@@ -96,7 +96,12 @@ class CDP {
   }
   async fill(selector, text, frame = false) {
     await this.click(selector, frame);
-    await this.evaluate(`document.querySelector(${JSON.stringify(selector)}).select()`, frame);
+    await this.evaluate(`(() => {
+      const host = document.querySelector(${JSON.stringify(selector)});
+      const input = host.matches?.('blora-search') ? (host.shadowRoot?.querySelector('input') || host.querySelector('input')) : host;
+      input.focus();
+      input.select?.();
+    })()`, frame);
     await this.send('Input.insertText', { text });
   }
   close() {
@@ -222,6 +227,10 @@ async function main() {
     try { state.reset(); state.snapshot(); await run(); results.push({ label, pass: true }); console.log(`PASS ${label}`); }
     catch (error) {
       const diagnostic = await cdp?.evaluate(`({url:location.href,viewport:[innerWidth,innerHeight],scrollWidth:document.documentElement.scrollWidth,dialogs:[...document.querySelectorAll('blora-dialog[open]')].map(e=>({id:e.id,text:e.textContent.slice(0,250)})),library:document.querySelector('.aml-directory')?.textContent.slice(0,600)})`).catch(() => null);
+      if (process.env.AM_LIBRARY_FAIL_SCREENSHOT) {
+        const shot = await cdp?.send('Page.captureScreenshot').catch(() => null);
+        if (shot?.data) fs.writeFileSync(`${process.env.AM_LIBRARY_FAIL_SCREENSHOT}/fail-${String(label).replace(/[^\w\u4e00-\u9fa5]+/g, '-')}.png`, Buffer.from(shot.data, 'base64'));
+      }
       results.push({ label, pass: false, error: error.message, diagnostic }); console.error(`FAIL ${label}: ${error.message}\n${JSON.stringify(diagnostic)}`);
     }
   };
@@ -257,7 +266,10 @@ async function main() {
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 390 });
       await cdp.send('Page.navigate', { url: `${base}/${mode !== 'team' ? 'console' : 'admin'}?fixture=${width}&run=${Date.now()}#${hash}` });
       if (mode === 'team') { await cdp.wait("typeof adminApp !== 'undefined' && !!adminApp.modelLibrary"); await loaded(); }
-      else { await cdp.wait("!!document.getElementById('unifiedProviderManager')"); await loaded(true); }
+      else {
+        await cdp.wait("!!document.getElementById('unifiedProviderManager')");
+        await cdp.wait("typeof adminApp !== 'undefined' && adminApp.currentPage === 'adminProviders' && document.querySelectorAll('#adminProvidersList .admin-card').length > 0", true);
+      }
     };
     const expand = async (id = 'fixture-provider', frame = false) => {
       const selector = `[data-action="expand"][data-id="${id}"]`;
@@ -266,12 +278,19 @@ async function main() {
     };
     const switchModel = '[data-action="toggle-model"][data-id="fixture-model"]';
     const confirm = async accept => { await cdp.wait("!!document.querySelector('blora-dialog[open] [data-dialog-confirm]')"); await cdp.click(accept ? '[data-dialog-confirm]' : '[data-dialog-cancel]'); };
-    const select = async (selector, steps) => {
+    const select = async (selector, value) => {
       await cdp.click(selector);
-      for (const key of ['Home', ...Array(steps).fill('ArrowDown'), 'Enter']) {
-        await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key, windowsVirtualKeyCode: { Home: 36, ArrowDown: 40, Enter: 13 }[key] });
-        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, windowsVirtualKeyCode: { Home: 36, ArrowDown: 40, Enter: 13 }[key] });
-      }
+      await sleep(350);
+      const selected = await cdp.evaluate(`(() => {
+        const host = document.querySelector(${JSON.stringify(selector)});
+        const root = host.shadowRoot || host;
+        const option = [...root.querySelectorAll('[part="option"], .blora-select__option')].find(item => item.dataset.value === ${JSON.stringify(value)});
+        if (!option) return false;
+        option.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        option.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        return true;
+      })()`);
+      assert.ok(selected, `找不到下拉选项 ${selector}=${value}`);
       await sleep(400);
     };
     for (const width of [1440, 1024, 390]) {
@@ -310,12 +329,12 @@ async function main() {
         await cdp.wait("document.querySelector('.aml-directory').getAttribute('aria-busy') === 'false' && adminApp.modelLibrary.filters.q === 'missing-model'"); await sleep(350);
         assert.ok(state.requests.slice(before).some(r => r.url.includes('q=missing-model')));
         await cdp.click('.aml-more-filters > summary'); await cdp.click('[data-action="reset"]'); await loaded();
-        await select('[data-filter="provider"]', 2); await loaded(); await expect("document.querySelectorAll('.aml-provider').length === 1 && !!document.querySelector('[data-provider=" + JSON.stringify('fixture-empty') + "]')", '供应商筛选应限制目录');
+        await select('[data-filter="provider"]', 'fixture-empty'); await loaded(); await expect("document.querySelectorAll('.aml-provider').length === 1 && !!document.querySelector('[data-provider=" + JSON.stringify('fixture-empty') + "]')", '供应商筛选应限制目录');
       });
       await check(`${p} 测试筛选与排序符合后端契约`, async () => {
-        await navigate(width); await cdp.click('.aml-more-filters > summary'); await select('[data-filter="test"]', 2);
+        await navigate(width); await cdp.click('.aml-more-filters > summary'); await select('[data-filter="test"]', 'pass');
         await expect("!document.querySelector('.aml-directory').textContent.includes('加载失败')", '测试成功筛选传值必须是 pass（不是 ok）');
-        await cdp.click('[data-action="reset"]'); await select('[data-filter="sort"]', 2);
+        await cdp.click('[data-action="reset"]'); await select('[data-filter="sort"]', 'price_asc');
         await expect("!document.querySelector('.aml-directory').textContent.includes('加载失败')", '排序值必须在后端允许列表内');
       });
       await check(`${p} 全部模型系统开关`, async () => {
@@ -327,10 +346,12 @@ async function main() {
         await navigate(width); await expand(); await cdp.click('[data-action="edit-model"][data-id="fixture-model"]');
         await cdp.wait("document.getElementById('addModelModal').hasAttribute('open')"); await cdp.fill('#modelAlias', `Edited ${width}`); await cdp.click('#saveModelBtn');
         await cdp.wait("!document.getElementById('addModelModal').hasAttribute('open')"); assert.equal(state.models[0].alias, `Edited ${width}`);
-        await cdp.click('#adminLibraryManagerClose'); await loaded();
+        await cdp.wait(`document.querySelector('[data-model="fixture-model"]')?.textContent.includes('Edited ${width}')`);
       });
       await check(`${p} 新建 TEAM`, async () => {
-        await navigate(width); await cdp.click('.aml-header [data-action="manage-teams"]'); await cdp.wait("!document.getElementById('adminLibraryManager').hidden");
+        await navigate(width); await cdp.click('.aml-header .library-more-trigger'); await sleep(250);
+        await cdp.click('.aml-header .blora-dropdown__item[data-value*="manage-teams"]');
+        await cdp.wait("!document.getElementById('adminLibraryManager').hidden");
         await cdp.click('#createTeamBtn'); await cdp.wait("!!document.getElementById('teamNameInput')"); await cdp.fill('#teamNameInput', `Created ${width}`); await cdp.fill('#teamDescInput', 'Memory only'); await cdp.click('#confirmCreateTeam');
         await cdp.wait("!document.getElementById('teamNameInput')?.closest('blora-dialog')?.hasAttribute('open')"); assert.ok(state.teams.some(t => t.name === `Created ${width}`)); await cdp.click('#adminLibraryManagerClose');
       });
@@ -349,11 +370,9 @@ async function main() {
       }
       await check(`${p} 个人内嵌真实交互`, async () => {
         await navigate(width, 'myUpstream', 'personal');
-        if (await cdp.evaluate("!document.getElementById('adminLibraryManager').hidden", true)) await cdp.click('#adminLibraryManagerClose', true);
-        await expect("!adminApp.user.isAdmin && adminApp.currentPage === 'adminModelLibrary'", '个人非管理员可访问统一模型库', true);
+        await expect("!adminApp.user.isAdmin && adminApp.currentPage === 'adminProviders'", '个人非管理员可访问供应商管理', true);
         await expect("[...document.querySelectorAll('.sidebar,.content-header,.mobile-header')].every(e=>getComputedStyle(e).display==='none')", '嵌入隐藏重复导航', true);
-        await cdp.fill('[data-filter="q"]', 'Alpha', true); await sleep(400); await loaded(true); await expand('fixture-provider', true);
-        await expect("!!document.querySelector('[data-model=" + JSON.stringify('fixture-model') + "]')", '个人内嵌应可加载真实模型卡', true);
+        await expect("document.querySelectorAll('#adminProvidersList .admin-card').length === 2", '个人内嵌应加载供应商卡片', true);
         await expect('document.documentElement.scrollWidth <= innerWidth + 1', '外层不得横向溢出'); await expect('document.documentElement.scrollWidth <= innerWidth + 1', '内嵌不得横向溢出', true);
       });
     }
@@ -361,12 +380,19 @@ async function main() {
       await check(`${width} 批量当前筛选与供应商授权`, async () => {
         await navigate(width); await cdp.click('[data-team="1"]'); await loaded();
         await cdp.fill('[data-filter="q"]', 'Alpha'); await sleep(450); await loaded();
-        await cdp.click('[data-action="enable-filtered"]'); await confirm(true);
+        await cdp.click('.aml-batch-entry .library-more-trigger'); await sleep(250);
+        await cdp.click('.aml-batch-entry .blora-dropdown__item[data-value*="enable-filtered"]');
+        await confirm(true);
         await cdp.wait("document.querySelector('.aml-notice')?.textContent.includes('已启用')");
         assert.equal(state.grants[1], true); assert.equal(state.writes.at(-1).url, '/api/admin/teams/1/models/batch');
-        await cdp.click('[data-action="disable-provider"][data-id="fixture-provider"]'); await confirm(true);
+        const providerMenu = '.aml-provider[data-provider="fixture-provider"] .library-more-trigger';
+        await cdp.click(providerMenu); await sleep(250);
+        await cdp.click('.aml-provider[data-provider="fixture-provider"] .blora-dropdown__item[data-value*="disable-provider"]');
+        await confirm(true);
         await cdp.wait("document.querySelector('.aml-notice')?.textContent.includes('已关闭')"); assert.equal(state.grants[1], false);
-        await cdp.click('[data-action="enable-provider"][data-id="fixture-provider"]'); await confirm(true);
+        await cdp.click(providerMenu); await sleep(250);
+        await cdp.click('.aml-provider[data-provider="fixture-provider"] .blora-dropdown__item[data-value*="enable-provider"]');
+        await confirm(true);
         await cdp.wait("document.querySelector('.aml-notice')?.textContent.includes('已启用')"); assert.equal(state.grants[1], true);
       });
       await check(`${width} 系统关闭仍可撤销已有TEAM授权`, async () => {
@@ -385,7 +411,9 @@ async function main() {
       });
     }
     await check('目录与模型加载失败真实重试', async () => {
-      await navigate(1440); state.failView = 'providers'; await cdp.click('[data-action="refresh"]');
+      await navigate(1440); state.failView = 'providers';
+      await cdp.click('.aml-header .library-more-trigger'); await sleep(250);
+      await cdp.click('.aml-header .blora-dropdown__item[data-value*="refresh"]');
       await cdp.wait("document.querySelector('.aml-directory').textContent.includes('Intentional library failure')");
       await cdp.click('.aml-directory [data-action="refresh"]'); await loaded();
       state.failView = 'models'; await cdp.click('[data-action="expand"][data-id="fixture-provider"]');
@@ -425,18 +453,25 @@ async function main() {
     });
     for (const mode of ['personal', 'local']) await check(`${mode} 内嵌无TEAM入口或API`, async () => {
       const before = state.requests.length; await navigate(390, 'myUpstream', mode);
-      if (await cdp.evaluate("!document.getElementById('adminLibraryManager').hidden", true)) await cdp.click('#adminLibraryManagerClose', true);
       await expect("!document.querySelector('[data-action=manage-teams]') && !document.querySelector('.aml-team-tabs [data-team=\"1\"]')", '个人/本地无TEAM入口', true);
       assert.ok(!state.requests.slice(before).some(r => /\/api\/(admin|user)\/teams/.test(r.url)), '个人/本地不应请求TEAM API');
     });
     await check('供应商启停连通性和额度仅fixture响应可见', async () => {
       await navigate(1440); await cdp.click('[data-action="toggle-provider"][data-id="fixture-provider"]'); await confirm(true);
-      await cdp.wait("!document.getElementById('adminLibraryManager').hidden"); await sleep(500);
+      await cdp.wait("document.querySelector('[data-action=\"toggle-provider\"][data-id=\"fixture-provider\"]')?.getAttribute('aria-checked') === 'false'");
       assert.equal(state.providerEnabled, false);
-      await cdp.click('#adminLibraryManagerClose'); await loaded(); await expect("document.querySelector('[data-provider=fixture-provider]').textContent.includes('供应商已关闭')", '关闭状态可见');
-      await cdp.click('[data-action="toggle-provider"][data-id="fixture-provider"]'); await cdp.wait("!document.getElementById('adminLibraryManager').hidden"); await sleep(500); assert.equal(state.providerEnabled, true); await cdp.click('#adminLibraryManagerClose'); await loaded();
-      await cdp.click('[data-action="test-provider"][data-id="fixture-provider"]'); await cdp.wait("document.getElementById('adminProvidersPage').textContent.includes('123ms')"); await cdp.click('#adminLibraryManagerClose'); await loaded();
-      await cdp.click('[data-action="quota-provider"][data-id="fixture-provider"]'); await cdp.wait("document.getElementById('providerQuotaModal').hasAttribute('open') && document.getElementById('quotaRemaining').textContent === '75'");
+      await expect("document.getElementById('adminLibraryManager').hidden", '供应商启停不应打开管理面板');
+      await loaded(); await expect("document.querySelector('[data-provider=fixture-provider]').textContent.includes('供应商已关闭')", '关闭状态可见');
+      await cdp.click('[data-action="toggle-provider"][data-id="fixture-provider"]');
+      await cdp.wait("document.querySelector('[data-action=\"toggle-provider\"][data-id=\"fixture-provider\"]')?.getAttribute('aria-checked') === 'true'"); assert.equal(state.providerEnabled, true);
+      const providerMenu = '.aml-provider[data-provider="fixture-provider"] .library-more-trigger';
+      const beforePing = state.requests.length;
+      await cdp.click(providerMenu); await sleep(250);
+      await cdp.click('.aml-provider[data-provider="fixture-provider"] .blora-dropdown__item[data-value*="test-provider"]'); await sleep(500);
+      assert.ok(state.requests.slice(beforePing).some(request => request.url.endsWith('/ping')), '连通性应直接请求');
+      await cdp.click(providerMenu); await sleep(250);
+      await cdp.click('.aml-provider[data-provider="fixture-provider"] .blora-dropdown__item[data-value*="quota-provider"]');
+      await cdp.wait("document.getElementById('providerQuotaModal').hasAttribute('open') && document.getElementById('quotaRemaining').textContent === '75'");
     });
     await check('授权变更后普通成员console共享读取', async () => {
       await navigate(1440); await cdp.click('[data-team="1"]'); await loaded(); await expand(); await cdp.click(switchModel); await cdp.wait("document.querySelector('.aml-notice')?.textContent.includes('已启用')");

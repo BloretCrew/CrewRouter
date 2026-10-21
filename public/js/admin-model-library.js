@@ -71,7 +71,7 @@
       if (this.optionData) this.updateOptions(this.optionData);
       else this.syncControls();
       if (this.total != null) {
-        this.container.querySelector('.aml-summary').textContent = tr('{providers} 个供应商，{models} 个模型 · 模型按供应商展开加载', { providers: this.total, models: this.stats?.model_count ?? '—' });
+        this.renderListSummary(this.total, this.stats?.model_count ?? '—');
         this.renderDirectory();
         for (const [id, group] of this.groups) {
           if (group.error) {
@@ -104,11 +104,57 @@
       const restored = this.app._parseAdminHash?.(window.location?.hash || '');
       this.teamId = this.canManageTeams() ? String(restored?.teamId ?? this.teamId ?? '') : '';
       container.classList.add('admin-model-library', 'blora-model-library');
-      this.shell = () => `<header class="aml-header model-library-header"><div><h2>${html('模型库')}</h2><p>${html('浏览供应商模型，管理系统可用状态与 TEAM 授权。')}</p></div><div class="aml-actions">${button('add-provider', '添加供应商')}${button('add-model', '添加模型')}${this.canManageTeams() ? button('create-team', '创建 TEAM') : ''}${button('manage-providers', '供应商管理')}${button('manage-models', '模型管理')}${this.canManageTeams() ? button('manage-teams', 'TEAM 管理') : ''}${button('refresh', '刷新')}</div></header>
-        <section class="aml-quota-overview model-quota-section"><div class="aml-quota-heading"><span>${html('最后有效观测，非实时余额；查询失败时可能保留旧值。')}</span>${button('refresh-quotas', '刷新额度')}</div><div class="aml-quota-host" data-quota-scope="admin" data-quota-context="overview"></div></section>
-        <section class="aml-scope model-library-binding-bar" aria-label="${html('模型范围')}"><div class="aml-team-tabs" role="group" aria-label="${html('选择 TEAM')}"></div><details class="aml-team-more"><summary>${html('更多 TEAM')}</summary><div class="aml-team-panel"><input type="search" data-team-search placeholder="${html('搜索 TEAM 名称')}" aria-label="${html('搜索更多 TEAM')}"><div class="aml-team-results"></div></div></details><span class="aml-team-error" role="status"></span></section>
-        <div class="aml-toolbar model-filter-bar"><div class="aml-toolbar-context"></div><div class="aml-filter-row"><input type="search" data-filter="q" placeholder="${html('搜索模型、别名或供应商')}" aria-label="${html('搜索模型')}"><select data-filter="provider" aria-label="${html('供应商')}"><blora-option value="">${html('全部供应商')}</blora-option></select><select data-filter="sort" aria-label="${html('排序')}"><blora-option value="name">${html('名称排序')}</blora-option><blora-option value="newest">${html('最新添加')}</blora-option><blora-option value="price_asc">${html('价格从低到高')}</blora-option><blora-option value="price_desc">${html('价格从高到低')}</blora-option><blora-option value="name_desc">${html('名称倒序')}</blora-option><blora-option value="test_latency">${html('测试延迟')}</blora-option><blora-option value="test_speed">${html('测试速度')}</blora-option></select><details class="aml-more-filters"><summary>${html('更多筛选')}</summary><div class="aml-filter-panel"><label>${html('系列')}<select data-filter="series"><blora-option value="">${html('全部系列')}</blora-option></select></label><label>${html('供应商标签')}<select data-filter="tag"><blora-option value="">${html('全部标签')}</blora-option></select></label><label>${html('测试结果')}<select data-filter="test"><blora-option value="">${html('全部结果')}</blora-option><blora-option value="untested">${html('未测试')}</blora-option><blora-option value="pass">${html('测试成功')}</blora-option><blora-option value="fail">${html('测试失败')}</blora-option></select></label><label>${html('系统状态')}<select data-filter="systemEnabled"><blora-option value="">${html('全部状态')}</blora-option><blora-option value="true">${html('系统已启用')}</blora-option><blora-option value="false">${html('系统已关闭')}</blora-option></select></label><label class="aml-team-filter">${html('TEAM 授权')}<select data-filter="teamEnabled"><blora-option value="">${html('全部授权')}</blora-option><blora-option value="true">${html('已授权')}</blora-option><blora-option value="false">${html('未授权')}</blora-option></select></label>${button('reset', '清空筛选')}</div></details></div><div class="aml-selection"><span data-selection-count>${html('未选择模型')}</span>${button('select-page', '选择已加载模型')}${button('clear-selection', '清空选择')}${button('enable', '启用选中', 'data-batch')}${button('disable', '关闭选中', 'data-batch')}${button('test-selected', '测试选中', 'data-batch')}${button('enable-filtered', '启用当前筛选')}${button('disable-filtered', '关闭当前筛选')}<span class="aml-selection-hint">${html('勾选只用于批量操作，不改变开关')}</span></div></div>
-        <div class="aml-notice" role="status" aria-live="polite" hidden></div><div class="aml-summary" aria-live="polite"></div><div class="aml-directory model-library-grid" aria-busy="false"></div><div class="aml-directory-pages"></div>`;
+      this.shell = () => `<header class="aml-header model-library-header">
+          <div class="aml-header-copy model-library-header-left">
+            <h2>${html('模型库')}</h2>
+            <span class="model-library-header-hint">${html('浏览供应商模型，管理系统可用状态与 TEAM 授权。')}</span>
+          </div>
+          <div class="aml-header-actions model-library-header-actions">
+            ${button('manage-providers', '供应商管理')}
+            ${button('add-provider', '添加供应商')}
+            ${button('add-model', '添加模型')}
+            ${this.canManageTeams() ? button('create-team', '创建 TEAM') : ''}
+            ${button('manage-models', '模型管理')}
+            ${this.canManageTeams() ? button('manage-teams', 'TEAM 管理') : ''}
+            ${button('refresh', '刷新')}
+          </div>
+        </header>
+        <section class="aml-scope model-library-binding-bar" aria-label="${html('模型范围')}">
+          <div class="aml-scope-tabs">
+            <span class="aml-scope-label">${html('范围')}</span>
+            <div class="aml-team-tabs" role="group" aria-label="${html('选择 TEAM')}"></div>
+            <details class="aml-team-more"><summary>${html('更多 TEAM')}</summary><div class="aml-team-panel"><input type="search" data-team-search placeholder="${html('搜索 TEAM 名称')}" aria-label="${html('搜索更多 TEAM')}"><div class="aml-team-results"></div></div></details>
+          </div>
+          <div class="aml-toolbar-context"></div>
+          <span class="aml-team-error" role="status"></span>
+        </section>
+        <div class="aml-toolbar model-filter-bar">
+          <div class="aml-filter-row">
+            <input type="search" data-filter="q" placeholder="${html('搜索模型、别名或供应商')}" aria-label="${html('搜索模型')}">
+            <select data-filter="provider" aria-label="${html('供应商')}"><blora-option value="">${html('全部供应商')}</blora-option></select>
+            <select data-filter="sort" aria-label="${html('排序')}"><blora-option value="name">${html('名称排序')}</blora-option><blora-option value="newest">${html('最新添加')}</blora-option><blora-option value="price_asc">${html('价格从低到高')}</blora-option><blora-option value="price_desc">${html('价格从高到低')}</blora-option><blora-option value="name_desc">${html('名称倒序')}</blora-option><blora-option value="test_latency">${html('测试延迟')}</blora-option><blora-option value="test_speed">${html('测试速度')}</blora-option></select>
+            <details class="aml-more-filters"><summary>${html('更多筛选')}</summary><div class="aml-filter-panel"><label>${html('系列')}<select data-filter="series"><blora-option value="">${html('全部系列')}</blora-option></select></label><label>${html('供应商标签')}<select data-filter="tag"><blora-option value="">${html('全部标签')}</blora-option></select></label><label>${html('测试结果')}<select data-filter="test"><blora-option value="">${html('全部结果')}</blora-option><blora-option value="untested">${html('未测试')}</blora-option><blora-option value="pass">${html('测试成功')}</blora-option><blora-option value="fail">${html('测试失败')}</blora-option></select></label><label>${html('系统状态')}<select data-filter="systemEnabled"><blora-option value="">${html('全部状态')}</blora-option><blora-option value="true">${html('系统已启用')}</blora-option><blora-option value="false">${html('系统已关闭')}</blora-option></select></label><label class="aml-team-filter">${html('TEAM 授权')}<select data-filter="teamEnabled"><blora-option value="">${html('全部授权')}</blora-option><blora-option value="true">${html('已授权')}</blora-option><blora-option value="false">${html('未授权')}</blora-option></select></label>${button('reset', '清空筛选')}</div></details>
+            <span class="aml-filter-count" aria-live="polite"></span>
+            <div class="aml-batch-entry">${button('select-page', '选择已加载模型')}${button('enable-filtered', '启用当前筛选')}${button('disable-filtered', '关闭当前筛选')}</div>
+          </div>
+          <div class="aml-active-filters" role="status"></div>
+          <div class="aml-selection" hidden>
+            <span data-selection-count>${html('未选择模型')}</span>
+            ${button('enable', '启用选中', 'data-batch')}${button('disable', '关闭选中', 'data-batch')}${button('test-selected', '测试选中', 'data-batch')}
+            ${button('clear-selection', '清空选择')}
+            <span class="aml-selection-hint">${html('勾选只用于批量操作，不改变开关')}</span>
+          </div>
+        </div>
+        <div class="aml-notice" role="status" aria-live="polite" hidden></div>
+        <div class="aml-directory model-library-grid" aria-busy="false"></div>
+        <div class="aml-directory-pages"></div>
+        <details class="aml-quota-overview model-quota-section" open>
+          <summary class="aml-quota-heading model-quota-section-header"><h3>${html('供应商额度')}</h3><span>${html('最后有效观测，非实时余额；查询失败时可能保留旧值。')}</span></summary>
+          <div class="aml-quota-body">
+            <div class="aml-quota-toolbar">${button('refresh-quotas', '刷新额度')}</div>
+            <div class="aml-quota-host" data-quota-scope="admin" data-quota-context="overview"></div>
+          </div>
+        </details>`;
       const originalShell = this.shell;
       this.shell = () => window.AdminLibraryConsoleView.shell(originalShell(), this);
       container.innerHTML = this.shell();
@@ -197,7 +243,35 @@
     syncControls() {
       if (!this.container) return;
       this.container.querySelectorAll('[data-filter]').forEach(control => { control.value = this.filters[control.dataset.filter] || ''; });
+      this.renderActiveFilters();
       this.renderSelection();
+    }
+
+    renderListSummary(providers, models) {
+      const target = this.container?.querySelector('.aml-filter-count');
+      if (target) target.textContent = tr('{providers} 个供应商 · {models} 个模型', { providers, models });
+    }
+
+    activeFilterEntries() {
+      const labels = { q: '搜索', provider: '供应商', series: '系列', tag: '标签', test: '测试', systemEnabled: '系统状态', teamEnabled: 'TEAM 授权', sort: '排序' };
+      return Object.entries(this.filters)
+        .filter(([key, value]) => value && !(key === 'sort' && value === 'name'))
+        .map(([key, value]) => {
+          const control = this.container?.querySelector(`[data-filter="${key}"]`);
+          const root = control?.shadowRoot || control;
+          const options = root && typeof root.querySelectorAll === 'function' ? [...root.querySelectorAll('blora-option, option, [part="option"]')] : [];
+          const option = options.find(item => String(item.dataset?.value ?? item.value) === String(value));
+          return { key, label: tr(labels[key] || key), value: option?.textContent?.trim() || value };
+        });
+    }
+
+    renderActiveFilters() {
+      if (!this.container) return;
+      const host = this.container.querySelector('.aml-active-filters');
+      if (!host) return;
+      const entries = this.activeFilterEntries();
+      host.innerHTML = entries.map(item => `<span class="aml-filter-chip"><span class="aml-filter-chip-label">${esc(item.label)}：${esc(item.value)}</span><button type="button" class="aml-filter-chip-remove" data-action="remove-filter" data-filter="${esc(item.key)}" aria-label="${html('移除筛选')}">×</button></span>`).join('') + (entries.length ? `<button type="button" class="blora-button aml-button aml-filter-clear" data-variant="ghost" data-size="sm" data-action="clear-filters">${html('清空全部')}</button>` : '');
+      host.hidden = entries.length === 0;
     }
 
     query(mode, extra = {}) {
@@ -229,7 +303,7 @@
       this.syncControls();
       const directory = this.container.querySelector('.aml-directory');
       directory.setAttribute('aria-busy', 'true');
-      directory.innerHTML = `<div class="aml-empty" role="status">${html('正在加载供应商目录…')}</div>`;
+      directory.innerHTML = this.skeleton();
       this.container.querySelector('.aml-directory-pages').innerHTML = '';
       try {
         const data = await this.request(this.query('providers'));
@@ -240,7 +314,7 @@
         this.stats = data.stats || {};
         this.renderTeams();
         this.updateOptions(data);
-        this.container.querySelector('.aml-summary').textContent = tr('{providers} 个供应商，{models} 个模型 · 模型按供应商展开加载', { providers: this.total, models: this.stats.model_count ?? this.stats.total_models ?? this.stats.models ?? '—' });
+        this.renderListSummary(this.total, this.stats.model_count ?? this.stats.total_models ?? this.stats.models ?? '—');
         this.renderDirectory();
         await Promise.all(this.providers.filter(provider => this.expanded.has(providerId(provider))).map(provider => this.loadProvider(providerId(provider))));
       } catch (error) {
@@ -271,6 +345,10 @@
       this.syncControls();
     }
 
+    skeleton(count = 4) {
+      return `<div class="aml-skeleton-grid" role="status" aria-label="${html('正在加载供应商目录…')}">${'<div class="aml-skeleton"></div>'.repeat(count)}</div>`;
+    }
+
     renderDirectory() {
       const directory = this.container.querySelector('.aml-directory');
       directory.innerHTML = this.providers.map(provider => window.AdminLibraryConsoleView.provider(this, provider)).join('') || `<div class="aml-empty"><strong>${html('没有符合条件的供应商')}</strong><p>${html('清空筛选，或进入供应商管理添加供应商。')}</p>${button('reset', '清空筛选')}${button('manage-providers', '供应商管理')}</div>`;
@@ -294,7 +372,7 @@
       this.groups.set(id, { ...previous, token, loading: true });
       const element = this.providerElement(id);
       if (!element) return;
-      element.querySelector('.aml-model-grid').innerHTML = `<div class="aml-empty" role="status">${html('正在加载模型…')}</div>`;
+      element.querySelector('.aml-model-grid').innerHTML = `<div class="aml-skeleton-grid" role="status" aria-label="${html('正在加载模型…')}">${'<div class="aml-skeleton"></div>'.repeat(3)}</div>`;
       element.querySelector('.aml-model-pages').innerHTML = '';
       try {
         const data = await this.request(this.query('models', { provider: id, page: String(page), limit: String(this.modelLimit) }));
@@ -477,8 +555,11 @@
         if (target.checked) this.selected.add(target.dataset.select);
         else this.selected.delete(target.dataset.select);
         this.renderSelection();
-      } else if (target.matches('select[data-filter]')) {
-        this.filters[target.dataset.filter] = target.value;
+      } else if (target.matches('select[data-filter], blora-select[data-filter]')) {
+        const key = target.dataset.filter;
+        const value = target.value;
+        if (this.filters[key] === value) return;
+        this.filters[key] = value;
         this.page = 1;
         this.load();
       }
@@ -495,8 +576,8 @@
           this.app._writeAdminHash?.('adminModelLibrary', { teamId: control.dataset.team || null });
           this.container.querySelector('.aml-team-more').open = false;
           await this.load({ teamId: control.dataset.team });
-        } else if (action === 'add-provider') { await this.openManager('providers'); await this.app.showAddProviderWizard(); }
-        else if (action === 'add-model') { await this.openManager('models'); this.app.showAddModelModal(); }
+        } else if (action === 'add-provider') { await this.app.showAddProviderWizard('library'); }
+        else if (action === 'add-model') { this.app.showAddModelModal(); }
         else if (action === 'create-team') { if (!this.canManageTeams()) return; await this.openManager('teams'); this.app.showCreateTeamModal(); }
         else if (action === 'system-enable') { this.filters.q = id; this.filters.provider = ''; this.filters.series = ''; this.filters.tag = ''; this.filters.test = ''; this.filters.systemEnabled = ''; this.app._writeAdminHash?.('adminModelLibrary', { teamId: null }); await this.load({ teamId: null }); this.notice(tr('已切换全部模型，请启用系统模型后返回 TEAM 配置。')); }
         else if (action === 'trace-model') window.ModelTrace?.open(id);
@@ -506,25 +587,35 @@
           if (this.refreshingQuotas) return;
           this.refreshingQuotas = true;
           control.disabled = true;
-          try { await this.openManager('providers'); await this.app.refreshPageQuotas(); }
-          finally { this.refreshingQuotas = false; control.disabled = false; }
+          try {
+            if (typeof this.app.refreshProviderQuotasFromLibrary === 'function') await this.app.refreshProviderQuotasFromLibrary();
+            else { await this.openManager('providers'); await this.app.refreshPageQuotas(); }
+          } finally { this.refreshingQuotas = false; control.disabled = false; }
         }
-        else if (action === 'quota-provider') { await this.openManager('providers', id); await this.app.checkProviderQuota(id); }
+        else if (action === 'quota-provider') { await this.app.checkProviderQuota(id); }
         else if (action === 'toggle-provider') {
           const enabled = control.dataset.enabled === 'true';
           if (!enabled && !await window.confirm(tr('关闭此供应商？将影响所有 TEAM 的调用。'))) return;
           this.mutating = true;
-          try { await this.openManager('providers', id); await this.app.toggleProviderEnabled(id, enabled); } finally { this.mutating = false; }
+          try { await this.app.toggleProviderEnabled(id, enabled); } finally { this.mutating = false; }
           await this.load();
         } else if (['enable-provider', 'disable-provider', 'enable-filtered', 'disable-filtered'].includes(action)) {
           await this.batchRange(action.startsWith('enable'), action.endsWith('provider') ? id : null);
         } else if (action === 'refresh') await this.load();
         else if (action === 'retry-teams') await this.loadTeams();
-        else if (action === 'reset') {
+        else if (action === 'reset' || action === 'clear-filters') {
           Object.keys(this.filters).forEach(key => { this.filters[key] = key === 'sort' ? 'name' : ''; });
           this.page = 1;
           this.syncControls();
           await this.load();
+        } else if (action === 'remove-filter') {
+          const filter = control.dataset.filter;
+          if (Object.prototype.hasOwnProperty.call(this.filters, filter)) {
+            this.filters[filter] = filter === 'sort' ? 'name' : '';
+            this.page = 1;
+            this.syncControls();
+            await this.load();
+          }
         } else if (action === 'expand') {
           const element = this.providerElement(id);
           const expanded = !this.expanded.has(id);
@@ -547,11 +638,10 @@
         else if (action === 'manage-providers' || action === 'provider-manager') await this.openManager('providers', id);
         else if (action === 'manage-models' || action === 'model-manager') await this.openManager('models', id);
         else if (action === 'manage-teams') await this.openManager('teams', this.teamId);
-        else if (action === 'edit-provider') { await this.openManager('providers', id); await this.app.editProviderById(id); }
-        else if (action === 'sync-provider') { await this.openManager('providers', id); await this.app.fetchProviderModels(id); }
-        else if (action === 'test-provider') { await this.openManager('providers', id); await this.app.pingProvider(id); }
+        else if (action === 'edit-provider') { await this.app.editProviderById(id, 'library'); }
+        else if (action === 'sync-provider') { await this.app.fetchProviderModels(id); }
+        else if (action === 'test-provider') { await this.app.pingProvider(id); }
         else if (action === 'edit-model') {
-          await this.openManager('models', id);
           const summary = this.findModel(id);
           const params = new URLSearchParams({ page: '1', limit: '200', q: id });
           if (summary?.provider_id) params.set('provider', summary.provider_id);

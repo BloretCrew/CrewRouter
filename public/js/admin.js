@@ -83,6 +83,15 @@ class AdminApp {
     this._adminTeamModelsStickyObserver = null;
     this._adminModelsStickyMoreOpen = false;
     this._adminProvidersStickyMoreOpen = false;
+    // 供应商编辑器会话：来源、脏状态、校验与关闭保护
+    this._providerEditorSource = 'panel';
+    this._providerEditorDirty = false;
+    this._providerEditorSaving = false;
+    this._allowProviderClose = false;
+    this._providerEditorErrors = [];
+    this._providerDiscardPrompt = false;
+    this._providerWizardSource = 'panel';
+    this._providerEditorPage = 0;
     this.init();
   }
 
@@ -477,11 +486,13 @@ class AdminApp {
       });
     });
 
-    // 模态框关闭按钮
+    // 模态框关闭按钮（供应商编辑器使用独立的未保存保护）
     const modalCloseButtons = document.querySelectorAll('.modal-close');
     modalCloseButtons.forEach(btn => {
+      if (btn.closest('#addProviderModal')) return;
       btn.addEventListener('click', () => this.closeModals());
     });
+    this._bindProviderEditorEvents();
 
     // 官方 blora-dialog 自带遮罩、Escape、焦点陷阱和焦点回收。
 
@@ -515,9 +526,18 @@ class AdminApp {
 
   closeModals() {
     document.querySelectorAll('blora-dialog').forEach(modal => {
+      if (modal.id === 'addProviderModal' && this._providerEditorDirty && !this._allowProviderClose && !this._providerEditorSaving) return;
       if (typeof modal.close === 'function') modal.close('api');
       else modal.removeAttribute('open');
     });
+  }
+
+  async refreshProviderQuotasFromLibrary() {
+    if (!(this.providersData || []).length) {
+      try { await this.loadProviders({ resetPage: true }); } catch (_) { /* 保留当前额度视图 */ }
+    }
+    await this.refreshPageQuotas();
+    this.modelLibrary?.loadQuotaOverview();
   }
 
   _formatBigNumber(num) {
@@ -3160,16 +3180,14 @@ class AdminApp {
     // 额度改为按需查询（更多菜单 / 手动刷新），打开页不自动外呼
   }
 
-  refreshPageQuotas() {
+  async refreshPageQuotas() {
     const visible = (this.providersData || []).filter(p => p.quota_enabled);
     if (visible.length === 0) {
       this.showToast(t('当前页没有启用额度查询的供应商'), 'info');
       return;
     }
     this.showToast(`${t('正在查询')}${visible.length}${t('个供应商额度…')}`, 'info');
-    for (const p of visible) {
-      this.loadProviderQuotaInline(p.id);
-    }
+    await Promise.all(visible.map(p => this.loadProviderQuotaInline(p.id)));
   }
 
   _renderProviderRowActions(provider, { isCard = false } = {}) {
@@ -3294,20 +3312,20 @@ class AdminApp {
     this.providerPageGo(page);
   }
 
-  async editProviderById(providerId) {
+  async editProviderById(providerId, source = 'panel') {
     try {
       const res = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}`);
       if (res.ok) {
         const provider = await res.json();
-        this.editProvider(provider);
+        this.editProvider(provider, source);
         return;
       }
     } catch (e) {
       console.warn(t('加载供应商详情失败，回退列表数据'), e);
     }
-    const provider = (this.providersData || []).find(p => p.id === providerId);
+    const provider = (this.providersData || []).find(p => String(p.id) === String(providerId));
     if (!provider) { this.showToast(t('供应商不存在，请刷新后重试'), 'error'); return; }
-    this.editProvider(provider);
+    this.editProvider(provider, source);
   }
 
   // ========== 供应商多 API Key 编辑 ==========
@@ -3335,9 +3353,11 @@ class AdminApp {
     const mode = document.getElementById('providerKeyMode')?.value || 'fixed';
     const section = document.getElementById('providerFixedKeysSection');
     if (section) {
-      // 脚本模式仍展示，但说明主 Key 仅作缓存；多 Key 选择仅对固定模式生效
+      // 脚本模式仍保留 Key 作为初始缓存；顺序/权重选择仅对固定模式生效
       section.style.opacity = mode === 'script' ? '0.65' : '1';
     }
+    const selectMode = document.getElementById('providerKeySelectModeWrap');
+    if (selectMode) selectMode.style.display = mode === 'script' ? 'none' : 'flex';
   }
 
   /**
@@ -4025,8 +4045,12 @@ class AdminApp {
     }
   }
 
-  async showAddProviderWizard() {
+  async showAddProviderWizard(source = 'panel') {
     const self = this;
+    this._providerWizardSource = source || 'panel';
+    if (source === 'library' && !(self.providersData || []).length) {
+      try { await self.loadProviders({ resetPage: true }); } catch (_) { /* 索引仍可单独加载 */ }
+    }
     // Step 1: 显示供应商选择列表
     const modal = Dialog.showModal({
       title: t('添加供应商'),
@@ -4082,7 +4106,7 @@ class AdminApp {
             <button type="button" class="blora-button" id="wizardManualFallback" data-variant="primary" data-size="sm">${t('手动添加')}</button>
           </div>`);
         document.getElementById('wizardRetryBtn')?.addEventListener('click', () => loadIndex());
-        document.getElementById('wizardManualFallback')?.addEventListener('click', () => { modal.close(); self.showAddProviderModal(); });
+        document.getElementById('wizardManualFallback')?.addEventListener('click', () => { modal.close(); self.showAddProviderModal(source); });
         return;
       }
 
@@ -4129,7 +4153,7 @@ class AdminApp {
           const action = item.dataset.action;
           if (action === 'manual') {
             modal.close();
-            self.showAddProviderModal();
+            self.showAddProviderModal(source);
             return;
           }
           const provider = {
@@ -4207,7 +4231,12 @@ class AdminApp {
           if (!apiKey) {
             self.showToast(t('已添加（未填 API Key，可稍后在编辑中补全）'), 'info');
           }
-          await self.loadProviders();
+          if (self._providerWizardSource === 'library') {
+            self.modelLibrary?.catalogChanged({ teams: true });
+          } else {
+            await self.loadProviders();
+          }
+          self._providerWizardSource = 'panel';
           self.showProviderAddedSuccess(newId, provider.name);
         } else {
           const err = await resp.json().catch(() => ({}));
@@ -4257,6 +4286,7 @@ class AdminApp {
 
   setProviderEditorPage(page = 0) {
     const root = document.getElementById('addProviderModal');
+    if (!root) return;
     const sections = [root.querySelector('.provider-form-basics'), ...['KeyMode', 'ModelsQuota', 'Proxy', 'Test', 'Headers', 'Tags'].map(name => document.getElementById('providerSection' + name))];
     this._providerEditorPage = Math.max(0, Math.min(sections.length - 1, page));
     sections.forEach((section, index) => {
@@ -4272,7 +4302,8 @@ class AdminApp {
     document.getElementById('providerEditorPrevious').disabled = this._providerEditorPage === 0;
     document.getElementById('providerEditorNext').disabled = this._providerEditorPage === sections.length - 1;
     document.getElementById('providerEditorPageStatus').textContent = `${this._providerEditorPage + 1} / ${sections.length}`;
-    root.querySelector('.modal-body').scrollTop = 0;
+    const body = root.querySelector('.provider-editor-body') || root.querySelector('.modal-body');
+    if (body) body.scrollTop = 0;
   }
 
   _setProviderFormSectionsOpen({ keyMode = false, modelsQuota = false, proxy = false, headers = false, tags = false, test = false } = {}) {
@@ -4295,7 +4326,246 @@ class AdminApp {
     if (doc) doc.open = false;
   }
 
-  showAddProviderModal() {
+  _bindProviderEditorEvents() {
+    const dialog = document.getElementById('addProviderModal');
+    if (!dialog || dialog.dataset.editorBound === 'true') return;
+    dialog.dataset.editorBound = 'true';
+    dialog.addEventListener('blora-before-close', event => {
+      if (this._allowProviderClose || this._providerEditorSaving || !this._providerEditorDirty) return;
+      event.preventDefault();
+      this._confirmDiscardProviderChanges();
+    });
+    dialog.addEventListener('blora-close', () => {
+      this._providerEditorDirty = false;
+      this._updateProviderEditorDirty(false);
+      this._providerEditorSource = null;
+    });
+    dialog.addEventListener('input', event => {
+      if (!event.target?.closest?.('#addProviderModal')) return;
+      this._markProviderEditorDirty();
+      this._clearProviderFieldError(event.target);
+      this._updateProviderEditorSummary();
+    });
+    dialog.addEventListener('change', () => {
+      this._markProviderEditorDirty();
+      this._updateProviderEditorSummary();
+    });
+    dialog.querySelector('.provider-editor-header .modal-close')?.addEventListener('click', () => this.requestCloseProviderEditor());
+    document.getElementById('providerEditorCancel')?.addEventListener('click', () => this.requestCloseProviderEditor());
+  }
+
+  _initProviderEditorSession(source = 'panel') {
+    this._providerEditorSource = source || 'panel';
+    this._providerEditorDirty = false;
+    this._providerEditorSaving = false;
+    this._allowProviderClose = false;
+    this._providerEditorErrors = [];
+    this._providerDiscardPrompt = false;
+    this._providerEditorPage = 0;
+    this._clearProviderEditorErrors();
+    this._updateProviderEditorDirty(false);
+  }
+
+  _markProviderEditorDirty() {
+    if (this._providerEditorSaving) return;
+    this._updateProviderEditorDirty(true);
+  }
+
+  _updateProviderEditorDirty(dirty) {
+    this._providerEditorDirty = !!dirty;
+    const indicator = document.getElementById('providerEditorDirty');
+    if (indicator) indicator.hidden = !this._providerEditorDirty;
+  }
+
+  _updateProviderEditorSummary() {
+    const host = document.getElementById('providerEditorSummary');
+    if (!host) return;
+    const name = document.getElementById('providerName')?.value.trim() || '';
+    const format = document.getElementById('providerFormat')?.value || 'openai';
+    const enabled = document.getElementById('providerEnabled')?.value !== 'false';
+    const keyMode = document.getElementById('providerKeyMode')?.value || 'fixed';
+    host.innerHTML = `${name ? `<strong>${escapeHtml(name)}</strong>` : `<span>${t('新供应商')}</span>`}<span class="blora-badge" data-variant="${enabled ? 'success' : 'danger'}">${t(enabled ? '启用' : '禁用')}</span><span>${escapeHtml(formatDisplayName(format))}</span><span>${keyMode === 'script' ? t('脚本刷新（动态密钥）') : t('固定密钥（传统模式）')}</span>`;
+  }
+
+  _focusProviderEditorFirstField() {
+    requestAnimationFrame(() => document.getElementById('providerName')?.focus());
+  }
+
+  requestCloseProviderEditor() {
+    if (this._providerEditorSaving) return;
+    if (this._providerEditorDirty) {
+      this._confirmDiscardProviderChanges();
+      return;
+    }
+    this._closeProviderEditor();
+  }
+
+  _closeProviderEditor() {
+    const dialog = document.getElementById('addProviderModal');
+    this._allowProviderClose = true;
+    try {
+      if (typeof dialog?.close === 'function') dialog.close('api');
+      else dialog?.removeAttribute('open');
+    } finally {
+      this._allowProviderClose = false;
+    }
+  }
+
+  _confirmDiscardProviderChanges() {
+    if (this._providerDiscardPrompt) return;
+    this._providerDiscardPrompt = true;
+    Dialog.confirm(
+      t('放弃未保存的修改？'),
+      t('当前供应商配置尚未保存，关闭后修改会丢失。'),
+      { confirmText: t('放弃修改'), cancelText: t('继续编辑'), danger: true }
+    ).then(ok => {
+      this._providerDiscardPrompt = false;
+      if (!ok) return;
+      this._providerEditorDirty = false;
+      this._updateProviderEditorDirty(false);
+      this._closeProviderEditor();
+    });
+  }
+
+  _renderProviderEditorAlert() {
+    const alert = document.getElementById('providerEditorAlert');
+    if (!alert) return;
+    if (!this._providerEditorErrors.length) {
+      alert.hidden = true;
+      alert.innerHTML = '';
+      return;
+    }
+    alert.hidden = false;
+    alert.innerHTML = `<strong>${escapeHtml(t('请检查以下配置'))}</strong><ul>${this._providerEditorErrors.map(error => `<li>${escapeHtml(error.message)}</li>`).join('')}</ul>`;
+  }
+
+  _showProviderEditorErrors(errors) {
+    document.querySelectorAll('#addProviderModal .is-invalid').forEach(field => {
+      field.classList.remove('is-invalid');
+      field.removeAttribute('aria-invalid');
+    });
+    this._providerEditorErrors = Array.isArray(errors) ? errors : [];
+    for (const error of this._providerEditorErrors) {
+      const field = document.getElementById(error.field);
+      if (field) {
+        field.classList.add('is-invalid');
+        field.setAttribute('aria-invalid', 'true');
+      }
+    }
+    this._renderProviderEditorAlert();
+    const first = this._providerEditorErrors[0];
+    if (!first) return;
+    this.setProviderEditorPage(first.page || 0);
+    const target = document.getElementById(first.field);
+    if (target) {
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    this.showToast(first.message, 'error');
+  }
+
+  _clearProviderEditorErrors() {
+    this._providerEditorErrors = [];
+    this._renderProviderEditorAlert();
+    document.querySelectorAll('#addProviderModal .is-invalid').forEach(field => {
+      field.classList.remove('is-invalid');
+      field.removeAttribute('aria-invalid');
+    });
+  }
+
+  _clearProviderFieldError(target) {
+    const id = target?.id;
+    if (!id || !this._providerEditorErrors.length) return;
+    const remaining = this._providerEditorErrors.filter(error => error.field !== id);
+    if (remaining.length === this._providerEditorErrors.length) return;
+    this._providerEditorErrors = remaining;
+    target.classList.remove('is-invalid');
+    target.removeAttribute('aria-invalid');
+    this._renderProviderEditorAlert();
+  }
+
+  _showProviderSaveError(message) {
+    this._providerEditorErrors = [];
+    const alert = document.getElementById('providerEditorAlert');
+    if (alert) {
+      alert.hidden = false;
+      alert.innerHTML = `<strong>${escapeHtml(t('保存失败'))}</strong><p>${escapeHtml(message || t('请稍后重试'))}</p>`;
+      const body = document.querySelector('#addProviderModal .provider-editor-body');
+      if (body) body.scrollTop = 0;
+    }
+    this.showToast(message || t('保存失败'), 'error');
+  }
+
+  _isHttpUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) { return false; }
+  }
+
+  _isProxyUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return ['http:', 'https:', 'socks5:', 'socks5h:'].includes(url.protocol);
+    } catch (_) { return false; }
+  }
+
+  _validateProviderForm({ isCreate = false } = {}) {
+    const errors = [];
+    const add = (field, page, message) => errors.push({ field, page, message });
+    const name = document.getElementById('providerName')?.value.trim() || '';
+    const baseUrl = document.getElementById('providerBaseUrl')?.value.trim() || '';
+    const modelsUrl = document.getElementById('providerModelsUrl')?.value.trim() || '';
+    if (!name) add('providerName', 0, t('请填写供应商名称'));
+    if (!baseUrl) add('providerBaseUrl', 0, t('请填写 Base URL'));
+    else if (!this._isHttpUrl(baseUrl)) add('providerBaseUrl', 0, t('Base URL 需以 http:// 或 https:// 开头'));
+    if (modelsUrl && !modelsUrl.startsWith('/') && !this._isHttpUrl(modelsUrl)) add('providerModelsUrl', 2, t('模型列表 URL 需为完整地址或以 / 开头'));
+
+    const keyMode = document.getElementById('providerKeyMode')?.value || 'fixed';
+    const keyScript = document.getElementById('providerKeyScript')?.value || '';
+    const keyInterval = parseInt(document.getElementById('providerKeyRefreshInterval')?.value, 10);
+    if (keyMode === 'script' && !keyScript.trim()) add('providerKeyScript', 1, t('脚本模式下必须填写密钥刷新脚本'));
+    if (keyMode === 'script' && (!Number.isFinite(keyInterval) || keyInterval < 60)) add('providerKeyRefreshInterval', 1, t('刷新间隔不能少于 60 秒'));
+
+    const quotaEnabled = document.getElementById('providerQuotaEnabled')?.value === 'true';
+    const quotaMode = document.getElementById('providerQuotaMode')?.value || 'script';
+    if (quotaEnabled && quotaMode === 'cpa') {
+      const managementUrl = document.getElementById('providerCpaManagementUrl')?.value.trim() || '';
+      const managementKey = document.getElementById('providerCpaManagementKey')?.value.trim() || '';
+      const authIndex = document.getElementById('providerCpaAuthIndex')?.value.trim() || '';
+      const pluginId = document.getElementById('providerCpaPluginId')?.value.trim() || '';
+      if (!managementUrl) add('providerCpaManagementUrl', 2, t('请填写 CPA 管理地址'));
+      else if (!this._isHttpUrl(managementUrl)) add('providerCpaManagementUrl', 2, t('CPA 管理地址需以 http:// 或 https:// 开头'));
+      if (!managementKey && !this._hasCpaManagementKey) add('providerCpaManagementKey', 2, t('请填写 CPA 管理密钥'));
+      if (!authIndex) add('providerCpaAuthIndex', 2, t('请选择 CPA 账号'));
+      if (['.', '..'].includes(pluginId)) add('providerCpaPluginId', 2, t('CPA 插件 ID 无效'));
+    }
+    if (quotaEnabled && (quotaMode === 'ark_inference' || quotaMode === 'ark_afp')) {
+      const accessKey = document.getElementById('providerArkAccessKey')?.value.trim() || '';
+      const secretKey = document.getElementById('providerArkSecretKey')?.value.trim() || '';
+      const region = document.getElementById('providerArkRegion')?.value.trim() || '';
+      const service = document.getElementById('providerArkService')?.value.trim() || '';
+      const action = document.getElementById('providerArkAction')?.value.trim() || '';
+      const params = document.getElementById('providerArkParams')?.value.trim() || '{}';
+      if (!accessKey) add('providerArkAccessKey', 2, t('请填写火山方舟 Access Key'));
+      if (isCreate && !secretKey) add('providerArkSecretKey', 2, t('请填写火山方舟 Secret Key'));
+      if (!region) add('providerArkRegion', 2, t('请填写火山方舟 Region'));
+      if (!service) add('providerArkService', 2, t('请填写火山方舟 Service'));
+      if (!action) add('providerArkAction', 2, t('请填写火山方舟 Action'));
+      try { JSON.parse(params || '{}'); } catch (_) { add('providerArkParams', 2, t('火山方舟请求参数需为有效 JSON')); }
+    }
+
+    const proxy = this._collectProviderProxyFromForm();
+    if (proxy.proxy_enabled && proxy.proxy_mode === 'single' && !proxy.proxy_use_system) {
+      if (!proxy.proxy_url) add('providerProxyUrl', 3, t('请填写自定义代理地址'));
+      else if (!this._isProxyUrl(proxy.proxy_url)) add('providerProxyUrl', 3, t('代理地址格式无效'));
+    }
+
+    return errors.sort((a, b) => a.page - b.page);
+  }
+
+  showAddProviderModal(source = 'panel') {
+    this._initProviderEditorSession(source);
     document.getElementById('providerModalTitle').textContent = t('添加供应商');
     document.getElementById('providerId').value = '';
     document.getElementById('providerName').value = '';
@@ -4373,6 +4643,8 @@ class AdminApp {
 
     this.setProviderEditorPage(0);
     this.showModal('addProviderModal');
+    this._updateProviderEditorSummary();
+    this._focusProviderEditorFirstField();
   }
 
   async lookupProviderInfo() {
@@ -4399,7 +4671,8 @@ class AdminApp {
     }
   }
 
-  editProvider(provider) {
+  editProvider(provider, source = 'panel') {
+    this._initProviderEditorSession(source);
     document.getElementById('providerModalTitle').textContent = t('编辑供应商');
     document.getElementById('providerId').value = provider.id;
     document.getElementById('providerName').value = provider.name;
@@ -4482,6 +4755,8 @@ class AdminApp {
 
     this.setProviderEditorPage(0);
     this.showModal('addProviderModal');
+    this._updateProviderEditorSummary();
+    this._focusProviderEditorFirstField();
   }
 
   async saveProvider() {
@@ -4496,20 +4771,10 @@ class AdminApp {
     const quota_mode = document.getElementById('providerQuotaMode')?.value || 'script';
     const cpaManagementUrl = document.getElementById('providerCpaManagementUrl').value.trim();
     const cpaManagementKey = document.getElementById('providerCpaManagementKey').value.trim();
-    if (quota_mode === 'cpa' && (!cpaManagementUrl || (!cpaManagementKey && !this._hasCpaManagementKey))) {
-      this.showToast(t('请填写 CPA 管理地址和管理密钥'), 'error');
-      this._setProviderFormSectionsOpen({ modelsQuota: true });
-      return;
-    }
     const cpaConfig = quota_mode === 'cpa' ? {
       plugin_id: document.getElementById('providerCpaPluginId').value.trim(),
       auth_index: document.getElementById('providerCpaAuthIndex').value.trim()
     } : null;
-    if (cpaConfig && (!cpaConfig.auth_index || ['.', '..'].includes(cpaConfig.plugin_id))) {
-      this.showToast(t('请填写 CPA 账号凭据索引；插件 ID 可留空，填写时必须有效'), 'error');
-      this._setProviderFormSectionsOpen({ modelsQuota: true });
-      return;
-    }
     const quota_schedule_enabled = document.getElementById('providerQuotaScheduleEnabled')?.value === 'true';
     const quota_schedule_interval = parseInt(document.getElementById('providerQuotaScheduleInterval')?.value, 10) || 3600;
     const notes = document.getElementById('providerNotes')?.value || '';
@@ -4524,22 +4789,18 @@ class AdminApp {
     const collectedKeys = this._collectProviderApiKeysFromForm();
     const isCreate = !id;
 
-    if (!name || !base_url) {
-      this.showToast(t('请填写供应商名称和 API 地址'), 'error');
+    const validationErrors = this._validateProviderForm({ isCreate });
+    if (validationErrors.length) {
+      this._showProviderEditorErrors(validationErrors);
       return;
     }
 
-    if (key_mode === 'script' && !key_script.trim()) {
-      this.showToast(t('脚本模式下必须填写密钥刷新脚本'), 'error');
-      this._setProviderFormSectionsOpen({ keyMode: true });
-      return;
-    }
-
-    if (proxyFields.proxy_enabled && proxyFields.proxy_mode === 'single'
-        && !proxyFields.proxy_use_system && !proxyFields.proxy_url) {
-      this.showToast(t('代理模式下请填写自定义代理地址，或勾选使用系统代理'), 'error');
-      this._setProviderFormSectionsOpen({ proxy: true });
-      return;
+    const source = this._providerEditorSource || 'panel';
+    const saveButton = document.getElementById('saveProviderBtn');
+    this._providerEditorSaving = true;
+    if (saveButton) {
+      saveButton.disabled = true;
+      setButtonLoading(saveButton, t('保存中...'));
     }
 
     try {
@@ -4585,8 +4846,21 @@ class AdminApp {
         }
         const cached = (this._providerOptionsCache || []).find(p => String(p.id) === String(providerId));
         if (cached) cached.test_user_agent = test_user_agent;
+        this._providerEditorDirty = false;
+        this._updateProviderEditorDirty(false);
+        this._providerEditorSaving = false;
+        if (saveButton) {
+          saveButton.disabled = false;
+          clearButtonLoading(saveButton, t('保存'));
+        }
+        this._allowProviderClose = true;
         this.closeModals();
-        await this.loadProviders();
+        this._allowProviderClose = false;
+        if (source === 'library') {
+          this.modelLibrary?.catalogChanged({ teams: true });
+        } else {
+          await this.loadProviders();
+        }
         if (isCreate) {
           this.showProviderAddedSuccess(providerId, name);
         } else {
@@ -4594,11 +4868,17 @@ class AdminApp {
         }
       } else {
         const err = await response.json().catch(() => ({}));
-        this.showToast(err.error || t('保存失败'), 'error');
+        this._showProviderSaveError(err.error || t('保存失败'));
       }
     } catch (error) {
       console.error(t('保存供应商失败:'), error);
-      this.showToast(t('保存失败'), 'error');
+      this._showProviderSaveError(error.message || t('保存失败'));
+    } finally {
+      this._providerEditorSaving = false;
+      if (saveButton) {
+        saveButton.disabled = false;
+        clearButtonLoading(saveButton, t('保存'));
+      }
     }
   }
 
@@ -6206,14 +6486,16 @@ async function(ctx) {
 
   toggleArkQuotaConfig() {
     const mode = document.getElementById('providerQuotaMode')?.value;
+    const quotaOn = document.getElementById('providerQuotaEnabled')?.value === 'true';
     const section = document.getElementById('arkQuotaConfigSection');
-    if (section) section.style.display = mode === 'ark_inference' || mode === 'ark_afp' ? 'block' : 'none';
+    if (section) section.style.display = quotaOn && (mode === 'ark_inference' || mode === 'ark_afp') ? 'block' : 'none';
   }
 
   toggleCodexQuotaImport() {
     const mode = document.getElementById('providerQuotaMode')?.value;
+    const quotaOn = document.getElementById('providerQuotaEnabled')?.value === 'true';
     const cpaSection = document.getElementById('cpaQuotaConfigSection');
-    if (cpaSection) cpaSection.style.display = mode === 'cpa' ? 'block' : 'none';
+    if (cpaSection) cpaSection.style.display = quotaOn && mode === 'cpa' ? 'block' : 'none';
     const section = document.getElementById('codexQuotaImportSection');
     const hint = document.getElementById('providerQuotaModeHint');
     const label = document.getElementById('providerQuotaAuthLabel');
@@ -6221,7 +6503,7 @@ async function(ctx) {
     const textarea = document.getElementById('providerCodexConfigText');
     const isCodex = mode === 'codex_wham';
     const isGrok = mode === 'grok_billing';
-    if (section) section.style.display = isCodex || isGrok ? 'block' : 'none';
+    if (section) section.style.display = quotaOn && (isCodex || isGrok) ? 'block' : 'none';
     if (hint) {
       const hints = {
         cpa: this._cpaQuotaConfigHint(),
@@ -6248,9 +6530,11 @@ async function(ctx) {
     const scheduleOn = document.getElementById('providerQuotaScheduleEnabled')?.value === 'true';
     const scheduleGroup = document.getElementById('providerQuotaScheduleGroup');
     const intervalGroup = document.getElementById('providerQuotaScheduleIntervalGroup');
+    const modeGroup = document.getElementById('providerQuotaModeGroup');
     const meta = document.getElementById('providerQuotaScheduleMeta');
     if (scheduleGroup) scheduleGroup.style.display = quotaOn ? 'block' : 'none';
     if (intervalGroup) intervalGroup.style.display = quotaOn && scheduleOn ? 'block' : 'none';
+    if (modeGroup) modeGroup.hidden = !quotaOn;
     if (meta) meta.style.display = quotaOn && meta.dataset.hasMeta === '1' ? 'block' : 'none';
   }
 

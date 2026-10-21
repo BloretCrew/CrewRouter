@@ -102,22 +102,238 @@
 .provider-select-all-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); margin-bottom: var(--blora-space-3); font-size: var(--blora-text-sm); }
 .provider-select-all-hint { color: var(--blora-color-text-subtle); }
 
-#addProviderModal::part(panel) { width: 100vw !important; max-width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important; margin: 0 !important; border-radius: 0 !important; }
-#addProviderModal .modal-content { width: 100%; height: 100%; max-width: none; max-height: none; border-radius: 0; }
-#addProviderModal .modal-body { flex: 1; min-height: 0; overflow-y: auto; }
-#addProviderModal .provider-editor-pages { display: flex; flex-wrap: wrap; gap: .5rem; padding: .75rem 1.5rem; border-bottom: var(--blora-border-subtle); }
-#addProviderModal .provider-form-section[hidden], #addProviderModal .provider-form-basics[hidden] { display: none !important; }
+#addProviderModal::part(backdrop) { padding: 16px !important; }
+#addProviderModal::part(panel) {
+  flex: 0 0 auto !important;
+  width: min(1100px, calc(100vw - 32px)) !important;
+  max-width: min(1100px, calc(100vw - 32px)) !important;
+  height: min(860px, calc(100dvh - 32px)) !important;
+  max-height: calc(100dvh - 32px) !important;
+  margin: auto !important;
+  border-radius: var(--blora-radius-xl) !important;
+}
+#addProviderModal .modal-content {
+  display: grid !important;
+  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "header header" "nav body" "footer footer";
+  width: 100%;
+  height: 100% !important;
+  min-height: 0;
+  max-width: none;
+  max-height: 100% !important;
+  border-radius: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+#addProviderModal .provider-editor-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  flex-wrap: wrap;
+  padding: var(--blora-space-4) var(--blora-space-5);
+  padding-inline-end: 64px;
+  border-bottom: var(--blora-border-subtle);
+  background: var(--blora-color-surface-default);
+}
+#addProviderModal .provider-editor-heading { min-width: 0; }
+#addProviderModal .provider-editor-heading h3 { margin: 0; font-size: var(--blora-text-lg); }
+#addProviderModal .provider-editor-subtitle {
+  margin: 2px 0 0;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+}
+#addProviderModal .provider-editor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  margin-inline-start: auto;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+}
+#addProviderModal .provider-editor-summary strong { color: var(--blora-color-text-primary); }
+#addProviderModal .provider-editor-header .modal-close { flex: none; }
+
+#addProviderModal .provider-editor-pages {
+  grid-area: nav;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--blora-space-3);
+  border-right: var(--blora-border-subtle);
+  background: var(--blora-color-surface-raised);
+  overflow-y: auto;
+}
+#addProviderModal .provider-editor-nav-item {
+  width: 100%;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-2);
+  text-align: left;
+}
+#addProviderModal .provider-editor-nav-index {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--blora-border-subtle);
+  border-radius: 50%;
+  color: var(--blora-color-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+#addProviderModal .provider-editor-nav-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+}
+#addProviderModal .provider-editor-nav-copy strong { font-size: var(--blora-text-sm); font-weight: 600; }
+#addProviderModal .provider-editor-nav-copy small {
+  color: var(--blora-color-text-muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+#addProviderModal .provider-editor-nav-item[aria-current="page"] {
+  background: var(--blora-color-action-primary-tint);
+  color: var(--blora-color-text-primary);
+}
+#addProviderModal .provider-editor-nav-item[aria-current="page"] .provider-editor-nav-index {
+  border-color: var(--blora-color-action-primary-default);
+  color: var(--blora-color-action-primary-default);
+}
+
+#addProviderModal .modal-body {
+  grid-area: body;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--blora-space-5);
+  min-height: 0;
+  overflow-y: auto;
+}
+#addProviderModal .provider-editor-body { background: var(--blora-color-surface-page); }
+#addProviderModal .provider-editor-alert {
+  margin-bottom: var(--blora-space-4);
+  padding: var(--blora-space-3);
+  border: 1px solid color-mix(in srgb, var(--destructive) 45%, transparent);
+  border-radius: var(--blora-radius-lg);
+  background: color-mix(in srgb, var(--destructive) 8%, var(--blora-color-surface-default));
+  color: var(--destructive);
+  font-size: var(--blora-text-sm);
+}
+#addProviderModal .provider-form-basics,
+#addProviderModal .provider-form-section[open] .provider-form-section-body {
+  padding: var(--blora-space-5);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+#addProviderModal .provider-form-basics { margin-bottom: 0; }
+#addProviderModal .provider-form-section {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+#addProviderModal .provider-form-section[hidden],
+#addProviderModal .provider-form-basics[hidden] { display: none !important; }
 #addProviderModal .provider-form-section > summary { display: none; }
+#addProviderModal .provider-form-section-body { border-top: 0; }
+#addProviderModal .form-group { margin-bottom: var(--blora-space-4); }
+#addProviderModal .form-group:last-child { margin-bottom: 0; }
+#addProviderModal .form-group > label { display: block; margin-bottom: var(--blora-space-2); }
+#addProviderModal .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--blora-space-3); }
 #addProviderModal blora-select { display: block; width: 100%; min-width: 0; }
-#addProviderModal .modal-footer { flex-wrap: wrap; gap: .5rem; }
-#providerEditorPageStatus { margin-inline-end: auto; }
-@media (max-width: 640px) { #addProviderModal .provider-editor-pages { flex-wrap: nowrap; overflow-x: auto; padding: .75rem; } #addProviderModal .provider-editor-pages button { flex-shrink: 0; } }
-#addProviderModal::part(overlay) { padding: 0 !important; }
-#addProviderModal::part(panel) { flex-shrink: 0; position: fixed; inset: 0; }
-#addProviderModal .modal-footer { display: flex; flex-direction: row !important; align-items: center; }
-#addProviderModal .provider-editor-pages { flex-shrink: 0; }
+#addProviderModal .input,
+#addProviderModal .textarea { width: 100%; }
+#addProviderModal .provider-api-key-row { align-items: stretch; flex-wrap: wrap; row-gap: var(--blora-space-2); }
+#addProviderModal .provider-api-key-row .input { min-width: 0; }
+#addProviderModal .provider-api-key-label-wrap > label { display: none; }
+#addProviderModal .provider-api-key-label-wrap input { width: 120px; }
+#addProviderModal .provider-api-key-input-wrap { flex: 1 1 240px; }
+#addProviderModal .provider-api-key-main-badge-wrap { flex-basis: 52px; width: 52px; }
+#addProviderModal .provider-api-key-row > .provider-api-key-disable,
+#addProviderModal .provider-api-key-row > .provider-api-key-remove { align-self: center; }
 @media (max-width: 640px) {
-  #addProviderModal .modal-footer > .blora-button { flex: 0 0 auto; width: auto; }
+  #addProviderModal .provider-api-key-input-wrap { flex-basis: 100%; }
+  #addProviderModal .provider-api-key-label-wrap { flex: 1 1 auto; }
+  #addProviderModal .provider-api-key-label-wrap input { width: 100%; }
+}
+#addProviderModal .is-invalid,
+#addProviderModal [aria-invalid="true"]::part(trigger) {
+  border-color: var(--destructive) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--destructive) 18%, transparent);
+}
+#addProviderModal .provider-editor-alert ul { margin: var(--blora-space-2) 0 0; padding-inline-start: 20px; }
+#addProviderModal .provider-editor-alert p { margin: var(--blora-space-2) 0 0; }
+
+#addProviderModal .modal-footer {
+  grid-area: footer;
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: var(--blora-space-2);
+  flex-wrap: wrap;
+  padding: var(--blora-space-3) var(--blora-space-5);
+  border-top: var(--blora-border-subtle);
+  background: var(--blora-color-surface-default);
+}
+#addProviderModal .provider-editor-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  margin-inline-start: auto;
+  flex-wrap: wrap;
+}
+#providerEditorPageStatus { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+.provider-editor-dirty { color: var(--warning, #b45309); font-size: var(--blora-text-xs); }
+
+@media (max-width: 900px) {
+  #addProviderModal::part(backdrop) { padding: 0 !important; }
+  #addProviderModal::part(panel) {
+    flex: 0 0 auto !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  #addProviderModal .modal-content {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "header" "nav" "body" "footer";
+  }
+  #addProviderModal .provider-editor-pages {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: var(--blora-border-subtle);
+    padding: var(--blora-space-2) var(--blora-space-3);
+  }
+  #addProviderModal .provider-editor-nav-item { width: auto; flex: 0 0 auto; }
+  #addProviderModal .provider-editor-nav-copy small { display: none; }
+  #addProviderModal .provider-editor-nav-index { display: none; }
+  #addProviderModal .modal-body { padding: var(--blora-space-4); max-width: none; }
+  #addProviderModal .provider-form-basics,
+  #addProviderModal .provider-form-section[open] .provider-form-section-body { padding: var(--blora-space-4); }
+  #addProviderModal .form-row-2 { grid-template-columns: 1fr; }
+  #addProviderModal .provider-editor-summary { margin-inline-start: 0; }
+  #addProviderModal .provider-editor-footer-actions { margin-inline-start: 0; width: 100%; }
+  #addProviderModal .provider-editor-footer-actions .blora-button { flex: 1 1 auto; }
+}
+
+@media (max-width: 560px) {
   #addProviderModal .provider-api-key-row { flex-wrap: wrap; }
 }
 

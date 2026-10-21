@@ -250,7 +250,7 @@ test('legacy quota widget is supported and real refresh requires explicit action
   await f.click('refresh-quotas');
   assert.deepEqual(actions, ['providers', 'refresh']);
   await f.click('test-provider', { id: 'p' });
-  assert.deepEqual(actions.slice(-2), ['providers', 'ping']);
+  assert.deepEqual(actions.slice(-1), ['ping']);
   f.lib.destroy();
 });
 

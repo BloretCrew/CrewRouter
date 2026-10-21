@@ -6,12 +6,22 @@
 
 管理后台以用户控制台模型库为视觉基准，复制其页面区块、供应商折叠分组和模型条目结构，复用 `model-library-blora.css` 与 Blora 控件。后台视图模板集中在 `public/js/admin-library-console-view.js`；用户控制台本身不变。用户侧 Key 绑定、星标与隐藏操作替换为后台的系统启停、TEAM 授权、批量选择及完整管理入口，数据和写入仍使用管理员接口。
 
-视觉直接沿用控制台的 Blora 按钮、搜索、下拉、徽章及更多菜单，不再用后台自定义按钮和卡片皮肤覆盖。顶部只保留供应商管理、添加供应商和更多菜单；模型卡片只常驻编辑/系统启用，其余管理能力收进同款下拉。TEAM 范围置于额度概览之前，批量工具仅在勾选模型后显示。筛选通过 `blora-select` 事件处理，菜单动作使用结构化值分发，不执行内联脚本。
+视觉直接沿用控制台的 Blora 按钮、搜索、下拉、徽章及更多菜单，不再用后台自定义按钮和卡片皮肤覆盖。顶部保留供应商管理、添加供应商和更多菜单；模型卡片只常驻编辑/系统启用，其余管理能力收进同款下拉。TEAM 范围独立成条，搜索、供应商、排序、更多筛选和结果数位于同一工具栏；已选筛选以可单独移除的标签展示。批量工具在勾选模型后出现，全选已加载与按筛选批量操作收进“批量操作”菜单。供应商额度移到模型目录之后并支持折叠，避免额度卡片挤占首屏。供应商分组头展示格式、标签、模型数、授权/启用数量和额度摘要；模型卡展示上游 ID、状态、测试结果、系列及价格。筛选通过 `blora-select` 的 `change` 事件处理，菜单动作使用结构化值分发，不执行内联脚本。
+
+模型库内的编辑、同步、测试和额度操作直接执行，只有“供应商管理 / 模型管理 / TEAM 管理”打开管理面板。从模型库新增或编辑供应商后，保存成功会刷新当前模型库；控制台内嵌的“我的上游”继续直接展示供应商管理页。
 
 - 「全部模型」中的开关控制系统模型启用状态，影响全部用户。
 - 选择 TEAM 后，开关控制该 TEAM 的模型授权。供应商及系统模型状态另行展示。
 - 关闭模型授权可能清理失去访问权限的 API Key 绑定；恢复授权后需要重新配置已清理的绑定。
 - 模型复选框用于批量操作。筛选、分页与供应商展开加载减少大目录的前端开销。
+
+## 供应商编辑器
+
+供应商编辑器在桌面使用左侧分区导航和右侧表单的双栏布局，面板约 1100px 宽、860px 高；宽度不超过 900px 时改为全屏，分区导航横排滚动。
+
+七个分区保持为基本信息、密钥、模型与额度、代理、测试配置、请求头转发和标签。API Key 列表、顺序/权重策略与脚本刷新统一放在“密钥”分区；基本信息只保留名称、Base URL、格式、启用状态和备注。额度关闭时隐藏查询方式及条件配置，脚本模式下隐藏顺序/权重选择。
+
+保存前统一校验名称、Base URL、模型列表 URL、脚本、CPA、火山方舟和代理配置。失败时显示错误摘要，跳到第一个错误分区并标记、聚焦字段。关闭、Esc 或点击遮罩时若有未保存修改会要求确认；保存过程中禁止重复提交和关闭。保存成功后按来源返回模型库或刷新管理面板。
 
 ## 管理功能
 
@@ -38,6 +48,7 @@ node server/scripts/test-admin-model-library.js
 node --test scripts/test-admin-library-team-rules.js scripts/test-admin-model-library-ui.js scripts/test-admin-library-integration.js
 node scripts/test-admin-model-library-browser.js
 node scripts/test-admin-library-console-view-browser.js
+node scripts/test-provider-editor-pages-browser.js
 node server/scripts/test-provider-manager-permissions.js
 node server/scripts/test-personal-model-access.js
 node server/scripts/test-frontier-auto-add.js

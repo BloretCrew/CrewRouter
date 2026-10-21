@@ -218,6 +218,16 @@ async function main() {
     await cdp.send('Network.setBlockedURLs', { urls: ['https://*', 'http://*.invalid/*'] });
     console.log(`Fixture ${base}; Chrome CDP ${debug}; public 页面，无实际后端或数据库。`);
     const expect = async (expression, label, frame = true) => assert.ok(await cdp.evaluate(expression, frame), label);
+    const navigate = async url => {
+      let lastError;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { await cdp.send('Page.navigate', { url }); return; } catch (error) {
+          lastError = error;
+          await sleep(500);
+        }
+      }
+      throw lastError;
+    };
     for (const mode of ['personal', 'local', 'team']) {
       state.mode = mode;
       for (const width of [1024, 390]) {
@@ -225,9 +235,9 @@ async function main() {
         let ready = false;
         await check(`${prefix} 页面加载`, async () => {
           await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: 720, deviceScaleFactor: 1, mobile: width === 390 });
-          await cdp.send('Page.navigate', { url: 'about:blank' });
+          await navigate('about:blank');
           await cdp.wait("location.href === 'about:blank'");
-          await cdp.send('Page.navigate', { url: `${base}/console?fixture=${mode}-${width}#myUpstream` });
+          await navigate(`${base}/console?fixture=${mode}-${width}#myUpstream`);
           await cdp.wait("typeof app !== 'undefined' && !!app.user && !!app.instance && app.currentPage === 'myUpstream'");
           await cdp.wait(`app.instance.edition === '${mode === 'personal' ? 'personal' : 'team'}' && app.instance.runtime === '${mode === 'local' ? 'desktop-local' : 'server'}'`);
           await expect('app.user.isAdmin === false', '必须使用非管理员用户', false);
@@ -263,9 +273,10 @@ async function main() {
             await cdp.wait("!!document.getElementById('wizardManualFallback')", true);
             await cdp.click('#wizardManualFallback', true);
             await cdp.wait("document.getElementById('addProviderModal').hasAttribute('open')", true);
-            await cdp.wait("(() => {const modal=document.getElementById('addProviderModal');const panel=modal.shadowRoot?.querySelector('[part=panel],.blora-dialog__panel');if(!panel)return false;const r=panel.getBoundingClientRect();return Math.abs(r.width-innerWidth)<2 && Math.abs(r.height-innerHeight)<2;})()", true);
+            await cdp.wait("(() => {const modal=document.getElementById('addProviderModal');const panel=modal.shadowRoot?.querySelector('[part=panel],.blora-dialog__panel');if(!panel)return false;const r=panel.getBoundingClientRect();const full=Math.abs(r.width-innerWidth)<2 && Math.abs(r.height-innerHeight)<2;const contained=r.width>0 && r.height>0 && r.left>=-1 && r.top>=-1 && r.right<=innerWidth+1 && r.bottom<=innerHeight+1 && r.width>=Math.min(900,innerWidth);return innerWidth<=900 ? full : contained;})()", true);
             await cdp.fill('#providerName', 'Fixture unsaved provider', true);
             await cdp.fill('#providerBaseUrl', 'https://fixture.invalid/v1', true);
+            await cdp.click('[data-provider-page="1"]', true);
             await cdp.fill('.provider-api-key-input[data-key-index="0"]', 'fixture-unsaved-key-1', true);
             await cdp.click('#addProviderApiKeyBtn', true);
             await cdp.fill('.provider-api-key-input[data-key-index="1"]', 'fixture-unsaved-key-2', true);
@@ -282,6 +293,8 @@ async function main() {
           });
           await check(`${prefix} editor 关闭`, async () => {
             if (await cdp.evaluate("document.getElementById('addProviderModal').hasAttribute('open')", true)) await cdp.click('#addProviderModal .modal-close', true);
+            await cdp.wait("!!document.querySelector('blora-dialog[open] [data-dialog-confirm]')", true);
+            await cdp.click('[data-dialog-confirm]', true);
             await cdp.wait("!document.getElementById('addProviderModal').hasAttribute('open')", true);
             await expect("!document.querySelector('blora-dialog[open]')", '不应残留向导遮罩');
           });

@@ -55,16 +55,18 @@
     return buildHash.call(this, page, options);
   };
   proto.navigateTo = async function (page, options = {}) {
+    const embedded = document.documentElement.classList.contains('embedded-provider-manager');
     const oldPages = { adminProviders: 'providers', adminModels: 'models', adminTeams: 'teams', adminUserGroups: 'teams' };
     const manager = oldPages[page];
-    if (manager) {
+    // 控制台内嵌的「我的上游」直接展示供应商管理页，不再套一层模型库抽屉。
+    if (manager && !embedded) {
       await this.navigateTo('adminModelLibrary', { ...options, skipHash: true });
       this._writeAdminHash('adminModelLibrary', { teamId: options.teamId });
       if (manager !== 'teams' || !options.teamId) await this.openLibraryManager(manager);
       return;
     }
     if (this._unifiedProviders && ['adminStats', 'adminUsers', 'adminTeams', 'adminUserGroups', 'adminAuditLogs'].includes(page)) page = 'adminModelLibrary';
-    if (document.documentElement.classList.contains('embedded-provider-manager')) page = 'adminModelLibrary';
+    if (embedded && !['adminProviders', 'adminModels'].includes(page)) page = 'adminModelLibrary';
     this.closeLibraryManager(false);
     this._libraryMemberSeq = (this._libraryMemberSeq || 0) + 1;
     // Legacy navigation guards accept the library through this explicit path.

@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
-  <link rel="stylesheet" href="/css/admin-model-library.css?v=console-design-20261018b">
+  <link rel="stylesheet" href="/css/admin-model-library.css?v=admin-editor-20261021c">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sidebar-blora.css?v=mobile-sidebar-avatar-20261018">
@@ -44,7 +44,7 @@
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=invite-team-select-20261008">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=cards-20261005">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=model-cards-20261005">
-  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=provider-menu-stack-20261005">
+  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=admin-editor-20261021c">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=paged-error-detail-20261008">
   <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=rounded-audit-badges-20261008">
   <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=paged-prompt-detail-20261008">
@@ -1692,12 +1692,26 @@
 
   <!-- 添加/编辑供应商模态框 -->
   <blora-dialog id="addProviderModal" role="dialog" aria-modal="true">
-    <div class="modal-content modal-content-lg">
-      <div class="modal-header">
-        <h3 id="providerModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
-        <button class="modal-close">&times;</button>
+    <div class="modal-content modal-content-lg provider-editor">
+      <div class="modal-header provider-editor-header">
+        <div class="provider-editor-heading">
+          <h3 id="providerModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
+          <p class="provider-editor-subtitle" data-i18n="配置连接、密钥、额度与转发选项">配置连接、密钥、额度与转发选项</p>
+        </div>
+        <div id="providerEditorSummary" class="provider-editor-summary" aria-live="polite"></div>
+        <button type="button" class="modal-close" aria-label="关闭" data-i18n-aria-label="关闭">&times;</button>
       </div>
-      <nav class="provider-editor-pages" aria-label="供应商配置分页"><button type="button" class="blora-button" data-variant="ghost" data-provider-page="0" onclick="adminApp.setProviderEditorPage(0)">基本信息</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="1" onclick="adminApp.setProviderEditorPage(1)">密钥模式</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="2" onclick="adminApp.setProviderEditorPage(2)">模型与额度</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="3" onclick="adminApp.setProviderEditorPage(3)">代理</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="4" onclick="adminApp.setProviderEditorPage(4)">测试配置</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="5" onclick="adminApp.setProviderEditorPage(5)">请求头转发</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="6" onclick="adminApp.setProviderEditorPage(6)">标签</button></nav><div class="modal-body">
+      <nav class="provider-editor-pages" aria-label="供应商配置分区">
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="0" onclick="adminApp.setProviderEditorPage(0)"><span class="provider-editor-nav-index">1</span><span class="provider-editor-nav-copy"><strong data-i18n="基本信息">基本信息</strong><small data-i18n="名称与连接">名称与连接</small></span></button>
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="1" onclick="adminApp.setProviderEditorPage(1)"><span class="provider-editor-nav-index">2</span><span class="provider-editor-nav-copy"><strong data-i18n="密钥">密钥</strong><small data-i18n="Key 与刷新方式">Key 与刷新方式</small></span></button>
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="2" onclick="adminApp.setProviderEditorPage(2)"><span class="provider-editor-nav-index">3</span><span class="provider-editor-nav-copy"><strong data-i18n="模型与额度">模型与额度</strong><small data-i18n="列表与余额查询">列表与余额查询</small></span></button>
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="3" onclick="adminApp.setProviderEditorPage(3)"><span class="provider-editor-nav-index">4</span><span class="provider-editor-nav-copy"><strong data-i18n="代理">代理</strong><small data-i18n="单代理或代理池">单代理或代理池</small></span></button>
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="4" onclick="adminApp.setProviderEditorPage(4)"><span class="provider-editor-nav-index">5</span><span class="provider-editor-nav-copy"><strong data-i18n="测试配置">测试配置</strong><small data-i18n="模型测试 UA">模型测试 UA</small></span></button>
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="5" onclick="adminApp.setProviderEditorPage(5)"><span class="provider-editor-nav-index">6</span><span class="provider-editor-nav-copy"><strong data-i18n="请求头转发">请求头转发</strong><small data-i18n="Content-Type / UA">Content-Type / UA</small></span></button>
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="6" onclick="adminApp.setProviderEditorPage(6)"><span class="provider-editor-nav-index">7</span><span class="provider-editor-nav-copy"><strong data-i18n="标签">标签</strong><small data-i18n="分类与筛选">分类与筛选</small></span></button>
+      </nav>
+      <div class="modal-body provider-editor-body">
+        <div id="providerEditorAlert" class="provider-editor-alert" role="alert" hidden></div>
         <input type="hidden" id="providerId">
 
         <!-- 基础字段（始终可见） -->
@@ -1713,33 +1727,6 @@
           <div class="form-group">
             <label for="providerBaseUrl">Base URL</label>
             <input type="text" id="providerBaseUrl" class="input" placeholder="例如：https://api.openai.com/v1" data-i18n-placeholder="例如：https://api.openai.com/v1">
-          </div>
-          <div class="form-group" id="providerFixedKeysSection">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-              <label style="margin:0;">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
-              <div class="provider-key-select-mode" id="providerKeySelectModeWrap" style="display:flex;align-items:center;gap:12px;font-size:13px;">
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:normal;margin:0;">
-                  <input type="radio" name="providerKeySelectMode" value="order" checked onchange="adminApp.onProviderKeySelectModeChange()"><span data-i18n="顺序模式">
-                  顺序模式
-                </span></label>
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:normal;margin:0;">
-                  <input type="radio" name="providerKeySelectMode" value="weight" onchange="adminApp.onProviderKeySelectModeChange()"><span data-i18n="权重模式">
-                  权重模式
-                </span></label>
-              </div>
-            </div>
-            <div id="providerApiKeysList" class="provider-api-keys-list"></div>
-            <button type="button" class="blora-button" id="addProviderApiKeyBtn" onclick="adminApp.addProviderApiKeyRow()" style="margin-top:8px;" data-variant="secondary" data-size="sm"><span data-i18n="+ 添加 Key">
-              + 添加 Key
-            </span></button>
-            <small style="color:var(--muted-foreground);margin-top:6px;display:block;line-height:1.5;">
-              <strong><span data-i18n="主 Key">主 Key</span></strong>（获取模型列表 / 连通性 / 额度仅用主 Key）可通过「设为主」切换，也可拖动排序调整 fallback 顺序。
-              可用 <strong><span data-i18n="禁用">禁用</span></strong> 开关临时停用某个 Key（不参与调用，但保留配置）。
-              顺序模式：调用时按排序依次 fallback；权重模式：按权重随机选 Key，失败后再按权重从高到低 fallback。
-              编辑时修改 Key 文本即更新；留空该项在保存时会被忽略。
-            </small>
-            <!-- 兼容旧逻辑：隐藏单字段 -->
-            <input type="hidden" id="providerApiKey" value="">
           </div>
           <div class="form-row-2">
             <div class="form-group">
@@ -1757,6 +1744,10 @@
                 <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
               </blora-select>
             </div>
+          </div>
+          <div class="form-group">
+            <label for="providerNotes"><span data-i18n="备注">备注</span></label>
+            <textarea id="providerNotes" class="input" rows="3" placeholder="供应商备注，对有权限访问的用户可见" data-i18n-placeholder="供应商备注，对有权限访问的用户可见"></textarea>
           </div>
         </div>
 
@@ -1825,12 +1816,39 @@
                 </span></small>
               </div>
             </div>
+          <div class="form-group" id="providerFixedKeysSection">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <label style="margin:0;">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
+              <div class="provider-key-select-mode" id="providerKeySelectModeWrap" style="display:flex;align-items:center;gap:12px;font-size:13px;">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:normal;margin:0;">
+                  <input type="radio" name="providerKeySelectMode" value="order" checked onchange="adminApp.onProviderKeySelectModeChange()"><span data-i18n="顺序模式">
+                  顺序模式
+                </span></label>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:normal;margin:0;">
+                  <input type="radio" name="providerKeySelectMode" value="weight" onchange="adminApp.onProviderKeySelectModeChange()"><span data-i18n="权重模式">
+                  权重模式
+                </span></label>
+              </div>
+            </div>
+            <div id="providerApiKeysList" class="provider-api-keys-list"></div>
+            <button type="button" class="blora-button" id="addProviderApiKeyBtn" onclick="adminApp.addProviderApiKeyRow()" style="margin-top:8px;" data-variant="secondary" data-size="sm"><span data-i18n="+ 添加 Key">
+              + 添加 Key
+            </span></button>
+            <small style="color:var(--muted-foreground);margin-top:6px;display:block;line-height:1.5;">
+              <strong><span data-i18n="主 Key">主 Key</span></strong>（获取模型列表 / 连通性 / 额度仅用主 Key）可通过「设为主」切换，也可拖动排序调整 fallback 顺序。
+              可用 <strong><span data-i18n="禁用">禁用</span></strong> 开关临时停用某个 Key（不参与调用，但保留配置）。
+              顺序模式：调用时按排序依次 fallback；权重模式：按权重随机选 Key，失败后再按权重从高到低 fallback。
+              编辑时修改 Key 文本即更新；留空该项在保存时会被忽略。
+            </small>
+            <!-- 兼容旧逻辑：隐藏单字段 -->
+            <input type="hidden" id="providerApiKey" value="">
+          </div>
           </div>
         </details>
 
         <!-- 高级：模型与额度 -->
         <details class="provider-form-section" id="providerSectionModelsQuota">
-          <summary><span data-i18n="模型与额度">模型与额度 </span><span class="provider-form-section-hint"><span data-i18n="模型列表 URL、额度查询、备注">模型列表 URL、额度查询、备注</span></span></summary>
+          <summary><span data-i18n="模型与额度">模型与额度 </span><span class="provider-form-section-hint"><span data-i18n="模型列表 URL 与额度查询">模型列表 URL 与额度查询</span></span></summary>
           <div class="provider-form-section-body">
             <div class="form-group">
               <label for="providerModelsUrl"><span data-i18n="模型列表 URL（可选）">模型列表 URL（可选）</span></label>
@@ -1839,7 +1857,7 @@
             </div>
             <div class="form-group">
               <label for="providerQuotaEnabled"><span data-i18n="额度查询">额度查询</span></label>
-              <blora-select id="providerQuotaEnabled" onchange="adminApp.toggleQuotaScheduleFields()">
+              <blora-select id="providerQuotaEnabled" onchange="adminApp.toggleQuotaScheduleFields();adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
                 <blora-option value="true"><span data-i18n="启用（用户可查看此供应商额度）">启用（用户可查看此供应商额度）</span></blora-option>
                 <blora-option value="false"><span data-i18n="关闭">关闭</span></blora-option>
               </blora-select>
@@ -1866,7 +1884,7 @@
               </blora-select>
             </div>
             <div id="providerQuotaScheduleMeta" style="display:none;font-size:12px;color:var(--muted-foreground);margin:-4px 0 12px;"></div>
-            <div class="form-group">
+            <div class="form-group" id="providerQuotaModeGroup">
               <label for="providerQuotaMode"><span data-i18n="额度查询方式">额度查询方式</span></label>
               <blora-select id="providerQuotaMode" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
                 <blora-option value="script"><span data-i18n="通用脚本（按 Base URL 查询）">通用脚本（按 Base URL 查询）</span></blora-option>
@@ -1929,10 +1947,6 @@
               <textarea id="providerCodexConfigText" class="textarea textarea-mono" rows="6" placeholder='{"tokens":{"access_token":"...","refresh_token":"..."}}'></textarea>
               <input type="file" id="providerCodexConfigFile" class="input" accept=".json,.jsonc" style="margin-top:8px;color:var(--muted-foreground);">
               <button type="button" id="bindCodexQuotaBtn" class="blora-button" style="margin-top:8px;" data-variant="secondary"><span data-i18n="导入并绑定到当前供应商">导入并绑定到当前供应商</span></button>
-            </div>
-            <div class="form-group">
-              <label for="providerNotes"><span data-i18n="备注">备注</span></label>
-              <textarea id="providerNotes" class="input" rows="3" placeholder="供应商备注，对有权限访问的用户可见" data-i18n-placeholder="供应商备注，对有权限访问的用户可见"></textarea>
             </div>
           </div>
         </details>
@@ -2049,8 +2063,15 @@
           </div>
         </details>
       </div>
-      <div class="modal-footer"><span id="providerEditorPageStatus" role="status"></span><button type="button" id="providerEditorPrevious" class="blora-button" data-variant="outline" onclick="adminApp.setProviderEditorPage(adminApp._providerEditorPage - 1)">上一页</button><button type="button" id="providerEditorNext" class="blora-button" data-variant="outline" onclick="adminApp.setProviderEditorPage(adminApp._providerEditorPage + 1)">下一页</button>
-        <button type="button" id="saveProviderBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="保存">保存</span></button>
+      <div class="modal-footer provider-editor-footer">
+        <span id="providerEditorPageStatus" role="status"></span>
+        <span id="providerEditorDirty" class="provider-editor-dirty" hidden><span data-i18n="未保存">未保存</span></span>
+        <div class="provider-editor-footer-actions">
+          <button type="button" id="providerEditorPrevious" class="blora-button" data-variant="outline" onclick="adminApp.setProviderEditorPage(adminApp._providerEditorPage - 1)"><span data-i18n="上一页">上一页</span></button>
+          <button type="button" id="providerEditorNext" class="blora-button" data-variant="outline" onclick="adminApp.setProviderEditorPage(adminApp._providerEditorPage + 1)"><span data-i18n="下一页">下一页</span></button>
+          <button type="button" id="providerEditorCancel" class="blora-button" data-variant="secondary"><span data-i18n="取消">取消</span></button>
+          <button type="button" id="saveProviderBtn" class="blora-button" data-variant="primary"><span data-i18n="保存">保存</span></button>
+        </div>
       </div>
     </div>
   </blora-dialog>
@@ -2501,12 +2522,12 @@
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/admin.js?v=modeltrace-20261013"></script>
+  <script src="/js/admin.js?v=admin-editor-20261021c"></script>
   <script src="/js/admin-library-i18n.js?v=admin-library-20261014"></script>
-  <script src="/js/admin-library-console-view.js?v=console-design-20261018b"></script>
-  <script src="/js/admin-model-library.js?v=console-design-20261018b"></script>
+  <script src="/js/admin-library-console-view.js?v=admin-editor-20261021c"></script>
+  <script src="/js/admin-model-library.js?v=admin-editor-20261021c"></script>
   <script src="/js/admin-library-team-rules.js?v=admin-library-20261014"></script>
-  <script src="/js/admin-library-integration.js?v=admin-library-20261014"></script>
+  <script src="/js/admin-library-integration.js?v=admin-editor-20261021c"></script>
   <script src="/js/plugin-runtime.js?v=default-theme-select-20261008"></script>
   <script>
     const initializeSidebarNavigation = () => {

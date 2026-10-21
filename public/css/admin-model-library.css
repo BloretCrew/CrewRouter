@@ -1,69 +1,417 @@
 .admin-model-library { min-width: 0; padding-bottom: 24px; }
 .admin-model-library [hidden] { display: none !important; }
-.admin-model-library .aml-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); }
-.admin-model-library .aml-scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-3); }
-.admin-model-library .aml-toolbar-context { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-.admin-model-library .aml-toolbar-context strong { color: var(--blora-color-text-primary); }
-.admin-model-library .aml-team-tabs { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
-.admin-model-library .aml-team-tabs small, .admin-model-library .aml-team-results small { display: none; }
-.admin-model-library .aml-team-tabs [aria-pressed="true"] { background: var(--blora-color-action-primary-default); color: var(--blora-color-text-on-action); }
-.admin-model-library .aml-team-more, .admin-model-library .aml-more-filters { position: relative; }
+
+/* ---------- 顶部 ---------- */
+.admin-model-library .aml-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--blora-space-4);
+  flex-wrap: wrap;
+}
+.admin-model-library .aml-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.admin-model-library .aml-header-copy h2 { margin: 0; }
+.admin-model-library .aml-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+}
+.admin-model-library .aml-header-actions .library-more-menu { display: inline-flex; }
+
+/* ---------- 范围 ---------- */
+.admin-model-library .aml-scope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-3);
+}
+.admin-model-library .aml-scope-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+}
+.admin-model-library .aml-scope-label {
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-xs);
+  font-weight: 600;
+  letter-spacing: .08em;
+}
+.admin-model-library .aml-team-tabs,
+.admin-model-library .aml-team-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
+}
+.admin-model-library .aml-team-tabs small,
+.admin-model-library .aml-team-results small { display: none; }
+.admin-model-library .aml-team-tabs [aria-pressed="true"] {
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-action);
+}
+.admin-model-library .aml-toolbar-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-muted);
+}
+.admin-model-library .aml-toolbar-context strong {
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-sm);
+}
+.admin-model-library .aml-team-more,
+.admin-model-library .aml-more-filters { position: relative; }
 .admin-model-library summary { cursor: pointer; list-style: none; }
 .admin-model-library summary::-webkit-details-marker { display: none; }
-.admin-model-library .aml-team-panel { position: absolute; z-index: 15; left: 0; top: 100%; width: min(300px, calc(100vw - 64px)); padding: var(--blora-space-4); border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg); background: var(--blora-color-surface-default); box-shadow: var(--blora-shadow-2); }
+.admin-model-library .aml-team-panel {
+  position: absolute;
+  z-index: 25;
+  left: 0;
+  top: calc(100% + 6px);
+  width: min(320px, calc(100vw - 32px));
+  padding: var(--blora-space-4);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-2);
+}
 .admin-model-library .aml-team-panel input { width: 100%; }
 .admin-model-library .aml-team-results { display: grid; gap: var(--blora-space-2); max-height: 300px; overflow-y: auto; margin-top: var(--blora-space-3); }
-.admin-model-library .aml-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-3); width: 100%; }
-.admin-model-library .aml-filter-row > blora-search { flex: 1 1 240px; min-width: 0; }
-.admin-model-library .aml-filter-row > blora-select { flex: 0 1 180px; min-width: 0; }
-.admin-model-library .aml-batch-entry { margin-top: var(--blora-space-3); }
-.admin-model-library .aml-more-filters > summary { white-space: nowrap; }
-.admin-model-library .aml-filter-panel { display: flex; flex-wrap: wrap; gap: var(--blora-space-3); padding-top: var(--blora-space-4); }
-.admin-model-library .aml-filter-panel label { display: flex; flex-direction: column; gap: var(--blora-space-1); color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
-.admin-model-library .aml-filter-panel blora-select { min-width: 150px; }
-.admin-model-library .aml-more-filters[open] { flex-basis: 100%; }
-.admin-model-library .aml-selection { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); width: 100%; padding-top: var(--blora-space-3); margin-top: var(--blora-space-3); border-top: var(--blora-border-subtle); font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-.admin-model-library .aml-selection-hint { margin-left: auto; }
-.admin-model-library .aml-summary { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); margin-bottom: var(--blora-space-3); }
-.admin-model-library .aml-directory { display: block; }
-.admin-model-library .aml-provider-toggle { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-2); padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.admin-model-library .aml-provider-toggle strong { font: inherit; }
-.admin-model-library .aml-provider-toggle small { display: none; }
-.admin-model-library .aml-provider-header { flex-wrap: wrap; }
-.admin-model-library .aml-provider-summary { display: none; }
+
+/* ---------- 筛选 ---------- */
+.admin-model-library .aml-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-3);
+}
+.admin-model-library .aml-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  width: 100%;
+}
+.admin-model-library .aml-filter-row > blora-search { flex: 1 1 260px; min-width: 0; }
+.admin-model-library .aml-filter-row > blora-select { flex: 0 1 160px; min-width: 0; }
+.admin-model-library .aml-filter-row > blora-select[data-filter="sort"] { flex-basis: 170px; }
+.admin-model-library .aml-filter-count {
+  margin-inline-start: auto;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+  white-space: nowrap;
+}
+.admin-model-library .aml-batch-entry { flex: 0 0 auto; }
+.admin-model-library .aml-more-filters > summary {
+  min-height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.admin-model-library .aml-filter-panel {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(560px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-4);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-3);
+}
+.admin-model-library .aml-filter-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-1);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+}
+.admin-model-library .aml-filter-panel blora-select { width: 100%; min-width: 0; }
+.admin-model-library .aml-filter-panel > .aml-button { grid-column: 1 / -1; justify-self: start; }
+.admin-model-library .aml-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+}
+.admin-model-library .aml-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 3px 2px 10px;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-full);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-secondary);
+  font-size: var(--blora-text-xs);
+}
+.admin-model-library .aml-filter-chip-remove {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--blora-color-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.admin-model-library .aml-filter-chip-remove:hover { background: var(--blora-color-action-neutral-hover); color: var(--blora-color-text-primary); }
+
+/* ---------- 批量选择 ---------- */
+.admin-model-library .aml-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border: 1px solid var(--blora-color-action-primary-default);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-action-primary-tint);
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-secondary);
+}
+.admin-model-library .aml-selection-hint { margin-inline-start: auto; color: var(--blora-color-text-muted); }
+
+/* ---------- 提示 / 供应商分组 ---------- */
+.admin-model-library .aml-notice {
+  padding: var(--blora-space-3);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  font-size: var(--blora-text-sm);
+}
+.admin-model-library .aml-notice.is-error,
+.admin-model-library .aml-team-error { color: var(--destructive); }
+.admin-model-library .aml-provider-toggle {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-model-library .aml-provider-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.admin-model-library .aml-provider-name strong { overflow-wrap: anywhere; }
+.admin-model-library .aml-provider-name small {
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+}
+.admin-model-library .aml-provider-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2) var(--blora-space-3);
+}
+.admin-model-library .aml-provider-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.admin-model-library .aml-provider-tag-more { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+.admin-model-library .aml-provider-auth,
+.admin-model-library .aml-provider-quota {
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+  white-space: nowrap;
+}
+.admin-model-library .aml-provider-header .model-library-provider-actions { margin-inline-start: auto; }
 .admin-model-library .aml-provider-content { display: block; }
-.admin-model-library .aml-model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; }
-.admin-model-library .aml-model-title { flex: 1; min-width: 0; }
-.admin-model-library .aml-model-title strong { overflow-wrap: anywhere; }
-.admin-model-library .aml-model-title small { display: none; }
-.admin-model-library .aml-card { cursor: default; }
-.admin-model-library .aml-statuses { flex-basis: 100%; }
-.admin-model-library .aml-statuses > .aml-badge:nth-child(2) { display: none; }
-.admin-model-library .aml-statuses > .aml-badge:first-child.aml-success { display: none; }
-.admin-model-library .aml-check { display: inline-flex; align-items: center; }
+.admin-model-library .aml-model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+}
+
+/* ---------- 模型卡 ---------- */
+.admin-model-library .aml-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 11rem;
+  cursor: default;
+}
+.admin-model-library .model-library-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-2);
+}
+.admin-model-library .aml-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--blora-space-2);
+}
+.admin-model-library .aml-check { display: inline-flex; align-items: center; padding-top: 2px; }
 .admin-model-library .aml-check input { width: 14px; height: 14px; margin: 0; accent-color: var(--blora-color-action-primary-default); }
-.admin-model-library .aml-switch { flex: none; width: 32px; height: 20px; padding: 2px; border: 0; border-radius: var(--blora-radius-full); background: var(--blora-color-text-subtle); cursor: pointer; }
-.admin-model-library .aml-switch span { display: block; width: 16px; height: 16px; border-radius: 50%; background: white; transition: transform .15s; }
+.admin-model-library .aml-model-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-model-library .aml-model-title strong { overflow-wrap: anywhere; line-height: 1.3; }
+.admin-model-library .aml-model-title small {
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+  overflow-wrap: anywhere;
+}
+.admin-model-library .aml-statuses { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.admin-model-library .aml-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.admin-model-library .aml-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: auto;
+  padding-top: var(--blora-space-2);
+  border-top: var(--blora-border-subtle);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+}
+.admin-model-library .aml-card-meta .model-price-value { margin-inline-start: auto; }
+.admin-model-library .aml-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  margin-top: var(--blora-space-3);
+  padding-top: var(--blora-space-2);
+  border-top: var(--blora-border-subtle);
+}
+.admin-model-library .aml-card-actions .library-more-menu { margin-inline-start: auto; }
+
+/* ---------- 开关 ---------- */
+.admin-model-library .aml-switch {
+  flex: none;
+  width: 32px;
+  height: 20px;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--blora-radius-full);
+  background: var(--blora-color-text-subtle);
+  cursor: pointer;
+}
+.admin-model-library .aml-switch span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform .15s;
+}
 .admin-model-library .aml-switch[aria-checked="true"] { background: var(--blora-color-action-primary-default); }
 .admin-model-library .aml-switch[aria-checked="true"] span { transform: translateX(12px); }
 .admin-model-library .aml-switch:disabled { opacity: .45; cursor: not-allowed; }
-.admin-model-library .aml-switch:focus-visible, .admin-model-library .aml-provider-toggle:focus-visible { outline: 2px solid var(--blora-color-action-primary-default); outline-offset: 3px; }
-.admin-model-library .aml-card-actions .library-more-menu { margin-left: auto; }
-.admin-model-library .aml-card-meta { flex-wrap: wrap; }
-.admin-model-library .aml-card-meta > :first-child { display: none; }
-.admin-model-library .aml-card-meta:not(:has(> :nth-child(2))) { display: none; }
-.admin-model-library .aml-quota-heading { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); }
+.admin-model-library .aml-switch:focus-visible,
+.admin-model-library .aml-provider-toggle:focus-visible { outline: 2px solid var(--blora-color-action-primary-default); outline-offset: 3px; }
+
+/* ---------- 额度 ---------- */
+.admin-model-library .aml-quota-overview { padding: 0; overflow: hidden; }
+.admin-model-library .aml-quota-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--blora-space-3);
+  padding: var(--blora-space-4) var(--blora-space-5);
+  list-style: none;
+}
+.admin-model-library .aml-quota-heading h3 { margin: 0; }
 .admin-model-library .aml-quota-heading > span { flex: 1; color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
-.admin-model-library .aml-quota-heading h3 { flex-basis: 100%; }
-.admin-model-library .aml-notice { padding: var(--blora-space-3); margin-bottom: var(--blora-space-3); border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg); font-size: var(--blora-text-sm); }
-.admin-model-library .aml-notice.is-error, .admin-model-library .aml-team-error { color: var(--destructive); }
-.admin-model-library .aml-empty { grid-column: 1 / -1; padding: var(--blora-space-6); text-align: center; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
-.admin-model-library .aml-pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--blora-space-3); padding-top: var(--blora-space-3); font-size: var(--blora-text-xs); }
+.admin-model-library .aml-quota-heading::after {
+  content: '展开';
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+}
+.admin-model-library .aml-quota-overview[open] .aml-quota-heading::after { content: '收起'; }
+.admin-model-library .aml-quota-body { padding: 0 var(--blora-space-5) var(--blora-space-4); }
+.admin-model-library .aml-quota-toolbar { display: flex; justify-content: flex-end; margin-bottom: var(--blora-space-2); }
+.admin-model-library .aml-quota-host { max-height: 30rem; overflow: auto; }
+
+/* ---------- 空态 / 加载 / 分页 ---------- */
+.admin-model-library .aml-empty {
+  grid-column: 1 / -1;
+  padding: var(--blora-space-8) var(--blora-space-4);
+  text-align: center;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+.admin-model-library .aml-empty strong { display: block; margin-bottom: 4px; color: var(--blora-color-text-primary); }
+.admin-model-library .aml-empty p { margin: 0 0 var(--blora-space-3); }
+.admin-model-library .aml-empty .blora-button { margin: 0 4px; }
+.admin-model-library .aml-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  width: 100%;
+}
+.admin-model-library .aml-skeleton {
+  min-height: 9rem;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: linear-gradient(90deg, var(--blora-color-surface-raised) 25%, var(--blora-color-surface-default) 50%, var(--blora-color-surface-raised) 75%);
+  background-size: 200% 100%;
+  animation: aml-skeleton 1.4s ease-in-out infinite;
+}
+@keyframes aml-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.admin-model-library .aml-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--blora-space-3);
+  padding-top: var(--blora-space-3);
+  font-size: var(--blora-text-xs);
+}
+
+@media (max-width: 900px) {
+  .admin-model-library .aml-header { flex-direction: column; }
+  .admin-model-library .aml-header-actions { width: 100%; }
+  .admin-model-library .aml-header-actions .blora-button { flex: 1 1 auto; }
+}
+
 @media (max-width: 760px) {
-  .admin-model-library .aml-model-grid { grid-template-columns: 1fr; }
+  .admin-model-library .aml-model-grid,
+  .admin-model-library .aml-skeleton-grid { grid-template-columns: 1fr; }
   .admin-model-library .aml-filter-row > blora-search { flex-basis: 100%; }
-  .admin-model-library .aml-filter-panel blora-select { min-width: 0; width: 100%; }
-  .admin-model-library .aml-filter-panel label { flex: 1 1 140px; min-width: 0; }
+  .admin-model-library .aml-filter-row > blora-select { flex: 1 1 140px; }
+  .admin-model-library .aml-filter-count { margin-inline-start: 0; flex-basis: 100%; }
+  .admin-model-library .aml-batch-entry { flex: 1 1 100%; }
+  .admin-model-library .aml-batch-entry .library-more-menu { display: flex; }
+  .admin-model-library .aml-filter-panel {
+    position: static;
+    width: 100%;
+    grid-template-columns: 1fr;
+    box-shadow: none;
+    margin-top: var(--blora-space-2);
+  }
+  .admin-model-library .aml-team-panel { position: static; width: 100%; box-shadow: none; }
   .admin-model-library .aml-selection-hint { display: none; }
   .admin-model-library .aml-quota-heading > span { flex-basis: 100%; }
+  .admin-model-library .aml-quota-heading,
+  .admin-model-library .aml-quota-body { padding-inline: var(--blora-space-4); }
+  .admin-model-library .aml-card { min-height: 0; }
+  .admin-model-library .aml-provider-header .model-library-provider-actions { margin-inline-start: 0; }
 }
