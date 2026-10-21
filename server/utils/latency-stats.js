@@ -1,6 +1,7 @@
 'use strict';
 
-const { shanghaiDateRange, shanghaiDateString } = require('./timezone');
+const { shanghaiDateRange } = require('./timezone');
+const { normalizeRequestSource } = require('./usage-logs-filter');
 
 const MAX_RANGE_DAYS = 90;
 const DEFAULT_DAYS = 7;
@@ -95,7 +96,7 @@ function parseLatencyQuery(query = {}) {
     timezone: 'Asia/Shanghai',
     modelId: normalizeText(query.model_id, 100),
     providerId: normalizeText(query.provider_id, 100),
-    requestSource: normalizeText(query.request_source, 32),
+    requestSource: normalizeRequestSource(query.request_source),
     isStream,
   };
 }
