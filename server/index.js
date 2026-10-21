@@ -2334,6 +2334,18 @@ const app = express();
 // 信任反向代理（Nginx/Cloudflare等）
 app.set('trust proxy', 1);
 
+// 网关延迟指标起点：早于请求体解析，E2E 包含上传与反序列化耗时。
+app.use((req, res, next) => {
+  const path = req.path || req.url || '';
+  if (path === '/v1' || path.startsWith('/v1/')
+    || path === '/api/playground' || path.startsWith('/api/playground/')
+    || path === '/api/messages' || path === '/api/responses' || path.startsWith('/api/responses/')
+    || path.startsWith('/api/chat/')) {
+    req._requestStartedAt = Date.now();
+  }
+  next();
+});
+
 // 网关先执行请求体限制，再由全局 50MB parser 解析其他请求。
 // 编码工具（Claude Code/Codex 等）长上下文请求常达数 MB，限制必须与全局一致，过低会误杀正常请求。
 const { createGatewayBodyParser, gatewayBodyError } = require('./middleware/gateway-body');

@@ -106,6 +106,15 @@ const { canRetryUpstreamError } = require('../utils/upstream-retry-policy');
 const protocolBridge = require('../protocol/bridge');
 const wireShapes = require('../protocol/wire-shapes');
 const { createModelIdentity, observeModelResponse } = require('../utils/model-identity');
+const {
+  USAGE_METRIC_COLUMNS,
+  getRequestMetrics,
+  markActiveFirstByte,
+  markActiveToken,
+  usageMetricPlaceholders,
+  usageMetricValues,
+  forwardUpstreamHeaders,
+} = require('../utils/request-metrics');
 
 function modelIdentityValues(req, fusion = false) {
   const identity = fusion
@@ -130,8 +139,11 @@ async function fetchWithModelIdentity(url, options) {
   const identity = createModelIdentity(context?.requestedModel, sentBody?.model);
   if (context) context.modelIdentity = identity;
   const response = await proxyPool.proxyFetch(url, options);
-  if (context) context.retryAfter = response.status === 429
-    ? (response.headers?.get?.('retry-after') ?? response.headers?.['retry-after']) : null;
+  if (context) {
+    context.retryAfter = response.status === 429
+      ? (response.headers?.get?.('retry-after') ?? response.headers?.['retry-after']) : null;
+    if (context.metrics) context.metrics.captureHeaders(response.headers);
+  }
   return observeModelResponse(response, identity);
 }
 
@@ -1439,6 +1451,9 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   const baseUrl = cleanBaseUrl(provider.base_url);
   const url = upstreamUrl(baseUrl, '/chat/completions');
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: !!stream, model, providerId: provider.id, format: 'openai', serviceTier: body.service_tier
+  });
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json'
   });
@@ -1491,6 +1506,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   if (body.logit_bias !== undefined) upstreamBody.logit_bias = body.logit_bias;
   if (body.user !== undefined) upstreamBody.user = body.user;
   if (body.prompt_cache_key !== undefined) upstreamBody.prompt_cache_key = body.prompt_cache_key;
+  if (body.service_tier !== undefined) upstreamBody.service_tier = body.service_tier;
   // reasoning_effort：仅当模型开启 forward_reasoning_effort 时由上层写入 body
   if (body.reasoning_effort !== undefined) upstreamBody.reasoning_effort = body.reasoning_effort;
 
@@ -1554,6 +1570,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     if (currentProxyInfo?.proxyId) {
       proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, Date.now() - startTime);
     }
+    forwardUpstreamHeaders(res, response.headers);
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-store');
@@ -1617,11 +1634,16 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
           failure.code = 'upstream_stream_error';
           throw failure;
         }
-        const originalContent = parsed.choices?.[0]?.delta?.content || '';
+        const delta = parsed.choices?.[0]?.delta;
+        const originalContent = delta?.content || '';
         const content = streamScrubber.feed(originalContent);
-        if (parsed.choices?.[0]?.delta && originalContent !== content) {
+        if (delta && originalContent !== content) {
           parsed.choices[0].delta.content = content;
         }
+        if (delta && (content || delta.reasoning_content || (Array.isArray(delta.tool_calls) && delta.tool_calls.length))) {
+          attempt.markToken(content ? 'content' : (delta.reasoning_content ? 'reasoning' : 'tool'));
+        }
+        if (parsed.service_tier) attempt.setServiceTier(parsed.service_tier);
         totalContent += content;
         if (parsed.usage) lastUsage = parsed.usage;
         const normalizedChunk = ensureChatCompletionChunk(parsed, {
@@ -1653,6 +1675,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
 
         if (!firstChunkTime) {
           firstChunkTime = Date.now();
+          attempt.markFirstByte();
           Logger.stream(`[proxyOpenAI] 收到首个上游chunk: 等待耗时=${firstChunkTime - startTime}ms, chunk大小=${value.length}bytes`);
         }
         chunkCount++;
@@ -1761,7 +1784,12 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     Logger.stream(`[proxyOpenAI] 流式传输统计: chunkCount=${chunkCount}, sseLineCount=${sseLineCount}, jsonParseErrors=${jsonParseErrors}, contentLength=${totalContent.length}, 首chunk耗时=${firstChunkTime ? firstChunkTime - startTime : '-'}ms, 客户端断开=${clientDisconnected}, 背压次数=${backpressureCount}`);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyOpenAI] 流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-    return { ...normalized, content: totalContent };
+    const metricsSnapshot = attempt.finish({
+      promptTokens: normalized.promptTokens,
+      completionTokens: normalized.completionTokens,
+      completed: gotDone && !clientDisconnected
+    });
+    return { ...normalized, content: totalContent, metrics: metricsSnapshot };
   } else {
     // 非流式请求：带代理重试的 fetch
     const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
@@ -1849,10 +1877,17 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     if (req.apiUser?.injectPrompt) {
       scrubOpenAiChatCompletion(data, req.apiUser.injectPrompt);
     }
+    if (data.service_tier) attempt.setServiceTier(data.service_tier);
+    forwardUpstreamHeaders(res, response.headers);
     res.json(data);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyOpenAI] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, id=${data.id}, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-    return { ...normalized, content: data.choices?.[0]?.message?.content || '' };
+    const metricsSnapshot = attempt.finish({
+      promptTokens: normalized.promptTokens,
+      completionTokens: normalized.completionTokens,
+      completed: true
+    });
+    return { ...normalized, content: data.choices?.[0]?.message?.content || '', metrics: metricsSnapshot };
   }
 }
 
@@ -1867,6 +1902,9 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
   const baseUrl = cleanBaseUrl(provider.base_url);
   const url = upstreamUrl(baseUrl, '/responses');
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: !!stream, model, providerId: provider.id, format: 'responses', serviceTier: body.service_tier
+  });
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json'
   });
@@ -1933,6 +1971,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
 
   // 流式：Responses SSE → chat.completion.chunk SSE
   if (stream) {
+    forwardUpstreamHeaders(res, response.headers);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-store');
     res.setHeader('Connection', 'keep-alive');
@@ -1941,7 +1980,11 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     Logger.stream(`[proxyChatToResponses] SSE 头已发送, 开始流式传输: provider=${provider.id}(${provider.name}), model=${model}, url=${url}`);
 
     const { content, usage } = await ResponsesUpstream.streamResponsesAsChatCompletion(response.body, res, {
-      model, logPrefix: 'proxyChatToResponses', scrubber: createStreamScrubber(req.apiUser?.injectPrompt)
+      model,
+      logPrefix: 'proxyChatToResponses',
+      scrubber: createStreamScrubber(req.apiUser?.injectPrompt),
+      onFirstByte: () => attempt.markFirstByte(),
+      onToken: kind => attempt.markToken(kind)
     });
 
     const streamUsage = usage || {};
@@ -1951,7 +1994,8 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
       || streamUsage.input_tokens_details?.cached_tokens
       || streamUsage.prompt_tokens_details?.cached_tokens
       || 0;
-    return { promptTokens, completionTokens, cachedTokens, content };
+    const metricsSnapshot = attempt.finish({ promptTokens, completionTokens, completed: true });
+    return { promptTokens, completionTokens, cachedTokens, content, metrics: metricsSnapshot };
   }
 
   // 非流式：Responses → chat.completion
@@ -1971,9 +2015,16 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
   const storedContent = req.apiUser?.injectPrompt
     ? scrubInjectedEcho(ResponsesUpstream.extractResponsesText(data), { exactText: req.apiUser.injectPrompt })
     : ResponsesUpstream.extractResponsesText(data);
+  if (data.service_tier) attempt.setServiceTier(data.service_tier);
+  forwardUpstreamHeaders(res, response.headers);
   res.json(completion);
   Logger.info(`[proxyChatToResponses] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens}, completion_tokens=${normalized.completionTokens}`);
-  return { ...normalized, content: storedContent };
+  const metricsSnapshot = attempt.finish({
+    promptTokens: normalized.promptTokens,
+    completionTokens: normalized.completionTokens,
+    completed: true
+  });
+  return { ...normalized, content: storedContent, metrics: metricsSnapshot };
 }
 
 // 转发到上游 Anthropic 格式
@@ -2087,6 +2138,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   if (body.temperature !== undefined) upstreamBody.temperature = body.temperature;
   if (body.top_p !== undefined) upstreamBody.top_p = body.top_p;
   if (body.stop) upstreamBody.stop_sequences = Array.isArray(body.stop) ? body.stop : [body.stop];
+  if (body.speed) upstreamBody.speed = body.speed;
 
   if (body.tools) {
     upstreamBody.tools = body.tools.map(t => ({
@@ -2108,6 +2160,10 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   const msgCount = body.messages?.length || 0;
   Logger.info(`[proxyAnthropic] 请求: provider=${provider.id}(${provider.name}), url=${url}, model=${model}, stream=${!!stream}, messages=${msgCount}, max_tokens=${body.max_tokens ?? '-'}, temperature=${body.temperature ?? '-'}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: !!stream, model, providerId: provider.id, format: 'anthropic',
+    serviceTier: body.service_tier || (body.speed === 'fast' ? 'fast' : null)
+  });
 
   if (stream) {
     // 带代理重试的 fetch
@@ -2143,6 +2199,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     if (currentProxyInfo?.proxyId) {
       proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, Date.now() - startTime);
     }
+    forwardUpstreamHeaders(res, response.headers);
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-store');
@@ -2214,6 +2271,9 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     };
 
     const emitOpenAIChunk = async (delta, finishReason = null) => {
+      if (delta && (delta.content || delta.reasoning_content || (Array.isArray(delta.tool_calls) && delta.tool_calls.length))) {
+        attempt.markToken(delta.content ? 'content' : (delta.reasoning_content ? 'reasoning' : 'tool'));
+      }
       await ensureRoleEmitted();
       let payload = {
         id: streamChunkId,
@@ -2247,6 +2307,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 
         if (!firstChunkTime) {
           firstChunkTime = Date.now();
+          attempt.markFirstByte();
           Logger.stream(`[proxyAnthropic] 收到首个上游chunk: 等待耗时=${firstChunkTime - startTime}ms, chunk大小=${value.length}bytes`);
         }
         chunkCount++;
@@ -2463,7 +2524,12 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     Logger.stream(`[proxyAnthropic] 流式传输统计: chunkCount=${chunkCount}, sseLineCount=${sseLineCount}, jsonParseErrors=${jsonParseErrors}, contentLength=${totalContent.length}, finish_reason=${streamFinishReason}, 首chunk耗时=${firstChunkTime ? firstChunkTime - startTime : '-'}ms, 客户端断开=${clientDisconnected}, toolUseBlocks=${toolUseBlocks.length}, 背压次数=${backpressureCount}`);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropic] 流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-    return { ...normalized, content: totalContent };
+    const metricsSnapshot = attempt.finish({
+      promptTokens: normalized.promptTokens,
+      completionTokens: normalized.completionTokens,
+      completed: gotDone && !clientDisconnected
+    });
+    return { ...normalized, content: totalContent, metrics: metricsSnapshot };
   } else {
     // 非流式请求：带代理重试的 fetch
     const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
@@ -2585,10 +2651,16 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     if (req.apiUser?.injectPrompt) {
       scrubOpenAiChatCompletion(openaiResponse, req.apiUser.injectPrompt);
     }
+    forwardUpstreamHeaders(res, response.headers);
     res.json(openaiResponse);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-    return { ...normalized, content: openaiResponse.choices[0].message.content };
+    const metricsSnapshot = attempt.finish({
+      promptTokens: normalized.promptTokens,
+      completionTokens: normalized.completionTokens,
+      completed: true
+    });
+    return { ...normalized, content: openaiResponse.choices[0].message.content, metrics: metricsSnapshot };
   }
 }
 
@@ -2613,7 +2685,7 @@ async function handleChatCompletion(req, res) {
   // 吞图：在转发前剥离客户端图片并注入提示（默认禁用）
   applySwallowImagesIfEnabled(req);
 
-  let { model, messages, temperature, max_tokens, max_completion_tokens, top_p, frequency_penalty, presence_penalty, stop, stream, tools, tool_choice, response_format, n, fusion_preset, prompt_cache_key } = req.body;
+  let { model, messages, temperature, max_tokens, max_completion_tokens, top_p, frequency_penalty, presence_penalty, stop, stream, tools, tool_choice, response_format, n, fusion_preset, prompt_cache_key, service_tier, speed } = req.body;
   // 兼容 max_completion_tokens（新 OpenAI / o 系列）
   if (max_tokens === undefined && max_completion_tokens !== undefined) {
     max_tokens = max_completion_tokens;
@@ -2825,6 +2897,8 @@ async function handleChatCompletion(req, res) {
     if (req.body.user !== undefined) body.user = req.body.user;
     if (req.body.stream_options !== undefined) body.stream_options = req.body.stream_options;
     if (prompt_cache_key !== undefined) body.prompt_cache_key = prompt_cache_key;
+    if (service_tier !== undefined) body.service_tier = service_tier;
+    if (speed !== undefined) body.speed = speed;
     if (modelConfig.forward_reasoning_effort && req.body.reasoning_effort !== undefined) {
       body.reasoning_effort = req.body.reasoning_effort;
     }
@@ -2944,13 +3018,13 @@ async function handleChatCompletion(req, res) {
         const localModelId = modelConfig.id || userRequestedModel;
         const latencyMs = Date.now() - liveCallStart;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -3135,14 +3209,17 @@ async function handleFusionRequest(req, res, format = 'openai') {
           apiKeyId: req.apiUser.keyId,
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
+        const fusionMetrics = getRequestMetrics(req).fallbackSnapshot({
+          stream: !!stream, promptTokens: fusionPromptTokens, completionTokens: fusionCompletionTokens
+        });
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
+           weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, ${usageMetricPlaceholders(20)}) RETURNING id`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
            totalWeightedTokens, null, 'fusion',
            JSON.stringify(messages), result.content || null, realDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta, ...modelIdentityValues(req, true)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req, true), ...usageMetricValues(fusionMetrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
 
@@ -3581,13 +3658,13 @@ async function handleAnthropicMessage(req, res) {
         const localModelId = modelConfig.id || queueModelId;
         const latencyMs = Date.now() - liveCallStart;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -3688,6 +3765,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   if (body.metadata) upstreamBody.metadata = body.metadata;
   if (body.output_config) upstreamBody.output_config = body.output_config;
   if (body.service_tier) upstreamBody.service_tier = body.service_tier;
+  if (body.speed) upstreamBody.speed = body.speed;
   if (body.cache_control) upstreamBody.cache_control = body.cache_control;
   if (body.container) upstreamBody.container = body.container;
   if (body.inference_geo) upstreamBody.inference_geo = body.inference_geo;
@@ -3703,6 +3781,10 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   const msgCount = body.messages?.length || 0;
   Logger.info(`[proxyAnthropicToAnthropic] 请求: provider=${provider.id}(${provider.name}), url=${url}, model=${model}, stream=${!!stream}, messages=${msgCount}, max_tokens=${body.max_tokens ?? '-'}, temperature=${body.temperature ?? '-'}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: !!stream, model, providerId: provider.id, format: 'anthropic',
+    serviceTier: body.service_tier || (body.speed === 'fast' ? 'fast' : null)
+  });
 
   if (stream) {
     const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
@@ -3733,6 +3815,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       return respondProxyError(res, response.status, toAnthropicError(errBody, response.status), { suppressErrorResponse });
     }
 
+    forwardUpstreamHeaders(res, response.headers);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-store');
     res.setHeader('Connection', 'keep-alive');
@@ -3792,6 +3875,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
 
         if (!firstChunkTime) {
           firstChunkTime = Date.now();
+          attempt.markFirstByte();
           Logger.stream(`[proxyAnthropicToAnthropic] 收到首个上游chunk: 等待耗时=${firstChunkTime - startTime}ms, chunk大小=${value.length}bytes`);
         }
         chunkCount++;
@@ -3828,13 +3912,16 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
                 cachedTokens = parsed.message?.usage?.cache_read_input_tokens || 0;
               } else if (parsed.type === 'content_block_start') {
                 currentBlockType = parsed.content_block?.type || null;
+                if (currentBlockType === 'tool_use') attempt.markToken('tool');
               } else if (parsed.type === 'content_block_delta') {
                 if (currentBlockType === 'text') {
                   const scrubbedText = streamScrubber.feed(parsed.delta?.text || '');
                   parsed.delta.text = scrubbedText;
                   totalContent += scrubbedText;
+                  if (scrubbedText) attempt.markToken('content');
                 } else if (currentBlockType === 'thinking') {
                   // Thinking content tracked but not added to totalContent
+                  if (parsed.delta?.thinking) attempt.markToken('reasoning');
                 }
               } else if (parsed.type === 'content_block_stop') {
                 currentBlockType = null;
@@ -3994,7 +4081,8 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     Logger.stream(`[proxyAnthropicToAnthropic] 流式传输统计: chunkCount=${chunkCount}, sseLineCount=${sseLineCount}, jsonParseErrors=${jsonParseErrors}, contentLength=${totalContent.length}, 首chunk耗时=${firstChunkTime ? firstChunkTime - startTime : '-'}ms, 客户端断开=${clientDisconnected}, 背压次数=${backpressureCount}`);
     const cacheHitRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropicToAnthropic] 流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${promptTokens}, completion_tokens=${completionTokens}, cached_tokens=${cachedTokens}, cache_hit_rate=${cacheHitRate}%`);
-    return { promptTokens, completionTokens, cachedTokens, content: totalContent };
+    const metricsSnapshot = attempt.finish({ promptTokens, completionTokens, completed: gotDone && !clientDisconnected });
+    return { promptTokens, completionTokens, cachedTokens, content: totalContent, metrics: metricsSnapshot };
   } else {
     const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
       (proxyInfo) => ({
@@ -4059,10 +4147,17 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     if (req.apiUser?.injectPrompt) {
       scrubAnthropicResponse(hookData, req.apiUser.injectPrompt);
     }
+    if (hookData.service_tier) attempt.setServiceTier(hookData.service_tier);
+    forwardUpstreamHeaders(res, response.headers);
     res.json(hookData);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropicToAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-    return { ...normalized, content: hookData.content?.map(b => b.text || '').join('') || '' };
+    const metricsSnapshot = attempt.finish({
+      promptTokens: normalized.promptTokens,
+      completionTokens: normalized.completionTokens,
+      completed: true
+    });
+    return { ...normalized, content: hookData.content?.map(b => b.text || '').join('') || '', metrics: metricsSnapshot };
   }
 }
 
@@ -4093,6 +4188,9 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     headers['Authorization'] = `Bearer ${provider.api_key}`;
   }
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: true, model, providerId: provider.id, format: 'openai'
+  });
 
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
@@ -4137,6 +4235,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     return respondProxyError(res, response.status, toAnthropicError(errBody, response.status), { suppressErrorResponse });
   }
 
+  forwardUpstreamHeaders(res, response.headers);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-store');
   res.setHeader('Connection', 'keep-alive');
@@ -4241,6 +4340,9 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     if (choice?.finish_reason) rawFinish = choice.finish_reason;
     const delta = choice?.delta;
     if (!delta) return;
+    if (typeof delta.content === 'string' && delta.content) attempt.markToken('content');
+    if (Array.isArray(delta.tool_calls) && delta.tool_calls.length) attempt.markToken('tool');
+    if (typeof delta.reasoning_content === 'string' && delta.reasoning_content) attempt.markToken('reasoning');
     if (Array.isArray(delta.content) && delta.content.some(block => ['thinking', 'redacted_thinking'].includes(block?.type))) {
       const error = new Error('Opaque thinking requires the native Anthropic streaming endpoint');
       error.code = 'unsupported_stream_thinking';
@@ -4289,6 +4391,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
 
       if (!firstChunkTime) {
         firstChunkTime = Date.now();
+        attempt.markFirstByte();
         Logger.stream(`[proxyOpenAIToAnthropic] 收到首个上游chunk: 等待耗时=${firstChunkTime - startTime}ms, chunk大小=${value.length}bytes`);
       }
       chunkCount++;
@@ -4432,7 +4535,12 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   Logger.stream(`[proxyOpenAIToAnthropic] 流式传输统计: chunkCount=${chunkCount}, sseLineCount=${sseLineCount}, jsonParseErrors=${jsonParseErrors}, contentLength=${totalContent.length}, 首chunk耗时=${firstChunkTime ? firstChunkTime - startTime : '-'}ms, 客户端断开=${clientDisconnected}, toolCalls=${toolAssembler.entries.size}, 背压次数=${backpressureCount}`);
   const cacheHitRate = promptTokens > 0 ? ((normalized.cachedTokens || 0) / promptTokens * 100).toFixed(1) : 0;
   Logger.info(`[proxyOpenAIToAnthropic] 流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${promptTokens || 0}, completion_tokens=${completionTokens}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-  return { ...normalized, promptTokens, completionTokens, content: totalContent };
+  const metricsSnapshot = attempt.finish({
+    promptTokens: promptTokens || normalized.promptTokens,
+    completionTokens: completionTokens || normalized.completionTokens,
+    completed: !clientDisconnected
+  });
+  return { ...normalized, promptTokens, completionTokens, content: totalContent, metrics: metricsSnapshot };
 }
 
 // OpenAI 非流式响应 -> Anthropic 格式
@@ -4447,6 +4555,9 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
     headers['Authorization'] = `Bearer ${provider.api_key}`;
   }
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: false, model, providerId: provider.id, format: 'openai'
+  });
 
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
@@ -4523,10 +4634,17 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
   if (req.apiUser?.injectPrompt) {
     scrubAnthropicResponse(anthropicResp, req.apiUser.injectPrompt);
   }
+  if (data.service_tier) attempt.setServiceTier(data.service_tier);
+  forwardUpstreamHeaders(res, response.headers);
   res.json(anthropicResp);
   const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
   Logger.info(`[proxyOpenAIToAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-  return { ...normalized, content: anthropicResp.content.map(b => b.text || '').join('') };
+  const metricsSnapshot = attempt.finish({
+    promptTokens: normalized.promptTokens,
+    completionTokens: normalized.completionTokens,
+    completed: true
+  });
+  return { ...normalized, content: anthropicResp.content.map(b => b.text || '').join(''), metrics: metricsSnapshot };
 }
 
 // ==================== OpenAI Responses API ====================
@@ -4820,6 +4938,9 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
     if (parsed.usage) lastUsage = parsed.usage;
     const delta = choice?.delta;
     if (!delta) return;
+    if (delta.content || delta.reasoning_content || (Array.isArray(delta.tool_calls) && delta.tool_calls.length)) {
+      markActiveToken(req, delta.content ? 'content' : (delta.reasoning_content ? 'reasoning' : 'tool'));
+    }
 
     if (delta.reasoning_content) {
       if (!sawReasoning) {
@@ -4872,7 +4993,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
     while (true) {
       const { done, value } = await reader.read();
       if (done || clientDisconnected) break;
-      if (!firstChunkTime) firstChunkTime = Date.now();
+      if (!firstChunkTime) { firstChunkTime = Date.now(); markActiveFirstByte(req); }
       chunkCount++;
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -5044,9 +5165,11 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
       if (currentBlockType === 'tool_use') {
         currentToolIndex = toolUseBlocks.length;
         toolUseBlocks.push({ id: parsed.content_block.id, name: parsed.content_block.name, arguments: '' });
+        markActiveToken(req, 'tool');
       }
     } else if (parsed.type === 'content_block_delta') {
       if (currentBlockType === 'text' && parsed.delta?.text) {
+        markActiveToken(req, 'content');
         if (!textStarted) {
           textStarted = true;
           textOutputIndex = nextOutputIndex++;
@@ -5065,6 +5188,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         }
         await emit({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, delta: deltaTextA });
       } else if (currentBlockType === 'thinking' && parsed.delta?.thinking) {
+        markActiveToken(req, 'reasoning');
         if (reasoningIndex === null) {
           reasoningIndex = nextOutputIndex++;
           reasoningOpen = true;
@@ -5076,6 +5200,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         if (currentToolIndex >= 0 && toolUseBlocks[currentToolIndex]) {
           toolUseBlocks[currentToolIndex].arguments += parsed.delta.partial_json || '';
         }
+        if (parsed.delta.partial_json) markActiveToken(req, 'tool');
       }
     } else if (parsed.type === 'content_block_stop') {
       if (currentBlockType === 'thinking' && reasoningOpen) {
@@ -5106,7 +5231,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
     while (true) {
       const { done, value } = await reader.read();
       if (done || clientDisconnected) break;
-      if (!firstChunkTime) firstChunkTime = Date.now();
+      if (!firstChunkTime) { firstChunkTime = Date.now(); markActiveFirstByte(req); }
       chunkCount++;
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -5214,6 +5339,9 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
   if (provider.api_key) headers['Authorization'] = `Bearer ${provider.api_key}`;
 
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: false, model, providerId: provider.id, format: 'openai'
+  });
 
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
@@ -5282,9 +5410,16 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
   if (req.apiUser?.injectPrompt) {
     scrubResponsesApiResult(result, req.apiUser.injectPrompt);
   }
+  if (data.service_tier) attempt.setServiceTier(data.service_tier);
+  forwardUpstreamHeaders(res, response.headers);
   res.json(result);
   Logger.info(`[Responses/OpenAI] 非流式完成: provider=${provider.id}, model=${model}, latency=${latency}ms, prompt=${normalized.promptTokens}, completion=${normalized.completionTokens}`);
-  return { ...normalized, content: result.output_text || '' };
+  const metricsSnapshot = attempt.finish({
+    promptTokens: normalized.promptTokens,
+    completionTokens: normalized.completionTokens,
+    completed: true
+  });
+  return { ...normalized, content: result.output_text || '', metrics: metricsSnapshot };
 }
 
 // 非流式代理 Anthropic 上游，返回 Responses API 格式
@@ -5351,6 +5486,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   if (chatBody.temperature !== undefined) upstreamBody.temperature = chatBody.temperature;
   if (chatBody.top_p !== undefined) upstreamBody.top_p = chatBody.top_p;
   if (chatBody.stop) upstreamBody.stop_sequences = Array.isArray(chatBody.stop) ? chatBody.stop : [chatBody.stop];
+  if (chatBody.speed) upstreamBody.speed = chatBody.speed;
   if (chatBody.tools) {
     upstreamBody.tools = chatBody.tools.map(t => ({
       name: t.function?.name || t.name,
@@ -5361,6 +5497,10 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   }
 
   const startTime = Date.now();
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: false, model, providerId: provider.id, format: 'anthropic',
+    serviceTier: chatBody.service_tier || (chatBody.speed === 'fast' ? 'fast' : null)
+  });
 
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
@@ -5461,9 +5601,15 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   if (req.apiUser?.injectPrompt) {
     scrubResponsesApiResult(result, req.apiUser.injectPrompt);
   }
+  forwardUpstreamHeaders(res, response.headers);
   res.json(result);
   Logger.info(`[Responses/Anthropic] 非流式完成: provider=${provider.id}, model=${model}, latency=${latency}ms`);
-  return { ...normalized, content: result.output_text || '' };
+  const metricsSnapshot = attempt.finish({
+    promptTokens: normalized.promptTokens,
+    completionTokens: normalized.completionTokens,
+    completed: true
+  });
+  return { ...normalized, content: result.output_text || '', metrics: metricsSnapshot };
 }
 
 // OpenAI 兼容: /v1/responses 和 /api/responses
@@ -5607,6 +5753,8 @@ async function handleResponses(req, res) {
       tools: chatTools, tool_choice, response_format: responseFormat, stream: !!stream
     };
     if (body.prompt_cache_key !== undefined) chatBody.prompt_cache_key = body.prompt_cache_key;
+    if (body.service_tier !== undefined) chatBody.service_tier = body.service_tier;
+    if (body.speed !== undefined) chatBody.speed = body.speed;
     if (stream) chatBody.stream_options = { include_usage: true };
     if (modelConfig.forward_reasoning_effort) {
       if (body.reasoning_effort !== undefined) {
@@ -5640,6 +5788,9 @@ async function handleResponses(req, res) {
         if (!upstreamBody.input) {
           return res.status(400).json({ error: { message: 'input is required', type: 'invalid_request_error' } });
         }
+        const passthroughAttempt = getRequestMetrics(req).beginAttempt({
+          stream: false, model: upstreamModel, providerId: provider.id, format: 'responses', serviceTier: body.service_tier
+        });
         try {
           const upstreamResp = await fetchWithModelIdentity(url, {
             quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
@@ -5677,6 +5828,8 @@ async function handleResponses(req, res) {
           const usage = responseData.usage || {};
           const promptTokens = usage.input_tokens || 0;
           const completionTokens = usage.output_tokens || 0;
+          if (responseData.service_tier) passthroughAttempt.setServiceTier(responseData.service_tier);
+          const passthroughMetrics = passthroughAttempt.finish({ promptTokens, completionTokens, completed: true });
           const totalTokens = promptTokens + completionTokens;
           const cachedTokens = usage.cached_tokens || 0;
           const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens });
@@ -5700,13 +5853,13 @@ async function handleResponses(req, res) {
               }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
               const localModelId = modelConfig.id || model;
               const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-                 cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+                 cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                  promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
                  provider?.id || null, 'responses',
                  typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-                 pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+                 pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(passthroughMetrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
@@ -5719,6 +5872,7 @@ async function handleResponses(req, res) {
               }
             }
           }
+          forwardUpstreamHeaders(res, upstreamResp.headers);
           return res.json(responseData);
         } catch (error) {
           lastError = buildUpstreamExceptionError(error, 'openai');
@@ -5816,14 +5970,14 @@ async function handleResponses(req, res) {
             const localModelId = modelConfig.id || model;
             const latencyMs = Date.now() - liveCallStart;
             const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-               cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+               cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                result.promptTokens || 0, result.completionTokens || 0,
                result.cachedTokens || 0, weightedTokens,
                provider?.id || null, 'responses',
                typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-               pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+               pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -5897,6 +6051,9 @@ async function handleResponses(req, res) {
     if (stream) {
       // 流式直接透传
       const liveCallStart = Date.now();
+      const attempt = getRequestMetrics(req).beginAttempt({
+        stream: true, model: upstreamModel, providerId: provider.id, format: 'responses', serviceTier: body.service_tier
+      });
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache, no-store');
       res.setHeader('Connection', 'keep-alive');
@@ -5921,6 +6078,7 @@ async function handleResponses(req, res) {
         sendGenerationFailure(res, respId, upstreamResp.status, err);
         return;
       }
+      forwardUpstreamHeaders(res, upstreamResp.headers);
       res.flushHeaders();
       const reader = upstreamResp.body.getReader();
       const decoder = new TextDecoder();
@@ -5952,7 +6110,13 @@ async function handleResponses(req, res) {
           const delta = streamScrubber.feed(parsed.delta || '');
           parsed.delta = delta;
           totalContent += delta;
+          if (delta) attempt.markToken('content');
+        } else if (parsed.type === 'response.reasoning_summary_text.delta' || parsed.type === 'response.reasoning_text.delta') {
+          if (parsed.delta) attempt.markToken('reasoning');
+        } else if (parsed.type === 'response.function_call_arguments.delta') {
+          if (parsed.delta) attempt.markToken('tool');
         }
+        if (parsed.service_tier) attempt.setServiceTier(parsed.service_tier);
         if (terminal) await flushScrubResidual();
         await writePassthroughEvent(parsed);
         const u = parsed.response?.usage || parsed.usage || null;
@@ -5964,6 +6128,7 @@ async function handleResponses(req, res) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          attempt.markFirstByte();
           const text = decoder.decode(value, { stream: true });
           if (!scrubEnabled) {
             if (!res.write(text)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
@@ -6012,6 +6177,7 @@ async function handleResponses(req, res) {
         promptTokens = 0;
         usageEstimated = true;
       }
+      const metricsSnapshot = attempt.finish({ promptTokens, completionTokens, completed: streamCompleted });
       const totalTokens = promptTokens + completionTokens;
       recordModelCall(modelConfig.id || model, true);
       recordLiveCallTest(modelConfig.id || model, {
@@ -6048,14 +6214,14 @@ async function handleResponses(req, res) {
             ? { estimated: true, estimate_method: 'output_chars/4', prompt_tokens_policy: 'zero_when_unknown' }
             : { estimated: false };
           const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-             cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+             cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, ${usageMetricPlaceholders(23)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
              provider?.id || null, 'responses',
              typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, realDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-             pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+             pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(metricsSnapshot)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
@@ -6072,6 +6238,9 @@ async function handleResponses(req, res) {
     }
 
     // 非流式直接透传
+    const attempt = getRequestMetrics(req).beginAttempt({
+      stream: false, model: upstreamModel, providerId: provider.id, format: 'responses', serviceTier: body.service_tier
+    });
     const upstreamResp = await fetchWithModelIdentity(url, {
       quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
       method: 'POST', headers, body: JSON.stringify(upstreamBody),
@@ -6095,11 +6264,13 @@ async function handleResponses(req, res) {
     const _pt = responseData.usage?.input_tokens || 0;
     const _ct = responseData.usage?.output_tokens || 0;
     recordLiveCallTest(modelConfig.id || model, { ok: true, promptTokens: _pt, completionTokens: _ct });
+    if (responseData.service_tier) attempt.setServiceTier(responseData.service_tier);
 
     // 计费
     const usage = responseData.usage || {};
     const promptTokens = usage.input_tokens || 0;
     const completionTokens = usage.output_tokens || 0;
+    const metricsSnapshot = attempt.finish({ promptTokens, completionTokens, completed: true });
     const totalTokens = promptTokens + completionTokens;
     const cachedTokens = usage.cached_tokens || 0;
     const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens });
@@ -6127,13 +6298,13 @@ async function handleResponses(req, res) {
 
         const localModelId = modelConfig.id || model;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(metricsSnapshot)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -6147,6 +6318,7 @@ async function handleResponses(req, res) {
       }
     }
 
+    forwardUpstreamHeaders(res, upstreamResp.headers);
     res.json(responseData);
     return;
   }
@@ -6167,6 +6339,9 @@ async function handleResponses(req, res) {
         return ok;
       };
       const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
+      const streamAttempt = getRequestMetrics(req).beginAttempt({
+        stream: true, model: upstreamModel, providerId: provider.id, format: provider.format
+      });
 
       if (provider.format === 'anthropic') {
         // Anthropic 流式
@@ -6200,6 +6375,7 @@ async function handleResponses(req, res) {
           return;
         }
 
+        forwardUpstreamHeaders(res, response.headers);
         res.flushHeaders();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -6232,12 +6408,19 @@ async function handleResponses(req, res) {
           return;
         }
 
+        forwardUpstreamHeaders(res, response.headers);
         res.flushHeaders();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         result = await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain);
       }
 
+      const streamMetrics = streamAttempt.finish({
+        promptTokens: result?.promptTokens,
+        completionTokens: result?.completionTokens,
+        completed: true
+      });
+      if (result) result.metrics = streamMetrics;
       res.end();
     } else {
       // 非流式模式
@@ -6298,14 +6481,14 @@ async function handleResponses(req, res) {
         const localModelId = modelConfig.id || model;
         const latencyMs = typeof liveCallStart === 'number' ? Date.now() - liveCallStart : null;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);

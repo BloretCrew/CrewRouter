@@ -352,6 +352,7 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
     if (!row) return;
     if (row.opened) {
       sawToolCall = true;
+      opts.onToken?.('tool');
       sendChunk({
         tool_calls: [{
           index: row.item.index,
@@ -411,18 +412,19 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
       case 'response.output_text.delta': {
         const original = obj.delta || '';
         const d = opts.scrubber ? opts.scrubber.feed(original) : original;
-        if (d) { content += d; sawContentDelta = true; sawReasoningDelta = false; }
+        if (d) { content += d; sawContentDelta = true; sawReasoningDelta = false; opts.onToken?.('content'); }
         if (d) sendChunk({ content: d });
         break;
       }
       case 'response.reasoning_summary_text.delta':
       case 'response.reasoning_text.delta': {
         const d = obj.delta || '';
-        if (d) { reasoning += d; sawReasoningDelta = true; }
+        if (d) { reasoning += d; sawReasoningDelta = true; opts.onToken?.('reasoning'); }
         sendChunk({ reasoning_content: d || '' });
         break;
       }
       case 'response.function_call_arguments.delta': {
+        if (obj.delta) opts.onToken?.('tool');
         const callId = obj.call_id || obj.item_id || activeCallId || `call_${nextToolIndex}`;
         activeCallId = callId;
         const index = indexForCall(callId);
@@ -486,6 +488,7 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      opts.onFirstByte?.();
       buffer += decoder.decode(value, { stream: true });
       let idx;
       while ((idx = buffer.indexOf('\n')) >= 0) {

@@ -16,6 +16,7 @@ function routeFunctions(overrides = {}) {
     createModelIdentity, observeModelResponse, JSON, AbortSignal,
     ...require('../utils/request-lifecycle'),
     ...require('../utils/upstream-retry-policy'),
+    ...require('../utils/request-metrics'),
     MAX_UPSTREAM_ATTEMPTS: 12,
     Logger: { warn() {} },
     pluginHooks: { hasSubscribers: () => false },
@@ -176,8 +177,10 @@ test('all eight existing usage INSERTs append identity with matching placeholder
   assert.equal(inserts.length, 8);
   for (const [, columns, placeholders, values] of inserts) {
     assert.equal(columns.split(',').length, placeholders.split(',').length);
-    assert.ok(columns.endsWith('requested_model, resolved_model, response_model'));
-    assert.match(values, /\.\.\.modelIdentityValues\(req(?:, true)?\)$/);
+    assert.ok(columns.includes('requested_model, resolved_model, response_model'));
+    assert.ok(columns.includes('${USAGE_METRIC_COLUMNS}'));
+    assert.match(values, /\.\.\.modelIdentityValues\(req(?:, true)?\)/);
+    assert.ok(values.includes('usageMetricValues('));
   }
   const context = routeFunctions();
   const req = { _requestedModel: 'fusion', _upstreamAttemptContext: { modelIdentity: createModelIdentity('fusion', 'child') } };
@@ -259,6 +262,20 @@ const streamFixtures = {
     + 'data: {"type":"response.completed","response":{"model":"raw-v2","usage":{"input_tokens":2,"output_tokens":1}}}\n\n',
 };
 
+function delayedSseResponse(chunks, headers = {}, delayMs = 12) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+      controller.close();
+    }
+  });
+  return new Response(stream, { headers });
+}
+
 function mockClient() {
   const { EventEmitter } = require('events');
   const req = new EventEmitter();
@@ -267,7 +284,8 @@ function mockClient() {
   req.apiUser = {};
   req._upstreamAttemptContext = { requestedModel: 'client-alias', upstreamAttempts: 0 };
   const res = new EventEmitter();
-  res.setHeader = () => {};
+  res.headers = {};
+  res.setHeader = (name, value) => { res.headers[String(name).toLowerCase()] = value; };
   res.flushHeaders = () => {};
   res.output = '';
   res.write = value => { res.output += value; return true; };
@@ -381,6 +399,47 @@ test('actual response chunk plugin sees the model only after raw collection', as
   assert.equal(req._upstreamAttemptContext.modelIdentity.snapshot().response_model, 'raw-v2');
 });
 
+test('proxyOpenAI records streaming TTFT, TPS and upstream observability headers', async () => {
+  const context = loadProxyMatrix(streamFixtures.openai);
+  const chunks = [
+    'data: {"id":"chatcmpl_mock","object":"chat.completion.chunk","model":"raw-v2","choices":[{"index":0,"delta":{"content":"o"},"finish_reason":null}]}\n\n',
+    'data: {"id":"chatcmpl_mock","object":"chat.completion.chunk","model":"raw-v2","choices":[{"index":0,"delta":{"content":"k"},"finish_reason":null}]}\n\n',
+    'data: {"id":"chatcmpl_mock","object":"chat.completion.chunk","choices":[],"usage":{"prompt_tokens":2,"completion_tokens":2,"total_tokens":4}}\n\ndata: [DONE]\n\n'
+  ];
+  context.proxyPool.proxyFetch = async () => delayedSseResponse(chunks, {
+    'x-ratelimit-remaining-requests': '9',
+    'x-ratelimit-limit-requests': '10',
+    'openai-processing-ms': '42'
+  });
+  const { req, res } = mockClient();
+  req._requestStartedAt = Date.now();
+  const result = await context.proxyOpenAI({ id: 'mock', base_url: 'http://mock' }, 'route-model', { messages: [] }, true, res, req);
+  assert.equal(result.metrics.isStream, true);
+  assert.ok(result.metrics.ttftMs != null && result.metrics.ttftMs >= 0);
+  assert.ok(result.metrics.e2eMs >= result.metrics.ttftMs);
+  assert.ok(result.metrics.outputTps > 0);
+  assert.equal(result.metrics.upstreamProcessingMs, 42);
+  assert.equal(result.metrics.rateLimit.headers['x-ratelimit-remaining-requests'], '9');
+  assert.equal(res.headers['x-ratelimit-remaining-requests'], '9');
+  assert.equal(res.headers['x-ratelimit-limit-requests'], '10');
+});
+
+test('proxyOpenAI records non-stream E2E without fabricating TTFT', async () => {
+  const context = loadProxyMatrix(JSON.stringify(rawFixtures.openai));
+  context.proxyPool.proxyFetch = async () => new Response(JSON.stringify(rawFixtures.openai), {
+    headers: { 'openai-processing-ms': '12' }
+  });
+  const { req, res } = mockClient();
+  req._requestStartedAt = Date.now();
+  const result = await context.proxyOpenAI({ id: 'mock', base_url: 'http://mock' }, 'route-model', { messages: [] }, false, res, req);
+  assert.equal(result.metrics.isStream, false);
+  assert.equal(result.metrics.ttftMs, null);
+  assert.equal(result.metrics.tpotMs, null);
+  assert.equal(result.metrics.outputTps, null);
+  assert.ok(result.metrics.e2eMs >= 0);
+  assert.equal(result.metrics.upstreamProcessingMs, 12);
+});
+
 test('bridge synthesized model never fills missing upstream response model', async () => {
   const raw = { ...rawFixtures.responses };
   delete raw.model;
@@ -407,7 +466,10 @@ test('real transport and retry helper count each network attempt once', async ()
   const begin = transportSource.indexOf('async function proxyFetch(');
   const end = transportSource.indexOf('\n/**', begin);
   let networkCalls = 0;
-  const transport = { ...require('../utils/request-lifecycle'), Logger: { info() {} }, axios: async () => { networkCalls++; throw Object.assign(new Error('mock refused'), { code: 'ECONNREFUSED' }); } };
+  const transportRequire = id => id === './utils/quota-request-context'
+    ? { quotaFetch: async (url, options, fn) => fn(url, options) }
+    : require(id);
+  const transport = { ...require('../utils/request-lifecycle'), Logger: { info() {} }, require: transportRequire, axios: async () => { networkCalls++; throw Object.assign(new Error('mock refused'), { code: 'ECONNREFUSED' }); } };
   vm.createContext(transport);
   vm.runInContext(transportSource.slice(begin, end), transport);
   const context = routeFunctions({ proxyPool: { proxyFetch: transport.proxyFetch, getProxyAgent: async () => null } });
@@ -423,9 +485,10 @@ test('trace snapshots remain available when finish precedes usage insertion', ()
   const identity = createModelIdentity('client', 'route');
   identity.observe({ model: 'served' });
   const req = { body: { model: 'client' }, path: '/chat/completions', _requestedModel: 'client', _upstreamAttemptContext: { modelIdentity: identity }, apiUser: { keyId: 1 } };
-  const middleware = { router: { use(fn) { fn(req, { statusCode: 200, once(event, fn) { if (event === 'finish' && !onFinish) onFinish = fn; } }, () => {}); } },
-    recordEvent: async (_req, payload) => { captured = payload; }, clientMetaFromReq: () => ({}), createRequestLifecycle: () => ({ signal: null, dispose() {} }), Date, crypto: require('crypto'),
-    require: () => ({ normalizeModel }) };
+  const captureEvent = async (_req, payload) => { captured = payload; };
+  const middleware = { router: { use(fn) { fn(req, { statusCode: 200, once(event, fn) { if (event === 'finish' && !onFinish) onFinish = fn; } }, () => {}); } }, quotaRequestMiddleware: () => {},
+    recordEvent: captureEvent, clientMetaFromReq: () => ({}), createRequestLifecycle: () => ({ signal: null, dispose() {} }), Date, crypto: require('crypto'),
+    require: () => ({ normalizeModel, recordEvent: captureEvent }) };
   vm.createContext(middleware);
   vm.runInContext(source.slice(source.indexOf('router.use('), source.indexOf("const { pool }")), middleware);
   req._upstreamAttemptContext.modelIdentity = identity;

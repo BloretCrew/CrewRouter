@@ -1352,6 +1352,18 @@ router.get('/stats/multi-dimension', requireAuth, (req, res, next) => {
   }
 });
 
+router.get('/stats/latency', requireAuth, async (req, res) => {
+  try {
+    const { queryLatencyStats } = require('../utils/latency-stats');
+    res.json(await queryLatencyStats(pool, req.query, 'user', req.session.user.id));
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ error: error.message });
+    if (error.status === 503) return res.status(503).json({ error: error.message });
+    Logger.error('[用户延迟统计] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 router.get('/stats', requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -4775,6 +4787,13 @@ router.get('/usage-logs/export', requireAuth, async (req, res) => {
         u.cached_tokens,
         u.cost,
         u.latency_ms,
+        u.is_stream,
+        u.ttft_ms,
+        u.tpot_ms,
+        u.output_tps,
+        u.e2e_ms,
+        u.upstream_processing_ms,
+        u.service_tier,
         u.ip_address
       ${fromSql}
       ${where}
@@ -4786,7 +4805,8 @@ router.get('/usage-logs/export', requireAuth, async (req, res) => {
     const header = [
       '时间', '模型', '上游模型ID', '系列', '供应商',
       'Key前缀', 'Key名称', '请求类型', '客户端', '总Token', '输入Token', '输出Token',
-      '缓存Token', '积分', '延迟ms', 'IP', '客户端请求模型', '路由模型', '上游响应模型'
+      '缓存Token', '积分', '延迟ms', '流式', 'TTFTms', 'TPOTms', '输出TPS', 'E2Ems', '上游处理ms', '服务层级',
+      'IP', '客户端请求模型', '路由模型', '上游响应模型'
     ];
 
     const lines = [header.map(csvEscapeUser).join(',')];
@@ -4808,6 +4828,13 @@ router.get('/usage-logs/export', requireAuth, async (req, res) => {
         row.cached_tokens || 0,
         row.cost != null ? row.cost : '',
         row.latency_ms != null ? row.latency_ms : '',
+        row.is_stream == null ? '' : (row.is_stream ? '是' : '否'),
+        row.ttft_ms != null ? row.ttft_ms : '',
+        row.tpot_ms != null ? row.tpot_ms : '',
+        row.output_tps != null ? row.output_tps : '',
+        row.e2e_ms != null ? row.e2e_ms : '',
+        row.upstream_processing_ms != null ? row.upstream_processing_ms : '',
+        row.service_tier || '',
         row.ip_address || '',
         row.requested_model || '',
         row.resolved_model || '',
@@ -4850,6 +4877,16 @@ router.get('/usage-logs/:id', requireAuth, async (req, res) => {
         COALESCE(u.request_source, 'unknown') as request_source,
         u.user_agent,
         u.latency_ms,
+        u.is_stream,
+        u.ttft_ms,
+        u.upstream_first_byte_ms,
+        u.generation_ms,
+        u.tpot_ms,
+        u.output_tps,
+        u.e2e_ms,
+        u.upstream_processing_ms,
+        u.service_tier,
+        u.rate_limit,
         u.ip_address,
         u.messages,
         u.response,

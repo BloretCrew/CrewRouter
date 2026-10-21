@@ -147,6 +147,7 @@ async function testIndependentWrites() {
     Logger: logger,
     calculatePointsToDeduct: async () => 0.125,
     clientMetaFromReq: () => ({ requestSource: 'unknown', userAgent: null }),
+    ...require('../utils/request-metrics'),
     recordQuotaData() {},
     require: name => {
       if (name === '../plugins/hooks') return { hasSubscribers: () => false, applyStatsRecord: async () => ({}) };
@@ -166,19 +167,21 @@ async function testIndependentWrites() {
     await context.recordUsage(41, 'local', 12, 12, 0.125, [], 'text', { promptTokens: 8, completionTokens: 4 }, null, {}, 'stop', {}, identity.snapshot());
     const call = calls.at(-1);
     for (const field of MODEL_IDENTITY_COLUMNS) assert(call.sql.includes(field));
-    assert.deepStrictEqual(Array.from(call.params.slice(-3)), ['client', 'route', 'upstream']);
+    assert.deepStrictEqual(Array.from(call.params.slice(-13, -10)), ['client', 'route', 'upstream']);
     assert.strictEqual(call.params[0], 41);
     assert.strictEqual(call.params[2], 12);
   }
   assert(source.indexOf('modelIdentity.observe(data)') < source.indexOf('const openaiResp ='));
   assert(source.includes('identityStream.push(value)'));
   const agent = read('routes/agent.js');
+  const mockAgentFetch = async () => ({ ok: true, json: async () => ({ model: 'original', usage: {} }) });
   const ctx = {
     createModelIdentity,
     loadProvider: async () => ({ format: 'anthropic' }), keyAttempts: () => ['key'],
     upstreamUrl: () => 'https://mock.invalid/messages', validateUrl: async () => ({ ok: true }),
     systemPrompt: () => '', anthropicTools: () => [], toAnthropicMessages: value => value,
-    fetch: async () => ({ ok: true, json: async () => ({ model: 'original', usage: {} }) }),
+    quotaFetch: mockAgentFetch,
+    fetch: mockAgentFetch,
     parseModelResponse: () => ({ model: 'rewritten' }), extractUsage: () => ({}), AbortSignal
   };
   vm.createContext(ctx);
@@ -193,7 +196,9 @@ async function testIndependentWrites() {
     calculateCost: () => ({ weightedTokens: 12, pointsCost: 0.125 }),
     calculatePointsToDeduct: context.calculatePointsToDeduct,
     clientMetaFromReq: context.clientMetaFromReq,
-    require: () => ({ deductPoints: async () => {} })
+    require: name => name === './quota-request-context'
+      ? { linkUsage: async () => {} }
+      : { deductPoints: async () => {} }
   };
   vm.createContext(billingContext);
   vm.runInContext(`async ${functionSource(billingSource, 'recordAgentUsage')}`, billingContext);

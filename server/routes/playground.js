@@ -17,6 +17,12 @@ const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
 const { consumePlaygroundSseLines, finalizePlaygroundStream, recordPlaygroundUsageIfCompleted } = require('../utils/playground-stream-state');
+const {
+  USAGE_METRIC_COLUMNS,
+  getRequestMetrics,
+  usageMetricPlaceholders,
+  usageMetricValues
+} = require('../utils/request-metrics');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -644,6 +650,11 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
     const reasoningText = reasoningContent || null;
     const paramsJson = requestParams ? JSON.stringify(requestParams) : null;
     const finish = finishReason || null;
+    const metricsSnapshot = getRequestMetrics(req).fallbackSnapshot({
+      stream: !!req?.body?.stream,
+      promptTokens,
+      completionTokens
+    });
     // 解析供应商：modelId 应为本地 models.id
     let providerId = null;
     try {
@@ -653,11 +664,12 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
 
     const usageResult = await pool.query(
       `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens,
-       provider_id, request_type, messages, response, cost, reasoning_content, request_params, finish_reason, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
+       provider_id, request_type, messages, response, cost, reasoning_content, request_params, finish_reason, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, ${usageMetricPlaceholders(21)}) RETURNING id`,
       [userId, modelId, totalTokens, weightedTokens, promptTokens, completionTokens,
        providerId, 'playground', messagesJson, responseText, pointsToDeduct, reasoningText, paramsJson, finish,
-       clientMeta.requestSource, clientMeta.userAgent, pluginMeta, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null]
+       clientMeta.requestSource, clientMeta.userAgent, pluginMeta, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null,
+       ...usageMetricValues(metricsSnapshot)]
     );
     Logger.info(`[Playground计费] 记录成功`);
     if (pointsToDeduct > 0) {
@@ -681,12 +693,18 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
         userId, teamId, weightedTokens, pointsCost
       });
       const clientMeta = clientMetaFromReq(req || {});
+      const fallbackMetrics = getRequestMetrics(req).fallbackSnapshot({
+        stream: !!req?.body?.stream,
+        promptTokens,
+        completionTokens
+      });
       const usageResult = await pool.query(
-        `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent, requested_model, resolved_model, response_model)
+        `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'playground',
-           (SELECT provider FROM models WHERE id = $2 LIMIT 1), $8, $9, $10, $11, $12) RETURNING id`,
+           (SELECT provider FROM models WHERE id = $2 LIMIT 1), $8, $9, $10, $11, $12, ${usageMetricPlaceholders(13)}) RETURNING id`,
         [userId, modelId, totalTokens, weightedTokens, promptTokens, completionTokens, pointsToDeduct,
-         clientMeta.requestSource, clientMeta.userAgent, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null]
+         clientMeta.requestSource, clientMeta.userAgent, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null,
+         ...usageMetricValues(fallbackMetrics)]
       );
       Logger.info(`[Playground计费] 简化INSERT成功`);
       if (pointsToDeduct > 0) {

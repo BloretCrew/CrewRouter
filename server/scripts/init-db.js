@@ -3,6 +3,7 @@ const config = require('../config-loader');
 const Logger = require('../logger');
 const { encryptSecret } = require('../utils/secret-crypto');
 const { ensureUsageModelIdentityColumns } = require('../utils/usage-model-migration');
+const { ensureUsageLatencyColumns } = require('../utils/usage-latency-migration');
 const { ensureQuotaHistorySchema } = require('../utils/provider-quota-history');
 
 async function ensureDatabase() {
@@ -633,6 +634,16 @@ async function initDatabase() {
         request_source VARCHAR(32) DEFAULT 'unknown',
         user_agent VARCHAR(500),
         latency_ms INTEGER,
+        is_stream BOOLEAN,
+        ttft_ms INTEGER,
+        upstream_first_byte_ms INTEGER,
+        generation_ms INTEGER,
+        tpot_ms NUMERIC(12, 3),
+        output_tps NUMERIC(12, 3),
+        e2e_ms INTEGER,
+        upstream_processing_ms INTEGER,
+        service_tier VARCHAR(32),
+        rate_limit JSONB,
         ip_address VARCHAR(45),
         messages JSONB,
         response TEXT,
@@ -660,6 +671,7 @@ async function initDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_request_type_created ON usage_records (request_type, created_at DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_request_source_created ON usage_records (request_source, created_at DESC)`);
     await ensureUsageModelIdentityColumns(client);
+    await ensureUsageLatencyColumns(client);
     Logger.info('[数据库初始化] 表 usage_records 已就绪');
 
     await client.query(`
