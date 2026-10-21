@@ -294,6 +294,82 @@ assert.throws(() => normalizeDeepSeekBalance({}), /balance_infos/);
 assert.throws(() => normalizeDeepSeekBalance({ balance_infos: [{ currency: 'CNY' }] }), /total_balance/);
 assert.throws(() => normalizeDeepSeekBalance(null), /无效余额数据/);
 
+// ── OpenRouter / Moonshot / SiliconFlow 余额 ──
+const { normalizeOpenRouterCredits, normalizeOpenRouterKey, originOf: openrouterOriginOf } = require('../utils/openrouter-usage');
+const { normalizeMoonshotBalance, currencyFor: moonshotCurrencyFor } = require('../utils/moonshot-usage');
+const { normalizeSiliconFlowBalance, currencyFor: siliconflowCurrencyFor } = require('../utils/siliconflow-usage');
+
+assert.strictEqual(openrouterOriginOf('https://openrouter.ai/api/v1'), 'https://openrouter.ai');
+assert.strictEqual(openrouterOriginOf('not a url'), 'https://openrouter.ai');
+
+// 账户 Credits：累计购买 100.5，累计消耗 25.75，剩余 74.75
+const orCredits = normalizeOpenRouterCredits({ data: { total_credits: 100.5, total_usage: 25.75 } }, 'OR 账户');
+assert.strictEqual(orCredits.planName, 'OR 账户');
+assert.strictEqual(orCredits.currency, 'USD');
+assert.strictEqual(orCredits.total, 100.5);
+assert.strictEqual(orCredits.used, 25.75);
+assert.strictEqual(orCredits.remaining, 74.75);
+assert.match(orCredits.extra, /Management Key/);
+assert.strictEqual(normalizeOpenRouterCredits({ data: { total_credits: 10, total_usage: 12 } }).remaining, 0);
+
+// 普通 Key：limit_remaining + 日/周/月用量；无上限时只展示累计用量
+const orKey = normalizeOpenRouterKey({
+  data: { limit: 100, limit_remaining: 74.5, usage: 25.5, usage_daily: 1.5, usage_weekly: 5, usage_monthly: 20, limit_reset: 'monthly' },
+}, 'OR Key');
+assert.strictEqual(orKey.total, 100);
+assert.strictEqual(orKey.used, 25.5);
+assert.strictEqual(orKey.remaining, 74.5);
+assert.match(orKey.extra, /Key 上限 \$100\.00/);
+assert.match(orKey.extra, /每月重置/);
+assert.match(orKey.extra, /日用量 \$1\.50/);
+const orUnlimited = normalizeOpenRouterKey({ data: { limit: null, limit_remaining: null, usage: 12.5, usage_daily: 0.5 } }, 'OR');
+assert.strictEqual(orUnlimited.total, null);
+assert.strictEqual(orUnlimited.remaining, null);
+assert.strictEqual(orUnlimited.used, 12.5);
+assert.match(orUnlimited.extra, /无额度上限/);
+assert.throws(() => normalizeOpenRouterKey({ data: {} }), /limit/);
+assert.throws(() => normalizeOpenRouterCredits({ data: {} }), /total_credits/);
+
+// Moonshot：国内站 CNY、国际站 USD；可用余额 = 现金 + 赠金
+assert.strictEqual(moonshotCurrencyFor('https://api.moonshot.cn/v1'), 'CNY');
+assert.strictEqual(moonshotCurrencyFor('https://api.moonshot.ai/v1'), 'USD');
+assert.strictEqual(moonshotCurrencyFor('not a url'), 'CNY');
+const moonshot = normalizeMoonshotBalance({
+  code: 0,
+  data: { available_balance: 49.58894, voucher_balance: 46.58893, cash_balance: 3.00001 },
+  scode: '0x0',
+  status: true,
+}, { providerName: 'Kimi', currency: 'CNY' });
+assert.strictEqual(moonshot.total, 49.58894);
+assert.strictEqual(moonshot.remaining, 49.58894);
+assert.strictEqual(moonshot.used, null);
+assert.strictEqual(moonshot.currency, 'CNY');
+assert.match(moonshot.extra, /赠金 46\.59/);
+assert.match(moonshot.extra, /现金 3\.00/);
+const moonshotEmpty = normalizeMoonshotBalance({ code: 0, data: { available_balance: 0, voucher_balance: 0, cash_balance: 0 } }, { currency: 'USD' });
+assert.match(moonshotEmpty.extra, /余额不足/);
+assert.throws(() => normalizeMoonshotBalance({ code: 0, data: {} }), /available_balance/);
+assert.throws(() => normalizeMoonshotBalance({ code: 401, message: 'unauthorized', status: false, data: {} }), /unauthorized/);
+
+// SiliconFlow：totalBalance = 充值 + 赠送；错误可能以 HTTP 200 + code 返回
+assert.strictEqual(siliconflowCurrencyFor('https://api.siliconflow.cn/v1'), 'CNY');
+assert.strictEqual(siliconflowCurrencyFor('https://api.siliconflow.com/v1'), 'USD');
+assert.strictEqual(siliconflowCurrencyFor('not a url'), 'CNY');
+const siliconflow = normalizeSiliconFlowBalance({
+  code: 20000,
+  message: 'OK',
+  status: true,
+  data: { balance: '0.88', chargeBalance: '88.00', totalBalance: '88.88' },
+}, { providerName: 'SF', currency: 'CNY' });
+assert.strictEqual(siliconflow.total, 88.88);
+assert.strictEqual(siliconflow.remaining, 88.88);
+assert.strictEqual(siliconflow.used, null);
+assert.match(siliconflow.extra, /赠金 0\.88/);
+assert.match(siliconflow.extra, /充值 88\.00/);
+assert.strictEqual(normalizeSiliconFlowBalance({ data: { balance: '1', chargeBalance: '2' } }).total, 3);
+assert.throws(() => normalizeSiliconFlowBalance({ status: false, code: 20012, message: 'bad key' }), /bad key/);
+assert.throws(() => normalizeSiliconFlowBalance({ data: {} }), /totalBalance/);
+
 // ── Team migration decision rules ──
 const { chooseTeamForUser, normalizeTeamRules } = require('../utils/quota-migration');
 assert.strictEqual(chooseTeamForUser({ groupTeamId: 9, legacyTeamId: 2, memberships: [{ team_id: 3 }] }), 9);
@@ -337,5 +413,6 @@ assert.match(cursorFallback.extra, /On-Demand 已关闭/);
 console.log('Cursor quota tests passed');
 console.log('new-api quota tests passed');
 console.log('DeepSeek quota tests passed');
+console.log('OpenRouter / Moonshot / SiliconFlow quota tests passed');
 console.log('command code quota tests passed');
 console.log('quota usage tests passed');

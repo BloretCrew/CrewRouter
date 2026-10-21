@@ -2187,7 +2187,7 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(A
     const finalProxyUrl = typeof proxy_url === 'string' ? proxy_url.trim() : '';
     const finalProxyUseSystem = proxy_use_system === true || proxy_use_system === 'true';
     const normalizedQuotaMode = String(quota_mode || 'script').toLowerCase();
-    const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp', 'commandcode', 'newapi', 'deepseek', 'cursor', 'cpa'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
+    const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp', 'commandcode', 'newapi', 'deepseek', 'openrouter', 'moonshot', 'siliconflow', 'cursor', 'cpa'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
     let cpaQuotaScript = null;
     if (finalQuotaMode === 'cpa') {
       try {

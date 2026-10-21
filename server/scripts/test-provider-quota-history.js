@@ -45,6 +45,12 @@ function pureTests() {
   assert.equal(deepseek.total,110);
   assert.equal(deepseek.remaining,110);
   assert.equal(deepseek.used,null);
+  for (const mode of ['openrouter','moonshot','siliconflow']) {
+    const balanceItem = history.normalizeQuotaItems({ unit:'balance', currency:'USD', total:10, used:null, remaining:10, periods:[] },{ ...provider,quota_mode:mode })[0];
+    assert.equal(balanceItem.unit,'USD');
+    assert.equal(balanceItem.remaining,10);
+    assert.equal(balanceItem.used,null);
+  }
   const compat = history.serializeSafeResult({ quota:{ credits:{ balance:'2',hasCredits:true,token:provider.api_key },rateLimitResetCredits:{ available_count:3,token:provider.api_key } } },provider);
   assert.equal(compat.credits.balance,2);
   assert.equal(compat.rateLimitResetCredits.available_count,3);

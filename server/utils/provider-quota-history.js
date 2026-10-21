@@ -6,7 +6,7 @@ const { decryptSecret } = require('./secret-crypto');
 const { normalizeProviderKeyEntries, getPrimaryApiKey } = require('./provider-keys');
 
 const contexts = new WeakMap();
-const keyModes = new Set(['script', 'opencode_go', 'commandcode', 'newapi', 'deepseek', 'cursor']);
+const keyModes = new Set(['script', 'opencode_go', 'commandcode', 'newapi', 'deepseek', 'openrouter', 'moonshot', 'siliconflow', 'cursor']);
 
 function identitySecret() {
   const secret = process.env.CRW_MASTER_KEY || process.env.CR_MASTER_KEY || config.gateway?.masterKey

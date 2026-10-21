@@ -6221,24 +6221,21 @@ async function(ctx) {
     const textarea = document.getElementById('providerCodexConfigText');
     const isCodex = mode === 'codex_wham';
     const isGrok = mode === 'grok_billing';
-    const isCommandCode = mode === 'commandcode';
-    const isNewApi = mode === 'newapi';
-    const isDeepSeek = mode === 'deepseek';
-    const isCursor = mode === 'cursor';
     if (section) section.style.display = isCodex || isGrok ? 'block' : 'none';
-    if (hint) hint.textContent = mode === 'cpa'
-      ? this._cpaQuotaConfigHint()
-      : isGrok
-      ? t('SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化')
-      : isCommandCode
-        ? t('Command Code 使用供应商 API Key 调用 /alpha/* 接口查询 5 小时、每周与月度额度，Base URL 只取域名（官方为 https://api.commandcode.ai）；Go 套餐不含 API 权限，四个端点全部 404')
-        : isNewApi
-          ? t('new-api / one-api 系站点使用令牌 Key 调用 /dashboard/billing/subscription 与 /usage 合并计算总额度与已用，Base URL 只取域名')
-          : isDeepSeek
-            ? t('DeepSeek 开放平台使用供应商 API Key 调用 /user/balance 查询账户余额，Base URL 只取域名（官方为 https://api.deepseek.com）。接口只返回当前余额，不返回历史用量')
-            : isCursor
-              ? t('Cursor Pro 使用 User API Key（crsr_）兑换 accessToken，再查 api2.cursor.sh 的 GetCurrentPeriodUsage。套餐字段缺失时改用按模型花费汇总。接口非公开，与聊天 Base URL 无关')
-              : t('Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化');
+    if (hint) {
+      const hints = {
+        cpa: this._cpaQuotaConfigHint(),
+        grok_billing: t('SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化'),
+        commandcode: t('Command Code 使用供应商 API Key 调用 /alpha/* 接口查询 5 小时、每周与月度额度，Base URL 只取域名（官方为 https://api.commandcode.ai）；Go 套餐不含 API 权限，四个端点全部 404'),
+        newapi: t('new-api / one-api 系站点使用令牌 Key 调用 /dashboard/billing/subscription 与 /usage 合并计算总额度与已用，Base URL 只取域名'),
+        deepseek: t('DeepSeek 开放平台使用供应商 API Key 调用 /user/balance 查询账户余额，Base URL 只取域名（官方为 https://api.deepseek.com）。接口只返回当前余额，不返回历史用量'),
+        openrouter: t('OpenRouter 先查账户 Credits（需要 Management Key），失败后回退 /api/v1/key 普通推理 Key；Base URL 只取域名（官方为 https://openrouter.ai）'),
+        moonshot: t('Moonshot / Kimi 使用供应商 API Key 调用 /v1/users/me/balance 查询可用余额；国内站 api.moonshot.cn 为 CNY，国际站 api.moonshot.ai 为 USD'),
+        siliconflow: t('SiliconFlow 使用供应商 API Key 调用 /v1/user/info 查询 totalBalance（充值 + 赠送）；国内站 api.siliconflow.cn 为 CNY，国际站 api.siliconflow.com 为 USD'),
+        cursor: t('Cursor Pro 使用 User API Key（crsr_）兑换 accessToken，再查 api2.cursor.sh 的 GetCurrentPeriodUsage。套餐字段缺失时改用按模型花费汇总。接口非公开，与聊天 Base URL 无关'),
+      };
+      hint.textContent = hints[mode] || t('Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化');
+    }
     if (label) label.textContent = isGrok ? 'SuperGrok auth.json' : 'Codex auth.json';
     if (authHint) authHint.innerHTML = isGrok
       ? t('文件通常位于') + ' <code>~/.grok/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.grok/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。')

@@ -10,9 +10,18 @@ const { fetchArkUsage } = require('./volcengine-ark-usage');
 const { fetchCommandCodeUsage } = require('./commandcode-usage');
 const { fetchNewApiUsage } = require('./newapi-usage');
 const { fetchDeepSeekUsage } = require('./deepseek-usage');
+const { fetchOpenRouterUsage } = require('./openrouter-usage');
+const { fetchMoonshotUsage } = require('./moonshot-usage');
+const { fetchSiliconFlowUsage } = require('./siliconflow-usage');
 const { fetchCursorUsage } = require('./cursor-usage');
 const { fetchCpaUsage } = require('./cpa-usage');
 const quotaHistory = require('./provider-quota-history');
+
+const BALANCE_QUOTA_FETCHERS = {
+  openrouter: { label: 'OpenRouter', fetch: fetchOpenRouterUsage },
+  moonshot: { label: 'Moonshot', fetch: fetchMoonshotUsage },
+  siliconflow: { label: 'SiliconFlow', fetch: fetchSiliconFlowUsage },
+};
 
 const QUOTA_SCHEDULE_INTERVALS = Object.freeze([
   { value: 600, label: '每 10 分钟' },
@@ -245,6 +254,22 @@ async function queryProviderQuotaInternal(provider, options = {}) {
       };
     } catch (error) {
       Logger.warn(`[查询 DeepSeek 余额] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
+      return { ok: false, status: 502, error: error.message, provider: meta };
+    }
+  }
+
+  const balanceFetcher = BALANCE_QUOTA_FETCHERS[provider.quota_mode];
+  if (balanceFetcher) {
+    try {
+      const quota = await balanceFetcher.fetch(provider);
+      return {
+        ok: true,
+        status: 200,
+        provider: { ...meta, type: provider.quota_mode },
+        quota
+      };
+    } catch (error) {
+      Logger.warn(`[查询 ${balanceFetcher.label} 额度] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }
