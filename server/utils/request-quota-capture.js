@@ -7,7 +7,7 @@ const history = require('./provider-quota-history');
 const { normalizeProviderKeyEntries } = require('./provider-keys');
 const { DEFAULTS: DEFAULT_CAPTURE_CONFIG, normalizeRequestQuotaConfig } = require('./request-quota-config');
 
-const KEY_MODES = new Set(['script', 'opencode_go', 'commandcode', 'newapi', 'cursor']);
+const KEY_MODES = new Set(['script', 'opencode_go', 'commandcode', 'newapi', 'deepseek', 'cursor']);
 const TERMINAL = new Set(['success', 'failed', 'cancelled', 'timeout', 'rejected']);
 const ERROR_CLASSES = new Set(['network_error', 'upstream_error', 'protocol_error', 'stream_error', 'rate_limited', 'failed', 'cancelled', 'timeout', 'rejected']);
 const USAGE_FIELDS = ['input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_creation_tokens', 'total_tokens', 'weighted_tokens', 'points'];

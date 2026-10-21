@@ -247,6 +247,53 @@ const naUnlimited = normalizeNewApiUsage({
 assert.match(naUnlimited.extra, /无限额度/);
 assert.match(naUnlimited.extra, /过期/);
 
+// ── DeepSeek 开放平台余额 ──
+const { normalizeDeepSeekBalance, originOf: deepseekOriginOf, BALANCE_PATH } = require('../utils/deepseek-usage');
+
+assert.strictEqual(BALANCE_PATH, '/user/balance');
+assert.strictEqual(deepseekOriginOf('https://api.deepseek.com/v1'), 'https://api.deepseek.com');
+assert.strictEqual(deepseekOriginOf('https://proxy.example.com/deepseek/v1'), 'https://proxy.example.com');
+assert.strictEqual(deepseekOriginOf('not a url'), 'https://api.deepseek.com');
+
+// 官方示例：CNY 账户，总额 110 = 赠金 10 + 充值 100
+const ds = normalizeDeepSeekBalance({
+  is_available: true,
+  balance_infos: [{ currency: 'CNY', total_balance: '110.00', granted_balance: '10.00', topped_up_balance: '100.00' }],
+}, 'DeepSeek 主账号');
+assert.strictEqual(ds.planName, 'DeepSeek 主账号');
+assert.strictEqual(ds.unit, 'balance');
+assert.strictEqual(ds.currency, 'CNY');
+assert.strictEqual(ds.total, 110);
+assert.strictEqual(ds.remaining, 110);
+assert.strictEqual(ds.used, null);
+assert.deepStrictEqual(ds.periods, []);
+assert.match(ds.extra, /CNY/);
+assert.match(ds.extra, /赠金 10\.00/);
+assert.match(ds.extra, /充值 100\.00/);
+
+// 余额不足：is_available=false 提示 402；多币种时首条为主，其余列入 extra
+const dsUnavailable = normalizeDeepSeekBalance({
+  is_available: false,
+  balance_infos: [{ currency: 'usd', total_balance: '0.5', granted_balance: '0', topped_up_balance: '0.5' }],
+});
+assert.strictEqual(dsUnavailable.currency, 'USD');
+assert.strictEqual(dsUnavailable.total, 0.5);
+assert.match(dsUnavailable.extra, /HTTP 402/);
+const dsMulti = normalizeDeepSeekBalance({
+  is_available: true,
+  balance_infos: [
+    { currency: 'CNY', total_balance: '5', granted_balance: '0', topped_up_balance: '5' },
+    { currency: 'USD', total_balance: '2.5', granted_balance: '0', topped_up_balance: '2.5' },
+  ],
+});
+assert.strictEqual(dsMulti.total, 5);
+assert.strictEqual(dsMulti.currency, 'CNY');
+assert.match(dsMulti.extra, /USD 2\.50/);
+
+assert.throws(() => normalizeDeepSeekBalance({}), /balance_infos/);
+assert.throws(() => normalizeDeepSeekBalance({ balance_infos: [{ currency: 'CNY' }] }), /total_balance/);
+assert.throws(() => normalizeDeepSeekBalance(null), /无效余额数据/);
+
 // ── Team migration decision rules ──
 const { chooseTeamForUser, normalizeTeamRules } = require('../utils/quota-migration');
 assert.strictEqual(chooseTeamForUser({ groupTeamId: 9, legacyTeamId: 2, memberships: [{ team_id: 3 }] }), 9);
@@ -289,5 +336,6 @@ assert.match(cursorFallback.extra, /On-Demand 已关闭/);
 
 console.log('Cursor quota tests passed');
 console.log('new-api quota tests passed');
+console.log('DeepSeek quota tests passed');
 console.log('command code quota tests passed');
 console.log('quota usage tests passed');

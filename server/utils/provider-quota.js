@@ -9,6 +9,7 @@ const { fetchGrokUsage } = require('./grok-usage');
 const { fetchArkUsage } = require('./volcengine-ark-usage');
 const { fetchCommandCodeUsage } = require('./commandcode-usage');
 const { fetchNewApiUsage } = require('./newapi-usage');
+const { fetchDeepSeekUsage } = require('./deepseek-usage');
 const { fetchCursorUsage } = require('./cursor-usage');
 const { fetchCpaUsage } = require('./cpa-usage');
 const quotaHistory = require('./provider-quota-history');
@@ -229,6 +230,21 @@ async function queryProviderQuotaInternal(provider, options = {}) {
       };
     } catch (error) {
       Logger.warn(`[查询 new-api 额度] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
+      return { ok: false, status: 502, error: error.message, provider: meta };
+    }
+  }
+
+  if (provider.quota_mode === 'deepseek') {
+    try {
+      const quota = await fetchDeepSeekUsage(provider);
+      return {
+        ok: true,
+        status: 200,
+        provider: { ...meta, type: 'deepseek' },
+        quota
+      };
+    } catch (error) {
+      Logger.warn(`[查询 DeepSeek 余额] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }

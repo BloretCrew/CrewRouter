@@ -39,6 +39,12 @@ function pureTests() {
   assert.equal(newapi.remaining,null);
   assert.equal(newapi.quality.unknown_used,true);
   assert.equal(history.normalizeQuotaItems(balance(1,99),{ ...provider,quota_mode:'cursor' })[0].unit,'USD');
+  const deepseek = history.normalizeQuotaItems({ unit:'balance', currency:'CNY', total:110, used:null, remaining:110, periods:[] },{ ...provider,quota_mode:'deepseek' })[0];
+  assert.equal(deepseek.kind,'balance');
+  assert.equal(deepseek.unit,'CNY');
+  assert.equal(deepseek.total,110);
+  assert.equal(deepseek.remaining,110);
+  assert.equal(deepseek.used,null);
   const compat = history.serializeSafeResult({ quota:{ credits:{ balance:'2',hasCredits:true,token:provider.api_key },rateLimitResetCredits:{ available_count:3,token:provider.api_key } } },provider);
   assert.equal(compat.credits.balance,2);
   assert.equal(compat.rateLimitResetCredits.available_count,3);
