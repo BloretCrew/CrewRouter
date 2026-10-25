@@ -20,6 +20,11 @@ function sha256(value) {
   return crypto.createHash('sha256').update(value || '').digest('hex');
 }
 
+async function hasPublicTable(client, name) {
+  const result = await client.query('SELECT to_regclass($1) IS NOT NULL AS present', [`public.${name}`]);
+  return result.rows[0].present;
+}
+
 async function audit() {
   const client = new Client({
     host: process.env.CR_DB_HOST || config.database?.host,
@@ -123,6 +128,45 @@ async function audit() {
       FROM users
     `)).rows[0];
 
+    activeCheck = 'balance preconsumes';
+    report.checks.balancePreconsumes = await hasPublicTable(client, 'balance_preconsumes')
+      ? (await client.query(`
+      SELECT count(*) FILTER(WHERE status='pending')::int AS "pendingCount",
+             count(*) FILTER(WHERE status='pending' AND created_at < now() - interval '24 hours')::int AS "stalePendingCount",
+             count(*) FILTER(WHERE status='settled' AND (actual_amount IS NULL OR settled_at IS NULL))::int AS "incompleteSettlementCount",
+             count(*) FILTER(WHERE status NOT IN ('pending','settled'))::int AS "unknownStatusCount",
+             count(*) FILTER(WHERE amount < 0 OR actual_amount < 0)::int AS "negativeAmountCount"
+      FROM balance_preconsumes
+    `)).rows[0]
+      : { tableMissing: true };
+
+    activeCheck = 'redemption codes';
+    report.checks.redemptionCodes = await hasPublicTable(client, 'redemption_codes')
+      && await hasPublicTable(client, 'redemption_code_uses')
+      ? (await client.query(`
+      SELECT count(*) FILTER(WHERE COALESCE(rc.used_count,0) <> COALESCE(uses.actual_uses,0))::int AS "usedCountMismatches",
+             count(*) FILTER(WHERE rc.max_uses > 0 AND COALESCE(uses.actual_uses,0) > rc.max_uses)::int AS "codesOverUseLimit",
+             count(*) FILTER(WHERE rc.used_count < 0 OR rc.max_uses < 0 OR rc.amount < 0)::int AS "invalidCodeValues"
+      FROM redemption_codes rc
+      LEFT JOIN (
+        SELECT code_id, count(*)::int AS actual_uses
+        FROM redemption_code_uses GROUP BY code_id
+      ) uses ON uses.code_id = rc.id
+    `)).rows[0]
+      : { tableMissing: true };
+
+    activeCheck = 'API key memberships';
+    report.checks.apiKeyMemberships = await hasPublicTable(client, 'api_key_members')
+      ? (await client.query(`
+      SELECT count(*) FILTER(WHERE ak.id IS NULL OR u.id IS NULL)::int AS "orphanMemberships",
+             count(*) FILTER(WHERE ak.id IS NOT NULL AND ak.user_id = m.user_id)::int AS "ownerAlsoMemberCount",
+             (SELECT count(*)::int FROM api_keys WHERE enabled = TRUE AND user_id IS NULL) AS "enabledKeysWithoutOwner"
+      FROM api_key_members m
+      LEFT JOIN api_keys ak ON ak.id = m.api_key_id
+      LEFT JOIN users u ON u.id = m.user_id
+    `)).rows[0]
+      : { tableMissing: true };
+
     activeCheck = 'catalog';
     report.checks.catalog = (await client.query(`
       SELECT count(*) FILTER(WHERE NOT i.indisvalid)::int AS "invalidIndexes",
@@ -130,6 +174,32 @@ async function audit() {
              (SELECT count(*)::int FROM pg_constraint WHERE connamespace='public'::regnamespace AND NOT convalidated) AS "unvalidatedConstraints"
       FROM pg_index i JOIN pg_class t ON t.oid=i.indrelid
       JOIN pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname='public'
+    `)).rows[0];
+
+    activeCheck = 'database hooks and role';
+    report.checks.databaseHooks = (await client.query(`
+      SELECT n.nspname AS "schemaName", c.relname AS "tableName", t.tgname AS "triggerName",
+             p.proname AS "functionName", l.lanname AS "languageName",
+             p.prosecdef AS "securityDefiner", pg_get_userbyid(p.proowner) AS "functionOwner"
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      JOIN pg_proc p ON p.oid=t.tgfoid
+      JOIN pg_language l ON l.oid=p.prolang
+      WHERE NOT t.tgisinternal AND n.nspname='public'
+      ORDER BY c.relname,t.tgname
+    `)).rows;
+    report.checks.databaseEventTriggers = (await client.query(`
+      SELECT evtname AS name, evtevent AS event, evtenabled AS enabled,
+             pg_get_userbyid(evtowner) AS owner
+      FROM pg_event_trigger ORDER BY evtname
+    `)).rows;
+    report.checks.databaseRole = (await client.query(`
+      SELECT rolname AS name, rolsuper AS superuser, rolcreaterole AS createRole,
+             rolcreatedb AS createDatabase, rolreplication AS replication,
+             rolbypassrls AS bypassRls,
+             has_schema_privilege(current_user, 'public', 'CREATE') AS publicSchemaCreate
+      FROM pg_roles WHERE rolname=current_user
     `)).rows[0];
 
     activeCheck = 'owned sequences';
@@ -186,7 +256,20 @@ audit().then(report => {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.checks.sequences.behindCount > 0
       || report.checks.providers.suspiciousProviderNames.length > 0
-      || report.checks.providers.suspiciousProviderScripts.length > 0) process.exitCode = 1;
+      || report.checks.providers.suspiciousProviderScripts.length > 0
+      || report.checks.balancePreconsumes.stalePendingCount > 0
+      || report.checks.balancePreconsumes.incompleteSettlementCount > 0
+      || report.checks.balancePreconsumes.unknownStatusCount > 0
+      || report.checks.balancePreconsumes.negativeAmountCount > 0
+      || report.checks.balancePreconsumes.tableMissing === true
+      || report.checks.redemptionCodes.usedCountMismatches > 0
+      || report.checks.redemptionCodes.codesOverUseLimit > 0
+      || report.checks.redemptionCodes.invalidCodeValues > 0
+      || report.checks.redemptionCodes.tableMissing === true
+      || report.checks.apiKeyMemberships.orphanMemberships > 0
+      || report.checks.apiKeyMemberships.ownerAlsoMemberCount > 0
+      || report.checks.apiKeyMemberships.enabledKeysWithoutOwner > 0
+      || report.checks.apiKeyMemberships.tableMissing === true) process.exitCode = 1;
 }).catch(error => {
   // Deliberately omit error text and connection diagnostics that could expose config values.
   process.stderr.write(`Security audit failed (${error.activeCheck || 'database query'}): ${error.code || error.name || 'unknown error'}\n`);

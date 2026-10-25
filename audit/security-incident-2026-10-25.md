@@ -28,7 +28,8 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 | 2026-10-23 至 10-24 | 复盘材料描述了处置、恢复和凭据重置；其总结强调日志异机留存、主机基线、进程派生与出站连接监控。 |
 | 2026-10-25 09:30 至 09:52 | 本轮只读复核时，Tailscale 主机 `bloret-core`（`100.64.0.2`）仍在线且 Tailscale ping 成功，但 TCP `5432` 无响应；CrewRouter 日志持续出现连接超时，新的只读数据库审计在连接阶段失败。未能确定是 PostgreSQL 停止还是远端防火墙丢弃连接；本轮未登录数据库主机。 |
 | 2026-10-25 10:15 CST | 再次只读检查：Tailscale ping 在 1 ms 内成功，`pg_isready` 返回 no response，TCP `5432` 连接失败；未登录数据库主机。 |
-| 2026-10-25 10:22 CST | 当前态复核：`crewrouter.service` 仍以 root 运行（PID 1407，`/usr/local/bin/node server/index.js`），监听 `*:20003`；运行时 Node 为 24.13.1。Tailscale ping 到 `bloret-core` 成功，但 `pg_isready` 与 TCP `5432` 仍无响应。运行环境为 production、`config.demo=false`，进程未设置 `CR_TRUST_PROXY`。本机 iptables INPUT 默认策略为 ACCEPT，只有 SSH 等特定规则；应用端口是否被云防火墙限制无证据。本轮 `npm audit --omit=dev` 对当前锁文件报告 0 项，但不代表运行进程依赖已更新。 |
+| 2026-10-25 10:22 CST | 当前态复核：`crewrouter.service` 仍以 root 运行（PID 1407，`/usr/local/bin/node server/index.js`），监听 `*:20003`；`/usr/local/bin/node --version` 返回 24.13.1。Tailscale ping 到 `bloret-core` 成功，但 `pg_isready` 与 TCP `5432` 仍无响应。运行环境为 production、`config.demo=false`，进程未设置 `CR_TRUST_PROXY`。本机 iptables INPUT 默认策略为 ACCEPT，只有 SSH 等特定规则；应用端口是否被云防火墙限制无证据。本轮 `npm audit --omit=dev` 对当前锁文件报告 0 项，但不代表运行进程依赖已更新。 |
+| 2026-10-25 10:33 CST | 重试运行只读数据库安全审计，连接等待约 10 秒后失败，未执行任何 SQL；因此本次不能对当前余额、兑换码、团队、Key 关系或数据库对象作结论。 |
 | 2026-10-25 | 完成本轮 CrewRouter 代码与数据库状态审查，撤销残留会话、禁用遗留用户 API Key、修正序列及一条缺失的团队关联；继续加固 SSRF 出站请求。 |
 
 时间线口径存在冲突：第一份 HTML 的内嵌图片给出上述分钟级时间，并把删除 `/opt`、清空 PostgreSQL 的时间列为 10-21 22:52 至 23:03；同一材料的正文把发现与删除描述为 10-22，第二份复盘则称入侵精确时间因日志丢失不可考。工作区没有这些时间对应的原始日志或取证包，因此图片中的分钟时间只作为材料记录保留，不能视为独立核实的事实；原始时区也未注明。
@@ -80,6 +81,8 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 - `server/plugins/zip.js`：插件上传、商店安装、商店清单读取和自动更新共用 ZIP 校验；检查目录与本地文件头、路径、重复条目、压缩算法和体积，拒绝链接/特殊文件，以 Node zlib 限量解压并验证 CRC。安装更新包时不再调用 root 权限的 `unzip`，也不再展开内嵌 tar；更新包须直接包含程序文件。更新 URL 限定为公网 HTTPS 且不跟随重定向，下载上限 32 MiB；商店清单下载上限 25 MiB，单个清单上限 1 MiB。ZIP 仅支持单卷、非 ZIP64、文件名为 ASCII 或 UTF-8 的包；这些改动都需随可信重建部署后才生效。
 - 依赖审计：初始 `npm audit --omit=dev` 报告 9 项生产依赖漏洞，完整审计另有 2 项开发依赖漏洞。更新 `@simplewebauthn/server`、Axios、Express、Nodemailer 及锁文件中的传递依赖后，`npm audit` 与 `npm audit --omit=dev` 均为 0 项。Nodemailer 升至 10.x；项目声明最低 Node.js 版本为 20，与 CI 的 Node 20/22 一致。结果只反映当前仓库清单，尚未部署到正在运行的服务。
 - 新增只读安全审计脚本及默认 dry-run 的数据库序列修复脚本；数据库处置已在本轮之前执行并复查。
+- `server/scripts/security-audit.js` 新增只读检查：余额预扣是否长期 pending/结算不完整、兑换码 `used_count` 是否与使用明细一致、API Key 成员关系、公开 schema 触发器/事件触发器和当前数据库角色权限。2026-10-25 10:33 重试时数据库仍无法连接，因此这些项目尚无现库结果。
+- `server/routes/teams.js` 删除 Team 改为事务处理，并在仍有用户主 Team 或成员映射时拒绝删除，避免旧逻辑清空 `users.team_id` 后再级联删除关联、造成用户失去 Team。该修复也尚未进入运行服务。
 
 ## 尚未关闭的风险与后续动作
 

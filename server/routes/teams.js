@@ -126,23 +126,49 @@ router.delete('/teams/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.A
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `删除 Team #${req.params.id}`,
 }), async (req, res) => {
+  let client;
+  let inTransaction = false;
   try {
-    // 检查是否为个人账户 Team
-    const teamCheck = await pool.query('SELECT is_personal FROM teams WHERE id = $1', [req.params.id]);
+    client = await pool.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
+    // 与成员添加共用 Team 行锁，避免删除与新成员写入竞态。
+    const teamCheck = await client.query('SELECT id, is_personal FROM teams WHERE id = $1 FOR UPDATE', [req.params.id]);
     if (teamCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(404).json({ error: 'Team 不存在' });
     }
     if (teamCheck.rows[0].is_personal) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return res.status(403).json({ error: '个人账户 Team 不可删除' });
     }
-    await pool.query('DELETE FROM user_group_team_map WHERE team_id = $1', [req.params.id]);
-    // 先将该 Team 的用户 team_id 置空
-    await pool.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [req.params.id]);
-    await pool.query('DELETE FROM teams WHERE id = $1', [req.params.id]);
+
+    const assigned = await client.query(`
+      SELECT
+        (SELECT count(*)::int FROM user_teams WHERE team_id = $1) AS membership_count,
+        (SELECT count(*)::int FROM users WHERE team_id = $1) AS primary_user_count
+    `, [req.params.id]);
+    const { membership_count: membershipCount, primary_user_count: primaryUserCount } = assigned.rows[0];
+    if (membershipCount > 0 || primaryUserCount > 0) {
+      await client.query('ROLLBACK');
+      inTransaction = false;
+      return res.status(409).json({ error: '该 Team 仍有关联用户，请先将成员重新分配后再删除' });
+    }
+
+    await client.query('DELETE FROM user_group_team_map WHERE team_id = $1', [req.params.id]);
+    const deleted = await client.query('DELETE FROM teams WHERE id = $1 RETURNING id', [req.params.id]);
+    if (!deleted.rowCount) throw new Error('删除 Team 时记录已发生变化');
+    await client.query('COMMIT');
+    inTransaction = false;
     res.json({ success: true });
   } catch (error) {
+    if (inTransaction) await client.query('ROLLBACK').catch(() => {});
     Logger.error('[删除Team] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
+  } finally {
+    client?.release();
   }
 });
 
