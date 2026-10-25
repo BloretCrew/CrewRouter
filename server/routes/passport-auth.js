@@ -6,8 +6,8 @@ const Logger = require('../logger');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const { getAuthMode, AUTH_MODE_LOCK } = require('../utils/auth-mode');
 const { loadPersistedEdition } = require('../utils/instance-edition');
-const { validateUrl } = require('../utils/url-validator');
-const proxyPool = require('../proxy-pool');
+const { hasPassportCredentials } = require('../utils/passport-credentials');
+const { verifyPassportCode } = require('../utils/passport-verifier');
 
 const router = express.Router();
 const passport = config.passport || {};
@@ -82,34 +82,13 @@ async function requirePassportLogin(db = pool) {
   if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await getAuthMode(db) }).auth.methods.includes('passport')) {
     throw Object.assign(new Error('当前实例不支持 PassPort 登录'), { code: 'PASSPORT_DISABLED' });
   }
-  if (!passport.appId || !passport.appSecret) {
+  if (!hasPassportCredentials(passport)) {
     throw Object.assign(new Error('PassPort 未配置'), { code: 'PASSPORT_NOT_CONFIGURED' });
   }
 }
 
 async function verifyPassport(code) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
-  try {
-    const verificationUrl = `${baseUrl}/app/verify`;
-    const urlCheck = await validateUrl(verificationUrl, { allowPrivate: false });
-    if (!urlCheck.ok || urlCheck.url.protocol !== 'https:' || urlCheck.url.username || urlCheck.url.password) {
-      throw new Error(`PassPort 地址安全校验失败: ${urlCheck.error || '必须使用无凭据的公网 HTTPS 地址'}`);
-    }
-    const response = await proxyPool.pinnedFetchValidated(urlCheck, {
-      method: 'POST', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ app_id: passport.appId, app_secret: passport.appSecret, code }),
-      redirect: 'manual',
-    });
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch (_) { throw new Error('PassPort 返回了非 JSON 响应'); }
-    if (!response.ok || data.error || (data.code !== undefined && data.code !== 0)) throw new Error(data.error || data.message || data.msg || 'PassPort 验证失败');
-    const payload = data.data && typeof data.data === 'object' ? data.data : data;
-    localPassport.passportIdentity(payload);
-    return payload;
-  } finally { clearTimeout(timer); }
+  return verifyPassportCode({ ...passport, baseUrl }, code, { method: 'POST', requireAppToken: true });
 }
 
 async function seedPassportUser(client, user, username, invite = null) {
@@ -140,7 +119,7 @@ router.get('/passport', async (req, res) => {
     const { metadata } = require('../utils/instance-edition');
     const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await getAuthMode() }).auth.methods.includes('passport')) return res.redirect('/?error=passport_disabled');
-    if (!passport.appId || !passport.appSecret) {
+    if (!hasPassportCredentials(passport)) {
       if (isLocal()) return res.status(503).type('html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>PassPort 未配置</title><p>Local PassPort 登录未配置，请配置应用 ID 和密钥后重试。</p></html>');
       return res.redirect('/?error=passport_not_configured');
     }
@@ -160,7 +139,8 @@ router.get('/passport', async (req, res) => {
     saveSession(req, res, (err) => {
       if (err) return res.status(500).send('登录状态保存失败，请重试。');
       const callbackUri = new URL(redirectUri);
-      // PassPort 的 /app/oauth 通过 redirect_uri 保留参数，回调只追加 code。
+      // Keep state in both locations for providers that preserve redirect_uri's
+      // query but append only code. This requires provider-specific support.
       callbackUri.searchParams.set('state', state);
       const params = new URLSearchParams({
         app_id: passport.appId,
@@ -192,7 +172,7 @@ async function localCallback(req, res) {
     const origin = localPassport.localOrigin(req, config.app.port);
     pending = localPassport.consumeState(req, origin);
     await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
-    if (!passport.appId || !passport.appSecret) throw new Error('PassPort 未配置');
+    if (!hasPassportCredentials(passport)) throw new Error('PassPort 未配置');
     const data = await verifyPassport(req.query.code);
     localPassport.assertActive(pending);
     const identity = localPassport.passportIdentity(data);

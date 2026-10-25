@@ -82,6 +82,7 @@
       <div class="setup-success">
         <h2>PassPort 首次授权</h2>
         <p>请使用管理员身份完成 Bloret PassPort 授权，授权成功后将自动创建管理员账号并进入控制台。</p>
+        <div class="blora-message setup-error" data-variant="danger" id="passportError" role="alert"></div>
         <button class="btn btn-primary blora-button" data-variant="primary" type="button" onclick="setup.startPassportAuth()">前往 PassPort 授权</button>
       </div>
     </div>
@@ -161,8 +162,18 @@
       },
 
       async startPassportAuth() {
-        const errorEl = document.getElementById('modeError');
+        const errorEl = document.getElementById('passportError');
         errorEl.style.display = 'none';
+        try {
+          const statusResponse = await fetch('/auth/status', { credentials: 'same-origin' });
+          if (!statusResponse.ok) throw new Error('暂时无法确认登录配置，请稍后重试');
+          const status = await statusResponse.json();
+          if (status.passportConfigured === false) throw new Error('PassPort 登录尚未配置，请联系实例管理员完成应用配置后重试');
+        } catch (error) {
+          errorEl.textContent = error.message || '无法确认登录配置';
+          errorEl.style.display = 'block';
+          return;
+        }
         try {
           const response = await fetch('/auth/passport/redirect-uri', { credentials: 'same-origin' });
           const data = await response.json().catch(() => ({}));

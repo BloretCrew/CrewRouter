@@ -10,12 +10,36 @@
 
 const crypto = require('crypto');
 const Logger = require('../logger');
+const { isStoreSessionSecretValid } = require('../utils/store-session-secret');
 
 const COOKIE_NAME = 'bl_store_session';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
+const MAX_CLOCK_SKEW_MS = 60 * 1000;
+const MAX_COOKIE_LENGTH = 3800;
+const MAX_COOKIE_HEADER_LENGTH = 16 * 1024;
+const MAX_USERNAME_LENGTH = 255;
+const MAX_AVATAR_LENGTH = 2048;
 
 function sign(payloadB64, secret) {
   return crypto.createHmac('sha256', secret).update(payloadB64).digest('base64url');
+}
+
+function validString(value, maxLength) {
+  return typeof value === 'string' && value.length <= maxLength
+    && !/[\x00-\x1f\x7f]/.test(value)
+    && Buffer.from(value, 'utf8').toString('utf8') === value;
+}
+
+function validUser(user) {
+  return user && typeof user === 'object' && !Array.isArray(user)
+    && validString(user.username, MAX_USERNAME_LENGTH)
+    && user.username.length > 0 && user.username.trim() === user.username
+    && validString(user.avatar, MAX_AVATAR_LENGTH)
+    && typeof user.admin === 'boolean';
+}
+
+function sessionError() {
+  return Object.assign(new Error('商店会话字段无效或过长'), { code: 'PASSPORT_SESSION_INVALID' });
 }
 
 /**
@@ -24,27 +48,33 @@ function sign(payloadB64, secret) {
  * @returns {string} cookie value
  */
 function encodeSession(user, secret) {
-  if (!secret) {
-    const err = new Error('store sessionSecret 未配置');
+  if (!isStoreSessionSecretValid(secret)) {
+    const err = new Error('商店会话签名密钥须配置为至少 32 字节的随机值，不能使用默认值');
     err.code = 'PASSPORT_NOT_CONFIGURED';
     throw err;
   }
+  if (!user || typeof user !== 'object' || Array.isArray(user)) throw sessionError();
   const body = {
     username: user.username,
-    avatar: user.avatar || '',
-    admin: !!user.admin,
+    avatar: user.avatar === undefined ? '' : user.avatar,
+    admin: user.admin,
     iat: Date.now(),
   };
+  if (!validUser(body)) throw sessionError();
   const payloadB64 = Buffer.from(JSON.stringify(body), 'utf8').toString('base64url');
   const sig = sign(payloadB64, secret);
-  return `${payloadB64}.${sig}`;
+  const value = `${payloadB64}.${sig}`;
+  if (value.length > MAX_COOKIE_LENGTH) throw sessionError();
+  return value;
 }
 
 function decodeSession(cookieValue, secret) {
-  if (!cookieValue || !secret) return null;
+  if (!isStoreSessionSecretValid(secret) || typeof cookieValue !== 'string'
+      || !cookieValue || cookieValue.length > MAX_COOKIE_LENGTH) return null;
   const parts = cookieValue.split('.');
   if (parts.length !== 2) return null;
   const [payloadB64, sig] = parts;
+  if (!/^[A-Za-z0-9_-]+$/.test(payloadB64) || !/^[A-Za-z0-9_-]{43}$/.test(sig)) return null;
   const expected = sign(payloadB64, secret);
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
@@ -53,16 +83,19 @@ function decodeSession(cookieValue, secret) {
     return null;
   }
   try {
-    const body = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
-    if (!body.username || !body.iat) return null;
-    if (Date.now() - body.iat > MAX_AGE_MS) {
-      Logger.info('[store-session] 会话过期，username=', body.username);
-      return null;
-    }
+    const bytes = Buffer.from(payloadB64, 'base64url');
+    if (bytes.toString('base64url') !== payloadB64) return null;
+    const json = bytes.toString('utf8');
+    if (!Buffer.from(json, 'utf8').equals(bytes)) return null;
+    const body = JSON.parse(json);
+    if (!validUser(body) || Object.keys(body).length !== 4
+        || !Number.isSafeInteger(body.iat) || body.iat <= 0) return null;
+    const now = Date.now();
+    if (body.iat > now + MAX_CLOCK_SKEW_MS || now - body.iat >= MAX_AGE_MS) return null;
     return {
       username: body.username,
-      avatar: body.avatar || '',
-      admin: !!body.admin,
+      avatar: body.avatar,
+      admin: body.admin,
       iat: body.iat,
     };
   } catch (e) {
@@ -98,26 +131,28 @@ function clearSessionCookie(res, secure) {
  * CrewRouter 未用 cookie-parser，这里手动解析 Cookie 头。
  */
 function readSessionFromReq(req, secret) {
-  if (!secret) return null;
-  const raw = parseCookieHeader(req.headers.cookie || '')[COOKIE_NAME];
-  return decodeSession(raw, secret);
-}
-
-function parseCookieHeader(header) {
-  const out = {};
-  for (const part of String(header).split(';')) {
+  if (!isStoreSessionSecretValid(secret)) return null;
+  const header = req?.headers?.cookie;
+  if (typeof header !== 'string' || header.length > MAX_COOKIE_HEADER_LENGTH) return null;
+  let raw;
+  for (const part of header.split(';')) {
     const idx = part.indexOf('=');
     if (idx < 0) continue;
     const k = part.slice(0, idx).trim();
+    if (k !== COOKIE_NAME) continue;
+    // Duplicate cookies are ambiguous across paths/domains. Never choose one.
+    if (raw !== undefined) return null;
     const v = part.slice(idx + 1).trim();
-    if (k) out[k] = decodeURIComponent(v);
+    if (v.length > MAX_COOKIE_LENGTH) return null;
+    try { raw = decodeURIComponent(v); } catch { return null; }
   }
-  return out;
+  return decodeSession(raw, secret);
 }
 
 module.exports = {
   COOKIE_NAME,
   MAX_AGE_MS,
+  MAX_CLOCK_SKEW_MS,
   encodeSession,
   decodeSession,
   setSessionCookie,

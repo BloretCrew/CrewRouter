@@ -60,6 +60,7 @@
       <a id="feishuLogin" class="link-button" href="/auth/feishu" hidden>飞书登录</a>
       <a id="passportLogin" class="link-button" href="/auth/passport" hidden>Bloret PassPort 登录</a>
     </div>
+    <p id="passportConfigurationNotice" class="subtitle" role="status" hidden>PassPort 登录尚未配置，请联系实例管理员。</p>
     <p class="footer"><a href="/">返回标准登录页</a></p>
   </main>
   <script>
@@ -139,7 +140,10 @@
         const data = await response.json();
         const feishu = document.getElementById('feishuLogin');
         const passport = document.getElementById('passportLogin');
-        if (data.authMode === 'passport') passport.hidden = false;
+        if (data.authMode === 'passport') {
+          passport.hidden = data.passportConfigured === false;
+          document.getElementById('passportConfigurationNotice').hidden = data.passportConfigured !== false;
+        }
         else if (data.feishuEnabled) feishu.hidden = false;
         document.getElementById('otherLogin').hidden = feishu.hidden && passport.hidden;
         const instanceResponse = await fetch('/api/instance');

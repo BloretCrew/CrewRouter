@@ -6,9 +6,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const express = require('express');
 const storeState = require('../utils/passport-store-state');
 const noLog = { info() {}, warn() {}, error() {} };
+const TEST_SESSION_SECRET = crypto.randomBytes(32).toString('base64url');
+const ROTATED_SESSION_SECRET = crypto.randomBytes(32).toString('base64url');
 
 function loadModule(file, overrides = {}, globals = {}) {
   const module = { exports: {} };
@@ -20,7 +23,7 @@ function loadModule(file, overrides = {}, globals = {}) {
 }
 
 function stateChecks() {
-  const cfg = { isConfigured: true, appId: 'test-app', appSecret: 'offline-secret', sessionSecret: 'offline-cookie-secret', baseUrl: 'https://passport.example.test' };
+  const cfg = { isConfigured: true, appId: 'test-app', appSecret: 'offline-secret', sessionSecret: TEST_SESSION_SECRET, baseUrl: 'https://passport.example.test' };
   const callback = 'https://router.example/store/auth/callback';
   const req = { secure: true, headers: {}, query: {} };
   let setCookie;
@@ -50,7 +53,7 @@ function stateChecks() {
   assert.throws(() => storeState.consumeState({ ...req, query: { code: 'code' } }, res, cfg, callback, 1001), /状态/);
   assert.throws(() => storeState.consumeState({ ...req, query: { code: ['code'], state: flow.state } }, res, cfg, callback, 1001), /状态/);
   assert.throws(() => storeState.consumeState({ ...req, headers: { cookie: `${cookie}; ${cookie}` } }, res, cfg, callback, 1001), /状态/);
-  assert.throws(() => storeState.consumeState(req, res, { ...cfg, sessionSecret: 'rotated' }, callback, 1001), /状态/);
+  assert.throws(() => storeState.consumeState(req, res, { ...cfg, sessionSecret: ROTATED_SESSION_SECRET }, callback, 1001), /状态/);
   assert.throws(() => storeState.consumeState(req, res, cfg, 'https://other.example/store/auth/callback', 1001), /状态/);
   assert.throws(() => storeState.consumeState(req, res, cfg, callback, 1000 + storeState.STATE_TTL_MS), /状态/);
   assert.equal(storeState.consumeState(req, res, cfg, callback, 1001).returnTo, '/store?plugin=demo#reviews');
@@ -73,7 +76,7 @@ function gate() {
 }
 
 async function fixture() {
-  const cfg = { isConfigured: true, appId: 'test-app', appSecret: 'offline-secret', sessionSecret: 'offline-cookie-secret', baseUrl: 'https://passport.example.test' };
+  const cfg = { isConfigured: true, appId: 'test-app', appSecret: 'offline-secret', sessionSecret: TEST_SESSION_SECRET, baseUrl: 'https://passport.example.test' };
   const data = { verifies: 0, profile: { username: 'alice', avatar: '', admin: false } };
   const passportLib = {
     getPassportConfig: () => cfg,
@@ -180,7 +183,7 @@ async function main() {
     begin.jar.set('cr_store_oauth', `${Buffer.from(JSON.stringify(changed)).toString('base64url')}.${sig}`);
     assert.equal((await f.call(begin.callback, begin.jar)).headers.get('location'), '/store?auth=error');
     assert.equal(f.data.verifies, 0, 'signed return target cannot be tampered with');
-    f.cfg.sessionSecret = 'rotated-secret';
+    f.cfg.sessionSecret = ROTATED_SESSION_SECRET;
     assert.equal((await f.call(begin.callback, original)).headers.get('location'), '/store?auth=error');
     assert.equal(f.data.verifies, 0);
   });

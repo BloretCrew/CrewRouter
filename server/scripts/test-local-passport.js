@@ -111,7 +111,7 @@ async function main() {
   const testConfig = { app: { port: 20003, sessionSecret: 'test-secret' }, passport: { appId: 'app', appSecret: 'secret' } };
   const originalLoad = Module._load;
   const originalFetch = global.fetch;
-  global.fetch = async () => { verificationCount++; if (verifyGate) { const paused = verifyGate; verifyGate = null; await paused.pause(); } return { ok: true, text: async () => JSON.stringify({ username: verifyIdentity, apptoken: 'token' }) }; };
+  global.fetch = async () => { verificationCount++; if (verifyGate) { const paused = verifyGate; verifyGate = null; await paused.pause(); } return new Response(JSON.stringify({ username: verifyIdentity, apptoken: 'token' })); };
   Module._load = function(name, parent, ...args) {
     if (name === '../logger') return { info() {}, warn() {}, error() {}, debug() {} };
     if (name === '../models/database') return { pool };
@@ -121,7 +121,9 @@ async function main() {
       if (name === '../models/database') return { pool };
       if (name === '../config-loader') return testConfig;
       if (name === '../utils/auth-mode') return { getAuthMode: async () => 'feishu' };
-      if (name === '../utils/url-validator') return { validateUrl: async value => ({ ok: true, url: new URL(value) }) };
+    }
+    if (parent?.filename.endsWith('/utils/passport-verifier.js')) {
+      if (name === './url-validator') return { validateUrl: async value => ({ ok: true, url: new URL(value) }) };
       if (name === '../proxy-pool') return { pinnedFetchValidated: async (check, options) => global.fetch(check.url.toString(), options) };
     }
     if (name === '../utils/login-reporter') return { reportLoginEvent() {}, reportLogoutEvent() {} };

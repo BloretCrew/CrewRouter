@@ -43,7 +43,18 @@ src/renderer/               启动页（OOBE + 已保存连接 + 设置），仅
 - PassPort 在独立、安全的授权窗口内登录，与本地控制台共享会话；授权窗口不提供 Desktop IPC。首次授权绑定本地账户，已有本地配置、Key 和历史记录保留在本机。绑定完成后使用同一 PassPort 身份登录。
 - 就绪检查依次验证 `/api/version`、`/api/setup/status`、`/api/instance`，并要求 `runtime=desktop-local`、`edition=personal`、`auth={required:true,methods:['passport']}`、`demo=false`。服务就绪后打开登录页，完成授权后进入控制台。
 - Local 不提供免登录回退；首次授权需要连接 PassPort 服务。PassPort 应用配置需要允许本机动态端口的回环回调地址。
+- Local 需要独立的 PassPort 应用凭据，安装包不再内置共享 Secret。启动 Desktop 前设置 `CREWROUTER_DESKTOP_PASSPORT_APP_ID` 和 `CREWROUTER_DESKTOP_PASSPORT_APP_SECRET`；缺少任一项或仍使用旧共享 Secret 时，登录页显示未配置提示，完成配置并重启 Desktop 后才能授权。
 - 本地服务意外退出时回到启动页并提示重启；返回启动页不会停止本地服务，再次选择本地使用会直接复用。
+
+```bash
+export CREWROUTER_DESKTOP_PASSPORT_APP_ID="替换为独立应用的ID"
+export CREWROUTER_DESKTOP_PASSPORT_APP_SECRET="替换为独立应用的Secret"
+npm start
+```
+
+集成代码也可向 `LocalServerManager` 传入 `config.passport`。配置按整组选择，优先级为显式 `config.passport`（包括空值）、`options.env` 中的 Desktop 专用变量、进程中的 Desktop 专用变量；任一组缺少字段时不会从另一组补齐。普通 `CR_PASSPORT_*` 继续受到父项目配置隔离，不用于 Desktop Local。配置写入权限为 `0600` 的运行时文件，每次启动重新生成；直接修改 `runtime/config.json` 不能作为持久配置入口。专用变量写入配置后不再传给 Server 子进程。
+
+Desktop 用户可读取自己的本地配置，因此该配置不能使原生客户端成为能保密的 OAuth 客户端。对外发行应由身份提供方支持公共客户端和 PKCE，或使用经过审查的可信中转服务；当前代码尚未实现这项协议迁移，不能把另一对共享 Secret 再放入安装包替代。
 
 ## 远程模式
 

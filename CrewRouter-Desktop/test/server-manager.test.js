@@ -23,6 +23,7 @@ test('createRuntimeConfig creates isolated config, data and logs paths', async (
   assert.equal(config.runtime, 'desktop-local');
   assert.equal(config.edition, 'personal');
   assert.deepEqual(config.auth, { required: true, methods: ['passport'] });
+  assert.deepEqual(config.passport, { appId: '', appSecret: '' });
   assert.equal(config.demo, false);
   assert.equal(config.loginReport.enabled, true);
   assert.equal(config.statsReport.enabled, true);
@@ -30,6 +31,65 @@ test('createRuntimeConfig creates isolated config, data and logs paths', async (
   assert.ok(fs.statSync(result.dataDir).isDirectory());
   assert.ok(fs.statSync(result.logsDir).isDirectory());
   await fsp.rm(dir, { recursive: true, force: true });
+});
+
+test('Desktop PassPort config uses one explicit source and never falls back over an explicit config', (t) => {
+  const keys = ['CREWROUTER_DESKTOP_PASSPORT_APP_ID', 'CREWROUTER_DESKTOP_PASSPORT_APP_SECRET'];
+  const previous = keys.map(key => process.env[key]);
+  t.after(() => keys.forEach((key, index) => {
+    if (previous[index] === undefined) delete process.env[key];
+    else process.env[key] = previous[index];
+  }));
+  process.env[keys[0]] = 'inherited-desktop-app';
+  process.env[keys[1]] = 'inherited-desktop-fixture-secret';
+  const overrides = options => new LocalServerManager(options)._configOverrides().passport;
+  assert.deepEqual(overrides({}), { appId: 'inherited-desktop-app', appSecret: 'inherited-desktop-fixture-secret' });
+  assert.deepEqual(overrides({ env: { [keys[0]]: 'explicit-env-app', [keys[1]]: 'explicit-env-fixture-secret' } }), {
+    appId: 'explicit-env-app', appSecret: 'explicit-env-fixture-secret',
+  });
+  assert.deepEqual(overrides({ env: { [keys[0]]: 'partial-env-app' } }), { appId: 'partial-env-app', appSecret: '' });
+  assert.deepEqual(overrides({ env: { [keys[1]]: '' } }), { appId: '', appSecret: '' });
+  for (const passport of [null, {}, { appId: '', appSecret: '' }, { appId: 'explicit-config-app', appSecret: 'explicit-config-fixture-secret' }]) {
+    assert.deepEqual(overrides({ config: { passport }, env: { [keys[0]]: 'ignored-env-app', [keys[1]]: 'ignored-env-fixture-secret' } }), passport);
+  }
+  for (const key of keys) delete process.env[key];
+  assert.equal(overrides({ env: { CR_PASSPORT_APP_ID: 'ignored-server-app', CR_PASSPORT_APP_SECRET: 'ignored-server-fixture-secret' } }), undefined);
+});
+
+test('runtime credential files retain restrictive permissions when regenerated', async (t) => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'cr-desktop-credentials-'));
+  let oldFile;
+  t.after(async () => { await oldFile?.close(); await fsp.rm(dir, { recursive: true, force: true }); });
+  const first = await createRuntimeConfig(dir);
+  await fsp.chmod(first.configPath, 0o644);
+  oldFile = await fsp.open(first.configPath, 'r');
+  const configured = { appId: 'fixture-app', appSecret: 'fixture-app-secret' };
+  const result = await createRuntimeConfig(dir, { passport: configured });
+  const oldConfig = JSON.parse(await oldFile.readFile('utf8'));
+  assert.deepEqual(oldConfig.passport, { appId: '', appSecret: '' }, 'the old readable inode must never receive the new credentials');
+  assert.deepEqual(JSON.parse(await fsp.readFile(result.configPath, 'utf8')).passport, configured);
+  if (process.platform !== 'win32') {
+    assert.equal((await oldFile.stat()).mode & 0o777, 0o644);
+    assert.equal((await fsp.stat(result.configPath)).mode & 0o777, 0o600);
+    assert.equal((await fsp.stat(result.runtimeDir)).mode & 0o777, 0o700);
+  }
+  assert.equal((await fsp.readdir(result.runtimeDir)).some(name => name.startsWith('.config-')), false);
+});
+
+test('runtime configuration replaces a previous symlink without changing its target', { skip: process.platform === 'win32' }, async (t) => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'cr-desktop-symlink-'));
+  t.after(() => fsp.rm(dir, { recursive: true, force: true }));
+  const initial = await createRuntimeConfig(dir);
+  const target = path.join(dir, 'other-config.json');
+  await fsp.writeFile(target, 'unrelated file must remain unchanged\n');
+  await fsp.unlink(initial.configPath);
+  await fsp.symlink(target, initial.configPath);
+  const configured = { appId: 'fixture-app', appSecret: 'fixture-app-secret' };
+  const result = await createRuntimeConfig(dir, { passport: configured });
+  assert.equal(await fsp.readFile(target, 'utf8'), 'unrelated file must remain unchanged\n');
+  assert.equal((await fsp.lstat(result.configPath)).isSymbolicLink(), false);
+  assert.deepEqual(JSON.parse(await fsp.readFile(result.configPath, 'utf8')).passport, configured);
+  assert.equal((await fsp.readdir(result.runtimeDir)).some(name => name.startsWith('.config-')), false);
 });
 
 test('resolveServerEntry supports development and packaged resources', async () => {
@@ -47,6 +107,38 @@ test('redact removes credentials from log output', () => {
 });
 
 const READY_CHILD = `const http=require('http'); const s=http.createServer((q,r)=>{if(q.url==='/api/version')r.end(JSON.stringify({version:'test'}));else if(q.url==='/api/setup/status')r.end(JSON.stringify({needsSetup:false}));else if(q.url==='/api/instance')r.end(JSON.stringify({runtime:'desktop-local',edition:'personal',auth:{required:true,methods:['passport']},demo:false,secret:'no'}));else if(q.url==='/env')r.end(JSON.stringify({token:process.env.CR_LOCAL_TOKEN,db:process.env.CR_DB_NAME,port:process.env.CR_APP_PORT}));else r.statusCode=404,r.end();}); s.listen(process.env.CR_APP_PORT,process.env.CR_APP_HOST);`;
+
+test('dedicated Desktop credentials reach only runtime config while server CR variables stay isolated', async (t) => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'cr-desktop-env-'));
+  const entry = path.join(dir, 'child.js');
+  await fsp.writeFile(entry, READY_CHILD);
+  let spawnedEnv;
+  const manager = new LocalServerManager({
+    serverEntry: entry, userData: dir, createDatabase: false, startupTimeoutMs: 3000, pollIntervalMs: 20,
+    env: {
+      CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'dedicated-desktop-app',
+      CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'dedicated-desktop-fixture-secret',
+      CR_PASSPORT_APP_ID: 'isolated-server-app', CR_PASSPORT_APP_SECRET: 'isolated-server-fixture-secret',
+      CR_CONFIG_PATH: '/must-not-read/server-config.json', CR_DB_HOST: 'must-not-connect.invalid',
+    },
+    spawn(executable, args, options) {
+      spawnedEnv = options.env;
+      return require('node:child_process').spawn(executable, args, options);
+    },
+  });
+  t.after(async () => { await manager.stop(); await fsp.rm(dir, { recursive: true, force: true }); });
+  const status = await manager.start();
+  const config = JSON.parse(await fsp.readFile(manager.runtime.configPath, 'utf8'));
+  assert.deepEqual(config.passport, { appId: 'dedicated-desktop-app', appSecret: 'dedicated-desktop-fixture-secret' });
+  assert.equal(spawnedEnv.CR_CONFIG_PATH, manager.runtime.configPath);
+  assert.equal(spawnedEnv.CR_DB_HOST, '127.0.0.1');
+  for (const name of ['CREWROUTER_DESKTOP_PASSPORT_APP_ID', 'CREWROUTER_DESKTOP_PASSPORT_APP_SECRET', 'CR_PASSPORT_APP_ID', 'CR_PASSPORT_APP_SECRET']) {
+    assert.equal(Object.prototype.hasOwnProperty.call(spawnedEnv, name), false);
+  }
+  assert.equal(JSON.stringify(status).includes('dedicated-desktop-fixture-secret'), false);
+  assert.equal(status.auth.required, true);
+  assert.deepEqual(status.auth.methods, ['passport']);
+});
 
 function getJson(url) {
   return new Promise((resolve, reject) => { http.get(url, (res) => { let body = ''; res.setEncoding('utf8'); res.on('data', (c) => { body += c; }); res.on('end', () => resolve(JSON.parse(body))); }).once('error', reject); });

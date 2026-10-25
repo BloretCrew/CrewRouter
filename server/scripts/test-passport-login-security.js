@@ -11,6 +11,7 @@ const express = require('express');
 const session = require('express-session');
 const passportState = require('../utils/passport-login-state');
 const edition = require('../utils/instance-edition');
+const { createPassportVerifier } = require('../utils/passport-verifier');
 const routeFile = path.resolve(__dirname, '../routes/passport-auth.js');
 
 function independentStateHelper() {
@@ -104,7 +105,7 @@ async function fixture(options = {}) {
       assert.equal(typeof JSON.parse(opts.body).code, 'string');
       if (data.verifyGate) { const pause = data.verifyGate; data.verifyGate = null; await pause.wait(); }
       if (data.verifyError) throw new Error('Offline IdP rejection');
-      return { ok: true, text: async () => JSON.stringify(data.identity) };
+      return new Response(JSON.stringify(data.identity), { headers: { 'Content-Type': 'application/json' } });
     } },
     '../utils/inject-prompt': { seedDefaultPrompt: async () => {} },
     '../utils/login-reporter': { reportLoginEvent() {} },
@@ -113,6 +114,10 @@ async function fixture(options = {}) {
       consumeInvite: async () => { data.consumedInvites++; return true; },
     },
   };
+  mocks['../utils/passport-verifier'] = { verifyPassportCode: createPassportVerifier({
+    validateUrl: mocks['../utils/url-validator'].validateUrl,
+    pinnedFetchValidated: mocks['../proxy-pool'].pinnedFetchValidated,
+  }) };
   const module = { exports: {} };
   const sandbox = {
     module, exports: module.exports, URL, URLSearchParams, AbortController, setTimeout, clearTimeout,
@@ -208,6 +213,15 @@ async function main() {
     assert.equal((await f.call(second.callback, second.jar)).status, 503);
     assert.equal(f.data.verifyCalls, 0, 'credentials removed after initiation');
   });
+  for (const invalidSecret of [' ', 'replace-me', 'your-passport-app-secret']) {
+    await withFixture({}, async f => {
+      const begin = await f.start();
+      f.config.passport.appSecret = invalidSecret;
+      assert.equal((await f.call('/auth/passport')).headers.get('location'), '/?error=passport_not_configured');
+      assert.equal((await f.call(begin.callback, begin.jar)).status, 503);
+      assert.equal(f.data.verifyCalls, 0, 'invalid credentials must block both entry and exchange');
+    });
+  }
   await withFixture({ setup: false, users: [] }, async f => {
     const begin = await f.start();
     const pause = gate(); f.data.verifyGate = pause;

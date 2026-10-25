@@ -30,6 +30,8 @@
 
 安装首次打开 `/setup` 时必须选择 `personal` 或 `team`，选择会写入实例数据库并永久固定，界面和 `CR_EDITION` 不能修改已初始化的版本。无人值守安装可在首次启动前设置 `CR_EDITION=personal` 或 `CR_EDITION=team`；已有实例若没有 edition 记录，需明确完成一次选择，含团队数据的旧库不会被自动标记为 Personal。Personal 版保留核心网关、个人 Key、用量和 Playground，团队管理接口返回 `team_edition_required`；Team 版保留现有团队管理能力。Edition 不是许可或安全边界，后端授权检查始终有效。正式页面品牌区的 `LOCAL` / `PERSONAL` / `TEAM` badge 仅展示实例状态：Desktop 本地运行时显示 `LOCAL`，服务端依据实例 edition 显示 `PERSONAL` 或 `TEAM`；它不是运行时切换控件。本地 runtime 与服务端 edition 是两个不同维度，`runtime=desktop-local` 优先于 edition。Desktop Local 使用 Bloret PassPort 登录，首次授权绑定本地账户；模型配置、API Key 和用量数据仍保存在本机。退出后需要重新登录，Desktop Token 仅标识应用请求来源。
 
+使用 PassPort 登录的 Server 或 Desktop Local 需要配置独立应用的 ID 和 Secret。程序不再提供共享应用凭据，旧版公开的共享 Secret 也不再接受。Server 使用 `passport.appId/appSecret` 或 `CR_PASSPORT_APP_ID/CR_PASSPORT_APP_SECRET`；Desktop 的配置方式见 [Desktop 说明](CrewRouter-Desktop/README.md)。缺少配置时登录保持关闭，请先完成配置并重新启动。
+
 ## 隔离开发测试
 
 请使用仓库外临时 `config.json`、临时端口（例如 `20103`）和独立 PostgreSQL 数据库运行测试，禁止使用生产端口 `20003`、Show 端口 `20004` 或生产 `config.json`/数据库。
@@ -48,7 +50,7 @@ CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic 兼�
 - [x] **Fusion 模式** — 同一请求并发多个模型，裁判模型评估并综合最优回答
 - [x] **实时统计** — 请求量、Token、延迟、成本；按模型 / Key / 时间下钻
 - [x] **API Key 管理** — 时间调度、模型绑定、自定义签名、独立 Fusion 配置
-- [x] **多因素认证** — TOTP、WebAuthn PassKey、飞书 / GitHub OAuth
+- [x] **多因素认证** — TOTP、WebAuthn PassKey、飞书 / PassPort 登录（按实例认证模式提供）
 - [x] **动态密钥刷新** — 供应商 Key 可用脚本定时轮换并缓存
 - [x] **代理池** — 每供应商独立代理，支持订阅导入，应对跨境与 429
 - [x] **团队与权限** — 个人 / 默认 / 前沿团队分层，配合用户组限额

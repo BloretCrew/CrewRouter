@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('node:crypto');
+const { isStoreSessionSecretValid } = require('./store-session-secret');
 
 const STATE_TTL_MS = 5 * 60 * 1000;
 const MAX_CONSUMED_STATES = 10_000;
@@ -39,7 +40,8 @@ function callbackUrl(value) {
 }
 
 function contextFor(cfg, redirectUri) {
-  if (!cfg?.isConfigured || !cfg.appId || !cfg.appSecret || typeof cfg.sessionSecret !== 'string' || !cfg.sessionSecret) throw stateError();
+  if (cfg?.isConfigured !== true || !cfg.appId || !cfg.appSecret
+      || !isStoreSessionSecretValid(cfg.sessionSecret)) throw stateError();
   return crypto.createHash('sha256').update(JSON.stringify([cfg.baseUrl, cfg.appId, callbackUrl(redirectUri).toString()])).digest('hex');
 }
 
@@ -59,14 +61,17 @@ function signature(payload, secret) {
 
 function readCookie(req) {
   const name = cookieName(req);
-  const values = String(req.headers?.cookie || '').split(';').map(part => part.trim())
+  const header = req.headers?.cookie;
+  if (typeof header !== 'string' || header.length > 16 * 1024) throw stateError();
+  const values = header.split(';').map(part => part.trim())
     .filter(part => part.slice(0, part.indexOf('=')) === name)
     .map(part => part.slice(part.indexOf('=') + 1));
-  if (values.length !== 1 || values[0].length > 4096) throw stateError();
+  if (values.length !== 1 || values[0].length > 3800) throw stateError();
   try { return decodeURIComponent(values[0]); } catch { throw stateError(); }
 }
 
 function issueState(req, res, cfg, redirectUri, returnTo, now = Date.now()) {
+  if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + STATE_TTL_MS)) throw stateError();
   const context = contextFor(cfg, redirectUri);
   const state = crypto.randomBytes(32).toString('hex');
   const body = { state, context, returnTo: safeReturnTo(returnTo), expiresAt: now + STATE_TTL_MS };
@@ -80,21 +85,30 @@ function issueState(req, res, cfg, redirectUri, returnTo, now = Date.now()) {
 }
 
 function consumeState(req, res, cfg, redirectUri, now = Date.now()) {
+  if (!Number.isSafeInteger(now) || now < 0) throw stateError();
   const state = req.query?.state;
   const code = req.query?.code;
   if (typeof state !== 'string' || !/^[a-f0-9]{64}$/.test(state)
       || typeof code !== 'string' || !code.trim() || code.length > 4096) throw stateError();
   const context = contextFor(cfg, redirectUri);
   const [payload, actual, extra] = readCookie(req).split('.');
-  if (!payload || !actual || extra !== undefined || !/^[A-Za-z0-9_-]+$/.test(payload)) throw stateError();
+  if (!payload || extra !== undefined || !/^[A-Za-z0-9_-]+$/.test(payload)
+      || !/^[A-Za-z0-9_-]{43}$/.test(actual)) throw stateError();
   const expected = signature(payload, cfg.sessionSecret);
   const expectedBytes = Buffer.from(expected);
   const actualBytes = Buffer.from(actual);
   if (expectedBytes.length !== actualBytes.length || !crypto.timingSafeEqual(expectedBytes, actualBytes)) throw stateError();
   let body;
-  try { body = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); } catch { throw stateError(); }
-  if (!body || body.state !== state || body.context !== context || !Number.isFinite(body.expiresAt)
-      || body.expiresAt <= now || body.expiresAt > now + STATE_TTL_MS) throw stateError();
+  try {
+    const bytes = Buffer.from(payload, 'base64url');
+    const json = bytes.toString('utf8');
+    if (bytes.toString('base64url') !== payload || !Buffer.from(json, 'utf8').equals(bytes)) throw stateError();
+    body = JSON.parse(json);
+  } catch { throw stateError(); }
+  if (!body || Array.isArray(body) || Object.keys(body).length !== 4
+      || body.state !== state || body.context !== context || !Number.isSafeInteger(body.expiresAt)
+      || body.expiresAt <= now || body.expiresAt > now + STATE_TTL_MS
+      || typeof body.returnTo !== 'string' || safeReturnTo(body.returnTo) !== body.returnTo) throw stateError();
   for (const [key, expiresAt] of consumedStates) if (expiresAt <= now) consumedStates.delete(key);
   const key = crypto.createHash('sha256').update(`${context}\0${state}`).digest('hex');
   if (consumedStates.has(key) || consumedStates.size >= MAX_CONSUMED_STATES) throw stateError();

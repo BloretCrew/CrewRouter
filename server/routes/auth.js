@@ -71,12 +71,18 @@ router.get('/status', async (req, res) => {
     const { getAuthMode } = require('../utils/auth-mode');
     const mode = process.env.CR_RUNTIME === 'desktop-local' ? 'passport' : await getAuthMode();
     const { isFeishuLoginAvailable } = require('../utils/feishu-config');
-    const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
+    const config = require('../config-loader');
+    const { hasPassportCredentials } = require('../utils/passport-credentials');
+    const edition = await loadPersistedEdition(pool) || config.edition || 'personal';
     const instance = metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: mode });
+    const passportEnabled = instance.auth.methods.includes('passport');
+    const passportConfigured = passportEnabled && hasPassportCredentials(config.passport);
     const localPassport = process.env.CR_RUNTIME === 'desktop-local'
-      ? { passportOrigin: new URL(require('../config-loader').passport?.baseUrl || 'https://passport.bloret.net').origin }
+      ? { passportOrigin: new URL(config.passport?.baseUrl || 'https://passport.bloret.net').origin }
       : {};
-    res.json({ auth: instance.auth, authMode: mode, ...localPassport, feishuEnabled: instance.auth.methods.includes('feishu') && await isFeishuLoginAvailable() });
+    res.json({ auth: instance.auth, authMode: mode, ...localPassport, passportConfigured,
+      ...(passportEnabled && !passportConfigured ? { passportConfigurationError: 'PASSPORT_NOT_CONFIGURED' } : {}),
+      feishuEnabled: instance.auth.methods.includes('feishu') && await isFeishuLoginAvailable() });
   } catch (error) { res.status(503).json({ error: '认证状态暂不可用' }); }
 });
 

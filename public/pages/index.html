@@ -95,6 +95,7 @@
         <div id="passportLoginSection" class="login-oauth-item" style="display: none;"><a href="/auth/passport" id="passportLoginLink" class="blora-button" data-variant="outline">Bloret PassPort 登录</a></div>
         <div id="feishuLoginSection" class="login-oauth-item" style="display: block;"><a href="/auth/feishu" class="blora-button" data-variant="outline"><span>飞书登录</span></a></div>
       </div>
+      <p id="passportConfigurationNotice" class="auth-simple-link" role="status" hidden>PassPort 登录尚未配置，请联系实例管理员。</p>
       <p id="localPassportNotice" class="auth-simple-link" hidden>本地使用需要登录 Bloret PassPort。首次登录会绑定此电脑的本地账户，并保留已有配置与记录。</p>
       <p class="auth-simple-link" id="simpleLoginLink"><a href="/plain-login">使用简洁登录页</a></p>
 
@@ -122,7 +123,11 @@
         const d = await r.json();
         const feishu = document.getElementById('feishuLoginSection');
         const passport = document.getElementById('passportLoginSection');
-        if (d.authMode === 'passport') { if (passport) passport.style.display = 'block'; if (feishu) feishu.style.display = 'none'; }
+        if (d.authMode === 'passport') {
+          if (passport) passport.style.display = d.passportConfigured === false ? 'none' : 'block';
+          if (feishu) feishu.style.display = 'none';
+          document.getElementById('passportConfigurationNotice').hidden = d.passportConfigured !== false;
+        }
         else if (d.feishuEnabled && feishu) feishu.style.display = 'block';
         const link = document.getElementById('passportLoginLink');
         const instanceRes = await fetch('/api/instance');
@@ -393,6 +398,8 @@
       const errors = {
         'session_failed': '会话保存失败',
         'login_failed': '用户名/密码错误或登录失败',
+        'passport_disabled': '当前实例未启用 PassPort 登录',
+        'passport_not_configured': 'PassPort 登录尚未配置，请联系实例管理员',
         'feishu_state_invalid': '飞书登录失败：安全校验不通过，请重试',
         'feishu_disabled': '当前实例未启用飞书登录，请使用页面提供的登录方式',
         'feishu_conflict': '该账号已绑定其他飞书身份，请使用原登录方式后联系管理员核实',

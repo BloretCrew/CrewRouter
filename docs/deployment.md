@@ -200,6 +200,17 @@ export CR_DB_PASSWORD="你的数据库密码"
 export CR_SESSION_SECRET="随机字符串"
 ```
 
+使用 PassPort 登录的实例还需在身份提供方创建独立应用，配置允许的回调地址，并设置该应用的凭据：
+
+```bash
+export CR_PASSPORT_APP_ID="替换为独立应用的ID"
+export CR_PASSPORT_APP_SECRET="替换为独立应用的Secret"
+```
+
+也可填写 `config.json` 的 `passport.appId`、`passport.appSecret`。缺少任一项、仍为模板值或仍使用旧版公开的共享 Secret 时，登录不会启动；登录页会显示未配置提示。空配置不会再恢复共享凭据。旧 Secret 已公开，应用所有者还须在 PassPort 侧撤销或轮换它，删除源码默认值不会使上游凭据失效。不要把新 Secret 放入 Git 或发布包。
+
+Demo 插件商店使用独立的 `store.passport` 应用配置，其会话密钥可配置为 `CR_STORE_SESSION_SECRET` 或 `store.passport.sessionSecret`；未显式指定时沿用应用会话密钥。该密钥至少需要 32 字节、应随机生成；默认值、模板值和过短密钥会使商店登录及写操作关闭。轮换商店密钥会使旧商店会话和待授权状态失效。商店仅在 Demo 模式挂载，顶层 PassPort 配置不会自动配置商店。
+
 ### 3.5 启动服务
 
 ```bash

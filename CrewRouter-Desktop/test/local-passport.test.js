@@ -113,6 +113,22 @@ test('stale metadata response cannot open an authorization window after cancella
   assert.equal(electron.BrowserWindow.instances.length, count);
 });
 
+test('missing PassPort credentials show a configuration message without opening authorization', async () => {
+  const { main, flow, start, electron } = await setup({
+    fetchImpl: async () => ({ ok: true, json: async () => ({ passportOrigin: PASSPORT, passportConfigured: false }) }),
+  });
+  const el = errorElement(main);
+  const count = electron.BrowserWindow.instances.length;
+  await start();
+  await tick();
+  assert.equal(electron.BrowserWindow.instances.length, count);
+  assert.equal(main.currentUrl(), `${LOCAL}/`);
+  assert.equal(flow.isPending(), false);
+  assert.equal(el.hidden, false);
+  assert.match(el.textContent, /PassPort 登录尚未配置/);
+  await flow.cancel();
+});
+
 test('provider login, session and 2FA navigation allows only exact GitHub/Feishu HTTPS origins', async () => {
   const { flow, start } = await setup();
   const auth = await start();

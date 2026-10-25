@@ -32,7 +32,10 @@ async function createRuntimeConfig(userData, overrides = {}) {
   const runtimeDir = path.join(userData, 'runtime');
   const dataDir = path.join(runtimeDir, 'data');
   const logsDir = path.join(userData, 'logs');
-  await Promise.all([fsp.mkdir(runtimeDir, { recursive: true }), fsp.mkdir(dataDir, { recursive: true }), fsp.mkdir(logsDir, { recursive: true })]);
+  await fsp.mkdir(runtimeDir, { recursive: true, mode: 0o700 });
+  if (!(await fsp.lstat(runtimeDir)).isDirectory()) throw new Error('Local runtime directory must be a real directory');
+  await fsp.chmod(runtimeDir, 0o700);
+  await Promise.all([fsp.mkdir(dataDir, { recursive: true }), fsp.mkdir(logsDir, { recursive: true })]);
   const configPath = path.join(runtimeDir, 'config.json');
   const databaseKey = crypto.createHash('sha256').update(path.resolve(userData)).digest('hex').slice(0, 16);
   const databaseName = `crewrouter_desktop_${databaseKey}`;
@@ -42,12 +45,28 @@ async function createRuntimeConfig(userData, overrides = {}) {
     runtime: 'desktop-local',
     edition: 'personal',
     auth: { required: true, methods: ['passport'] },
+    passport: { appId: '', appSecret: '' },
     loginReport: { enabled: true },
     statsReport: { enabled: true },
     demo: false,
   };
   const finalConfig = mergeConfig(config, overrides);
-  await fsp.writeFile(configPath, `${JSON.stringify(finalConfig, null, 2)}\n`, { mode: 0o600 });
+  const temporaryConfigPath = path.join(runtimeDir, `.config-${crypto.randomBytes(12).toString('hex')}.tmp`);
+  let temporaryFile;
+  let ownsTemporary = false;
+  try {
+    temporaryFile = await fsp.open(temporaryConfigPath, 'wx', 0o600);
+    ownsTemporary = true;
+    await temporaryFile.writeFile(`${JSON.stringify(finalConfig, null, 2)}\n`, 'utf8');
+    await temporaryFile.close();
+    temporaryFile = null;
+    // Replace the old directory entry without writing through a permissive old
+    // file or a symlink. The new inode is private before it receives credentials.
+    await fsp.rename(temporaryConfigPath, configPath);
+  } finally {
+    if (temporaryFile) await temporaryFile.close().catch(() => {});
+    if (ownsTemporary) await fsp.rm(temporaryConfigPath, { force: true });
+  }
   return { runtimeDir, configPath, dataDir, logsDir, config: finalConfig };
 }
 
@@ -102,7 +121,25 @@ const PROGRESS = Object.freeze({
   ready: { step: 3, total: 4, label: '正在检查服务就绪' },
 });
 
-const INHERITED_CONFIG_KEYS = /^(?:CR(?:W)?_|CREWROUTER_(?:SERVER_ROOT|PACKAGED_SERVER_ROOT)$|DATABASE_URL$|PG(?:HOST|PORT|USER|PASSWORD|DATABASE)$)/;
+const DESKTOP_PASSPORT_APP_ID = 'CREWROUTER_DESKTOP_PASSPORT_APP_ID';
+const DESKTOP_PASSPORT_APP_SECRET = 'CREWROUTER_DESKTOP_PASSPORT_APP_SECRET';
+const INHERITED_CONFIG_KEYS = /^(?:CR(?:W)?_|CREWROUTER_(?:SERVER_ROOT|PACKAGED_SERVER_ROOT|DESKTOP_PASSPORT_APP_ID|DESKTOP_PASSPORT_APP_SECRET)$|DATABASE_URL$|PG(?:HOST|PORT|USER|PASSWORD|DATABASE)$)/;
+
+function passportOverrides(options) {
+  // Select a whole source instead of mixing an app ID and secret from different
+  // applications. Explicit config (even empty/null) wins, then explicit env,
+  // then the two Desktop-only process environment variables.
+  if (Object.prototype.hasOwnProperty.call(options.config || {}, 'passport')) return {};
+  const explicitEnv = options.env || {};
+  const hasDedicatedKey = env => [DESKTOP_PASSPORT_APP_ID, DESKTOP_PASSPORT_APP_SECRET]
+    .some(key => Object.prototype.hasOwnProperty.call(env, key));
+  const env = hasDedicatedKey(explicitEnv) ? explicitEnv : process.env;
+  if (!hasDedicatedKey(env)) return {};
+  return { passport: {
+    appId: env[DESKTOP_PASSPORT_APP_ID] ?? '',
+    appSecret: env[DESKTOP_PASSPORT_APP_SECRET] ?? '',
+  } };
+}
 
 function emptyStatus() {
   return { pid: null, port: null, baseUrl: null, ready: false, runtime: null, edition: null, auth: null, demo: null, capabilities: {}, version: null, logsDir: null, logPath: null, setup: null, database: null };
@@ -127,6 +164,7 @@ class LocalServerManager extends EventEmitter {
   _configOverrides() {
     const opts = this.options;
     return {
+      ...passportOverrides(opts),
       ...(opts.config || {}),
       ...(typeof opts.runtime === 'string' ? { runtime: opts.runtime } : {}),
       ...(opts.edition ? { edition: opts.edition } : {}),

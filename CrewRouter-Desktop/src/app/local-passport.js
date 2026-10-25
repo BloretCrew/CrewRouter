@@ -87,6 +87,7 @@ function createLocalPassport({ electron, getTarget, getWindow, fetchImpl, getTok
       const response = await fetchImpl(new URL('/auth/status', target));
       if (!response.ok) throw new Error(`认证状态返回 HTTP ${response.status}`);
       const status = await response.json();
+      if (status.passportConfigured === false) throw new Error('本地 PassPort 登录尚未配置，请按 Desktop 部署说明配置应用后重启');
       const origin = passportOrigin(status.passportOrigin ?? DEFAULT_PASSPORT_ORIGIN);
       if (current !== flow || getTarget() !== target) return;
       const win = new electron.BrowserWindow({

@@ -52,8 +52,8 @@ const DEFAULTS = {
     domain: '',
   },
   passport: {
-    appId: 'bp_2da5d6465574c0a2',
-    appSecret: 'bs_ba686f4608efd552f087ad3c09226167f278853fc031bf62',
+    appId: '',
+    appSecret: '',
     redirectCallbackHost: '',
   },
   // 统计信息上报（自建实例向官方上报匿名聚合使用统计）
@@ -204,8 +204,12 @@ function buildEnvOverlay() {
   const overlay = {};
   for (const [envKey, configPath] of Object.entries(ENV_MAP)) {
     const envValue = process.env[envKey];
-    if (envValue !== undefined && envValue !== '') {
-      setByPath(overlay, configPath, coerceValue(envValue));
+    const isPassportCredential = configPath === 'passport.appId' || configPath === 'passport.appSecret';
+    if (envValue !== undefined && (envValue !== '' || isPassportCredential)) {
+      // OAuth credentials are strings even when they contain only digits.
+      // An explicit empty credential also disables a value from the config file.
+      const value = isPassportCredential ? envValue : coerceValue(envValue);
+      setByPath(overlay, configPath, value);
     }
   }
   return overlay;
@@ -218,9 +222,11 @@ function loadConfig() {
   const envOverlay = buildEnvOverlay();
   const final = deepMerge(withDefaults, envOverlay);
 
-  // 空配置文件字段不应覆盖内置的 PassPort 应用凭据。
-  if (!final.passport?.appId) final.passport.appId = DEFAULTS.passport.appId;
-  if (!final.passport?.appSecret) final.passport.appSecret = DEFAULTS.passport.appSecret;
+  // Missing or malformed PassPort configuration must remain unconfigured.
+  // Never restore shared application credentials, including for explicit null.
+  if (!final.passport || typeof final.passport !== 'object' || Array.isArray(final.passport)) {
+    final.passport = { ...DEFAULTS.passport };
+  }
 
   // 确保嵌套对象有默认值
   if (!final.database) final.database = DEFAULTS.database;
