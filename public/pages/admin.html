@@ -1991,6 +1991,7 @@
               <div class="form-group">
                 <label for="providerCpaManagementUrl"><span data-i18n="CPA 管理地址">CPA 管理地址</span></label>
                 <input type="url" id="providerCpaManagementUrl" class="input" placeholder="http://127.0.0.1:8317" oninput="adminApp._resetCpaAccounts('')">
+                <small style="display:block;color:var(--muted-foreground);margin-top:4px;">公网地址须使用 HTTPS；私有地址需在服务器的 <code>CR_CPA_PRIVATE_ORIGINS</code> 中精确允许协议、主机和端口。</small>
               </div>
               <div class="form-group">
                 <label for="providerCpaManagementKey"><span data-i18n="CPA 管理密钥">CPA 管理密钥</span></label>

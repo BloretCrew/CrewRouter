@@ -1,8 +1,16 @@
 'use strict';
 
 const { quotaSignal } = require('./quota-http');
-
 const { decryptSecret } = require('./secret-crypto');
+const { validateUrl, normalizeAllowlistOrigin } = require('./url-validator');
+
+function cpaPrivateOriginAllowlist() {
+  return String(process.env.CR_CPA_PRIVATE_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean);
+}
+
+function isExplicitlyAllowedPrivateOrigin(url) {
+  return cpaPrivateOriginAllowlist().some(value => normalizeAllowlistOrigin(value) === url.origin.toLowerCase());
+}
 
 function parseCpaQuotaConfig(text) {
   let config;
@@ -135,6 +143,21 @@ function managementBase(provider) {
   return base;
 }
 
+async function validateCpaTargetUrl(urlValue) {
+  let url;
+  try { url = new URL(urlValue); } catch { return { ok: false, error: 'CPA 管理地址无效' }; }
+  if (url.protocol === 'http:' && !isExplicitlyAllowedPrivateOrigin(url)) {
+    return { ok: false, error: '外部 CPA 管理地址必须使用 HTTPS' };
+  }
+  return validateUrl(url.toString(), { allowedPrivateOrigins: cpaPrivateOriginAllowlist() });
+}
+
+async function validateCpaManagementUrl(value) {
+  let base;
+  try { base = managementBase({ cpa_management_url: value }); } catch { return { ok: false, error: 'CPA 管理地址必须为不含凭据、查询参数或片段的 HTTP(S) 地址' }; }
+  return validateCpaTargetUrl(base.toString());
+}
+
 function cpaRequest(provider) {
   const key = decryptSecret(provider.cpa_management_key || '');
   if (!key) throw new Error('供应商未配置 CPA 管理密钥');
@@ -143,8 +166,11 @@ function cpaRequest(provider) {
     const url = new URL(base);
     url.pathname += path.split('?')[0];
     url.search = path.includes('?') ? path.slice(path.indexOf('?')) : '';
-    // 管理员指定可信地址；禁止重定向泄露管理密钥。
-    const response = await fetch(url, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    // 每次请求都复核数据库中的目标；内网 CPA 仅允许精确主机列表中的地址。
+    const urlCheck = await validateCpaTargetUrl(url.toString());
+    if (!urlCheck.ok) throw new Error(`CPA 管理地址安全校验失败: ${urlCheck.error}`);
+    // 禁止重定向，避免把管理密钥发送到另一个目标。
+    const response = await fetch(urlCheck.url, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'error', signal: quotaSignal(AbortSignal.timeout(15000)) });
     if (!response.ok) throw new Error(`CPA 管理接口请求失败（HTTP ${response.status}）`);
     try { return await response.json(); } catch { throw new Error('CPA 额度响应不是有效 JSON'); }
@@ -197,4 +223,4 @@ async function fetchCpaUsage(provider) {
   }
 }
 
-module.exports = { parseCpaQuotaConfig, normalizeCpaQuota, normalizeClaudeUsage, normalizeCodexUsage, normalizePassiveQuota, fetchCpaUsage, listCpaAccounts };
+module.exports = { parseCpaQuotaConfig, normalizeCpaQuota, normalizeClaudeUsage, normalizeCodexUsage, normalizePassiveQuota, validateCpaManagementUrl, fetchCpaUsage, listCpaAccounts };

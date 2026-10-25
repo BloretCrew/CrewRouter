@@ -141,17 +141,29 @@ function isBlockedHost(hostname) {
   return false;
 }
 
+function normalizeAllowlistOrigin(value) {
+  try {
+    const origin = new URL(String(value || '').trim());
+    if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password
+        || origin.pathname !== '/' || origin.search || origin.hash) return '';
+    return origin.origin.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 /**
  * 校验外部请求 URL 的安全性
  *
  * @param {string} urlStr - 要校验的 URL
  * @param {object} options
  * @param {boolean} options.allowPrivate - 是否允许内网地址（默认 false）
- * @param {boolean} options.resolveDNS - 是否解析域名检查 IP（默认 false，依赖 dns 模块）
+ * @param {boolean} options.resolveDNS - 是否解析域名检查 IP（默认 true，依赖 dns 模块）
+ * @param {string[]} options.allowedPrivateOrigins - 按协议、主机名/IP、端口精确允许访问内网的目标列表
  * @returns {{ ok: boolean, error?: string, url?: URL }}
  */
 async function validateUrl(urlStr, options = {}) {
-  const { allowPrivate = false, resolveDNS = true } = options;
+  const { allowPrivate = false, resolveDNS = true, allowedPrivateOrigins = [] } = options;
 
   if (!urlStr || typeof urlStr !== 'string') {
     return { ok: false, error: 'URL 不能为空' };
@@ -170,18 +182,21 @@ async function validateUrl(urlStr, options = {}) {
   }
 
   if (!allowPrivate) {
-    // 检查 hostname
-    if (isBlockedHost(url.hostname)) {
+    const normalizedHost = url.hostname.replace(/^\[|\]$/g, '');
+    const allowedOrigins = new Set((Array.isArray(allowedPrivateOrigins) ? allowedPrivateOrigins : [])
+      .map(normalizeAllowlistOrigin).filter(Boolean));
+    const originExplicitlyAllowed = allowedOrigins.has(url.origin.toLowerCase());
+
+    // 私有地址只有在运维明确配置精确协议、主机名/IP 和端口后才可访问。
+    if (isBlockedHost(normalizedHost) && !originExplicitlyAllowed) {
       return { ok: false, error: `不允许请求内网地址: ${url.hostname}` };
     }
 
-    const normalizedHost = url.hostname.replace(/^\[|\]$/g, '');
-
     // 检查 IP 形式的 URL 中的地址
-    if (net.isIPv4(normalizedHost) && isPrivateIPv4(normalizedHost)) {
+    if (net.isIPv4(normalizedHost) && isPrivateIPv4(normalizedHost) && !originExplicitlyAllowed) {
       return { ok: false, error: `不允许请求内网 IP: ${url.hostname}` };
     }
-    if (net.isIPv6(normalizedHost) && isBlockedIPv6(normalizedHost)) {
+    if (net.isIPv6(normalizedHost) && isBlockedIPv6(normalizedHost) && !originExplicitlyAllowed) {
       return { ok: false, error: `不允许请求内网 IPv6: ${url.hostname}` };
     }
 
@@ -193,9 +208,9 @@ async function validateUrl(urlStr, options = {}) {
       } catch (err) {
         return { ok: false, error: `域名 DNS 解析失败: ${url.hostname}` };
       }
-      if (!addresses.length || addresses.some(({ address }) => net.isIPv4(address)
+      if (!addresses.length || (!originExplicitlyAllowed && addresses.some(({ address }) => net.isIPv4(address)
         ? isPrivateIPv4(address)
-        : isBlockedIPv6(address))) {
+        : isBlockedIPv6(address)))) {
         return { ok: false, error: `域名解析到不允许的内网地址: ${url.hostname}` };
       }
     }
@@ -254,6 +269,7 @@ function upstreamUrl(base, endpoint, defaultVersion = '/v1') {
 
 module.exports = {
   validateUrl,
+  normalizeAllowlistOrigin,
   buildSafeUrl,
   cleanBaseUrl,
   upstreamUrl,

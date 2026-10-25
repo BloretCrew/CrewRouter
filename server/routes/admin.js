@@ -2241,8 +2241,8 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
     const cpaManagementKey = typeof req.body.cpa_management_key === 'string' ? req.body.cpa_management_key.trim() : '';
     if (finalQuotaMode === 'cpa') {
       try {
-        const url = new URL(cpaManagementUrl);
-        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error();
+        const urlCheck = await require('../utils/cpa-usage').validateCpaManagementUrl(cpaManagementUrl);
+        if (!urlCheck.ok) return res.status(400).json({ error: `CPA 管理地址安全校验失败: ${urlCheck.error}` });
       } catch (_) { return res.status(400).json({ error: '请填写有效的 CPA HTTP(S) 管理地址' }); }
       const current = id ? await pool.query('SELECT cpa_management_key FROM providers WHERE id = $1', [id]) : { rows: [] };
       if (!cpaManagementKey && !current.rows[0]?.cpa_management_key) return res.status(400).json({ error: '请填写 CPA 管理密钥' });

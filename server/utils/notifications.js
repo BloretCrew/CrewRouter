@@ -1,6 +1,7 @@
 const axios = require('axios');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
+const { validateUrl, normalizeAllowlistOrigin } = require('./url-validator');
 
 const NOTIFICATION_TYPES = {
   QUOTA_INSUFFICIENT: 'quota_insufficient',
@@ -16,11 +17,29 @@ function normalizeEndpoint(endpoint) {
   const value = String(endpoint || 'https://api.day.app').trim().replace(/\/+$/, '');
   try {
     const url = new URL(value);
-    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null;
     return url.toString().replace(/\/$/, '');
   } catch {
     return null;
   }
+}
+
+function barkPrivateOriginAllowlist() {
+  return String(process.env.CR_BARK_PRIVATE_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean);
+}
+
+function isExplicitlyAllowedPrivateOrigin(url) {
+  return barkPrivateOriginAllowlist().some(value => normalizeAllowlistOrigin(value) === url.origin.toLowerCase());
+}
+
+async function validateBarkEndpoint(endpoint) {
+  const normalized = normalizeEndpoint(endpoint);
+  if (!normalized) return { ok: false, error: 'Bark 服务地址无效' };
+  const url = new URL(normalized);
+  if (url.protocol === 'http:' && !isExplicitlyAllowedPrivateOrigin(url)) {
+    return { ok: false, error: '公网 Bark 服务地址必须使用 HTTPS' };
+  }
+  return validateUrl(url.toString(), { allowedPrivateOrigins: barkPrivateOriginAllowlist() });
 }
 
 function truncate(value, max = 4000) {
@@ -46,8 +65,9 @@ async function getNotificationSettings(userId) {
 }
 
 async function updateNotificationSettings(userId, settings) {
-  const endpoint = normalizeEndpoint(settings.barkEndpoint || 'https://api.day.app');
-  if (!endpoint) throw new Error('Bark 服务地址必须是 http 或 https 地址');
+  const endpointCheck = await validateBarkEndpoint(settings.barkEndpoint || 'https://api.day.app');
+  if (!endpointCheck.ok) throw new Error(`Bark 服务地址安全校验失败: ${endpointCheck.error}`);
+  const endpoint = endpointCheck.url.toString().replace(/\/$/, '');
   const serverKey = String(settings.barkServerKey || '').trim();
   if (settings.barkEnabled && !serverKey) throw new Error('启用 Bark 通知前请输入 Server Key');
 
@@ -72,14 +92,15 @@ async function createNotification(userId, type, title, body, metadata = {}) {
 async function sendBark(userId, title, body) {
   const settings = await getNotificationSettings(userId);
   if (!settings.barkEnabled || !settings.barkServerKey) return { skipped: true };
-  const endpoint = normalizeEndpoint(settings.barkEndpoint);
-  if (!endpoint) return { success: false, error: 'Bark 服务地址无效' };
+  const endpointCheck = await validateBarkEndpoint(settings.barkEndpoint);
+  if (!endpointCheck.ok) return { success: false, error: `Bark 服务地址安全校验失败: ${endpointCheck.error}` };
+  const endpoint = endpointCheck.url.toString().replace(/\/$/, '');
   try {
     await axios.post(`${endpoint}/${encodeURIComponent(settings.barkServerKey)}`, {
       title: truncate(title, 200),
       body: truncate(body),
       group: 'CrewRouter',
-    }, { timeout: 10000, validateStatus: status => status >= 200 && status < 300 });
+    }, { timeout: 10000, maxRedirects: 0, validateStatus: status => status >= 200 && status < 300 });
     return { success: true };
   } catch (error) {
     Logger.warn(`[通知] Bark 发送失败 userId=${userId}: ${error.message}`);
