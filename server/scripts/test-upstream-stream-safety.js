@@ -35,6 +35,14 @@ mock('middleware/oauth-bearer.js', {
 mock('utils/trace-session.js', { recordEvent: asyncNoop });
 mock('utils/billing.js', { calculateCost: () => ({ weightedTokens: 0, pointsCost: 0 }) });
 mock('utils/quota-data.js', { recordQuotaData: noop });
+mock('utils/quota-request-context.js', {
+  requestMiddleware: (_req, _res, next) => next(),
+  quotaFetch(url, options, transport) {
+    assertFixtureUrl(url);
+    assert.equal(typeof transport, 'function');
+    return transport(url, options);
+  },
+});
 mock('utils/model-uptime.js', { recordModelCall: noop });
 mock('utils/model-test.js', { recordLiveCallTest: noop });
 mock('utils/error-records.js', { captureCallError: noop, clientIp: () => '127.0.0.1' });
@@ -82,11 +90,17 @@ ReadableStream.prototype.getReader = function getReader(...args) {
   return reader;
 };
 let activePort;
-const interceptor = axios.interceptors.request.use(options => {
-  const url = new URL(options.url);
+function assertFixtureUrl(value) {
+  const url = new URL(value);
   assert.equal(url.hostname, '127.0.0.1');
   assert.equal(url.protocol, 'http:');
+  assert.equal(url.username, '');
+  assert.equal(url.password, '');
+  assert.ok(Number.isInteger(activePort), 'A local fixture must be listening');
   assert.equal(Number(url.port), activePort, 'External upstream access is forbidden');
+}
+const interceptor = axios.interceptors.request.use(options => {
+  assertFixtureUrl(options.url);
   options.proxy = false;
   return options;
 });

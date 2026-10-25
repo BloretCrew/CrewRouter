@@ -8,7 +8,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../routes/api.js'), 'utf8');
 const cache = source.slice(source.indexOf('const apiKeyCache = new Map();'), source.indexOf('async function getProvider(providerId)'));
-const middleware = source.slice(source.indexOf('async function validateApiKey(req, res, next)'), source.indexOf('/**\n * 根据供应商配置构建上游请求头'));
+const middlewareStart = source.indexOf('async function validateApiKey(');
+const middlewareEnd = source.indexOf('/**\n * 根据供应商配置构建上游请求头', middlewareStart);
+assert.ok(middlewareStart >= 0 && middlewareEnd > middlewareStart, 'API key middleware fixture boundaries must exist');
+const middleware = source.slice(middlewareStart, middlewareEnd);
 
 function worker(state) {
   const key = { id: 1, user_id: 10, username: 'owner', enabled: true };

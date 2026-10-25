@@ -1,0 +1,764 @@
+{
+  "date": "2026-10-26",
+  "timezone": "Asia/Shanghai",
+  "baselineCommit": "089a7469356267e0ae90129b8dc0e5af1fc5d860",
+  "previousReview": "audit/security-guard-permissions-review-2026-10-25.md",
+  "productionAccessed": false,
+  "productionDatabaseAccessed": false,
+  "productionSourcesModified": false,
+  "deployed": false,
+  "productionPrivilegesRevoked": false,
+  "productionMigrationsExecuted": false,
+  "credentialsChanged": false,
+  "networkIsolationChanged": false,
+  "pushed": false,
+  "allSelectedTestsPassed": false,
+  "executedFinalChecksPassed": true,
+  "environment": {
+    "node": "v24.13.1",
+    "postgresql": "18.3",
+    "psql": "18.3"
+  },
+  "preload": "server/scripts/test-support/offline-security-preload.js",
+  "preloadModified": false,
+  "reproductions": [
+    {
+      "order": 1,
+      "file": "server/scripts/test-model-identity.js",
+      "exitCode": 1,
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "namePattern": "real transport and retry helper count each network attempt once",
+      "failure": "networkCalls: 0 !== 12; fixture omitted proxyFetchTransport"
+    },
+    {
+      "order": 2,
+      "file": "server/scripts/test-plugin-capabilities.js",
+      "exitCode": 1,
+      "failure": "OFFLINE_TEST_BLOCKED_APPLICATION_DATABASE_OPERATION",
+      "precedingPassingLogGroups": 3,
+      "databaseConnectionAllowed": false
+    },
+    {
+      "order": 3,
+      "file": "server/scripts/test-inject-prompt-cache-lifecycle.js",
+      "exitCode": 1,
+      "failure": "ReferenceError: validateApiKey is not defined"
+    },
+    {
+      "order": 4,
+      "file": "server/scripts/test-upstream-stream-safety.js",
+      "exitCode": 1,
+      "cases": 42,
+      "passedCases": 0,
+      "failedCases": 42,
+      "failure": "quotaFetch SSRF rejected fixture address 127.0.0.1"
+    }
+  ],
+  "targeted": [
+    {
+      "command": "node --test server/scripts/test-model-identity.js",
+      "exitCode": 0,
+      "tests": 39,
+      "pass": 39,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "command": "node server/scripts/test-plugin-capabilities.js",
+      "exitCode": 0,
+      "passingLogGroups": 4,
+      "sqlQueries": 2,
+      "fixtureRows": 1,
+      "database": "in-memory dependency-injected fixture; no application singleton loaded"
+    },
+    {
+      "command": "node server/scripts/test-inject-prompt-cache-lifecycle.js",
+      "exitCode": 0,
+      "unit": "standalone script, not counted as Node subtests"
+    },
+    {
+      "command": "node server/scripts/test-upstream-stream-safety.js",
+      "exitCode": 0,
+      "cases": 42,
+      "passedCases": 42,
+      "failedCases": 0,
+      "skippedCases": 0
+    },
+    {
+      "command": "Direct real quotaFetch private literal URL rejection checks via node:test on stdin",
+      "exitCode": 0,
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "transportCalls": 0,
+      "targets": [
+        "http://127.0.0.1/",
+        "http://10.0.0.1/",
+        "http://172.16.0.1/",
+        "http://192.168.0.1/",
+        "http://169.254.169.254/",
+        "http://100.64.0.1/",
+        "http://[::1]/",
+        "http://[fc00::1]/"
+      ]
+    },
+    {
+      "command": "env -i PATH=\"$PATH\" LANG=C node --eval <plugin fixture + exit-hook require-cache assertions>",
+      "exitCode": 0,
+      "preload": null,
+      "deploymentModulesNeverLoaded": [
+        "server/models/database.js",
+        "server/config-loader.js",
+        "server/logger.js",
+        "server/proxy-pool.js"
+      ]
+    }
+  ],
+  "securitySuites": [
+    {
+      "command": "npm run test:security-guards",
+      "exitCode": 0,
+      "tests": 71,
+      "pass": 71,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "additionalPassingScripts": [
+        "test-provider-manager-permissions.js",
+        "test-batch-e-permissions.js"
+      ]
+    },
+    {
+      "command": "npm run test:public-schema-create",
+      "exitCode": 0,
+      "tests": 9,
+      "pass": 9,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "database": "new private Unix socket PostgreSQL cluster with no TCP listeners"
+    },
+    {
+      "command": "npm run test:security-audit",
+      "exitCode": 0,
+      "tests": 41,
+      "pass": 41,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "additionalPassingScripts": [
+        "test-security-audit-postgres.js"
+      ],
+      "database": "new private Unix socket PostgreSQL cluster with no TCP listeners"
+    }
+  ],
+  "nodeRegression": {
+    "command": "node --test --test-reporter=tap --test-concurrency=1 --test-timeout=30000 <unchanged 34-file manifest>",
+    "selectedFiles": 34,
+    "manifestUnchangedFromPreviousReview": true,
+    "exitCode": 0,
+    "tests": 465,
+    "pass": 457,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 8,
+    "todo": 0,
+    "files": [
+      "server/scripts/test-admin-model-library.js",
+      "server/scripts/test-auth-guards.js",
+      "server/scripts/test-auth-session-failure.js",
+      "server/scripts/test-auth-status-security.js",
+      "server/scripts/test-avatar-upload.js",
+      "server/scripts/test-csrf-boundaries.js",
+      "server/scripts/test-feishu-binding-security.js",
+      "server/scripts/test-hook-rule-transactions.js",
+      "server/scripts/test-incident-guard.js",
+      "server/scripts/test-inject-prompt-transactions.js",
+      "server/scripts/test-latency-stats-postgres.js",
+      "server/scripts/test-latency-stats.js",
+      "server/scripts/test-model-identity.js",
+      "server/scripts/test-model-trace-runner-recovery.js",
+      "server/scripts/test-oauth-bearer-policy.js",
+      "server/scripts/test-offline-security-preload.js",
+      "server/scripts/test-passkey-security.js",
+      "server/scripts/test-passport-credentials.js",
+      "server/scripts/test-provider-quota-stats-db.js",
+      "server/scripts/test-provider-quota-stats.js",
+      "server/scripts/test-provider-sync-atomicity.js",
+      "server/scripts/test-public-schema-create-postgres.js",
+      "server/scripts/test-quota-cycle-analysis.js",
+      "server/scripts/test-quota-cycle-incremental.js",
+      "server/scripts/test-quota-cycle-review.js",
+      "server/scripts/test-quota-request-context.js",
+      "server/scripts/test-redemption-code-security.js",
+      "server/scripts/test-request-metrics.js",
+      "server/scripts/test-security-audit.js",
+      "server/scripts/test-startup-data-migrations.js",
+      "server/scripts/test-store-session-security.js",
+      "server/scripts/test-upstream-transport.js",
+      "server/scripts/test-usage-latency-inserts.js",
+      "server/scripts/test-usage-model-migration-isolation.js"
+    ],
+    "skippedSubtests": [
+      {
+        "file": "server/scripts/test-latency-stats-postgres.js",
+        "name": "隔离 PostgreSQL：延迟百分位、限流快照与用户范围",
+        "requiredEnvironmentVariable": "LATENCY_STATS_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      },
+      {
+        "file": "server/scripts/test-provider-quota-stats-db.js",
+        "name": "隔离 PostgreSQL：权限撤回、多 Team、分页、归档互斥和明细清理回退",
+        "requiredEnvironmentVariable": "QUOTA_STATS_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      },
+      {
+        "file": "server/scripts/test-quota-cycle-analysis.js",
+        "name": "隔离PG：多窗口、完整/partial、重置充值、修正回补、重叠、保留、权限和导出",
+        "requiredEnvironmentVariable": "QUOTA_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      },
+      {
+        "file": "server/scripts/test-quota-cycle-incremental.js",
+        "name": "真实attempt schema：增量1000样本预算、无变化不scan、质量与两phase、完整导出、late usage",
+        "requiredEnvironmentVariable": "QUOTA_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      },
+      {
+        "file": "server/scripts/test-quota-cycle-review.js",
+        "name": "最终复审：缺series不污染事务、推断终止长期快照、导出版本一致性",
+        "requiredEnvironmentVariable": "QUOTA_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      },
+      {
+        "file": "server/scripts/test-quota-request-context.js",
+        "name": "logical request schema is idempotent in isolated PostgreSQL",
+        "requiredEnvironmentVariable": "QUOTA_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      },
+      {
+        "file": "server/scripts/test-quota-request-context.js",
+        "name": "PostgreSQL max1 concurrent billing and attempt correction complete with exact debit and isolated failures",
+        "requiredEnvironmentVariable": "QUOTA_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      },
+      {
+        "file": "server/scripts/test-quota-request-context.js",
+        "name": "real rejected logical request never persists credential text in project/session",
+        "requiredEnvironmentVariable": "QUOTA_TEST_DATABASE_URL",
+        "reason": "No dedicated database URL supplied; inherited database variables are removed by the offline preload"
+      }
+    ],
+    "includedOfflinePreloadRegression": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "standaloneRegression": {
+    "selectedFiles": 29,
+    "manifestUnchangedFromPreviousReview": true,
+    "passedFiles": 29,
+    "failedFiles": 0,
+    "skipMarkersFound": 0,
+    "results": [
+      {
+        "file": "server/scripts/test-api-key-lifecycle.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-resolved-model-access.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-personal-model-access.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-provider-manager-permissions.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-batch-e-permissions.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-instance-edition.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-instance-edition-persistence.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-auth-mode.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-plugin-capabilities.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-passport-login-security.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-passport-verifier-security.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-passport-store-security.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-local-passport.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-passkey-store-postgres.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-oauth-revocation-security.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-admin-membership-isolation.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-team-membership-concurrency.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-balance-transaction-isolation.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-agent-transactions.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-agent-tools.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-conversation-transactions.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-api-key-queue-concurrency.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-inject-prompt-cache-lifecycle.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-inject-prompt-seed-postgres.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-upstream-generation-routes.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-upstream-stream-safety.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-upstream-url.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-responses-compat.js",
+        "exitCode": 0
+      },
+      {
+        "file": "server/scripts/test-security-audit-postgres.js",
+        "exitCode": 0
+      }
+    ]
+  },
+  "validation": {
+    "exitCode": 0,
+    "syntaxCheckedFiles": [
+      "server/scripts/test-model-identity.js",
+      "server/scripts/test-plugin-capabilities.js",
+      "server/scripts/test-inject-prompt-cache-lifecycle.js",
+      "server/scripts/test-upstream-stream-safety.js"
+    ],
+    "diffWhitespaceCheckPassed": true,
+    "isolatedPostgresDirectoriesRemaining": [],
+    "preservedUntrackedDirectories": [
+      ".blora/",
+      "CLIProxyAPI/"
+    ]
+  },
+  "limitations": [
+    "Test sets overlap; counts must not be summed as independent tests",
+    "Eight database-dependent Node subtests were skipped, not passed; no dedicated database URL was supplied",
+    "Plugin fixture checks SQL construction and permission-gated API shape, not real PostgreSQL execution or adversarial plugin containment",
+    "Stream lifecycle fixture deliberately substitutes quota-request-context; real production SSRF rejection was checked separately",
+    "No production service or database state was rechecked",
+    "No live nft parsing/loading or systemd lifecycle was tested; previous deployment and operational blockers remain",
+    "No complete desktop/browser/end-to-end or release build was run",
+    "Offline preload is a safety aid for trusted tests, not an OS or adversarial sandbox",
+    "Temporary evidence paths may disappear; hashes are not independent trust or long-term preservation"
+  ],
+  "changedTestSourceHashes": [
+    {
+      "file": "server/scripts/test-model-identity.js",
+      "sha256": "20e28bc04b6995f27c07205e302e8f7732ab387688783208297b8efc350b5859"
+    },
+    {
+      "file": "server/scripts/test-plugin-capabilities.js",
+      "sha256": "ec707d7b2bdffc7aa6f9e31b1f7194ac1739451464c938b0df3f2a7217f683f0"
+    },
+    {
+      "file": "server/scripts/test-inject-prompt-cache-lifecycle.js",
+      "sha256": "7b1c5978e7fbb892b09a7aca4514aa10c3a8954d1e9d686eeb708c75c49d2d29"
+    },
+    {
+      "file": "server/scripts/test-upstream-stream-safety.js",
+      "sha256": "d6d1d67c08e8271dbf14549915841c4174e3233439f54a61738b4c0fed314868"
+    }
+  ],
+  "evidenceDirectory": "/tmp/crewrouter-security-fixtures-20261026-xMRelr",
+  "evidence": [
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/baseline-commit.txt",
+      "sha256": "318d0e53ecd65b40117faa1aec2ae950dd9f4aa041a157254059a5aa719417a8",
+      "bytes": 41
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/inject-prompt-cache-lifecycle-after.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/inject-prompt-cache-lifecycle-after.log",
+      "sha256": "c095bc388b88b3bacf431ff524f914bdb19036a5909d62f3b6e968afac6b6289",
+      "bytes": 124
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/inject-prompt-cache-lifecycle-before.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/inject-prompt-cache-lifecycle-before.log",
+      "sha256": "8dc0b8605890ff6156c49f918e68cec95cbc5a264de9a455e1fc7b28c823c3cb",
+      "bytes": 823
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/model-identity-after.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/model-identity-after.log",
+      "sha256": "cf02bac48fbec0f51a754413f08ad27a1b59e4b86b995ca5a1071fc9a92f0c8f",
+      "bytes": 3726
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/model-identity-before.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/model-identity-before.log",
+      "sha256": "6bbff643e33700032a7773bc63bce0e5d3c6f21d9d995d864d14ba7688ae8ab7",
+      "bytes": 825
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/node-files-current.txt",
+      "sha256": "477b52f0a70e7580ea0be2105a61f3467b1ab62295d7cc938518a2628f437844",
+      "bytes": 1499
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/node-files.txt",
+      "sha256": "477b52f0a70e7580ea0be2105a61f3467b1ab62295d7cc938518a2628f437844",
+      "bytes": 1499
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/node-regression.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/node-regression.log",
+      "sha256": "40dbb2872b2129df2fd231279a712422b114201da7c1325dd2ffa303df263b20",
+      "bytes": 97387
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/plugin-capabilities-after.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/plugin-capabilities-after.log",
+      "sha256": "d0c136d944a2267b38c6c2c08158d86d72d83eee5ad0e85d3269801c3f85d908",
+      "bytes": 145
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/plugin-capabilities-before.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/plugin-capabilities-before.log",
+      "sha256": "93478cadab0384aa081a84d194a7afc03cf6f8c4a123439de56aa8add725eb93",
+      "bytes": 970
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/plugin-isolation-without-preload.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/plugin-isolation-without-preload.log",
+      "sha256": "633cded2d289251fc2a7f53c72a76201df4592e6a85bcd67055f405e8ee1d366",
+      "bytes": 235
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/production-ssrf-boundary.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/production-ssrf-boundary.log",
+      "sha256": "befdb8e9ca57ea19405280df5521361f680db1c5edf9aff3ba197ee5ce3c8076",
+      "bytes": 1718
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/public-schema-create.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/public-schema-create.log",
+      "sha256": "11e0bc83a565877192cb291daab0354325a0ab921a388fc944a075368d58d044",
+      "bytes": 1261
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/security-audit.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/security-audit.log",
+      "sha256": "8746ba051fdf77125532e5841b5b8a7b3171f00e9d47eb5bd0aa9f77d4d72f53",
+      "bytes": 3272
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/security-guards.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/security-guards.log",
+      "sha256": "9228fe80ca70f2116dab35f30aa916a84fe85341bb64e101fb9017d667c0a1df",
+      "bytes": 5511
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/standalone-files.txt",
+      "sha256": "d35bc62defe5e1c384a4f2147e35a2e86410fbf89032aba7dcbaca7993b8761b",
+      "bytes": 801
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/standalone-summary.tsv",
+      "sha256": "6f32ac1795fd02f063b53a6847ba6e18dadbe56f5031416238b4b5335c06b250",
+      "bytes": 859
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-admin-membership-isolation.log",
+      "sha256": "2e2674c2cd5e14213800878142522c186d79956e486ef7bdc93165beccf08625",
+      "bytes": 244
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-agent-tools.log",
+      "sha256": "9b67466be248fa0770983d6dcfd9fb47b5f54c4f9dcea39d2e88cd88b6a5b2d5",
+      "bytes": 550
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-agent-transactions.log",
+      "sha256": "6a38504a5fc1d5309fbec65236d1ef67bc973eb2bb9fe67057250b2d1d4a7366",
+      "bytes": 247
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-api-key-lifecycle.log",
+      "sha256": "efe33cd94672285a47374970c7107bbcd7493b98d52a29e3a461cd3e806ac5e0",
+      "bytes": 130
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-api-key-queue-concurrency.log",
+      "sha256": "06bbefdbb712c2d73ad6c52c6ec33da56a10cb81caba6dbb0c6346aeea750ac5",
+      "bytes": 152
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-auth-mode.log",
+      "sha256": "28244054144a9654e3a046162490cd433a6389480b51e494f3664f5eaf03ed2d",
+      "bytes": 74
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-balance-transaction-isolation.log",
+      "sha256": "02410702bf62da011eb435fc2aa894b28709355d037456c25e2dc8495324cbca",
+      "bytes": 216
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-batch-e-permissions.log",
+      "sha256": "2554174ac65547aac934d772e4e3b0addaa444cc26f6d9539d76e73148164f6b",
+      "bytes": 41
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-conversation-transactions.log",
+      "sha256": "7566dd44c563d5e7d7230177f649c5531d904cb3c804fd54f1a9550c31b9dffc",
+      "bytes": 702
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-inject-prompt-cache-lifecycle.log",
+      "sha256": "c095bc388b88b3bacf431ff524f914bdb19036a5909d62f3b6e968afac6b6289",
+      "bytes": 124
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-inject-prompt-seed-postgres.log",
+      "sha256": "6b3b05d523acdac035f4b8d8562332e945f788ecaecb452547aa266d42d5323b",
+      "bytes": 160
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-instance-edition-persistence.log",
+      "sha256": "43de0ad03c5f4c644bd799d7293475675c91bed13e75c305f4fbdee692903600",
+      "bytes": 42
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-instance-edition.log",
+      "sha256": "e42582ae33e2cdc05a7d5128d232f1778efaa031a3e7b4a4641e3c780f89e2d8",
+      "bytes": 41
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-local-passport.log",
+      "sha256": "b6ad5cf668f60ffd7e3693aaecf2de53443a87e3760baac11841ba7ca1b74dfc",
+      "bytes": 78
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-oauth-revocation-security.log",
+      "sha256": "4153d4f8a18f63ee00ce383f5a9633042fe30bcdb974f2f1dea0934f6e38a713",
+      "bytes": 243
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-passkey-store-postgres.log",
+      "sha256": "e350507bb29519ebe79295e24eaa7ea203e1ef769a5576ec5f38fe799d490b66",
+      "bytes": 111
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-passport-login-security.log",
+      "sha256": "7eb1926eff3b3205a68152536290cc798e1d482193f6fa58eec13c1b53eef48e",
+      "bytes": 92
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-passport-store-security.log",
+      "sha256": "d51338c090a8a0f17498cc23b9bd72157780b1f59b7efb7b12a7da8beb2b125a",
+      "bytes": 93
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-passport-verifier-security.log",
+      "sha256": "53be9b7ace84e3da825373a7f11af88111af1a2d12c3ad152733679e0e8b61db",
+      "bytes": 54
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-personal-model-access.log",
+      "sha256": "5fd0be04d15c39a6158a081848cedf8e826dcc3cb3dff25465b27f208654e731",
+      "bytes": 113
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-plugin-capabilities.log",
+      "sha256": "d0c136d944a2267b38c6c2c08158d86d72d83eee5ad0e85d3269801c3f85d908",
+      "bytes": 145
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-provider-manager-permissions.log",
+      "sha256": "22dec5c5d269fadf221ebbbf0194bfc245d192e8744b6e6bd863d89523ccffdf",
+      "bytes": 106
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-resolved-model-access.log",
+      "sha256": "5e74beb7395af20d24b236f27f3a14a1620075c41a37f0839b11e0e9db82abe8",
+      "bytes": 714
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-responses-compat.log",
+      "sha256": "a72733dde54b6317a58db77b6bd1ce6f4163e1e8246921dcab03fb103aa0d41d",
+      "bytes": 37
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-security-audit-postgres.log",
+      "sha256": "4f43e66ae08b985df33fbe75459943b88eb50ff0fda88d298961c7c29fad326c",
+      "bytes": 95
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-team-membership-concurrency.log",
+      "sha256": "767ccf07254f5cb3878caa5595fa9fc9e55f4ce6e4f177790d2f63b67e190441",
+      "bytes": 700
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-upstream-generation-routes.log",
+      "sha256": "afac8d7d7f4728bb8fe8cbd7c8c9c77f7a1a073920514422a24de3320d9a9a58",
+      "bytes": 12070
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-upstream-stream-safety.log",
+      "sha256": "590271c8387045f6a704c157b074aabd53682322a2a9d5e4dced45c5ced3d92b",
+      "bytes": 1833
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/test-upstream-url.log",
+      "sha256": "ceaa5b672f9d0c09e5fb0017661ff3676eae64da0ae095a004aad28a76e2750c",
+      "bytes": 39
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/upstream-stream-safety-after.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/upstream-stream-safety-after.log",
+      "sha256": "590271c8387045f6a704c157b074aabd53682322a2a9d5e4dced45c5ced3d92b",
+      "bytes": 1833
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/upstream-stream-safety-before.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/upstream-stream-safety-before.log",
+      "sha256": "0b9354cd5a68d1ba3af4b305db73e27f5ce86ddd6e6cb495d6098eadec539714",
+      "bytes": 21338
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/validation.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/tmp/crewrouter-security-fixtures-20261026-xMRelr/validation.log",
+      "sha256": "d41448eac89bcb43f2c5d05c52b887469c182ff53bc9e7fce84219aa51bdcf0b",
+      "bytes": 308
+    }
+  ]
+}

@@ -465,13 +465,16 @@ test('real transport and retry helper count each network attempt once', async ()
   const transportSource = fs.readFileSync(path.join(__dirname, '../proxy-pool.js'), 'utf8');
   const begin = transportSource.indexOf('async function proxyFetch(');
   const end = transportSource.indexOf('\n/**', begin);
+  const transportBegin = transportSource.indexOf('async function proxyFetchTransport(');
+  const transportEnd = transportSource.indexOf('\n/**', transportBegin);
+  assert.ok(begin >= 0 && end > begin && transportBegin >= 0 && transportEnd > transportBegin);
   let networkCalls = 0;
   const transportRequire = id => id === './utils/quota-request-context'
     ? { quotaFetch: async (url, options, fn) => fn(url, options) }
     : require(id);
   const transport = { ...require('../utils/request-lifecycle'), Logger: { info() {} }, require: transportRequire, axios: async () => { networkCalls++; throw Object.assign(new Error('mock refused'), { code: 'ECONNREFUSED' }); } };
   vm.createContext(transport);
-  vm.runInContext(transportSource.slice(begin, end), transport);
+  vm.runInContext(`${transportSource.slice(begin, end)}\n${transportSource.slice(transportBegin, transportEnd)}`, transport);
   const context = routeFunctions({ proxyPool: { proxyFetch: transport.proxyFetch, getProxyAgent: async () => null } });
   const requestContext = { requestedModel: 'client', upstreamAttempts: 0 };
   await assert.rejects(context.fetchWithProxyRetry(() => ({ url: 'http://mock', body: '{"model":"route"}' }), {}, null, 12, 'test', { requestContext }));
