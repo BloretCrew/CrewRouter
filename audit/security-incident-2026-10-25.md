@@ -44,6 +44,7 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 ## 攻击者遗留归档的只读核验（2026-10-25）
 
 - 归档 `/root/attacker-residue-20261023-113349.tar.gz` 的 SHA-256 为 `cfe83cc62c90507a4580144bf4525628154d8eda3cbe25938d662567cd1dc195`。只通过 `tarfile` 在内存中读取指定成员，没有将归档解包或执行其中内容。成员 SHA-256：`harvest.py` `e35d965d850e1f4732bc86bb594972d09425e1f944de593f508349dfffe18241`；`h2.py` `b1f5266973d6fbf412f137cecd3bf99a0497e7bc4a2eba54ebefc1277e7b0564`；`out.json` `5d17aca38d8b7bd413dd121296e90f1bd2392bdd3ade8aa5fc01f0d1c6f6c82e`；`o.json` `a4909b600a4442b9a0698a80d426198ccfdf4118305d349aeddb64534d40763c`；`i147_o.txt` `0ac7ed8ada42eee5cf644ef11d74c08067575efce67f0d4366cc7887b9438df0`。
+- 本次还检查了归档成员对应的当前路径 `/data/bloret-image-hosting/public/i147_{c,o}.txt` 与 `/var/tmp/.i281/{harvest.py,h2.py,out.json,o.json}`，均不存在。该结果只说明检查时这些路径没有文件，不能确认它们何时被移除，也不能排除其他位置的副本。
 - `var/tmp/.i281/harvest.py` 与 `h2.py` 静态代码会枚举 Chromium/Firefox 配置、查询浏览器 Cookie、保存的登录项和历史数据库，并扫描本地存储中的匹配字符串；其唯一 `subprocess` 用途是调用 `openssl` 做本地解密，未发现网络模块或外连调用。这只能说明脚本行为与能力，不能单独证明由谁运行。
 - `out.json` 与 `o.json` 各列出 18 个 Chromium 配置、未列出 Firefox 配置；5 个 Chromium 配置共报告 639 条 Cookie，但筛选命中的 Cookie 为 0。4 个配置的保存登录项总数为 0；历史记录总量为 6,369，筛选命中的历史项为 0。导出结果仍包括浏览器配置/主机名等元数据。
 - 两份 JSON 都含本地存储扫描结果：`out.json` 有 10 条匹配字符串，`o.json` 有 42 条；其中两条各带一个 256 字符、高熵的 `token` 字段值，且两份 JSON 重复包含这两个候选值。本报告未输出或复制候选值，也未能将其归属到具体服务。应把相关浏览器配置及其令牌视为暴露，但这不证明令牌已发送到外部。
