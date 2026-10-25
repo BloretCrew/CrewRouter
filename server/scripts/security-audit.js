@@ -279,10 +279,10 @@ async function audit() {
       FROM pg_event_trigger ORDER BY evtname
     `)).rows;
     report.checks.databaseRole = (await client.query(`
-      SELECT rolname AS name, rolsuper AS superuser, rolcreaterole AS createRole,
-             rolcreatedb AS createDatabase, rolreplication AS replication,
-             rolbypassrls AS bypassRls,
-             has_schema_privilege(current_user, 'public', 'CREATE') AS publicSchemaCreate
+      SELECT rolname AS name, rolsuper AS superuser, rolcreaterole AS "createRole",
+             rolcreatedb AS "createDatabase", rolreplication AS replication,
+             rolbypassrls AS "bypassRls",
+             has_schema_privilege(current_user, 'public', 'CREATE') AS "publicSchemaCreate"
       FROM pg_roles WHERE rolname=current_user
     `)).rows[0];
 

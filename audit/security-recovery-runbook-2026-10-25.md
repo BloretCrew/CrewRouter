@@ -12,11 +12,15 @@
 - 2026-10-25 10:22 CST 再核验：服务仍以 root 运行 PID 1407，监听 `*:20003`；`bloret-core` 可 ping，但 PostgreSQL TCP/`pg_isready` 无响应。当前进程没有 `CR_TRUST_PROXY`，且本机 INPUT 默认策略为 ACCEPT；上游防火墙是否保护应用端口未知。当前仓库生产依赖审计为 0 项，但运行服务仍是旧进程。
 - 2026-10-25 10:41–10:46 CST 最新复核：CrewRouter PID 1407 与图床 PID 901 仍以 root 运行，分别监听 `*:20003`、`*:28888`，进程未设置代理信任或本轮两个脚本开关；数据库 `bloret-core:5432` 仍无响应。主机具有全局 IPv6 地址，iptables IPv4/IPv6 INPUT、OUTPUT 默认策略均为 ACCEPT；上游 IPv6 入站过滤未知。活动 nft guard 在更早 priority 阻断 `.2`、`.7`，但管理端口规则只约束非 Tailscale 接口；其他 Tailnet 节点可访问 5901、6080、9090、40020。CrewRouter 与图床端口未被 guard 阻断，不能据此断言互联网直连已发生，需由上游路由器/防火墙核实。
 - 当前主机 `/var/lib/pgsql/data` 是 PostgreSQL 18.3 集群（system ID `7659998119049616475`），最新检查点为 2026-09-10 18:00:26 CST，原始集群保持关闭。隔离副本的系统目录显示数据库为 `ai_guess`、`sub2api`、`translation_collector`、`postgres` 和 `template1`；业务表不符合 CrewRouter schema，因此不是 CrewRouter 恢复源。副本在禁用 TCP/预加载、只读事务条件下检查后已停止并删除，原始目录未启动或更改。
-- PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。2026-10-25 09:30–09:52 tailnet 主机在线且 ping 成功，但 TCP 5432 无响应；CrewRouter 持续连接超时，新的只读审计无法连接。尚不能区分 PostgreSQL 停止与远端防火墙丢包，活库一致性查询也不能证明操作系统或数据库完整。
-- 当前主机的 `cr-incident-guard.service` 会阻断清单中的已知失陷 Tailscale 节点；12:25 CST 又加入了对非 loopback、非 Tailscale 接口的 TCP `20003` 与 `28888` 阻断。其他 Tailnet 节点仍可访问这两个服务；该规则不隔离数据库出站连接，也不能替代上游隔离。
+- PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。此前 09:30–11:53 的 TCP 超时检查发生在本机 09:27 源地址丢弃规则之后，回包被本机阻断，不能证明远端 PostgreSQL 停止。12:39 放行仅限本机先发起连接的 `.2:5432` 状态性回包后，`pg_isready` 显示 accepting；12:41 只读审计完成。活库仍不可信，一致性检查不能证明底层数据完整。
+- 当前主机的 `cr-incident-guard.service` 按 IPv4/IPv6 地址阻断清单中的五台其他失陷 Tailscale 节点；仅允许本机主动访问 `.2:5432` 的已建立回包，并阻断非 loopback、非 Tailscale 接口对 TCP `20003` 与 `28888` 的访问。其他 Tailnet 节点仍可访问这两个服务及部分管理端口；规则不限制本机其他出站流量，也不能替代上游隔离。
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
 - 扩展本机候选路径搜索后仍未找到 CrewRouter PostgreSQL 全库备份。`/root/crewrouter-security-backup-20261023` 仅有旧 `sandbox.js.orig` 源码文件；CrewRouter Desktop runtime 的 PostgreSQL 子目录和 `runtime/data` 为空，配置所指向的 `127.0.0.1:40523` 没有监听。另有 2026-08-29 的 API Key SQL 文件，但它不是全库恢复点。先确认外部/离线备份，再决定恢复或数据抢救路径。
 - 2026-10-25 12:27 CST 补查：`/root/backup` 仅有 2026-08-29 API Key SQL 和旧 auditd 配置；`/root/fw-backup` 是防火墙规则快照；`/root/image-hosting-backup-20261023` 是图床源码、配置及 orphan uploads；Podman 当前无容器、无卷，只有两个镜像。未发现 CrewRouter 全库恢复源。
+- 2026-10-25 12:33 CST 补查：SSH 日志记录来自 `bloret-jinan`（`100.64.0.3`）的 root 密码认证成功 462 次、`detrital-cloud`（`.7`）的 root 公钥认证成功 148 次，以及 `bloret-core`（`.2`）的 root 密码认证成功 2 次；记录日期均在复盘攻击窗口内。Tailscale 状态显示另外两台失陷主机 `.4`、`.5` 仍在线。已把五台对端的 IPv4/IPv6 地址加入 `cr-incident-guard` 入站丢弃规则，并通过 `nft -c` 后原子加载；当前规则对其他 Tailnet 节点与出站流量仍放行。root/detrital crontab 及 `at` 队列为空；这不是主机清洁证明。
+- 2026-10-25 12:39 CST 补查：发现此前 `.2` 整机入站丢弃会阻止 PostgreSQL 返回包；规则改为只放行本机主动连接 `.2:5432` 的 established/related TCP 回包，其他入站仍丢弃。`pg_isready` 返回 accepting。
+- 2026-10-25 12:41 CST 补查：在受限 systemd transient unit 中执行只读数据库审计，`readOnly=true`、`complete=true`。余额/退款明细、团队关系、兑换码计数、API Key 成员关系和序列等检查未发现不一致；当前退款日志为空。数据库主机已失陷，审计结果只是该活库的当前快照，不是数据完整性证明；详细结果见事件记录。
+- 2026-10-25 12:46 CST 补查：修正审计器角色查询别名后重跑，报告完整且只读，退出码 `1` 正确标记 `crewrouter` 角色仍可在 `public` schema 创建对象。仅修改仓库审计脚本，没有更改数据库。
 - 2026-10-25 10:55 CST：Tailscale ping 到 `bloret-core` 成功，但 PostgreSQL `5432` 仍无响应；本机没有额外挂载数据盘，也未发现主机级 PostgreSQL/CrewRouter 定时备份。`/root/.cc-switch/backups/backup_20260606_060844.sql` 是 CC Switch SQLite 导出，与 CrewRouter 无关。该结论只涵盖本机已检查路径，不代表其他主机或异机存储没有备份。
 - 2026-10-25 11:08 CST 再测：Tailscale ping 成功，`pg_isready` 对 `100.64.0.2:5432` 仍返回 no response；未执行数据库查询。
 - 2026-10-25 对攻击残留归档 `/root/attacker-residue-20261023-113349.tar.gz` 做只读静态核验（SHA-256 `cfe83cc62c90507a4580144bf4525628154d8eda3cbe25938d662567cd1dc195`）：其中有浏览器采集脚本及结果、两个高熵 token 候选的重复副本，以及 Docker 网段端口扫描回显。输出没有证明这些候选令牌已外传；恢复时仍应从可信设备撤销/轮换浏览器内保存的凭据与会话，并核查重建环境的 Docker 端口暴露。归档成员时间戳不是可信时间证明。
@@ -45,6 +49,7 @@
 - 受影响主机浏览器的密码库、Cookie、Local Storage、Session Storage 中曾保存的账号、令牌与会话；遗留输出里出现无法归属到具体服务的 token 候选值。
 - Tailscale 管理员、节点密钥、设备会话和 ACL；移除受影响节点后重新注册干净节点。
 - 所有主机的 root/管理员密码、SSH 公钥、SSH 私钥和 MCSManager 凭据。现有 `authorized_keys` 无可信基线，不要直接复制到新机。
+- 本机 `/var/log/secure*` 已记录来自三台失陷主机的 root 成功 SSH 认证；新环境应清除这些主机的旧 SSH/Tailscale 信任关系，并单独核实本机 `authorized_keys` 指纹。
 - CrewRouter 管理员密码与 TOTP、数据库密码、会话签名密钥、用户 API Key、供应商 API Key、SMTP/飞书、PassPort 和其他第三方密钥。
 - 任何曾保存在受影响主机浏览器或浏览器密码库中的密码、Cookie、恢复码和令牌；统一按已泄露处理并撤销旧会话。
 
@@ -72,7 +77,7 @@
 3. 若找不到可信全库备份，仅将旧库/物理数据副本用于隔离环境中的数据抢救。恢复出的记录须标记为未验证，由业务负责人逐类确认后导入新库；不得把活库 `pg_dump` 或旧数据目录宣称为可信备份。
 4. 目前已知的 2026-08-29 API Key SQL 不是全库恢复点，且其中凭据需要撤销，不可直接作为线上密钥恢复源。
 
-数据库验收至少包括：外键与索引有效、关键表行数与备份清单相符、余额与退款对账、用户与团队归属核对、所有旧会话和用户 API Key 均失效、供应商及插件逐项复核。另须逐笔核对 `admin.user_refund` 操作日志与外部付款凭证；日志只证明应用记录过请求，不证明转账成功，而且日志异步写入，缺少日志也不能证明未操作。可信隔离副本可连接后运行 `node server/scripts/security-audit.js`；脚本在只读、可重复读事务中审计，先检查业务对象类型与 RLS，再输出插件配置哈希、退款历史和一致性结果。核验结果连同备份哈希异机归档。
+数据库验收至少包括：外键与索引有效、关键表行数与备份清单相符、余额与退款对账、用户与团队归属核对、所有旧会话和用户 API Key 均失效、供应商及插件逐项复核。另须逐笔核对 `admin.user_refund` 操作日志与外部付款凭证；日志只证明应用记录过请求，不证明转账成功，而且日志异步写入，缺少记录也不能证明未操作。本轮已对当前活库运行 `node server/scripts/security-audit.js`，只读、可重复读事务完成且没有余额/团队/兑换码不变量异常；报告指出应用角色仍可在 `public` schema 创建对象。该结果不能证明失陷主机或数据库底层可信。可信恢复副本建立后仍须重跑审计、与备份清单核对，并将结果及备份哈希异机归档。
 
 ### 6. 部署应用并切流
 
