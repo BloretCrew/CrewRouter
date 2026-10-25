@@ -89,6 +89,7 @@ function isBlockedIPv6(ip) {
   if (groups.slice(0, 7).every(group => group === 0) && groups[7] === 1) return true; // ::1/128
   if ((groups[0] & 0xfe00) === 0xfc00) return true; // fc00::/7
   if ((groups[0] & 0xffc0) === 0xfe80) return true; // fe80::/10
+  if ((groups[0] & 0xffc0) === 0xfec0) return true; // fec0::/10 已废弃的站点本地地址仍可能在局域网路由
   if ((groups[0] & 0xff00) === 0xff00) return true; // ff00::/8
   // IPv4-compatible IPv6 已弃用；不要让它绕过 IPv4 特殊地址检查。
   if (groups.slice(0, 6).every(group => group === 0)) return true; // ::/96
