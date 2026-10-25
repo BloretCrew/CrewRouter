@@ -260,7 +260,7 @@ router.post('/chat', requireAuth, async (req, res) => {
             'Authorization': `Bearer ${apiKey}`
           };
       try {
-        response = await quotaFetch(url, {
+        response = await quotaFetch(urlCheck.url.toString(), {
           quotaProvider: provider,
           quotaKey: apiKey,
           method: 'POST',

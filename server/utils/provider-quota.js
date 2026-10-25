@@ -348,7 +348,7 @@ async function queryProviderQuotaInternal(provider, options = {}) {
 
   let responseData;
   try {
-    const response = await fetch(reqConfig.url, fetchOptions);
+    const response = await fetch(urlCheck.url.toString(), fetchOptions);
     const text = await response.text();
     if (!response.ok) {
       try { responseData = JSON.parse(text); } catch { responseData = { _status: response.status, _body: text.substring(0, 500) }; }

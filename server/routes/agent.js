@@ -170,7 +170,7 @@ async function callManageModel(model, messages) {
     const headers = format === 'anthropic'
       ? { 'Content-Type': 'application/json', 'x-api-key': attempts[i], 'anthropic-version': '2023-06-01' }
       : { 'Content-Type': 'application/json', Authorization: `Bearer ${attempts[i]}` };
-    const response = await quotaFetch(url, {
+    const response = await quotaFetch(urlCheck.url.toString(), {
       quotaProvider: provider,
       quotaKey: attempts[i],
       method: 'POST',
@@ -292,7 +292,7 @@ router.post('/images', requireAuth, async (req, res) => {
       let lastText = '上游请求失败';
       let payload = null;
       for (let i = 0; i < attempts.length; i += 1) {
-        const response = await quotaFetch(url, {
+        const response = await quotaFetch(urlCheck.url.toString(), {
           quotaProvider: provider,
           quotaKey: attempts[i],
           method: 'POST',

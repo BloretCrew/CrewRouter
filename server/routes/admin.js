@@ -2660,7 +2660,7 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
       try {
         const urlCheck = await validateUrl(url);
         if (!urlCheck.ok) continue;
-        const resp = await fetch(url, {
+        const resp = await fetch(urlCheck.url.toString(), {
           headers,
           signal: AbortSignal.timeout(5000),
           redirect: 'manual'
@@ -2685,7 +2685,7 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
       if (!urlCheck.ok) {
         return res.json({ ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` });
       }
-      const resp = await fetch(baseUrl, {
+      const resp = await fetch(urlCheck.url.toString(), {
         headers,
         signal: AbortSignal.timeout(5000),
         redirect: 'manual'
@@ -2753,7 +2753,7 @@ async function fetchUpstreamModelsForProvider(provider) {
     Logger.info(`[获取供应商模型] 尝试: ${modelsUrl}`);
     const attempt = { url: modelsUrl };
     try {
-      const response = await fetch(modelsUrl, {
+      const response = await fetch(urlCheck.url.toString(), {
         headers,
         signal: AbortSignal.timeout(15000),
         redirect: 'manual'
@@ -4003,7 +4003,7 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
 
       // 尝试获取模型列表
       try {
-        const modelsRes = await fetch(modelsUrl, {
+        const modelsRes = await fetch(urlCheck.url.toString(), {
           headers: { 'Authorization': `Bearer ${apiKey}` },
           signal: AbortSignal.timeout(15000),
           redirect: 'manual'
@@ -4272,6 +4272,12 @@ async function tryAiRequest(bodyBuilder, { stream = false, excludeProviderId = n
   for (let i = 0; i < Math.min(candidates.length, MAX_ATTEMPTS); i++) {
     const { model, provider } = candidates[i];
     const { url, isAnthropic } = buildProviderApiUrl(provider);
+    const urlCheck = await validateUrl(url, { allowPrivate: false });
+    if (!urlCheck.ok) {
+      lastError = `provider=${provider.id}, URL 校验失败`;
+      Logger.warn(`[AI调用] 拒绝不安全的供应商 URL: provider=${provider.id}, reason=${urlCheck.error}`);
+      continue;
+    }
     const reqBody = bodyBuilder(model, isAnthropic);
     const headers = { 'Content-Type': 'application/json' };
     if (provider.api_key) {
@@ -4285,7 +4291,7 @@ async function tryAiRequest(bodyBuilder, { stream = false, excludeProviderId = n
     Logger.info(`[AI调用] 尝试 (${i + 1}/${MAX_ATTEMPTS}): provider=${provider.id}, model=${model}, format=${provider.format}, url=${url}`);
 
     try {
-      const res = await fetch(url, {
+      const res = await fetch(urlCheck.url.toString(), {
         method: 'POST',
         headers,
         body: JSON.stringify(reqBody),

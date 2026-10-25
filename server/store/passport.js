@@ -83,7 +83,7 @@ async function verifyCode(passportCfg, code) {
     throw err;
   }
 
-  const res = await fetch(url, {
+  const res = await fetch(urlCheck.url.toString(), {
     method: 'GET',
     headers: { Accept: 'application/json' },
     redirect: 'manual',

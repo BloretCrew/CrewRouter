@@ -275,6 +275,8 @@ sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d 你的域名
 ```
 
+应用默认只信任 loopback 来源的代理。若反向代理位于其他主机或容器网段，在 `.env` 中将 `CR_TRUST_PROXY` 设置为可信代理 IP/CIDR 列表；同时在防火墙限制应用端口，使请求只能经过这些代理。不要仅按固定代理跳数信任来源，也不要设置为 `true` 或 `*`。
+
 ---
 
 ## 四、方式二：Docker 部署

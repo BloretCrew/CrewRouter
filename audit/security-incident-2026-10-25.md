@@ -27,6 +27,7 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 | 2026-10-22 | 复盘材料记载服务异常、发现数据库清空，并发现攻击者删除 bloret-core 的 `/opt` 目录及其他业务数据库备份。CrewRouter 数据库因存放在另一块盘而幸存，但有数据错乱。 |
 | 2026-10-23 至 10-24 | 复盘材料描述了处置、恢复和凭据重置；其总结强调日志异机留存、主机基线、进程派生与出站连接监控。 |
 | 2026-10-25 09:30 至 09:52 | 本轮只读复核时，Tailscale 主机 `bloret-core`（`100.64.0.2`）仍在线且 Tailscale ping 成功，但 TCP `5432` 无响应；CrewRouter 日志持续出现连接超时，新的只读数据库审计在连接阶段失败。未能确定是 PostgreSQL 停止还是远端防火墙丢弃连接；本轮未登录数据库主机。 |
+| 2026-10-25 10:15 CST | 再次只读检查：Tailscale ping 在 1 ms 内成功，`pg_isready` 返回 no response，TCP `5432` 连接失败；未登录数据库主机。 |
 | 2026-10-25 | 完成本轮 CrewRouter 代码与数据库状态审查，撤销残留会话、禁用遗留用户 API Key、修正序列及一条缺失的团队关联；继续加固 SSRF 出站请求。 |
 
 时间线口径存在冲突：第一份 HTML 的内嵌图片给出上述分钟级时间，并把删除 `/opt`、清空 PostgreSQL 的时间列为 10-21 22:52 至 23:03；同一材料的正文把发现与删除描述为 10-22，第二份复盘则称入侵精确时间因日志丢失不可考。工作区没有这些时间对应的原始日志或取证包，因此图片中的分钟时间只作为材料记录保留，不能视为独立核实的事实；原始时区也未注明。
@@ -55,6 +56,8 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 - IPv4 与 IPv6 的 nftables `INPUT` 默认策略均为 `accept`。原规则限制了非 Tailscale 的 SSH 并列出攻击者源 IP，但没有普遍限制其他端口。检查时 VNC `5901`、noVNC `6080`、WebDAV `40020`、Cockpit `9090` 和 RPC `111` 绑定在所有网卡；CrewRouter `20003`、图床 `28888` 和 HTTP `80` 也在监听。
 - 已安装并启用持久化 `cr-incident-guard.service`：拒绝上述两台失陷节点经 Tailscale 向本机发起连接；把 RPC、VNC、noVNC、WebDAV、Cockpit 的 TCP/UDP 管理端口限制到 loopback 和 Tailscale。该规则已在 IPv4、IPv6 共用的 `inet` nftables 表中加载。公网 HTTP/API 监听保持不变；外部云防火墙是否另有限制，当前没有证据。
 - CrewRouter 当前服务以 root 运行，PID 1407 于 10-24 启动；当前代码库的补丁尚未进入这个进程。当前目标 `bloret-core`（`100.64.0.2`）在 tailnet 在线，但从 09:30 至 09:52 TCP `5432` 多次超时，`pg_isready` 返回 no response，CrewRouter 日志出现连接超时，`ss` 未见到该目标的已建立数据库连接。新一轮只读数据库审计因此在连接阶段失败；不能据此判断库内状态，也无法确认是 PostgreSQL 未运行还是远端防火墙丢弃连接。此前本机 guard 的规则只阻止 `.2` 入站访问 `detrital-server`，不阻止本机到数据库的出站连接。
+- 10:15 CST 复核时，CrewRouter PID 1407 仍以 root 运行于 `/data/CrewRouter`，systemd 单元 `crewrouter.service` 自 10-24 12:36 CST 起运行，监听 `*:20003`。当前进程实际加载的依赖仍是 Axios 1.16.0、Express 4.22.2、Nodemailer 9.0.1、`proxy-addr` 2.0.7、`body-parser` 1.20.5、`qs` 6.15.2、`follow-redirects` 1.16.0、`ip-address` 10.2.0 与 `@simplewebauthn/server` 13.3.0；它们与仓库当前已修复的锁文件不同。服务进程启动早于本轮源码修改，仓库的依赖和代码补丁均未进入运行进程。
+- 活跃代码之前固定信任一跳代理，而运行环境没有设置 `CR_TRUST_PROXY`；应用端口绑定所有网卡。公网请求绕过反向代理直连时，客户端可能伪造 `X-Forwarded-For`，影响基于 `req.ip` 的登录限速和审计来源；运行中的 `proxy-addr` 2.0.7 也处于高危公告影响范围。仓库现已改为默认只信任 loopback、移除 express-session 对任意 `X-Forwarded-Proto` 的单独信任，并支持显式设置可信代理 IP/CIDR；该修复尚未加载。另有 root Node 进程 PID 901 属于独立的 `bloret-image-hosting.service`，运行目录 `/data/bloret-image-hosting`，同样位于复盘列出的失陷主机上。
 - `auditd` 在本轮前只加载了抑制任务审计的 `-a task,never`，因此针对 10-20 的 `EXECVE` 与 `.ssh` 文件变更查询没有返回记录；这不能说明当时没有命令或文件变更。本轮已移除该抑制规则，并加载双架构 `execve/execveat` 及账号、SSH、systemd、cron、`/usr/local/bin` 变更规则；内核当前规则列表已确认加载。审计日志仍只保存在本机，root 攻击者可修改或删除，尚无可信异机接收端，因此不能作为独立证据。命令行参数可能包含敏感值，不应未经脱敏直接上传分析服务。
 - `pcap-watch` 于 10-24 22:12 左右开始生成本机 PCAP 轮转文件；捕获内容没有打开或复制。捕获起始时间晚于 10-18 至 10-21 的攻击窗口，且文件保存在被监控主机本地，无法补足事件期流量或提供异机防篡改留存。
 - 检查时 `/root` 与 `/root/backup` 为 `0755`；root 目录下的 API Key SQL 备份及 MCSM/取证压缩包为 `0644`，原先可被其他本地账号穿过目录读取。没有读取这些文件内容；已将 `/root` 与备份目录改为 `0700`，上述文件改为 `0600`。内容哈希保存在本机审计记录中：API Key SQL `fda251ba…e4e840`、攻击残留包 `cfe83cc6…dc195`、MCSM 配置包 `ced5f4d7…1eb693`。
@@ -69,7 +72,8 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 - `server/routes/setup.js`：OOBE 创建管理员时在取得事务锁后重新检查初始化状态。
 - `server/index.js`：启动迁移只为没有团队归属的用户补建个人 Team。
 - `server/utils/audit-log.js`、`server/routes/admin.js`：审计中间件可从响应提取资源 ID；供应商创建与更新分别记账。
-- 出站 URL：供应商额度查询、模型查询与连通性检测、插件 fetch/webhook、代理订阅、插件商店包下载、PassPort 验证等请求不再自动跟随重定向；供应商导入与探测路径补充 URL 校验。`url-validator` 默认策略新增 RFC 6598 `100.64.0.0/10` 拦截（包括 Tailscale 地址）；代理列表导入不再跳过私网校验，读取响应期间也持续执行超时与 1 MiB 限制。重定向会作为未成功的响应处理，需在配置中直接填写最终 URL。
+- 出站 URL：供应商额度查询、模型查询与连通性检测、插件 fetch/webhook、代理订阅、插件商店包下载、PassPort 验证等请求不再自动跟随重定向；供应商导入与探测路径补充 URL 校验。`url-validator` 默认策略新增 RFC 6598 `100.64.0.0/10`、IPv4 多播/保留、NAT64 私网映射及 6to4 私网映射拦截；统一 `quotaFetch` 出口也执行 SSRF 校验，覆盖融合请求。代理列表导入不再跳过私网校验，响应体受大小限制且读取期间持续执行超时。重定向会作为未成功的响应处理，需在配置中直接填写最终 URL。
+- 反向代理信任：默认只信任 loopback；远程代理必须通过 `CR_TRUST_PROXY` 指定可信 IP/CIDR，并在防火墙限制应用端口。固定信任一跳可能允许直接公网访问者伪造 IP；本代码修复需要随可信重建部署后才生效。
 - 插件宿主默认拒绝执行后端 `main.js`；只有管理员显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 才会信任并在主进程加载插件代码。数据库中当前所有插件均为禁用状态。
 - `server/plugins/zip.js`：插件上传、商店安装、商店清单读取和自动更新共用 ZIP 校验；检查目录与本地文件头、路径、重复条目、压缩算法和体积，拒绝链接/特殊文件，以 Node zlib 限量解压并验证 CRC。安装更新包时不再调用 root 权限的 `unzip`，也不再展开内嵌 tar；更新包须直接包含程序文件。更新 URL 限定为公网 HTTPS 且不跟随重定向，下载上限 32 MiB；商店清单下载上限 25 MiB，单个清单上限 1 MiB。ZIP 仅支持单卷、非 ZIP64、文件名为 ASCII 或 UTF-8 的包；这些改动都需随可信重建部署后才生效。
 - 依赖审计：初始 `npm audit --omit=dev` 报告 9 项生产依赖漏洞，完整审计另有 2 项开发依赖漏洞。更新 `@simplewebauthn/server`、Axios、Express、Nodemailer 及锁文件中的传递依赖后，`npm audit` 与 `npm audit --omit=dev` 均为 0 项。Nodemailer 升至 10.x；项目声明最低 Node.js 版本为 20，与 CI 的 Node 20/22 一致。结果只反映当前仓库清单，尚未部署到正在运行的服务。

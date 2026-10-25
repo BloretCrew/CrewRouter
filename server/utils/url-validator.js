@@ -22,6 +22,9 @@ const PRIVATE_RANGES = [
   { start: '169.254.0.0', end: '169.254.255.255' },
   // 本地通信（0.0.0.0/8）
   { start: '0.0.0.0', end: '0.255.255.255' },
+  // 多播与保留地址不应作为普通 HTTP 上游目标。
+  { start: '224.0.0.0', end: '239.255.255.255' },
+  { start: '240.0.0.0', end: '255.255.255.255' },
   // 注意：不拦 198.18.0.0/15（RFC 2544 基准测试网段）。Fake-IP 代理（Clash/Mihomo 等）
   // 会把公网域名解析到该网段，实际连接经代理出公网，拦截会导致所有外部供应商不可用。
 ];
@@ -87,8 +90,22 @@ function isBlockedIPv6(ip) {
   if ((groups[0] & 0xfe00) === 0xfc00) return true; // fc00::/7
   if ((groups[0] & 0xffc0) === 0xfe80) return true; // fe80::/10
   if ((groups[0] & 0xff00) === 0xff00) return true; // ff00::/8
+  // IPv4-compatible IPv6 已弃用；不要让它绕过 IPv4 特殊地址检查。
+  if (groups.slice(0, 6).every(group => group === 0)) return true; // ::/96
   if (groups.slice(0, 5).every(group => group === 0) && groups[5] === 0xffff) {
     const mapped = `${groups[6] >>> 8}.${groups[6] & 0xff}.${groups[7] >>> 8}.${groups[7] & 0xff}`;
+    return isPrivateIPv4(mapped);
+  }
+  // RFC 6052 well-known NAT64 prefix 可把 IPv4 私网地址编码为 IPv6 地址。
+  if (groups[0] === 0x0064 && groups[1] === 0xff9b && groups.slice(2, 6).every(group => group === 0)) {
+    const mapped = `${groups[6] >>> 8}.${groups[6] & 0xff}.${groups[7] >>> 8}.${groups[7] & 0xff}`;
+    return isPrivateIPv4(mapped);
+  }
+  // RFC 8215 local-use NAT64 prefix。
+  if (groups[0] === 0x0064 && groups[1] === 0xff9b && groups[2] === 0x0001) return true;
+  // 6to4 地址在第二、第三组中携带 IPv4 地址；拒绝指向私网的隧道目标。
+  if (groups[0] === 0x2002) {
+    const mapped = `${groups[1] >>> 8}.${groups[1] & 0xff}.${groups[2] >>> 8}.${groups[2] & 0xff}`;
     return isPrivateIPv4(mapped);
   }
   return false;

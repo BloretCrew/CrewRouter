@@ -265,7 +265,7 @@ async function testModel(modelId, userId) {
     if (testUserAgent) headers['User-Agent'] = testUserAgent;
     if (isOpenCodeZenUrl(url)) applyOpenCodeTestHeaders(headers, testUserAgent);
     try {
-      response = await doFetch(url, {
+      response = await doFetch(urlCheck.url.toString(), {
         method: 'POST',
         headers,
         body: JSON.stringify(testBody),

@@ -3728,7 +3728,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
         : upstreamUrl(base_url, '/models');
       const urlCheck = await validateUrl(modelsUrl, { allowPrivate: false });
       if (!urlCheck.ok) throw new Error(`模型列表 URL 校验失败: ${urlCheck.error}`);
-      const modelsRes = await fetch(modelsUrl, {
+      const modelsRes = await fetch(urlCheck.url.toString(), {
         headers: { 'Authorization': `Bearer ${api_key}` },
         redirect: 'manual'
       });
@@ -3863,7 +3863,7 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
       try {
         const urlCheck = await validateUrl(url, { allowPrivate: false });
         if (!urlCheck.ok) continue;
-        const resp = await fetch(url, { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
+        const resp = await fetch(urlCheck.url.toString(), { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
         const latency = Date.now() - start;
         if (resp.ok) return res.json({ ok: true, latency_ms: latency, url });
         if (resp.status === 401 || resp.status === 403) {
@@ -3878,7 +3878,7 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
       if (!urlCheck.ok) {
         return res.json({ ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` });
       }
-      const resp = await fetch(baseUrl, { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
+      const resp = await fetch(urlCheck.url.toString(), { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
       const latency = Date.now() - start;
       return res.json({ ok: true, latency_ms: latency, url: baseUrl, note: `HTTP ${resp.status}` });
     } catch (e) {
@@ -4077,7 +4077,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
           Logger.warn(`[用户刷新模型] SSRF 校验拒绝: ${modelsUrl} - ${urlCheck.error}`);
           continue;
         }
-        const response = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000), redirect: 'manual' });
+        const response = await fetch(urlCheck.url.toString(), { headers, signal: AbortSignal.timeout(15000), redirect: 'manual' });
         if (!response.ok) continue;
 
         const data = await response.json();

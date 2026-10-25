@@ -77,7 +77,7 @@ async function transport({ target, model, key, prompt, signal, beforeSend }) {
   if (!checked.ok) throw new Error('供应商 URL 未通过安全校验');
   const proxy = await proxyPool.getProxyAgent(model);
   if (!await beforeSend()) throw new Error('检测已取消');
-  const response = await proxyPool.proxyFetch(url, {
+  const response = await proxyPool.proxyFetch(checked.url.toString(), {
     method: 'POST', headers: spec.headers, body: JSON.stringify(spec.body), signal, agent: proxy?.agent,
     requestContext: { requestId: require('crypto').randomUUID(), purpose: 'model_trace', upstreamAttempts: 0, signal }
   });

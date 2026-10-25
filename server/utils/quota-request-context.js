@@ -3,6 +3,7 @@
 const { AsyncLocalStorage } = require('node:async_hooks');
 const { randomUUID, createHash } = require('node:crypto');
 const { combineAbortSignals, releaseCombinedAbortSignal } = require('./request-lifecycle');
+const { validateUrl } = require('./url-validator');
 const storage = new AsyncLocalStorage();
 
 function recordSkip(state, reason, metadata = {}) {
@@ -155,6 +156,13 @@ function failureStatus(error, signal) {
 
 // Wrap only explicit LLM calls; never tee or pre-read the upstream body.
 async function quotaFetch(url, options = {}, transport = globalThis.fetch) {
+  // Central SSRF boundary for every provider request, including fusion and
+  // proxy-pool callers that do not pass through a provider adapter.
+  const urlCheck = await validateUrl(String(url), { allowPrivate: false });
+  if (!urlCheck.ok) {
+    throw new Error(`上游 URL 未通过 SSRF 校验: ${urlCheck.error}`);
+  }
+  url = urlCheck.url.toString();
   const provider = options.quotaProvider;
   const state = options.quotaState || storage.getStore();
   if (!provider) return transport(url, options);

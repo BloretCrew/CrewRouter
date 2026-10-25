@@ -2333,8 +2333,21 @@ async function ensurePluginsTables() {
 
 const app = express();
 
-// 信任反向代理（Nginx/Cloudflare等）
-app.set('trust proxy', 1);
+// 仅信任明确指定的反向代理。直接公开应用端口时，固定信任一跳会让客户端伪造
+// X-Forwarded-For，进而绕过按 IP 限速并污染审计来源地址。
+function getTrustedProxySetting(value) {
+  const setting = String(value || '').trim();
+  if (!setting) return 'loopback';
+  if (setting.toLowerCase() === 'false') return false;
+  if (/^\d+$/.test(setting)) return Number(setting);
+  const ranges = setting.split(',').map((range) => range.trim()).filter(Boolean);
+  if (!ranges.length || ranges.some((range) => range === '*' || range.toLowerCase() === 'true')) {
+    throw new Error('CR_TRUST_PROXY 必须是 loopback、可信代理 IP/CIDR 列表、跳数，或 false；不允许信任所有来源');
+  }
+  return ranges.length === 1 ? ranges[0] : ranges;
+}
+
+app.set('trust proxy', getTrustedProxySetting(process.env.CR_TRUST_PROXY));
 
 // 网关延迟指标起点：早于请求体解析，E2E 包含上传与反序列化耗时。
 app.use((req, res, next) => {
@@ -2386,7 +2399,6 @@ if (isDemo) {
     secret: config.app.sessionSecret,
     resave: false,
     saveUninitialized: false,
-    proxy: true,
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30天
       httpOnly: true,
