@@ -1,0 +1,1 @@
+{"version":3,"file":"icons.data.d.ts","sourceRoot":"","sources":["../../src/core/icons.data.ts"],"names":[],"mappings":"AAGA,MAAM,WAAW,aAAa;IAC5B,GAAG,EAAE,QAAQ,GAAG,SAAS,GAAG,MAAM,GAAG,MAAM,GAAG,SAAS,GAAG,UAAU,GAAG,MAAM,CAAC;IAC9E,KAAK,EAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,CAAC;CAC/B;AAED,eAAO,MAAM,eAAe,EAAE,MAAM,CAAC,MAAM,EAAE,aAAa,EAAE,CA+X3D,CAAC"}

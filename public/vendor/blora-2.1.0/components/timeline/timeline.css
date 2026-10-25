@@ -1,0 +1,124 @@
+/* =========================================================================
+   Blora Design 2.0 - Timeline component
+   Visual baseline: legacy/v1/blora.css lines 1978-1987
+   ========================================================================= */
+
+.blora-timeline {
+  position: relative;
+  padding-inline-start: var(--blora-space-7);
+}
+
+.blora-timeline::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0.6em;
+  top: 0.4em;
+  bottom: 0.4em;
+  width: 1px;
+  background: var(--blora-color-border-subtle);
+}
+
+.blora-timeline__item {
+  position: relative;
+  padding-bottom: var(--blora-space-6);
+}
+
+.blora-timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+.blora-timeline__dot {
+  position: absolute;
+  inset-inline-start: calc(-1 * var(--blora-space-7) + 0.15em);
+  top: 0.3em;
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  background: var(--blora-color-surface-default);
+  border: 2px solid var(--blora-color-text-subtle);
+}
+
+/* Icon node: a small circle holding a Lucide icon (e.g. comment / event). */
+.blora-timeline__dot--icon {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  inset-inline-start: calc(-1 * var(--blora-space-7) - 0.1rem);
+  top: 0.2em;
+  background: var(--blora-color-surface-default);
+  border: 2px solid var(--blora-color-surface-canvas);
+  box-shadow: 0 0 0 1px var(--blora-color-border-subtle);
+  color: var(--blora-color-text-muted);
+}
+
+.blora-timeline__dot--icon svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.blora-timeline__dot[data-variant="primary"] {
+  border-color: var(--blora-color-action-primary-default);
+  background: var(--blora-color-action-primary-default);
+}
+
+.blora-timeline__dot[data-variant="success"] {
+  border-color: var(--blora-color-status-success);
+  background: var(--blora-color-status-success);
+}
+
+.blora-timeline__time {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-muted);
+  font-family: var(--blora-font-mono);
+}
+
+.blora-timeline__title {
+  font-size: var(--blora-text-sm);
+  font-weight: 500;
+  color: var(--blora-color-text-secondary);
+  margin-top: 0.2em;
+}
+
+.blora-timeline__desc {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-muted);
+  margin-top: 0.3em;
+}
+
+/* Arbitrary content (e.g. a forum comment card). */
+.blora-timeline__content {
+  margin-top: var(--blora-space-3);
+}
+
+/* Custom-content mode: content and time sit on one line after the node. */
+.blora-timeline__row {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  min-width: 0;
+}
+
+.blora-timeline__row .blora-timeline__content {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.blora-timeline__row .blora-timeline__time {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* Block content (e.g. a comment card) fills the timeline content column. */
+.blora-timeline__row[data-layout="block"] {
+  display: block;
+}
+
+.blora-timeline__row[data-layout="block"] .blora-timeline__content {
+  width: 100%;
+}
+
+blora-timeline {
+  display: block;
+}

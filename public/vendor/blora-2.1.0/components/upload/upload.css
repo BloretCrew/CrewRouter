@@ -1,0 +1,257 @@
+/* Blora Design 2.0 - upload component (beta, migrated from v1) */
+
+blora-upload {
+  display: block;
+}
+
+.blora-upload__content {
+  font-size: var(--blora-text-sm);
+}
+
+.blora-upload__content span {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-upload__hint,
+.blora-upload__size {
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-xs);
+}
+
+.blora-upload__list {
+  margin-top: var(--blora-space-3);
+}
+
+.blora-upload__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--blora-space-2);
+  padding: var(--blora-space-2) var(--blora-space-3);
+  background: var(--blora-color-surface-raised);
+  border-radius: var(--blora-radius-sm);
+}
+
+.blora-upload__name {
+  font-size: var(--blora-text-sm);
+}
+
+.blora-upload {
+  display: block;
+}
+
+.blora-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-7);
+  text-align: center;
+  background: var(--blora-color-surface-raised);
+  border: 1.5px dashed var(--blora-color-text-subtle);
+  border-radius: var(--blora-radius-lg);
+  color: var(--blora-color-text-muted);
+  cursor: pointer;
+  transition:
+    border-color var(--blora-duration-base) var(--blora-easing-standard),
+    color var(--blora-duration-base) var(--blora-easing-standard),
+    background-color var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-dropzone:hover,
+.blora-dropzone[data-dragover] {
+  border-color: var(--blora-color-action-primary-default);
+  color: var(--blora-color-action-primary-default);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 4%, transparent);
+}
+
+.blora-dropzone__icon {
+  font-size: 2em;
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-dropzone:hover .blora-dropzone__icon {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-dropzone__input,
+.blora-file-picker__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.blora-dropzone__trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blora-space-2);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.blora-dropzone__trigger:focus-visible {
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: -4px;
+  border-radius: var(--blora-radius-sm);
+}
+
+.blora-file-picker {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: var(--blora-control-height);
+  color: var(--blora-color-text-muted);
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  overflow: hidden;
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-file-picker:hover {
+  border-color: var(--blora-color-text-subtle);
+}
+
+.blora-file-picker:focus-within,
+.blora-file-picker[data-dragover] {
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-focus-ring-default);
+}
+
+.blora-file-picker[data-dragover] {
+  background: var(--blora-color-action-primary-tint);
+}
+
+.blora-file-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-height: calc(var(--blora-control-height) - 2px);
+  padding: 0 var(--blora-control-pad-x);
+  border: 0;
+  border-inline-end: 1px solid var(--blora-color-border-subtle);
+  border-radius: calc(var(--blora-radius-lg) - 1px) 0 0 calc(var(--blora-radius-lg) - 1px);
+  color: var(--blora-color-text-emphasis);
+  background: var(--blora-color-surface-raised);
+  font: inherit;
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-file-picker__trigger:hover,
+.blora-file-picker__trigger:focus-visible {
+  outline: none;
+  background: var(--blora-color-surface-sunken);
+}
+
+.blora-file-picker__trigger:disabled {
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-file-picker {
+    corner-shape: superellipse(1.2);
+  }
+
+  .blora-file-picker__trigger {
+    corner-shape: superellipse(1.2) square square superellipse(1.2);
+  }
+}
+
+.blora-file-picker__empty {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--blora-control-pad-x);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-file-picker__empty[hidden] {
+  display: none;
+}
+
+.blora-file-picker__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-1);
+  flex: 1;
+  min-width: 0;
+  padding: 0 calc((var(--blora-control-height) - 2rem) / 2) 0 var(--blora-control-pad-x);
+  color: var(--blora-color-text-secondary);
+  background: transparent;
+}
+
+.blora-file-picker__status[hidden] {
+  display: none;
+}
+
+.blora-file-status__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.blora-file-clear {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--blora-color-text-subtle);
+  background: transparent;
+  cursor: pointer;
+}
+
+.blora-file-clear:hover,
+.blora-file-clear:focus-visible {
+  color: var(--blora-color-text-emphasis);
+  outline: none;
+  background: var(--blora-color-surface-sunken);
+}
+
+.blora-file-clear svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 560px) {
+  .blora-file-picker__trigger {
+    max-width: 44%;
+    padding-inline: var(--blora-space-3);
+  }
+
+  .blora-file-picker__empty,
+  .blora-file-picker__status {
+    padding-inline-start: var(--blora-space-3);
+  }
+}

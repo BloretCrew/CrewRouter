@@ -1,0 +1,105 @@
+/* Blora Design 2.0 - autocomplete component (beta, migrated from v1) */
+
+blora-autocomplete {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+}
+
+.blora-autocomplete .blora-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.blora-autocomplete__control:not(:focus-within) .blora-search__clear {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.blora-autocomplete,
+.blora-mentions {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  width: 100%;
+  height: fit-content;
+  min-width: 0;
+}
+
+.blora-autocomplete {
+  max-width: 22rem;
+}
+
+.blora-autocomplete > .blora-label,
+.blora-mentions > .blora-label {
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-autocomplete__control {
+  position: relative;
+  width: 100%;
+}
+
+.blora-autocomplete__control > .blora-input {
+  padding-inline-end: 2.4em;
+}
+
+.blora-autocomplete__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: var(--blora-z-dropdown);
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0;
+  padding: var(--blora-space-2);
+  list-style: none;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  display: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-property: opacity, transform, display;
+  transition-duration: var(--blora-duration-fast);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+.blora-autocomplete[data-open] .blora-autocomplete__menu,
+.blora-autocomplete__menu[data-open] {
+  display: block;
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .blora-autocomplete[data-open] .blora-autocomplete__menu,
+  .blora-autocomplete__menu[data-open] {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.blora-autocomplete__option {
+  padding: 0.45em 0.65em;
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-autocomplete__option:hover,
+.blora-autocomplete__option[data-active] {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-autocomplete__empty {
+  padding: 0.6em 0.65em;
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+}

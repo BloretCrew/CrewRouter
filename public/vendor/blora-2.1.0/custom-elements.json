@@ -1,0 +1,2446 @@
+{
+  "schemaVersion": "1.0.0",
+  "readme": "",
+  "modules": [
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraAccordion",
+          "tagName": "blora-accordion",
+          "customElement": true,
+          "description": "accordion custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraAccordion",
+          "declaration": {
+            "name": "BloraAccordion"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraAccordion",
+          "declaration": {
+            "name": "defineBloraAccordion"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-accordion",
+          "declaration": {
+            "name": "BloraAccordion"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraAlert",
+          "tagName": "blora-alert",
+          "customElement": true,
+          "description": "alert custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraAlert",
+          "declaration": {
+            "name": "BloraAlert"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraAlert",
+          "declaration": {
+            "name": "defineBloraAlert"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-alert",
+          "declaration": {
+            "name": "BloraAlert"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraAutocomplete",
+          "tagName": "blora-autocomplete",
+          "customElement": true,
+          "description": "autocomplete custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraAutocomplete",
+          "declaration": {
+            "name": "BloraAutocomplete"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraAutocomplete",
+          "declaration": {
+            "name": "defineBloraAutocomplete"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-autocomplete",
+          "declaration": {
+            "name": "BloraAutocomplete"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraBacktop",
+          "tagName": "blora-backtop",
+          "customElement": true,
+          "description": "backtop custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraBacktop",
+          "declaration": {
+            "name": "BloraBacktop"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraBacktop",
+          "declaration": {
+            "name": "defineBloraBacktop"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-backtop",
+          "declaration": {
+            "name": "BloraBacktop"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraBanner",
+          "tagName": "blora-banner",
+          "customElement": true,
+          "description": "banner custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraBanner",
+          "declaration": {
+            "name": "BloraBanner"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraBanner",
+          "declaration": {
+            "name": "defineBloraBanner"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-banner",
+          "declaration": {
+            "name": "BloraBanner"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraBreadcrumb",
+          "tagName": "blora-breadcrumb",
+          "customElement": true,
+          "description": "breadcrumb custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraBreadcrumb",
+          "declaration": {
+            "name": "BloraBreadcrumb"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraBreadcrumb",
+          "declaration": {
+            "name": "defineBloraBreadcrumb"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-breadcrumb",
+          "declaration": {
+            "name": "BloraBreadcrumb"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraCalendar",
+          "tagName": "blora-calendar",
+          "customElement": true,
+          "description": "calendar custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraCalendar",
+          "declaration": {
+            "name": "BloraCalendar"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraCalendar",
+          "declaration": {
+            "name": "defineBloraCalendar"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-calendar",
+          "declaration": {
+            "name": "BloraCalendar"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraCarousel",
+          "tagName": "blora-carousel",
+          "customElement": true,
+          "description": "carousel custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraCarousel",
+          "declaration": {
+            "name": "BloraCarousel"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraCarousel",
+          "declaration": {
+            "name": "defineBloraCarousel"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-carousel",
+          "declaration": {
+            "name": "BloraCarousel"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraCascader",
+          "tagName": "blora-cascader",
+          "customElement": true,
+          "description": "cascader custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraCascader",
+          "declaration": {
+            "name": "BloraCascader"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraCascader",
+          "declaration": {
+            "name": "defineBloraCascader"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-cascader",
+          "declaration": {
+            "name": "BloraCascader"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraChartContainer",
+          "tagName": "blora-chart-container",
+          "customElement": true,
+          "description": "chart-container custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraChartContainer",
+          "declaration": {
+            "name": "BloraChartContainer"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraChartContainer",
+          "declaration": {
+            "name": "defineBloraChartContainer"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-chart-container",
+          "declaration": {
+            "name": "BloraChartContainer"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraChat",
+          "tagName": "blora-chat",
+          "customElement": true,
+          "description": "chat custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraChat",
+          "declaration": {
+            "name": "BloraChat"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraChat",
+          "declaration": {
+            "name": "defineBloraChat"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-chat",
+          "declaration": {
+            "name": "BloraChat"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraCheckbox",
+          "tagName": "blora-checkbox",
+          "customElement": true,
+          "description": "checkbox custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraCheckbox",
+          "declaration": {
+            "name": "BloraCheckbox"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraCheckbox",
+          "declaration": {
+            "name": "defineBloraCheckbox"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-checkbox",
+          "declaration": {
+            "name": "BloraCheckbox"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraCollapse",
+          "tagName": "blora-collapse",
+          "customElement": true,
+          "description": "collapse custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraCollapse",
+          "declaration": {
+            "name": "BloraCollapse"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraCollapse",
+          "declaration": {
+            "name": "defineBloraCollapse"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-collapse",
+          "declaration": {
+            "name": "BloraCollapse"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraColorPicker",
+          "tagName": "blora-color-picker",
+          "customElement": true,
+          "description": "color-picker custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraColorPicker",
+          "declaration": {
+            "name": "BloraColorPicker"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraColorPicker",
+          "declaration": {
+            "name": "defineBloraColorPicker"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-color-picker",
+          "declaration": {
+            "name": "BloraColorPicker"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraCommand",
+          "tagName": "blora-command",
+          "customElement": true,
+          "description": "command-palette custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraCommand",
+          "declaration": {
+            "name": "BloraCommand"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraCommand",
+          "declaration": {
+            "name": "defineBloraCommand"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-command",
+          "declaration": {
+            "name": "BloraCommand"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraComment",
+          "tagName": "blora-comment",
+          "customElement": true,
+          "description": "comment custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraComment",
+          "declaration": {
+            "name": "BloraComment"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraComment",
+          "declaration": {
+            "name": "defineBloraComment"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-comment",
+          "declaration": {
+            "name": "BloraComment"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraCopy",
+          "tagName": "blora-copy",
+          "customElement": true,
+          "description": "copy custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraCopy",
+          "declaration": {
+            "name": "BloraCopy"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraCopy",
+          "declaration": {
+            "name": "defineBloraCopy"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-copy",
+          "declaration": {
+            "name": "BloraCopy"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraDatepicker",
+          "tagName": "blora-datepicker",
+          "customElement": true,
+          "description": "datepicker custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraDatepicker",
+          "declaration": {
+            "name": "BloraDatepicker"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraDatepicker",
+          "declaration": {
+            "name": "defineBloraDatepicker"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-datepicker",
+          "declaration": {
+            "name": "BloraDatepicker"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraDeck",
+          "tagName": "blora-deck",
+          "customElement": true,
+          "description": "deck custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraDeck",
+          "declaration": {
+            "name": "BloraDeck"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraDeck",
+          "declaration": {
+            "name": "defineBloraDeck"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-deck",
+          "declaration": {
+            "name": "BloraDeck"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/components/dialog/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraDialog",
+          "tagName": "blora-dialog",
+          "customElement": true,
+          "description": "dialog custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraDialog",
+          "declaration": {
+            "name": "BloraDialog"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraDialog",
+          "declaration": {
+            "name": "defineBloraDialog"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-dialog",
+          "declaration": {
+            "name": "BloraDialog"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraDock",
+          "tagName": "blora-dock",
+          "customElement": true,
+          "description": "dock custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraDock",
+          "declaration": {
+            "name": "BloraDock"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraDock",
+          "declaration": {
+            "name": "defineBloraDock"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-dock",
+          "declaration": {
+            "name": "BloraDock"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraDrawer",
+          "tagName": "blora-drawer",
+          "customElement": true,
+          "description": "drawer custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraDrawer",
+          "declaration": {
+            "name": "BloraDrawer"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraDrawer",
+          "declaration": {
+            "name": "defineBloraDrawer"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-drawer",
+          "declaration": {
+            "name": "BloraDrawer"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraDropdown",
+          "tagName": "blora-dropdown",
+          "customElement": true,
+          "description": "dropdown custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraDropdown",
+          "declaration": {
+            "name": "BloraDropdown"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraDropdown",
+          "declaration": {
+            "name": "defineBloraDropdown"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-dropdown",
+          "declaration": {
+            "name": "BloraDropdown"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraEmpty",
+          "tagName": "blora-empty",
+          "customElement": true,
+          "description": "empty custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraEmpty",
+          "declaration": {
+            "name": "BloraEmpty"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraEmpty",
+          "declaration": {
+            "name": "defineBloraEmpty"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-empty",
+          "declaration": {
+            "name": "BloraEmpty"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraField",
+          "tagName": "blora-field",
+          "customElement": true,
+          "description": "field custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraField",
+          "declaration": {
+            "name": "BloraField"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraField",
+          "declaration": {
+            "name": "defineBloraField"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-field",
+          "declaration": {
+            "name": "BloraField"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraImage",
+          "tagName": "blora-image",
+          "customElement": true,
+          "description": "image custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraImage",
+          "declaration": {
+            "name": "BloraImage"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraImage",
+          "declaration": {
+            "name": "defineBloraImage"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-image",
+          "declaration": {
+            "name": "BloraImage"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraMegamenu",
+          "tagName": "blora-megamenu",
+          "customElement": true,
+          "description": "megamenu custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraMegamenu",
+          "declaration": {
+            "name": "BloraMegamenu"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraMegamenu",
+          "declaration": {
+            "name": "defineBloraMegamenu"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-megamenu",
+          "declaration": {
+            "name": "BloraMegamenu"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraMentions",
+          "tagName": "blora-mentions",
+          "customElement": true,
+          "description": "mentions custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraMentions",
+          "declaration": {
+            "name": "BloraMentions"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraMentions",
+          "declaration": {
+            "name": "defineBloraMentions"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-mentions",
+          "declaration": {
+            "name": "BloraMentions"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraMockup",
+          "tagName": "blora-mockup",
+          "customElement": true,
+          "description": "mockup custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraMockup",
+          "declaration": {
+            "name": "BloraMockup"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraMockup",
+          "declaration": {
+            "name": "defineBloraMockup"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-mockup",
+          "declaration": {
+            "name": "BloraMockup"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraNavbar",
+          "tagName": "blora-navbar",
+          "customElement": true,
+          "description": "navbar custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraNavbar",
+          "declaration": {
+            "name": "BloraNavbar"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraNavbar",
+          "declaration": {
+            "name": "defineBloraNavbar"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-navbar",
+          "declaration": {
+            "name": "BloraNavbar"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraNumberInput",
+          "tagName": "blora-number-input",
+          "customElement": true,
+          "description": "number-input custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraNumberInput",
+          "declaration": {
+            "name": "BloraNumberInput"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraNumberInput",
+          "declaration": {
+            "name": "defineBloraNumberInput"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-number-input",
+          "declaration": {
+            "name": "BloraNumberInput"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraOtp",
+          "tagName": "blora-otp",
+          "customElement": true,
+          "description": "otp custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraOtp",
+          "declaration": {
+            "name": "BloraOtp"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraOtp",
+          "declaration": {
+            "name": "defineBloraOtp"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-otp",
+          "declaration": {
+            "name": "BloraOtp"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraPagination",
+          "tagName": "blora-pagination",
+          "customElement": true,
+          "description": "pagination custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraPagination",
+          "declaration": {
+            "name": "BloraPagination"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraPagination",
+          "declaration": {
+            "name": "defineBloraPagination"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-pagination",
+          "declaration": {
+            "name": "BloraPagination"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraPopconfirm",
+          "tagName": "blora-popconfirm",
+          "customElement": true,
+          "description": "popconfirm custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraPopconfirm",
+          "declaration": {
+            "name": "BloraPopconfirm"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraPopconfirm",
+          "declaration": {
+            "name": "defineBloraPopconfirm"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-popconfirm",
+          "declaration": {
+            "name": "BloraPopconfirm"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraPopover",
+          "tagName": "blora-popover",
+          "customElement": true,
+          "description": "popover custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraPopover",
+          "declaration": {
+            "name": "BloraPopover"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraPopover",
+          "declaration": {
+            "name": "defineBloraPopover"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-popover",
+          "declaration": {
+            "name": "BloraPopover"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraProgress",
+          "tagName": "blora-progress",
+          "customElement": true,
+          "description": "progress custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraProgress",
+          "declaration": {
+            "name": "BloraProgress"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraProgress",
+          "declaration": {
+            "name": "defineBloraProgress"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-progress",
+          "declaration": {
+            "name": "BloraProgress"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraRadio",
+          "tagName": "blora-radio",
+          "customElement": true,
+          "description": "radio custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraRadio",
+          "declaration": {
+            "name": "BloraRadio"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraRadio",
+          "declaration": {
+            "name": "defineBloraRadio"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-radio",
+          "declaration": {
+            "name": "BloraRadio"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraRange",
+          "tagName": "blora-range",
+          "customElement": true,
+          "description": "range custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraRange",
+          "declaration": {
+            "name": "BloraRange"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraRange",
+          "declaration": {
+            "name": "defineBloraRange"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-range",
+          "declaration": {
+            "name": "BloraRange"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraRate",
+          "tagName": "blora-rate",
+          "customElement": true,
+          "description": "rate custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraRate",
+          "declaration": {
+            "name": "BloraRate"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraRate",
+          "declaration": {
+            "name": "defineBloraRate"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-rate",
+          "declaration": {
+            "name": "BloraRate"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraResult",
+          "tagName": "blora-result",
+          "customElement": true,
+          "description": "result custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraResult",
+          "declaration": {
+            "name": "BloraResult"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraResult",
+          "declaration": {
+            "name": "defineBloraResult"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-result",
+          "declaration": {
+            "name": "BloraResult"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSearch",
+          "tagName": "blora-search",
+          "customElement": true,
+          "description": "search custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSearch",
+          "declaration": {
+            "name": "BloraSearch"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSearch",
+          "declaration": {
+            "name": "defineBloraSearch"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-search",
+          "declaration": {
+            "name": "BloraSearch"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSegmented",
+          "tagName": "blora-segmented",
+          "customElement": true,
+          "description": "segmented custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSegmented",
+          "declaration": {
+            "name": "BloraSegmented"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSegmented",
+          "declaration": {
+            "name": "defineBloraSegmented"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-segmented",
+          "declaration": {
+            "name": "BloraSegmented"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/components/select/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSelect",
+          "tagName": "blora-select",
+          "customElement": true,
+          "description": "select custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSelect",
+          "declaration": {
+            "name": "BloraSelect"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSelect",
+          "declaration": {
+            "name": "defineBloraSelect"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-select",
+          "declaration": {
+            "name": "BloraSelect"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSidebarNav",
+          "tagName": "blora-sidebar-nav",
+          "customElement": true,
+          "description": "sidebar-nav custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSidebarNav",
+          "declaration": {
+            "name": "BloraSidebarNav"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSidebarNav",
+          "declaration": {
+            "name": "defineBloraSidebarNav"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-sidebar-nav",
+          "declaration": {
+            "name": "BloraSidebarNav"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSlider",
+          "tagName": "blora-slider",
+          "customElement": true,
+          "description": "slider custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSlider",
+          "declaration": {
+            "name": "BloraSlider"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSlider",
+          "declaration": {
+            "name": "defineBloraSlider"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-slider",
+          "declaration": {
+            "name": "BloraSlider"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSpeedDial",
+          "tagName": "blora-speed-dial",
+          "customElement": true,
+          "description": "speed-dial custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSpeedDial",
+          "declaration": {
+            "name": "BloraSpeedDial"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSpeedDial",
+          "declaration": {
+            "name": "defineBloraSpeedDial"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-speed-dial",
+          "declaration": {
+            "name": "BloraSpeedDial"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSplitter",
+          "tagName": "blora-splitter",
+          "customElement": true,
+          "description": "splitter custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSplitter",
+          "declaration": {
+            "name": "BloraSplitter"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSplitter",
+          "declaration": {
+            "name": "defineBloraSplitter"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-splitter",
+          "declaration": {
+            "name": "BloraSplitter"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraStatistic",
+          "tagName": "blora-statistic",
+          "customElement": true,
+          "description": "statistic custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraStatistic",
+          "declaration": {
+            "name": "BloraStatistic"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraStatistic",
+          "declaration": {
+            "name": "defineBloraStatistic"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-statistic",
+          "declaration": {
+            "name": "BloraStatistic"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSteps",
+          "tagName": "blora-steps",
+          "customElement": true,
+          "description": "steps custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSteps",
+          "declaration": {
+            "name": "BloraSteps"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSteps",
+          "declaration": {
+            "name": "defineBloraSteps"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-steps",
+          "declaration": {
+            "name": "BloraSteps"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSwap",
+          "tagName": "blora-swap",
+          "customElement": true,
+          "description": "swap custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSwap",
+          "declaration": {
+            "name": "BloraSwap"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSwap",
+          "declaration": {
+            "name": "defineBloraSwap"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-swap",
+          "declaration": {
+            "name": "BloraSwap"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraSwitch",
+          "tagName": "blora-switch",
+          "customElement": true,
+          "description": "switch custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraSwitch",
+          "declaration": {
+            "name": "BloraSwitch"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraSwitch",
+          "declaration": {
+            "name": "defineBloraSwitch"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-switch",
+          "declaration": {
+            "name": "BloraSwitch"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTabs",
+          "tagName": "blora-tabs",
+          "customElement": true,
+          "description": "tabs custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTabs",
+          "declaration": {
+            "name": "BloraTabs"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTabs",
+          "declaration": {
+            "name": "defineBloraTabs"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-tabs",
+          "declaration": {
+            "name": "BloraTabs"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTagsInput",
+          "tagName": "blora-tags-input",
+          "customElement": true,
+          "description": "tags-input custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTagsInput",
+          "declaration": {
+            "name": "BloraTagsInput"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTagsInput",
+          "declaration": {
+            "name": "defineBloraTagsInput"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-tags-input",
+          "declaration": {
+            "name": "BloraTagsInput"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTimeline",
+          "tagName": "blora-timeline",
+          "customElement": true,
+          "description": "timeline custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTimeline",
+          "declaration": {
+            "name": "BloraTimeline"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTimeline",
+          "declaration": {
+            "name": "defineBloraTimeline"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-timeline",
+          "declaration": {
+            "name": "BloraTimeline"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTimepicker",
+          "tagName": "blora-timepicker",
+          "customElement": true,
+          "description": "timepicker custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTimepicker",
+          "declaration": {
+            "name": "BloraTimepicker"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTimepicker",
+          "declaration": {
+            "name": "defineBloraTimepicker"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-timepicker",
+          "declaration": {
+            "name": "BloraTimepicker"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTooltip",
+          "tagName": "blora-tooltip",
+          "customElement": true,
+          "description": "tooltip custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTooltip",
+          "declaration": {
+            "name": "BloraTooltip"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTooltip",
+          "declaration": {
+            "name": "defineBloraTooltip"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-tooltip",
+          "declaration": {
+            "name": "BloraTooltip"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTour",
+          "tagName": "blora-tour",
+          "customElement": true,
+          "description": "tour custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTour",
+          "declaration": {
+            "name": "BloraTour"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTour",
+          "declaration": {
+            "name": "defineBloraTour"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-tour",
+          "declaration": {
+            "name": "BloraTour"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTransfer",
+          "tagName": "blora-transfer",
+          "customElement": true,
+          "description": "transfer custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTransfer",
+          "declaration": {
+            "name": "BloraTransfer"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTransfer",
+          "declaration": {
+            "name": "defineBloraTransfer"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-transfer",
+          "declaration": {
+            "name": "BloraTransfer"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTree",
+          "tagName": "blora-tree",
+          "customElement": true,
+          "description": "tree custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTree",
+          "declaration": {
+            "name": "BloraTree"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTree",
+          "declaration": {
+            "name": "defineBloraTree"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-tree",
+          "declaration": {
+            "name": "BloraTree"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraTreeSelect",
+          "tagName": "blora-tree-select",
+          "customElement": true,
+          "description": "tree-select custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraTreeSelect",
+          "declaration": {
+            "name": "BloraTreeSelect"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraTreeSelect",
+          "declaration": {
+            "name": "defineBloraTreeSelect"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-tree-select",
+          "declaration": {
+            "name": "BloraTreeSelect"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/index.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "BloraUpload",
+          "tagName": "blora-upload",
+          "customElement": true,
+          "description": "upload custom element",
+          "superclass": {
+            "name": "BloraElement",
+            "module": "dist/index.js"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "BloraUpload",
+          "declaration": {
+            "name": "BloraUpload"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "defineBloraUpload",
+          "declaration": {
+            "name": "defineBloraUpload"
+          }
+        },
+        {
+          "kind": "custom-element-definition",
+          "name": "blora-upload",
+          "declaration": {
+            "name": "BloraUpload"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+.blora-fieldset {
+  display: grid;
+  gap: var(--blora-space-4);
+  min-width: 0;
+  margin: 0;
+  padding: var(--blora-space-5);
+  background: var(--blora-color-surface-raised);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-fieldset__legend {
+  padding-inline: var(--blora-space-2);
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+  font-weight: 600;
+}
+
+.blora-fieldset__description {
+  margin: 0;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-fieldset[data-variant="flat"] {
+  padding-inline: 0;
+  background: transparent;
+  border: 0;
+}

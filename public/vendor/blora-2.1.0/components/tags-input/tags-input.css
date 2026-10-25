@@ -1,0 +1,41 @@
+/* Blora Design 2.0 - tags-input component (beta, migrated from v1) */
+
+blora-tags-input {
+  display: block;
+}
+
+.blora-tags-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
+  padding: 0.4em 0.6em;
+  min-height: 2.6em;
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-tags-input:focus-within {
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--blora-color-action-primary-default) 20%, transparent);
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-tags-input {
+    corner-shape: superellipse(1.2);
+  }
+}
+
+.blora-tags-input input {
+  flex: 1;
+  min-width: 8ch;
+  border: none;
+  outline: none;
+  background: none;
+  padding: 0.3em;
+  font-size: var(--blora-text-sm);
+}

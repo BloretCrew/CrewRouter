@@ -1,0 +1,33 @@
+/* Blora Design 2.0 - Breadcrumb */
+
+.blora-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-subtle);
+  flex-wrap: wrap;
+}
+
+.blora-breadcrumb a {
+  color: var(--blora-color-text-muted);
+  text-decoration: none;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-breadcrumb a:hover {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-breadcrumb__sep {
+  color: var(--blora-color-text-disabled);
+}
+
+.blora-breadcrumb__current {
+  color: var(--blora-color-text-secondary);
+  font-weight: 500;
+}
+
+blora-breadcrumb {
+  display: block;
+}

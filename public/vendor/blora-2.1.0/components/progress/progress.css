@@ -1,0 +1,122 @@
+/* =========================================================================
+   Blora Design 2.0 - Progress component
+   ========================================================================= */
+
+blora-progress {
+  display: block;
+}
+
+.blora-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-2);
+}
+
+.blora-progress__bar {
+  height: 6px;
+  background: var(--blora-color-surface-sunken);
+  border-radius: var(--blora-radius-full);
+  overflow: hidden;
+}
+
+.blora-progress__fill {
+  height: 100%;
+  background: var(--blora-color-action-primary-default);
+  border-radius: var(--blora-radius-full);
+  transition: width var(--blora-duration-slow) var(--blora-easing-standard);
+}
+
+.blora-progress__fill[data-variant="neutral"] {
+  background: var(--blora-color-status-neutral);
+}
+
+.blora-progress__fill[data-variant="success"] {
+  background: var(--blora-color-status-success);
+}
+
+.blora-progress__fill[data-variant="info"] {
+  background: var(--blora-color-status-info);
+}
+
+.blora-progress__fill[data-variant="striped"] {
+  background-image: linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--blora-color-text-on-media) 18%, transparent) 25%,
+    transparent 25%,
+    transparent 50%,
+    color-mix(in srgb, var(--blora-color-text-on-media) 18%, transparent) 50%,
+    color-mix(in srgb, var(--blora-color-text-on-media) 18%, transparent) 75%,
+    transparent 75%
+  );
+  background-size: 16px 16px;
+  animation: blora-progress-stripe 1s linear infinite;
+}
+
+@keyframes blora-progress-stripe {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 16px 0;
+  }
+}
+
+.blora-progress__label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-muted);
+}
+
+.blora-progress--circular {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 6.25rem;
+  height: 6.25rem;
+}
+
+.blora-progress__ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.blora-progress__ring-track,
+.blora-progress__ring-fill {
+  fill: none;
+  stroke-width: 3;
+}
+
+.blora-progress__ring-track {
+  stroke: var(--blora-color-surface-sunken);
+}
+
+.blora-progress__ring-fill {
+  stroke: var(--blora-color-action-primary-default);
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--blora-duration-slow) var(--blora-easing-standard);
+}
+
+.blora-progress__ring-fill[data-variant="neutral"] {
+  stroke: var(--blora-color-status-neutral);
+}
+
+.blora-progress__ring-fill[data-variant="success"] {
+  stroke: var(--blora-color-status-success);
+}
+
+.blora-progress__ring-fill[data-variant="info"] {
+  stroke: var(--blora-color-status-info);
+}
+
+.blora-progress__circular-label {
+  position: absolute;
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-lg);
+  font-weight: 700;
+  line-height: 1;
+}
