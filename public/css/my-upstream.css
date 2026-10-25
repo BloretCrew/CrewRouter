@@ -1,0 +1,3 @@
+/* 我的上游：page2-step1 已清空，只保留个人版内嵌供应商管理的功能性规则 */
+#myUpstreamPage.unified-provider-page > .content-section { display: none; }
+#myUpstreamPage #unifiedProviderManager { display: block; width: 100%; height: calc(100dvh - 5rem); min-height: 480px; border: 0; }
