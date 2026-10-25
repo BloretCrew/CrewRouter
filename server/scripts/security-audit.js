@@ -123,6 +123,11 @@ async function audit() {
       suspiciousProviderNames,
       suspiciousProviderScripts,
     };
+    report.checks.providerModelIntegrity = (await client.query(`
+      SELECT count(*) FILTER(WHERE p.id IS NULL)::int AS "modelsWithoutProvider"
+      FROM public.models m
+      LEFT JOIN public.providers p ON p.id = m.provider
+    `)).rows[0];
 
     activeCheck = 'plugins';
     if (!(await hasPublicTable(client, 'plugins'))) {
@@ -209,8 +214,10 @@ async function audit() {
       ? (await client.query(`
       SELECT count(*) FILTER(WHERE COALESCE(rc.used_count,0) <> COALESCE(uses.actual_uses,0))::int AS "usedCountMismatches",
              count(*) FILTER(WHERE rc.max_uses > 0 AND COALESCE(uses.actual_uses,0) > rc.max_uses)::int AS "codesOverUseLimit",
-             count(*) FILTER(WHERE rc.used_count < 0 OR rc.max_uses < 0 OR rc.amount < 0)::int AS "invalidCodeValues"
+             count(*) FILTER(WHERE rc.used_count < 0 OR rc.max_uses < 0 OR rc.amount < 0)::int AS "invalidCodeValues",
+             count(*) FILTER(WHERE rc.created_by IS NOT NULL AND u.id IS NULL)::int AS "orphanCreators"
       FROM redemption_codes rc
+      LEFT JOIN users u ON u.id = rc.created_by
       LEFT JOIN (
         SELECT code_id, count(*)::int AS actual_uses
         FROM redemption_code_uses GROUP BY code_id
@@ -223,6 +230,8 @@ async function audit() {
       ? (await client.query(`
       SELECT count(*) FILTER(WHERE ak.id IS NULL OR u.id IS NULL)::int AS "orphanMemberships",
              count(*) FILTER(WHERE ak.id IS NOT NULL AND ak.user_id = m.user_id)::int AS "ownerAlsoMemberCount",
+             (SELECT count(*)::int FROM api_keys ak LEFT JOIN users owner ON owner.id=ak.user_id
+               WHERE ak.user_id IS NOT NULL AND owner.id IS NULL) AS "orphanOwners",
              (SELECT count(*)::int FROM api_keys WHERE enabled = TRUE AND user_id IS NULL) AS "enabledKeysWithoutOwner"
       FROM api_key_members m
       LEFT JOIN api_keys ak ON ak.id = m.api_key_id
@@ -332,10 +341,13 @@ audit().then(report => {
       || c.providers.scriptKeyCount > 0
       || c.providers.customQuotaScriptCount > 0
       || c.plugins.enabledCount > 0
+      || c.providerModelIntegrity.modelsWithoutProvider > 0
       || c.teamConsistency.primaryMembershipMismatches > 0
       || c.teamConsistency.orphanMemberships > 0
       || c.teamConsistency.orphanTeamModels > 0
       || c.teamConsistency.duplicateTeamNames > 0
+      || c.teamConsistency.usersWithoutMembership > 0
+      || c.identities.emptyUsernames > 0
       || c.identities.duplicateUsernames > 0
       || c.identities.duplicateEmails > 0
       || c.balances.negativeBalances > 0
@@ -349,8 +361,10 @@ audit().then(report => {
       || c.redemptionCodes.usedCountMismatches > 0
       || c.redemptionCodes.codesOverUseLimit > 0
       || c.redemptionCodes.invalidCodeValues > 0
+      || c.redemptionCodes.orphanCreators > 0
       || c.apiKeyMemberships.orphanMemberships > 0
       || c.apiKeyMemberships.ownerAlsoMemberCount > 0
+      || c.apiKeyMemberships.orphanOwners > 0
       || c.apiKeyMemberships.enabledKeysWithoutOwner > 0
       || c.catalog.invalidIndexes > 0
       || c.catalog.notReadyIndexes > 0

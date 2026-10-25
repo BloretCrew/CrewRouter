@@ -82,7 +82,7 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 - `server/plugins/zip.js`：插件上传、商店安装、商店清单读取和自动更新共用 ZIP 校验；检查目录与本地文件头、路径、重复条目、压缩算法和体积，拒绝链接/特殊文件，以 Node zlib 限量解压并验证 CRC。安装更新包时不再调用 root 权限的 `unzip`，也不再展开内嵌 tar；更新包须直接包含程序文件。更新 URL 限定为公网 HTTPS 且不跟随重定向，下载上限 32 MiB；商店清单下载上限 25 MiB，单个清单上限 1 MiB。ZIP 仅支持单卷、非 ZIP64、文件名为 ASCII 或 UTF-8 的包；这些改动都需随可信重建部署后才生效。
 - 依赖审计：初始 `npm audit --omit=dev` 报告 9 项生产依赖漏洞，完整审计另有 2 项开发依赖漏洞。更新 `@simplewebauthn/server`、Axios、Express、Nodemailer 及锁文件中的传递依赖后，`npm audit` 与 `npm audit --omit=dev` 均为 0 项。Nodemailer 升至 10.x；项目声明最低 Node.js 版本为 20，与 CI 的 Node 20/22 一致。结果只反映当前仓库清单，尚未部署到正在运行的服务。
 - 新增只读安全审计脚本及默认 dry-run 的数据库序列修复脚本；数据库处置已在本轮之前执行并复查。
-- `server/scripts/security-audit.js` 提供只读检查：余额预扣、兑换码计数、API Key 成员关系、公开 schema 触发器/事件触发器、插件启用状态及数据库角色权限。2026-10-25 10:33 重试时数据库仍无法连接，因此这些项目尚无现库结果。10:46 对审计器再加固：限定 `search_path`、拒绝读取被替换为 view/foreign table 或启用 RLS 的业务关系、输出插件配置哈希，并让余额/团队/身份/catalog/角色异常反映到退出码；本次未对数据库运行此脚本。
+- `server/scripts/security-audit.js` 提供只读检查：余额预扣、兑换码计数、API Key 成员关系、供应商/模型孤儿关联、公开 schema 触发器/事件触发器、插件启用状态及数据库角色权限。2026-10-25 10:33 重试时数据库仍无法连接，因此这些项目尚无现库结果。10:46 对审计器再加固：限定 `search_path`、拒绝读取被替换为 view/foreign table 或启用 RLS 的业务关系、输出插件配置哈希，并让余额/团队/身份/catalog/角色异常反映到退出码；本次未对数据库运行此脚本。
 - `server/routes/teams.js` 删除 Team 改为事务处理，并在仍有用户主 Team 或成员映射时拒绝删除，避免旧逻辑清空 `users.team_id` 后再级联删除关联、造成用户失去 Team。该修复也尚未进入运行服务。
 
 ## 尚未关闭的风险与后续动作
