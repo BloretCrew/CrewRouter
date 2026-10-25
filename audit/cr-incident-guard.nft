@@ -1,0 +1,15 @@
+table inet cr_incident_guard {
+  chain input {
+    type filter hook input priority -10; policy accept;
+
+    # Detrital Cloud and bloret-core were listed as compromised in the incident
+    # report and both made successful root SSH connections to this host.
+    iifname "tailscale0" ip saddr { 100.64.0.2, 100.64.0.7 } drop
+    iifname "tailscale0" ip6 saddr { fd7a:115c:a1e0::5b36:2806, fd7a:115c:a1e0::b729:471a } drop
+
+    # Keep management and file transfer services reachable through loopback
+    # and the trusted tailnet only. Public web/API listeners are unchanged.
+    iifname != "lo" iifname != "tailscale0" tcp dport { 111, 5901, 6080, 9090, 40020 } drop
+    iifname != "lo" iifname != "tailscale0" udp dport 111 drop
+  }
+}

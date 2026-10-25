@@ -1,7 +1,12 @@
 /**
  * 插件宿主
  *
- * 负责把磁盘上的插件 main.js 加载进 vm 沙箱，并构建权限受限的插件上下文（ctx）。
+ * 插件 main.js 在 CrewRouter 主进程中运行。Node vm 不是安全边界，ctx 也包含宿主函数；
+ * 因此默认拒绝加载后端插件代码，仅允许管理员审查代码后用环境变量显式信任。
+ * VM realm 和权限清单用于隔离全局命名空间及限制 API，不代表能抵御恶意插件代码。
+ *
+ * 启用后端插件代码：CR_TRUST_IN_PROCESS_PLUGINS=1
+ *
  * 权限模型（plugin.json 的 permissions 数组）：
  *  - storage        允许读写 plugin_data KV 存储
  *  - network        允许通过 ctx.fetch 访问外部地址（过 SSRF 校验）
@@ -385,6 +390,9 @@ async function loadPluginMain(plugin) {
   const mainPath = path.join(plugin.dir, 'main.js');
   if (!fs.existsSync(mainPath)) {
     return null; // 纯前端插件允许没有后端入口
+  }
+  if (process.env.CR_TRUST_IN_PROCESS_PLUGINS !== '1') {
+    throw new Error('后端插件代码默认禁用：main.js 将在 CrewRouter 主进程运行，VM 不是安全边界。审查插件源码后可设置 CR_TRUST_IN_PROCESS_PLUGINS=1 显式信任并启用。');
   }
   const source = fs.readFileSync(mainPath, 'utf8');
   const safeGlobals = {};
