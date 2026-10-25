@@ -11436,12 +11436,30 @@ ${extractorBody}
     </div>`;
   }
 
+  // 在线率 → fill 变体；Outage / &lt;99% 破例用 ml-uptime-danger 覆盖（不用 Blora danger 变体）
+  _libraryUptimeFillState(summary) {
+    const label = summary?.label || '';
+    if (label === 'Normal') return { variant: 'success', danger: false };
+    if (label === 'Degraded') return { variant: 'info', danger: false };
+    if (label === 'Outage') return { variant: '', danger: true };
+    if (label === 'No data' || !summary || summary.uptime_pct == null) return { variant: 'neutral', danger: false };
+    const pct = Number(summary.uptime_pct);
+    if (!Number.isFinite(pct)) return { variant: 'neutral', danger: false };
+    if (pct >= 99.5) return { variant: 'success', danger: false };
+    if (pct >= 99.0) return { variant: 'info', danger: false };
+    return { variant: '', danger: true };
+  }
+
   // 控制台模型库：细进度条 + 右侧数值
   _renderLibraryUptime(modelId, modelName, summary) {
     const pctNum = summary?.uptime_pct == null ? null : Number(summary.uptime_pct);
     const pct = pctNum == null ? '—' : `${pctNum.toFixed(2)}%`;
+    const width = pctNum == null ? 0 : Math.max(0, Math.min(100, pctNum));
+    const { variant, danger } = this._libraryUptimeFillState(summary);
+    const variantAttr = variant ? ` data-variant="${variant}"` : '';
+    const dangerClass = danger ? ' ml-uptime-danger' : '';
     return `<div class="ml-model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="${t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情')}" onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
-      <div class="blora-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctNum == null ? 0 : pctNum}" aria-label="${t('可用率')}"><div class="blora-progress__bar"><div class="blora-progress__fill" data-variant="neutral" style="width:${pctNum == null ? 0 : Math.max(0, Math.min(100, pctNum))}%"></div></div></div>
+      <div class="blora-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctNum == null ? 0 : pctNum}" aria-label="${t('可用率')}"><div class="blora-progress__bar"><div class="blora-progress__fill${dangerClass}"${variantAttr} style="width:${width}%"></div></div></div>
       <span class="ml-model-uptime-pct">${escapeHtml(pct)}</span>
     </div>`;
   }
@@ -12321,7 +12339,7 @@ ${extractorBody}
     const testCapsule = this._renderTestCapsule(key);
     const modelId = key.current_model_id || '';
     const uptimeHtml = modelId
-      ? `<div class="binding-uptime">${this._renderModelUptimeSlot(String(modelId), modelName)}</div>`
+      ? `<div class="binding-uptime">${this._renderLibraryUptime(String(modelId), modelName, null)}</div>`
       : '';
 
     setHTML(summary, `
