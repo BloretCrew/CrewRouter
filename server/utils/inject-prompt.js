@@ -22,15 +22,35 @@ const DEFAULT_PROMPT = {
 };
 
 async function seedDefaultPrompt(userId, db) {
-  db = db || getPool();
-  const existing = await db.query('SELECT 1 FROM inject_prompts WHERE user_id = $1 LIMIT 1', [userId]);
-  if (existing.rows.length > 0) return;
-  await db.query(
-    `INSERT INTO inject_prompts (user_id, name, content, enabled, sort_order)
-     VALUES ($1, $2, $3, TRUE, -10)`,
-    [userId, DEFAULT_PROMPT.name, DEFAULT_PROMPT.content]
-  );
-  Logger.info(`[注入提示词] 已为用户 ${userId} 播种默认条目`);
+  // An explicitly supplied client belongs to the caller's transaction (PassPort
+  // signup); never commit, roll back, or release that transaction here.
+  const ownsTransaction = !db;
+  const client = db || await getPool().connect();
+  let inserted = false;
+  try {
+    if (ownsTransaction) await client.query('BEGIN');
+    // Serialize empty-user initialization across processes. NO KEY UPDATE also
+    // remains compatible with the KEY SHARE lock taken by child FK inserts.
+    const owner = await client.query('SELECT id FROM users WHERE id = $1 FOR NO KEY UPDATE', [userId]);
+    if (owner.rows.length > 0) {
+      const existing = await client.query('SELECT 1 FROM inject_prompts WHERE user_id = $1 LIMIT 1', [userId]);
+      if (existing.rows.length === 0) {
+        await client.query(
+          `INSERT INTO inject_prompts (user_id, name, content, enabled, sort_order)
+           VALUES ($1, $2, $3, TRUE, -10)`,
+          [userId, DEFAULT_PROMPT.name, DEFAULT_PROMPT.content]
+        );
+        inserted = true;
+      }
+    }
+    if (ownsTransaction) await client.query('COMMIT');
+  } catch (error) {
+    if (ownsTransaction) await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    if (ownsTransaction) client.release();
+  }
+  if (inserted) Logger.info(`[注入提示词] 已为用户 ${userId} 播种默认条目`);
 }
 
 async function buildInjectedPrompt(userId, apiKeyId) {

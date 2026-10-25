@@ -49,6 +49,51 @@ async function getOwnedApiKey(db, apiKeyId, userId) {
   return access?.is_owner ? access : null;
 }
 
+// 所有既有密钥写操作共用父行锁；成员撤销和设置更新按同一顺序串行化。
+// 回调只执行本地数据库操作，响应与缓存失效均延迟到提交成功后。
+async function withApiKeyWrite(req, res, options, write) {
+  const client = await pool.connect();
+  let transactionOpen = false;
+  let responseBody;
+  let statusCode = 200;
+  const invalidations = new Set();
+  const reply = {
+    status(code) { statusCode = code; return this; },
+    json(body) { responseBody = body; return this; },
+  };
+  try {
+    await client.query('BEGIN');
+    transactionOpen = true;
+    await client.query('SELECT id FROM api_keys WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const access = await getApiKeyAccess(client, req.params.id, req.session.user.id);
+    if (options.ownerOnly && !access?.is_owner) {
+      reply.status(options.deniedStatus || 403).json({ error: options.deniedMessage || '仅发起者可管理成员' });
+    } else if (!access) {
+      reply.status(404).json({ error: '密钥不存在' });
+    } else if (options.memberOnly && access.is_owner) {
+      reply.status(403).json({ error: '发起者不能退出自己的密钥，请使用成员管理或删除密钥' });
+    } else {
+      await write(client, reply, id => invalidations.add(Number(id)), access);
+    }
+    await client.query(statusCode < 400 ? 'COMMIT' : 'ROLLBACK');
+    transactionOpen = false;
+  } catch (error) {
+    if (transactionOpen) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+  if (statusCode < 400) {
+    for (const id of invalidations) {
+      try { await invalidateApiKeyCacheByKeyId(id); }
+      catch (error) { Logger.warn('[API Key 缓存失效] 写入已提交:', error.message); }
+    }
+  }
+  return res.status(statusCode).json(responseBody);
+}
+
 // 跟踪报告：按用户隔离，报告永久保留；详情首次打开时标记已查看。
 router.get('/trace-sessions', requireAuth, async (req, res) => {
   try {
@@ -408,26 +453,27 @@ router.post('/api-keys/:id/members', requireAuth, auditMiddleware(ACTIONS.COKEY_
   const identity = String(req.body?.identity || '').trim().toLowerCase();
   if (!identity) return res.status(400).json({ error: '请输入完整用户名或邮箱' });
   try {
-    const access = await getOwnedApiKey(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(403).json({ error: '仅发起者可管理成员' });
-    const userResult = await pool.query(
-      `SELECT id, username, email FROM users
-       WHERE LOWER(username) = $1 OR LOWER(email) = $1
-       LIMIT 1`,
-      [identity]
-    );
-    const member = userResult.rows[0];
-    if (!member) return res.status(404).json({ error: '用户不存在，请输入完整用户名或邮箱' });
-    if (Number(member.id) === Number(access.owner_user_id)) {
-      return res.status(400).json({ error: '发起者无需添加为共同成员' });
-    }
-    const inserted = await pool.query(
-      `INSERT INTO api_key_members (api_key_id, user_id) VALUES ($1, $2)
-       ON CONFLICT DO NOTHING RETURNING created_at`,
-      [req.params.id, member.id]
-    );
-    if (inserted.rowCount === 0) return res.status(409).json({ error: '该用户已是共同成员' });
-    res.status(201).json({ ...member, created_at: inserted.rows[0].created_at });
+    return await withApiKeyWrite(req, res, { ownerOnly: true }, async (db, res, invalidateAfterCommit, lockedKeyAccess) => {
+      const access = lockedKeyAccess;
+      const userResult = await db.query(
+        `SELECT id, username, email FROM users
+         WHERE LOWER(username) = $1 OR LOWER(email) = $1
+         LIMIT 1`,
+        [identity]
+      );
+      const member = userResult.rows[0];
+      if (!member) return res.status(404).json({ error: '用户不存在，请输入完整用户名或邮箱' });
+      if (Number(member.id) === Number(access.owner_user_id)) {
+        return res.status(400).json({ error: '发起者无需添加为共同成员' });
+      }
+      const inserted = await db.query(
+        `INSERT INTO api_key_members (api_key_id, user_id) VALUES ($1, $2)
+         ON CONFLICT DO NOTHING RETURNING created_at`,
+        [req.params.id, member.id]
+      );
+      if (inserted.rowCount === 0) return res.status(409).json({ error: '该用户已是共同成员' });
+      res.status(201).json({ ...member, created_at: inserted.rows[0].created_at });
+    });
   } catch (error) {
     Logger.error('[添加 Co-Key 成员] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -441,14 +487,14 @@ router.delete('/api-keys/:id/members/:userId(\\d+)', requireAuth, auditMiddlewar
   detailsFrom: (req) => ({ member_user_id: req.params.userId }),
 }), async (req, res) => {
   try {
-    const access = await getOwnedApiKey(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(403).json({ error: '仅发起者可管理成员' });
-    const result = await pool.query(
-      'DELETE FROM api_key_members WHERE api_key_id = $1 AND user_id = $2 RETURNING user_id',
-      [req.params.id, req.params.userId]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: '共同成员不存在' });
-    res.json({ success: true });
+    return await withApiKeyWrite(req, res, { ownerOnly: true }, async (db, res, invalidateAfterCommit) => {
+      const result = await db.query(
+        'DELETE FROM api_key_members WHERE api_key_id = $1 AND user_id = $2 RETURNING user_id',
+        [req.params.id, req.params.userId]
+      );
+      if (result.rowCount === 0) return res.status(404).json({ error: '共同成员不存在' });
+      res.json({ success: true });
+    });
   } catch (error) {
     Logger.error('[移除 Co-Key 成员] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -463,22 +509,24 @@ router.delete('/api-keys/:id/members/me', requireAuth, auditMiddleware(ACTIONS.C
   detailsFrom: (req) => ({ member_user_id: req.session?.user?.id }),
 }), async (req, res) => {
   try {
-    const keyResult = await pool.query(
-      'SELECT id, user_id FROM api_keys WHERE id = $1',
-      [req.params.id]
-    );
-    const key = keyResult.rows[0];
-    if (!key) return res.status(404).json({ error: '密钥不存在' });
-    if (Number(key.user_id) === Number(req.session.user.id)) {
-      return res.status(403).json({ error: '发起者不能退出自己的密钥，请使用成员管理或删除密钥' });
-    }
+    return await withApiKeyWrite(req, res, { memberOnly: true }, async (db, res, invalidateAfterCommit) => {
+      const keyResult = await db.query(
+        'SELECT id, user_id FROM api_keys WHERE id = $1',
+        [req.params.id]
+      );
+      const key = keyResult.rows[0];
+      if (!key) return res.status(404).json({ error: '密钥不存在' });
+      if (Number(key.user_id) === Number(req.session.user.id)) {
+        return res.status(403).json({ error: '发起者不能退出自己的密钥，请使用成员管理或删除密钥' });
+      }
 
-    const result = await pool.query(
-      'DELETE FROM api_key_members WHERE api_key_id = $1 AND user_id = $2 RETURNING api_key_id',
-      [req.params.id, req.session.user.id]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: '您不是该 Co-Key 的共同成员' });
-    res.json({ success: true, api_key_id: result.rows[0].api_key_id });
+      const result = await db.query(
+        'DELETE FROM api_key_members WHERE api_key_id = $1 AND user_id = $2 RETURNING api_key_id',
+        [req.params.id, req.session.user.id]
+      );
+      if (result.rowCount === 0) return res.status(404).json({ error: '您不是该 Co-Key 的共同成员' });
+      res.json({ success: true, api_key_id: result.rows[0].api_key_id });
+    });
   } catch (error) {
     Logger.error('[退出 Co-Key] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -491,34 +539,30 @@ router.delete('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_DELE
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `删除 API Key #${req.params.id}`,
 }), async (req, res) => {
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    const owned = await client.query(
-      'SELECT id, name FROM api_keys WHERE id = $1 AND user_id = $2 FOR UPDATE',
-      [req.params.id, req.session.user.id]
-    );
-    if (owned.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: '密钥不存在或无权删除' });
-    }
-    // CrewRouter 内部密钥受保护：禁止删除（客户端上报/凭证依赖此 key）
-    if (/^crewrouter$/i.test(String(owned.rows[0].name || ''))) {
-      await client.query('ROLLBACK');
-      return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止删除' });
-    }
-    // 历史库可能仍是 RESTRICT 外键：先断开用量关联，再删密钥
-    await client.query('UPDATE usage_records SET api_key_id = NULL WHERE api_key_id = $1', [req.params.id]);
-    await client.query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
-    await client.query('COMMIT');
-    invalidateApiKeyCacheByKeyId(Number(req.params.id));
-    res.json({ success: true });
+    return await withApiKeyWrite(req, res, { ownerOnly: true, deniedStatus: 404, deniedMessage: '密钥不存在或无权删除' }, async (db, res, invalidateAfterCommit) => {
+      const client = db;
+      const owned = await client.query(
+        'SELECT id, name FROM api_keys WHERE id = $1 AND user_id = $2 FOR UPDATE',
+        [req.params.id, req.session.user.id]
+      );
+      if (owned.rows.length === 0) {
+        return res.status(404).json({ error: '密钥不存在或无权删除' });
+      }
+      // CrewRouter 内部密钥受保护：禁止删除（客户端上报/凭证依赖此 key）
+      if (/^crewrouter$/i.test(String(owned.rows[0].name || ''))) {
+        return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止删除' });
+      }
+      // 历史库可能仍是 RESTRICT 外键：先断开用量关联，再删密钥
+      await client.query('UPDATE usage_records SET api_key_id = NULL WHERE api_key_id = $1', [req.params.id]);
+      await client.query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+
+      invalidateAfterCommit(Number(req.params.id));
+      res.json({ success: true });
+    });
   } catch (error) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
     Logger.error('[删除API密钥] 错误:', error);
     res.status(500).json({ error: '删除失败：存在关联数据，请稍后重试' });
-  } finally {
-    client.release();
   }
 });
 
@@ -531,49 +575,49 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
 }), async (req, res) => {
   const { customModelName, name } = req.body || {};
   try {
-    // CrewRouter 内部密钥受保护：禁止改名（含改出/改成 CrewRouter）
-    const cur = await pool.query('SELECT name FROM api_keys WHERE id = $1', [req.params.id]);
-    if (/^crewrouter$/i.test(String(cur.rows[0]?.name || '')) && name !== undefined) {
-      return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止改名' });
-    }
-    if (name !== undefined && /^crewrouter$/i.test(String(name ?? '').trim())) {
-      return res.status(400).json({ error: '不能使用保留名称 CrewRouter' });
-    }
-    const sets = [];
-    const params = [];
-    let idx = 1;
-
-    if (name !== undefined) {
-      const trimmed = String(name ?? '').trim();
-      if (!trimmed) {
-        return res.status(400).json({ error: '名称不能为空' });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
+      // CrewRouter 内部密钥受保护：禁止改名（含改出/改成 CrewRouter）
+      const cur = await db.query('SELECT name FROM api_keys WHERE id = $1', [req.params.id]);
+      if (/^crewrouter$/i.test(String(cur.rows[0]?.name || '')) && name !== undefined) {
+        return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止改名' });
       }
-      if (trimmed.length > 100) {
-        return res.status(400).json({ error: '名称过长（最多 100 字）' });
+      if (name !== undefined && /^crewrouter$/i.test(String(name ?? '').trim())) {
+        return res.status(400).json({ error: '不能使用保留名称 CrewRouter' });
       }
-      sets.push(`name = $${idx++}`);
-      params.push(trimmed);
-    }
-    if (customModelName !== undefined) {
-      sets.push(`custom_model_name = $${idx++}`);
-      params.push(customModelName || 'claude-fable-5');
-    }
-    if (!sets.length) {
-      return res.status(400).json({ error: '无更新字段' });
-    }
+      const sets = [];
+      const params = [];
+      let idx = 1;
 
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
-    params.push(req.params.id);
-    const result = await pool.query(
-      `UPDATE api_keys SET ${sets.join(', ')}
-       WHERE id = $${idx}
-       RETURNING id, name, key_prefix, custom_model_name`,
-      params
-    );
-    // 名称可能进入签名等缓存字段
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id, 10));
-    res.json(result.rows[0]);
+      if (name !== undefined) {
+        const trimmed = String(name ?? '').trim();
+        if (!trimmed) {
+          return res.status(400).json({ error: '名称不能为空' });
+        }
+        if (trimmed.length > 100) {
+          return res.status(400).json({ error: '名称过长（最多 100 字）' });
+        }
+        sets.push(`name = $${idx++}`);
+        params.push(trimmed);
+      }
+      if (customModelName !== undefined) {
+        sets.push(`custom_model_name = $${idx++}`);
+        params.push(customModelName || 'claude-fable-5');
+      }
+      if (!sets.length) {
+        return res.status(400).json({ error: '无更新字段' });
+      }
+
+      params.push(req.params.id);
+      const result = await db.query(
+        `UPDATE api_keys SET ${sets.join(', ')}
+         WHERE id = $${idx}
+         RETURNING id, name, key_prefix, custom_model_name`,
+        params
+      );
+      // 名称可能进入签名等缓存字段
+      invalidateAfterCommit(parseInt(req.params.id, 10));
+      res.json(result.rows[0]);
+    });
   } catch (error) {
     Logger.error('[更新API密钥] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -678,80 +722,71 @@ router.put('/api-keys/:id/models', requireAuth, auditMiddleware(ACTIONS.API_KEY_
 }), async (req, res) => {
   const { modelId, modelIds } = req.body;
   try {
-    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!keyAccess) return res.status(404).json({ error: '密钥不存在' });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit, lockedKeyAccess) => {
+      const keyAccess = lockedKeyAccess;
 
-    // 归一化为有序 modelIds
-    let orderedIds = [];
-    if (Array.isArray(modelIds)) {
-      orderedIds = modelIds.map(id => String(id || '').trim()).filter(Boolean);
-    } else if (modelId) {
-      orderedIds = [String(modelId).trim()].filter(Boolean);
-    }
-
-    // 去重，保留首次出现顺序
-    const seen = new Set();
-    orderedIds = orderedIds.filter(id => {
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
-
-    if (orderedIds.length > MAX_MODEL_QUEUE_SIZE) {
-      return res.status(400).json({ error: `模型队列最多 ${MAX_MODEL_QUEUE_SIZE} 个` });
-    }
-
-    // 校验每个模型存在、供应商启用，且属于发起者可用的 Team。
-    for (const mid of orderedIds) {
-      const modelCheck = await pool.query(
-        `SELECT m.id, p.enabled AS provider_enabled,
-                EXISTS (
-                  SELECT 1 FROM team_models tm
-                  JOIN user_teams ut ON ut.team_id = tm.team_id
-                  WHERE tm.model_id = m.id AND tm.enabled = TRUE AND ut.user_id = $2
-                ) AS owner_can_use
-         FROM models m JOIN providers p ON m.provider = p.id
-         WHERE m.id = $1`,
-        [mid, keyAccess.owner_user_id]
-      );
-      if (modelCheck.rows.length === 0) {
-        return res.status(404).json({ error: `模型不存在: ${mid}` });
+      // 归一化为有序 modelIds
+      let orderedIds = [];
+      if (Array.isArray(modelIds)) {
+        orderedIds = modelIds.map(id => String(id || '').trim()).filter(Boolean);
+      } else if (modelId) {
+        orderedIds = [String(modelId).trim()].filter(Boolean);
       }
-      if (modelCheck.rows[0].provider_enabled === false) {
-        return res.status(400).json({ error: `该供应商已禁用，无法选择模型: ${mid}` });
-      }
-      if (!modelCheck.rows[0].owner_can_use) {
-        return res.status(403).json({ error: `发起者无权使用该模型: ${mid}` });
-      }
-    }
 
-    const apiKeyId = parseInt(req.params.id, 10);
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await client.query('DELETE FROM api_key_models WHERE api_key_id = $1', [apiKeyId]);
+      // 去重，保留首次出现顺序
+      const seen = new Set();
+      orderedIds = orderedIds.filter(id => {
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+
+      if (orderedIds.length > MAX_MODEL_QUEUE_SIZE) {
+        return res.status(400).json({ error: `模型队列最多 ${MAX_MODEL_QUEUE_SIZE} 个` });
+      }
+
+      // 校验每个模型存在、供应商启用，且属于发起者可用的 Team。
+      for (const mid of orderedIds) {
+        const modelCheck = await db.query(
+          `SELECT m.id, p.enabled AS provider_enabled,
+                  EXISTS (
+                    SELECT 1 FROM team_models tm
+                    JOIN user_teams ut ON ut.team_id = tm.team_id
+                    WHERE tm.model_id = m.id AND tm.enabled = TRUE AND ut.user_id = $2
+                  ) AS owner_can_use
+           FROM models m JOIN providers p ON m.provider = p.id
+           WHERE m.id = $1`,
+          [mid, keyAccess.owner_user_id]
+        );
+        if (modelCheck.rows.length === 0) {
+          return res.status(404).json({ error: `模型不存在: ${mid}` });
+        }
+        if (modelCheck.rows[0].provider_enabled === false) {
+          return res.status(400).json({ error: `该供应商已禁用，无法选择模型: ${mid}` });
+        }
+        if (!modelCheck.rows[0].owner_can_use) {
+          return res.status(403).json({ error: `发起者无权使用该模型: ${mid}` });
+        }
+      }
+
+      const apiKeyId = parseInt(req.params.id, 10);
+      await db.query('DELETE FROM api_key_models WHERE api_key_id = $1', [apiKeyId]);
       for (let i = 0; i < orderedIds.length; i++) {
-        await client.query(
+        await db.query(
           'INSERT INTO api_key_models (api_key_id, model_id, sort_order) VALUES ($1, $2, $3)',
           [apiKeyId, orderedIds[i], i]
         );
       }
-      await client.query(
+      await db.query(
         'UPDATE api_keys SET current_model_id = $1 WHERE id = $2',
         [orderedIds[0] || null, apiKeyId]
       );
-      await client.query('COMMIT');
-    } catch (txErr) {
-      await client.query('ROLLBACK');
-      throw txErr;
-    } finally {
-      client.release();
-    }
 
-    // 立即失效 API Key 缓存，使新队列即时生效
-    invalidateApiKeyCacheByKeyId(apiKeyId);
+      // 立即失效 API Key 缓存，使新队列即时生效
+      invalidateAfterCommit(apiKeyId);
 
-    res.json({ success: true, modelIds: orderedIds, current_model_id: orderedIds[0] || null });
+      res.json({ success: true, modelIds: orderedIds, current_model_id: orderedIds[0] || null });
+    });
   } catch (error) {
     Logger.error('[更新密钥模型] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -759,8 +794,8 @@ router.put('/api-keys/:id/models', requireAuth, auditMiddleware(ACTIONS.API_KEY_
 });
 
 /** 校验模型是否可被 Key 发起者使用（与默认模型队列一致） */
-async function assertOwnerCanUseModel(modelId, ownerUserId) {
-  const modelCheck = await pool.query(
+async function assertOwnerCanUseModel(modelId, ownerUserId, db = pool) {
+  const modelCheck = await db.query(
     `SELECT m.id, m.name, p.enabled AS provider_enabled, p.name AS provider_name,
             EXISTS (
               SELECT 1 FROM team_models tm
@@ -830,57 +865,58 @@ router.put('/api-keys/:id/harness-models', requireAuth, auditMiddleware(ACTIONS.
   detailsFrom: (req) => ({ harness: req.body?.harness, model_id: req.body?.modelId ?? null }),
 }), async (req, res) => {
   try {
-    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!keyAccess) return res.status(404).json({ error: '密钥不存在' });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit, lockedKeyAccess) => {
+      const keyAccess = lockedKeyAccess;
 
-    const harness = String(req.body?.harness || '').trim().toLowerCase();
-    if (!isHarnessSource(harness) || harness === 'unknown') {
-      return res.status(400).json({
-        error: `无效的 harness，可选: ${HARNESS_SOURCES.join(', ')}`,
-      });
-    }
+      const harness = String(req.body?.harness || '').trim().toLowerCase();
+      if (!isHarnessSource(harness) || harness === 'unknown') {
+        return res.status(400).json({
+          error: `无效的 harness，可选: ${HARNESS_SOURCES.join(', ')}`,
+        });
+      }
 
-    const apiKeyId = parseInt(req.params.id, 10);
-    const rawModelId = req.body?.modelId;
-    const clear = rawModelId == null || rawModelId === '';
+      const apiKeyId = parseInt(req.params.id, 10);
+      const rawModelId = req.body?.modelId;
+      const clear = rawModelId == null || rawModelId === '';
 
-    if (clear) {
-      await pool.query(
-        'DELETE FROM api_key_harness_models WHERE api_key_id = $1 AND harness = $2',
-        [apiKeyId, harness]
+      if (clear) {
+        await db.query(
+          'DELETE FROM api_key_harness_models WHERE api_key_id = $1 AND harness = $2',
+          [apiKeyId, harness]
+        );
+        invalidateAfterCommit(apiKeyId);
+        return res.json({
+          success: true,
+          harness,
+          model_id: null,
+          cleared: true,
+        });
+      }
+
+      const modelId = String(rawModelId).trim();
+      const check = await assertOwnerCanUseModel(modelId, keyAccess.owner_user_id, db);
+      if (check.error) {
+        return res.status(check.status).json({ error: check.error });
+      }
+
+      await db.query(
+        `INSERT INTO api_key_harness_models (api_key_id, harness, model_id, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (api_key_id, harness)
+         DO UPDATE SET model_id = EXCLUDED.model_id, updated_at = CURRENT_TIMESTAMP`,
+        [apiKeyId, harness, modelId]
       );
-      invalidateApiKeyCacheByKeyId(apiKeyId);
-      return res.json({
+
+      invalidateAfterCommit(apiKeyId);
+      res.json({
         success: true,
         harness,
-        model_id: null,
-        cleared: true,
+        model_id: modelId,
+        name: check.row.name || modelId,
+        provider_name: check.row.provider_name || '',
+        label: sourceLabel(harness),
+        cleared: false,
       });
-    }
-
-    const modelId = String(rawModelId).trim();
-    const check = await assertOwnerCanUseModel(modelId, keyAccess.owner_user_id);
-    if (check.error) {
-      return res.status(check.status).json({ error: check.error });
-    }
-
-    await pool.query(
-      `INSERT INTO api_key_harness_models (api_key_id, harness, model_id, updated_at)
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-       ON CONFLICT (api_key_id, harness)
-       DO UPDATE SET model_id = EXCLUDED.model_id, updated_at = CURRENT_TIMESTAMP`,
-      [apiKeyId, harness, modelId]
-    );
-
-    invalidateApiKeyCacheByKeyId(apiKeyId);
-    res.json({
-      success: true,
-      harness,
-      model_id: modelId,
-      name: check.row.name || modelId,
-      provider_name: check.row.provider_name || '',
-      label: sourceLabel(harness),
-      cleared: false,
     });
   } catch (error) {
     Logger.error('[更新密钥 Harness 绑定] 错误:', error);
@@ -929,56 +965,57 @@ router.put('/api-keys/:id/fusion-config', requireAuth, auditMiddleware(ACTIONS.A
   }),
 }), async (req, res) => {
   try {
-    const { panel_models, judge_model_id, outer_model_id, fusion_enabled, fusion_synthesis_prompt_enabled } = req.body;
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit, lockedKeyAccess) => {
+      const { panel_models, judge_model_id, outer_model_id, fusion_enabled, fusion_synthesis_prompt_enabled } = req.body;
 
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
+      const access = lockedKeyAccess;
 
-    if (!Array.isArray(panel_models)) {
-      return res.status(400).json({ error: 'panel_models 必须为数组' });
-    }
-    const normalizedPanelModels = [...new Set(panel_models.map(id => String(id || '').trim()).filter(Boolean))];
-    if (normalizedPanelModels.length > 10) {
-      return res.status(400).json({ error: 'Fusion Panel 模型最多 10 个' });
-    }
-    const normalizedJudgeModel = String(judge_model_id || '').trim();
-    const normalizedOuterModel = String(outer_model_id || '').trim();
-    const fusionModelIds = [...new Set([...normalizedPanelModels, normalizedJudgeModel, normalizedOuterModel].filter(Boolean))];
-    if (fusionModelIds.length > 0) {
-      const allowedModels = await pool.query(
-        `SELECT DISTINCT m.id
-         FROM models m
-         JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
-         JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
-         JOIN user_teams ut ON ut.team_id = tm.team_id
-         WHERE m.id = ANY($1::text[]) AND m.enabled = TRUE AND ut.user_id = $2`,
-        [fusionModelIds, access.owner_user_id]
-      );
-      const allowedIds = new Set(allowedModels.rows.map(row => String(row.id)));
-      const forbiddenId = fusionModelIds.find(id => !allowedIds.has(id));
-      if (forbiddenId) {
-        return res.status(403).json({ error: `发起者无权使用该 Fusion 模型: ${forbiddenId}` });
+      if (!Array.isArray(panel_models)) {
+        return res.status(400).json({ error: 'panel_models 必须为数组' });
       }
-    }
+      const normalizedPanelModels = [...new Set(panel_models.map(id => String(id || '').trim()).filter(Boolean))];
+      if (normalizedPanelModels.length > 10) {
+        return res.status(400).json({ error: 'Fusion Panel 模型最多 10 个' });
+      }
+      const normalizedJudgeModel = String(judge_model_id || '').trim();
+      const normalizedOuterModel = String(outer_model_id || '').trim();
+      const fusionModelIds = [...new Set([...normalizedPanelModels, normalizedJudgeModel, normalizedOuterModel].filter(Boolean))];
+      if (fusionModelIds.length > 0) {
+        const allowedModels = await db.query(
+          `SELECT DISTINCT m.id
+           FROM models m
+           JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
+           JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
+           JOIN user_teams ut ON ut.team_id = tm.team_id
+           WHERE m.id = ANY($1::text[]) AND m.enabled = TRUE AND ut.user_id = $2`,
+          [fusionModelIds, access.owner_user_id]
+        );
+        const allowedIds = new Set(allowedModels.rows.map(row => String(row.id)));
+        const forbiddenId = fusionModelIds.find(id => !allowedIds.has(id));
+        if (forbiddenId) {
+          return res.status(403).json({ error: `发起者无权使用该 Fusion 模型: ${forbiddenId}` });
+        }
+      }
 
-    await pool.query(
-      `UPDATE api_keys
-       SET fusion_panel_models = $1, fusion_judge_model_id = $2, fusion_outer_model_id = $3,
-           fusion_enabled = $4, fusion_synthesis_prompt_enabled = $5
-       WHERE id = $6`,
-      [
-        JSON.stringify(normalizedPanelModels),
-        normalizedJudgeModel,
-        normalizedOuterModel,
-        fusion_enabled !== false,
-        fusion_synthesis_prompt_enabled !== false,
-        req.params.id
-      ]
-    );
+      await db.query(
+        `UPDATE api_keys
+         SET fusion_panel_models = $1, fusion_judge_model_id = $2, fusion_outer_model_id = $3,
+             fusion_enabled = $4, fusion_synthesis_prompt_enabled = $5
+         WHERE id = $6`,
+        [
+          JSON.stringify(normalizedPanelModels),
+          normalizedJudgeModel,
+          normalizedOuterModel,
+          fusion_enabled !== false,
+          fusion_synthesis_prompt_enabled !== false,
+          req.params.id
+        ]
+      );
 
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id));
-    Logger.info(`[Fusion] 更新 API Key ${req.params.id} 的 Fusion 配置: enabled=${fusion_enabled !== false}, synthesisPrompt=${fusion_synthesis_prompt_enabled !== false}, panel=${normalizedPanelModels.length}, judge=${normalizedJudgeModel}, outer=${normalizedOuterModel}`);
-    res.json({ success: true });
+      invalidateAfterCommit(parseInt(req.params.id));
+      Logger.info(`[Fusion] 更新 API Key ${req.params.id} 的 Fusion 配置: enabled=${fusion_enabled !== false}, synthesisPrompt=${fusion_synthesis_prompt_enabled !== false}, panel=${normalizedPanelModels.length}, judge=${normalizedJudgeModel}, outer=${normalizedOuterModel}`);
+      res.json({ success: true });
+    });
   } catch (error) {
     Logger.error('[更新Fusion配置] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1005,15 +1042,15 @@ router.put('/api-keys/:id/quota-warning', requireAuth, auditMiddleware(ACTIONS.A
   descriptionFrom: (req) => `${req.body?.quota_warning_enabled ? '启用' : '关闭'} API Key #${req.params.id} 额度预警`
 }), async (req, res) => {
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
-    const result = await pool.query(
-      'UPDATE api_keys SET quota_warning_enabled = $1 WHERE id = $2 RETURNING id, quota_warning_enabled',
-      [req.body?.quota_warning_enabled === true, req.params.id]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: '密钥不存在' });
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id, 10));
-    res.json({ success: true, quota_warning_enabled: result.rows[0].quota_warning_enabled });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
+      const result = await db.query(
+        'UPDATE api_keys SET quota_warning_enabled = $1 WHERE id = $2 RETURNING id, quota_warning_enabled',
+        [req.body?.quota_warning_enabled === true, req.params.id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: '密钥不存在' });
+      invalidateAfterCommit(parseInt(req.params.id, 10));
+      res.json({ success: true, quota_warning_enabled: result.rows[0].quota_warning_enabled });
+    });
   } catch (error) {
     Logger.error('[更新额度预警配置] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1058,28 +1095,28 @@ router.put('/api-keys/:id/signature', requireAuth, auditMiddleware(ACTIONS.API_K
   detailsFrom: (req) => ({ signature_enabled: req.body?.signature_enabled }),
 }), async (req, res) => {
   try {
-    const { signature_enabled, signature_template } = req.body;
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
+      const { signature_enabled, signature_template } = req.body;
 
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
-    const keyResult = await pool.query(
-      'SELECT id FROM api_keys WHERE id = $1',
-      [req.params.id]
-    );
-    if (keyResult.rows.length === 0) {
-      return res.status(404).json({ error: '密钥不存在' });
-    }
+      const keyResult = await db.query(
+        'SELECT id FROM api_keys WHERE id = $1',
+        [req.params.id]
+      );
+      if (keyResult.rows.length === 0) {
+        return res.status(404).json({ error: '密钥不存在' });
+      }
 
-    await pool.query(
-      `UPDATE api_keys SET signature_enabled = $1, signature_template = $2 WHERE id = $3`,
-      [signature_enabled, signature_template || null, req.params.id]
-    );
+      await db.query(
+        `UPDATE api_keys SET signature_enabled = $1, signature_template = $2 WHERE id = $3`,
+        [signature_enabled, signature_template || null, req.params.id]
+      );
 
-    // 失效缓存，使签名配置立即生效
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id));
+      // 失效缓存，使签名配置立即生效
+      invalidateAfterCommit(parseInt(req.params.id));
 
-    Logger.info(`[签名] 更新 API Key ${req.params.id} 的签名配置: enabled=${signature_enabled}, template=${signature_template ? '有' : '无'}`);
-    res.json({ success: true });
+      Logger.info(`[签名] 更新 API Key ${req.params.id} 的签名配置: enabled=${signature_enabled}, template=${signature_template ? '有' : '无'}`);
+      res.json({ success: true });
+    });
   } catch (error) {
     Logger.error('[更新签名配置] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1095,22 +1132,22 @@ router.put('/api-keys/:id/enabled', requireAuth, auditMiddleware(ACTIONS.API_KEY
 }), async (req, res) => {
   const { enabled } = req.body;
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
-    // CrewRouter 内部密钥受保护：禁止启停
-    const nameCheck = await pool.query('SELECT name FROM api_keys WHERE id = $1', [req.params.id]);
-    if (/^crewrouter$/i.test(String(nameCheck.rows[0]?.name || ''))) {
-      return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止禁用或启用' });
-    }
-    const result = await pool.query(
-      'UPDATE api_keys SET enabled = $1 WHERE id = $2 RETURNING id, enabled',
-      [!!enabled, req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '密钥不存在' });
-    }
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id));
-    res.json({ success: true, enabled: result.rows[0].enabled });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
+      // CrewRouter 内部密钥受保护：禁止启停
+      const nameCheck = await db.query('SELECT name FROM api_keys WHERE id = $1', [req.params.id]);
+      if (/^crewrouter$/i.test(String(nameCheck.rows[0]?.name || ''))) {
+        return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止禁用或启用' });
+      }
+      const result = await db.query(
+        'UPDATE api_keys SET enabled = $1 WHERE id = $2 RETURNING id, enabled',
+        [!!enabled, req.params.id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: '密钥不存在' });
+      }
+      invalidateAfterCommit(parseInt(req.params.id));
+      res.json({ success: true, enabled: result.rows[0].enabled });
+    });
   } catch (error) {
     Logger.error('[更新密钥启用状态] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1126,18 +1163,18 @@ router.put('/api-keys/:id/swallow-images', requireAuth, auditMiddleware(ACTIONS.
 }), async (req, res) => {
   const { swallow_images } = req.body || {};
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
-    const result = await pool.query(
-      'UPDATE api_keys SET swallow_images = $1 WHERE id = $2 RETURNING id, swallow_images',
-      [!!swallow_images, req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '密钥不存在' });
-    }
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id, 10));
-    Logger.info(`[吞图] 更新 API Key ${req.params.id}: swallow_images=${!!swallow_images}`);
-    res.json({ success: true, swallow_images: result.rows[0].swallow_images });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
+      const result = await db.query(
+        'UPDATE api_keys SET swallow_images = $1 WHERE id = $2 RETURNING id, swallow_images',
+        [!!swallow_images, req.params.id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: '密钥不存在' });
+      }
+      invalidateAfterCommit(parseInt(req.params.id, 10));
+      Logger.info(`[吞图] 更新 API Key ${req.params.id}: swallow_images=${!!swallow_images}`);
+      res.json({ success: true, swallow_images: result.rows[0].swallow_images });
+    });
   } catch (error) {
     Logger.error('[更新密钥吞图状态] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1152,18 +1189,18 @@ router.put('/api-keys/:id/crewrouter-commands', requireAuth, auditMiddleware(ACT
 }), async (req, res) => {
   const { crewrouter_commands } = req.body || {};
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
-    const result = await pool.query(
-      'UPDATE api_keys SET crewrouter_commands = $1 WHERE id = $2 RETURNING id, crewrouter_commands',
-      [!!crewrouter_commands, req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '密钥不存在' });
-    }
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id, 10));
-    Logger.info(`[CrewRouter指令] 更新 API Key ${req.params.id}: crewrouter_commands=${!!crewrouter_commands}`);
-    res.json({ success: true, crewrouter_commands: result.rows[0].crewrouter_commands });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
+      const result = await db.query(
+        'UPDATE api_keys SET crewrouter_commands = $1 WHERE id = $2 RETURNING id, crewrouter_commands',
+        [!!crewrouter_commands, req.params.id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: '密钥不存在' });
+      }
+      invalidateAfterCommit(parseInt(req.params.id, 10));
+      Logger.info(`[CrewRouter指令] 更新 API Key ${req.params.id}: crewrouter_commands=${!!crewrouter_commands}`);
+      res.json({ success: true, crewrouter_commands: result.rows[0].crewrouter_commands });
+    });
   } catch (error) {
     Logger.error('[更新密钥 CrewRouter 指令开关] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1210,33 +1247,33 @@ router.put('/api-keys/:id/schedule', requireAuth, auditMiddleware(ACTIONS.API_KE
 }), async (req, res) => {
   const { schedule_enabled, schedule_on_time, schedule_off_time, schedule_days, schedule_timezone } = req.body;
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
-    if (!access) return res.status(404).json({ error: '密钥不存在' });
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
 
-    if (schedule_enabled && (!schedule_on_time || !schedule_off_time)) {
-      return res.status(400).json({ error: '启用调度时必须设置开启和关闭时间' });
-    }
+      if (schedule_enabled && (!schedule_on_time || !schedule_off_time)) {
+        return res.status(400).json({ error: '启用调度时必须设置开启和关闭时间' });
+      }
 
-    await pool.query(
-      `UPDATE api_keys SET
-        schedule_enabled = $1,
-        schedule_on_time = $2,
-        schedule_off_time = $3,
-        schedule_days = $4,
-        schedule_timezone = $5
-       WHERE id = $6`,
-      [
-        !!schedule_enabled,
-        schedule_on_time || null,
-        schedule_off_time || null,
-        schedule_days || [0, 1, 2, 3, 4, 5, 6],
-        schedule_timezone || 'Asia/Shanghai',
-        req.params.id
-      ]
-    );
+      await db.query(
+        `UPDATE api_keys SET
+          schedule_enabled = $1,
+          schedule_on_time = $2,
+          schedule_off_time = $3,
+          schedule_days = $4,
+          schedule_timezone = $5
+         WHERE id = $6`,
+        [
+          !!schedule_enabled,
+          schedule_on_time || null,
+          schedule_off_time || null,
+          schedule_days || [0, 1, 2, 3, 4, 5, 6],
+          schedule_timezone || 'Asia/Shanghai',
+          req.params.id
+        ]
+      );
 
-    invalidateApiKeyCacheByKeyId(parseInt(req.params.id));
-    res.json({ success: true });
+      invalidateAfterCommit(parseInt(req.params.id));
+      res.json({ success: true });
+    });
   } catch (error) {
     Logger.error('[更新密钥调度] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -5194,48 +5231,43 @@ router.put('/api-keys/:id/tags', requireAuth, auditMiddleware(ACTIONS.API_KEY_TA
   const { tagIds } = req.body;
   if (!Array.isArray(tagIds)) return res.status(400).json({ error: 'tagIds 必须为数组' });
 
-  const client = await pool.connect();
   try {
-    // 标签属于发起者的个人分类体系，仅发起者可修改，成员只读。
-    const keyAccess = await getOwnedApiKey(client, id, req.session.user.id);
-    if (!keyAccess) return res.status(403).json({ error: '仅发起者可管理密钥标签' });
+    return await withApiKeyWrite(req, res, { ownerOnly: true, deniedMessage: '仅发起者可管理密钥标签' }, async (db, res, invalidateAfterCommit) => {
+      const client = db;
+      // 标签属于发起者的个人分类体系，仅发起者可修改，成员只读。
 
-    // 校验所有标签归属发起者
-    if (tagIds.length > 0) {
-      const tagCheck = await client.query(
-        `SELECT id FROM key_tags WHERE id = ANY($1) AND user_id = $2`,
-        [tagIds, req.session.user.id]
-      );
-      if (tagCheck.rows.length !== tagIds.length) {
-        return res.status(400).json({ error: '部分标签不存在或无权访问' });
+      // 校验所有标签归属发起者
+      if (tagIds.length > 0) {
+        const tagCheck = await client.query(
+          `SELECT id FROM key_tags WHERE id = ANY($1) AND user_id = $2`,
+          [tagIds, req.session.user.id]
+        );
+        if (tagCheck.rows.length !== tagIds.length) {
+          return res.status(400).json({ error: '部分标签不存在或无权访问' });
+        }
       }
-    }
 
-    await client.query('BEGIN');
-    await client.query(`DELETE FROM api_key_tags WHERE api_key_id = $1`, [id]);
-    for (const tagId of tagIds) {
-      await client.query(
-        `INSERT INTO api_key_tags (api_key_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [id, tagId]
-      );
-    }
-    await client.query('COMMIT');
+      await client.query(`DELETE FROM api_key_tags WHERE api_key_id = $1`, [id]);
+      for (const tagId of tagIds) {
+        await client.query(
+          `INSERT INTO api_key_tags (api_key_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [id, tagId]
+        );
+      }
 
-    // 返回更新后的标签
-    const tagsResult = await client.query(`
-      SELECT kt.id, kt.name, kt.color
-      FROM api_key_tags akt
-      JOIN key_tags kt ON akt.tag_id = kt.id
-      WHERE akt.api_key_id = $1
-      ORDER BY kt.sort_order
-    `, [id]);
-    res.json({ tags: tagsResult.rows });
+      // 返回更新后的标签
+      const tagsResult = await client.query(`
+        SELECT kt.id, kt.name, kt.color
+        FROM api_key_tags akt
+        JOIN key_tags kt ON akt.tag_id = kt.id
+        WHERE akt.api_key_id = $1
+        ORDER BY kt.sort_order
+      `, [id]);
+      res.json({ tags: tagsResult.rows });
+    });
   } catch (error) {
-    await client.query('ROLLBACK');
     Logger.error('[设置标签] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
-  } finally {
-    client.release();
   }
 });
 

@@ -1237,6 +1237,13 @@ async function validateApiKey(req, res, next) {
       // 缓存命中：直接使用缓存的数据，但仍需检查额度
       Logger.debug(`[API密钥验证] 缓存命中: user=${cached.username}`);
 
+      let injectPrompt = null;
+      try {
+        injectPrompt = await buildInjectedPrompt(cached.userId, cached.keyId);
+      } catch (err) {
+        Logger.warn('[API密钥验证] 注入提示词查询失败:', err.message);
+      }
+
       // Cached fields never substitute for current credential lifecycle state.
       await refreshApiUserModelAuthorization(cached);
 
@@ -1264,7 +1271,8 @@ async function validateApiKey(req, res, next) {
         [cached.keyId]
       ).catch(err => Logger.warn('[API密钥验证] 更新 last_used_at 失败:', err.message));
 
-      req.apiUser = cached;
+      // Keep this request's prompt snapshot out of the shared credential cache.
+      req.apiUser = { ...cached, injectPrompt };
       return next();
     }
 
@@ -1348,12 +1356,11 @@ async function validateApiKey(req, res, next) {
       crewrouterCommands: keyData.crewrouter_commands !== false
     };
 
-    // 注入提示词：查好拼接结果随 apiUser 一起缓存（无启用条目为 null）
+    let injectPrompt = null;
     try {
-      apiUser.injectPrompt = await buildInjectedPrompt(keyData.user_id, keyData.id);
+      injectPrompt = await buildInjectedPrompt(keyData.user_id, keyData.id);
     } catch (err) {
       Logger.warn('[API密钥验证] 注入提示词查询失败:', err.message);
-      apiUser.injectPrompt = null;
     }
 
     await refreshApiUserModelAuthorization(apiUser);
@@ -1363,7 +1370,7 @@ async function validateApiKey(req, res, next) {
       'UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1',
       [keyData.id]
     ).catch(err => Logger.warn('[API密钥验证] 更新 last_used_at 失败:', err.message));
-    req.apiUser = apiUser;
+    req.apiUser = { ...apiUser, injectPrompt };
     next();
   } catch (error) {
     if (error instanceof ApiKeyLifecycleError) {
