@@ -352,13 +352,11 @@
 .blora-page .blora-button[data-variant='secondary']:hover,
 .blora-page .blora-button[data-variant='outline']:hover { border-color: var(--blora-color-action-primary-default); color: var(--blora-color-action-primary-default); }
 
-.blora-page .my-upstream-tab,
 .blora-page .stats-tab-bar button {
   border: 1px solid transparent;
   border-radius: var(--blora-radius-sm);
   color: var(--blora-color-text-muted);
 }
-.blora-page .my-upstream-tab.active,
 .blora-page .stats-tab-bar button.active { border-color: var(--blora-color-action-primary-default); background: var(--blora-color-action-primary-soft); color: var(--blora-color-action-primary-default); }
 
 .blora-page table { border-color: var(--blora-color-border-subtle); }

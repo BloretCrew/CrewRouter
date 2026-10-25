@@ -11159,7 +11159,7 @@ ${extractorBody}
     }).join(''));
     // data-icon 按钮（测速等）在动态渲染后补上 Blora 图标
     window.bloraHydrateIcons?.(container);
-    // page2-step0：供应商默认展开，进页即加载模型卡片
+    // page2-step1：供应商默认展开，进页即加载模型卡片
     this._expandLibraryProvidersInitial(container);
   }
 
@@ -11492,7 +11492,7 @@ ${extractorBody}
 
   // 控制台模型库：细进度条 + 右侧数值
   _renderLibraryUptime(modelId, modelName, summary, opts = {}) {
-    // page2-step0：在线率是 24h 时间线（每 15 分钟一格），不是单条进度条
+    // page2-step1：在线率是 24h 时间线（每 15 分钟一格），不是单条进度条
     const pctNum = summary?.uptime_pct == null ? null : Number(summary.uptime_pct);
     const pct = pctNum == null ? '—' : `${pctNum.toFixed(2)}%`;
     const n = this._uptimeSlotCount || 96;
@@ -12338,9 +12338,9 @@ ${extractorBody}
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>`;
-    // page2-step0 A+C：切换 Key 紧跟 Key 按钮，不再单独占列
+    // page2-step1 A+C：切换 Key 紧跟 Key 按钮，不再单独占列
     const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}</span>`;
-    // page2-step0：切换 Key 放到状态时间线下方
+    // page2-step1：切换 Key 放到状态时间线下方
     const keySwitchRow = `<div class="ml-binding-key-switch-row"><span id="libraryKeyChips" class="ml-key-switch"></span></div>`;
     const bindTarget = this._libraryBindTarget || 'default';
     const isHarnessMode = bindTarget !== 'default';
@@ -12446,7 +12446,7 @@ ${extractorBody}
     // 优先取绑定卡内的切换控件宿主（侧栏已不再放 #libraryKeyChips）
     const chipsContainer = document.querySelector('#modelLibraryBindingSummary #libraryKeyChips')
       || document.getElementById('libraryKeyChips');
-    // page2-step0：侧栏「切换 Key」列废弃，控件并入绑定卡 Key 值
+    // page2-step1：侧栏「切换 Key」列废弃，控件并入绑定卡 Key 值
     if (container) container.style.display = 'none';
     if (!chipsContainer) return;
 
