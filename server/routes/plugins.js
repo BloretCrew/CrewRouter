@@ -31,6 +31,18 @@ function createPluginsRoutes() {
   const publicRouter = express.Router();
 
   const registry = () => require('../plugins/registry');
+  const logPluginAdminAction = (req, action, pluginId, description, details = null) => logAction({
+    userId: req.session.user.id,
+    username: req.session.user.username,
+    isAdmin: true,
+    action,
+    resourceType: 'plugin',
+    resourceId: pluginId,
+    description,
+    details,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
 
   // ---------- 管理端 ----------
   adminRouter.use(requireAdmin);
@@ -123,18 +135,9 @@ function createPluginsRoutes() {
         );
         try { await reg.reload(id); } catch (e) { Logger.warn('[plugins-api] 安装后 reload 失败', e.message); }
 
-        logAction({
-          userId: req.session.user.id,
-          username: req.session.user.username,
-          isAdmin: true,
-          action: 'plugin.install',
-          resourceType: 'plugin',
-          resourceId: id,
-          description: `从商店安装插件「${manifest.name || id}」v${manifest.version || ''}`,
-          details: { source, download: info.download || '' },
-          ip: req.ip,
-          userAgent: req.headers['user-agent'],
-        });
+        await logPluginAdminAction(req, 'plugin.install', id,
+          `从商店安装插件「${manifest.name || id}」v${manifest.version || ''}`,
+          { source, download: info.download || '' });
         // 异步上报商店安装计数（失败不影响）
         try {
           await proxyPool.pinnedFetch(`${source.replace(/\/+$/, '')}/store/api/plugins/${encodeURIComponent(id)}/install-click`, {
@@ -228,18 +231,9 @@ function createPluginsRoutes() {
         [id, manifest.name || id, manifest.version || '', manifest.description || '', manifest.author || '',
          JSON.stringify(manifest.permissions || [])]
       );
-      logAction({
-        userId: req.session.user.id,
-        username: req.session.user.username,
-        isAdmin: true,
-        action: 'plugin.install',
-        resourceType: 'plugin',
-        resourceId: id,
-        description: `安装插件「${manifest.name || id}」v${manifest.version || ''}`,
-        details: { file: file.originalFilename || '' },
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-      });
+      await logPluginAdminAction(req, 'plugin.install', id,
+        `安装插件「${manifest.name || id}」v${manifest.version || ''}`,
+        { file: file.originalFilename || '' });
       Logger.info(`[plugins-api] 插件 ${id} 已从 zip 安装（管理员 ${req.session.user.username}）`);
       res.json({ ok: true, id, name: manifest.name || id, version: manifest.version || '', reloadRequired: true });
     } catch (err) {
@@ -266,6 +260,8 @@ function createPluginsRoutes() {
       const next = !r.rows[0].enabled;
       if (next) await registry().enable(id);
       else await registry().disable(id);
+      await logPluginAdminAction(req, 'plugin.toggle', id,
+        `${next ? '启用' : '禁用'}插件「${id}」`, { enabled: next });
       Logger.info(`[plugins-api] 插件 ${id} 已${next ? '启用' : '禁用'}（管理员 ${req.session.user?.username}）`);
       res.json({ ok: true, enabled: next });
     } catch (err) {
@@ -277,6 +273,8 @@ function createPluginsRoutes() {
   adminRouter.post('/:id/reload', async (req, res) => {
     try {
       await registry().reload(req.params.id);
+      await logPluginAdminAction(req, 'plugin.reload', req.params.id,
+        `重载插件「${req.params.id}」`);
       res.json({ ok: true });
     } catch (err) {
       Logger.error(`[plugins-api] 重载失败: ${err.message}`);
@@ -291,6 +289,8 @@ function createPluginsRoutes() {
         return res.status(400).json({ error: 'config 必须是对象' });
       }
       await registry().setConfig(req.params.id, config);
+      await logPluginAdminAction(req, 'plugin.config_update', req.params.id,
+        `更新插件「${req.params.id}」配置`, { keyCount: Object.keys(config).length });
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -300,6 +300,8 @@ function createPluginsRoutes() {
   adminRouter.post('/:id/reset-errors', async (req, res) => {
     try {
       await registry().resetErrors(req.params.id);
+      await logPluginAdminAction(req, 'plugin.reset_errors', req.params.id,
+        `重置插件「${req.params.id}」错误计数`);
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -327,6 +329,8 @@ function createPluginsRoutes() {
       const key = req.params.key;
       if (!key || key.length > 200) return res.status(400).json({ error: 'key 不合法' });
       await pool.query('DELETE FROM plugin_data WHERE plugin_id = $1 AND key = $2', [id, String(key)]);
+      await logPluginAdminAction(req, 'plugin.data_delete', id,
+        `删除插件「${id}」的一条数据`);
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -351,17 +355,8 @@ function createPluginsRoutes() {
           fs.rmSync(dir, { recursive: true, force: true });
         }
       }
-      logAction({
-        userId: req.session.user.id,
-        username: req.session.user.username,
-        isAdmin: true,
-        action: 'plugin.uninstall',
-        resourceType: 'plugin',
-        resourceId: id,
-        description: `卸载插件「${id}」（含磁盘目录清理）`,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-      });
+      await logPluginAdminAction(req, 'plugin.uninstall', id,
+        `卸载插件「${id}」（含磁盘目录清理）`);
       Logger.info(`[plugins-api] 插件 ${id} 已卸载并清理目录（管理员 ${req.session.user?.username}）`);
       res.json({ ok: true, directoryCleaned: true });
     } catch (err) {
