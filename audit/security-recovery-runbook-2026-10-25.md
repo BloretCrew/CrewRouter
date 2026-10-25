@@ -16,6 +16,7 @@
 - 当前主机的 `cr-incident-guard.service` 会阻断清单中的已知失陷 Tailscale 节点；12:25 CST 又加入了对非 loopback、非 Tailscale 接口的 TCP `20003` 与 `28888` 阻断。其他 Tailnet 节点仍可访问这两个服务；该规则不隔离数据库出站连接，也不能替代上游隔离。
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
 - 扩展本机候选路径搜索后仍未找到 CrewRouter PostgreSQL 全库备份。`/root/crewrouter-security-backup-20261023` 仅有旧 `sandbox.js.orig` 源码文件；CrewRouter Desktop runtime 的 PostgreSQL 子目录和 `runtime/data` 为空，配置所指向的 `127.0.0.1:40523` 没有监听。另有 2026-08-29 的 API Key SQL 文件，但它不是全库恢复点。先确认外部/离线备份，再决定恢复或数据抢救路径。
+- 2026-10-25 12:27 CST 补查：`/root/backup` 仅有 2026-08-29 API Key SQL 和旧 auditd 配置；`/root/fw-backup` 是防火墙规则快照；`/root/image-hosting-backup-20261023` 是图床源码、配置及 orphan uploads；Podman 当前无容器、无卷，只有两个镜像。未发现 CrewRouter 全库恢复源。
 - 2026-10-25 10:55 CST：Tailscale ping 到 `bloret-core` 成功，但 PostgreSQL `5432` 仍无响应；本机没有额外挂载数据盘，也未发现主机级 PostgreSQL/CrewRouter 定时备份。`/root/.cc-switch/backups/backup_20260606_060844.sql` 是 CC Switch SQLite 导出，与 CrewRouter 无关。该结论只涵盖本机已检查路径，不代表其他主机或异机存储没有备份。
 - 2026-10-25 11:08 CST 再测：Tailscale ping 成功，`pg_isready` 对 `100.64.0.2:5432` 仍返回 no response；未执行数据库查询。
 - 2026-10-25 对攻击残留归档 `/root/attacker-residue-20261023-113349.tar.gz` 做只读静态核验（SHA-256 `cfe83cc62c90507a4580144bf4525628154d8eda3cbe25938d662567cd1dc195`）：其中有浏览器采集脚本及结果、两个高熵 token 候选的重复副本，以及 Docker 网段端口扫描回显。输出没有证明这些候选令牌已外传；恢复时仍应从可信设备撤销/轮换浏览器内保存的凭据与会话，并核查重建环境的 Docker 端口暴露。归档成员时间戳不是可信时间证明。
