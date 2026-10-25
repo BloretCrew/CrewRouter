@@ -9,6 +9,14 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { Client } = require('pg');
 
+const REQUIRED_PUBLIC_TABLES = [
+  'providers', 'users', 'user_teams', 'teams', 'team_models', 'models',
+  'api_keys', 'user_sessions', 'user_code_balances', 'redemption_codes', 'operation_logs',
+];
+const OPTIONAL_PUBLIC_TABLES = [
+  'balance_preconsumes', 'redemption_code_uses', 'api_key_members', 'plugins',
+];
+
 const configPath = path.resolve(process.argv[2] || process.env.CR_CONFIG_PATH || path.join(__dirname, '../../config.json'));
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
@@ -25,6 +33,27 @@ async function hasPublicTable(client, name) {
   return result.rows[0].present;
 }
 
+async function inspectPublicTableShapes(client) {
+  const required = new Set(REQUIRED_PUBLIC_TABLES);
+  const names = [...REQUIRED_PUBLIC_TABLES, ...OPTIONAL_PUBLIC_TABLES];
+  const result = await client.query(`
+    SELECT requested.name, c.relkind, c.relrowsecurity AS "rowSecurityEnabled"
+    FROM unnest($1::text[]) AS requested(name)
+    LEFT JOIN pg_catalog.pg_namespace n ON n.nspname = 'public'
+    LEFT JOIN pg_catalog.pg_class c
+      ON c.relnamespace = n.oid AND c.relname = requested.name
+    ORDER BY requested.name
+  `, [names]);
+  const rows = result.rows;
+  return {
+    missingRequired: rows.filter(row => required.has(row.name) && row.relkind === null).map(row => row.name),
+    nonTableRelations: rows.filter(row => row.relkind !== null && !['r', 'p'].includes(row.relkind))
+      .map(row => ({ name: row.name, kind: row.relkind })),
+    rowSecurityEnabled: rows.filter(row => row.relrowsecurity === true).map(row => row.name),
+    optionalMissing: rows.filter(row => !required.has(row.name) && row.relkind === null).map(row => row.name),
+  };
+}
+
 async function audit() {
   const client = new Client({
     host: process.env.CR_DB_HOST || config.database?.host,
@@ -37,13 +66,25 @@ async function audit() {
     application_name: 'crewrouter-security-readonly-audit',
     options: '-c default_transaction_read_only=on -c statement_timeout=15000 -c lock_timeout=1000',
   });
-  const report = { generatedAt: new Date().toISOString(), configPath, readOnly: false, checks: {} };
+  const report = { generatedAt: new Date().toISOString(), configPath, readOnly: false, complete: false, checks: {} };
   let activeCheck = 'connection';
   try {
     await client.connect();
     await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     report.readOnly = (await client.query("SELECT current_setting('transaction_read_only') = 'on' AS active")).rows[0].active;
     if (!report.readOnly) throw new Error('database transaction did not enter READ ONLY mode');
+
+    // Pin relation lookup to the application schema and fail closed if a public
+    // relation was replaced with a view/foreign table or has row policies.
+    await client.query('SET LOCAL search_path TO pg_catalog, public');
+    await client.query('SET LOCAL row_security = off');
+    activeCheck = 'schema preflight';
+    report.checks.schemaShape = await inspectPublicTableShapes(client);
+    const schemaShape = report.checks.schemaShape;
+    if (schemaShape.missingRequired.length || schemaShape.nonTableRelations.length || schemaShape.rowSecurityEnabled.length) {
+      await client.query('ROLLBACK');
+      return report;
+    }
 
     activeCheck = 'database';
     report.database = (await client.query(`
@@ -82,6 +123,28 @@ async function audit() {
       suspiciousProviderNames,
       suspiciousProviderScripts,
     };
+
+    activeCheck = 'plugins';
+    if (!(await hasPublicTable(client, 'plugins'))) {
+      report.checks.plugins = { tableMissing: true };
+    } else {
+      const plugins = await client.query(`
+        SELECT id, name, version, enabled, permissions, config
+        FROM public.plugins ORDER BY id
+      `);
+      report.checks.plugins = {
+        total: plugins.rowCount,
+        enabledCount: plugins.rows.filter(plugin => plugin.enabled).length,
+        entries: plugins.rows.map(plugin => ({
+          id: plugin.id,
+          name: plugin.name,
+          version: plugin.version,
+          enabled: plugin.enabled,
+          permissions: plugin.permissions,
+          configSha256: sha256(JSON.stringify(plugin.config || {})),
+        })),
+      };
+    }
 
     activeCheck = 'team consistency';
     report.checks.teamConsistency = (await client.query(`
@@ -212,7 +275,7 @@ async function audit() {
       JOIN pg_depend d ON d.objid=s.oid AND d.deptype IN ('a','i')
       JOIN pg_class t ON t.oid=d.refobjid JOIN pg_namespace tn ON tn.oid=t.relnamespace
       JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=d.refobjsubid
-      WHERE s.relkind='S' AND tn.nspname='public'
+      WHERE s.relkind='S' AND t.relkind IN ('r','p') AND tn.nspname='public'
       ORDER BY tn.nspname,t.relname,a.attname
     `);
     const behindSequences = [];
@@ -243,6 +306,7 @@ async function audit() {
     `)).rows;
 
     await client.query('ROLLBACK');
+    report.complete = true;
     return report;
   } catch (error) {
     error.activeCheck = activeCheck;
@@ -254,22 +318,58 @@ async function audit() {
 
 audit().then(report => {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  if (report.checks.sequences.behindCount > 0
+  if (!report.complete) {
+    process.exitCode = 2;
+    return;
+  }
+  const c = report.checks;
+  const unexpectedTriggers = c.databaseHooks.filter(trigger => ![
+    'quota_cycle_attempt_changed',
+    'quota_cycle_sample_changed',
+  ].includes(trigger.triggerName));
+  if (c.schemaShape.optionalMissing.includes('plugins')
+      || c.providers.plaintextApiKeyCount > 0
+      || c.providers.scriptKeyCount > 0
+      || c.providers.customQuotaScriptCount > 0
+      || c.plugins.enabledCount > 0
+      || c.teamConsistency.primaryMembershipMismatches > 0
+      || c.teamConsistency.orphanMemberships > 0
+      || c.teamConsistency.orphanTeamModels > 0
+      || c.teamConsistency.duplicateTeamNames > 0
+      || c.identities.duplicateUsernames > 0
+      || c.identities.duplicateEmails > 0
+      || c.balances.negativeBalances > 0
+      || c.balances.negativeRefundBalances > 0
+      || c.balances.refundDetailMismatches > 0
+      || c.balances.orphanCodeBalances > 0
+      || c.balancePreconsumes.stalePendingCount > 0
+      || c.balancePreconsumes.incompleteSettlementCount > 0
+      || c.balancePreconsumes.unknownStatusCount > 0
+      || c.balancePreconsumes.negativeAmountCount > 0
+      || c.redemptionCodes.usedCountMismatches > 0
+      || c.redemptionCodes.codesOverUseLimit > 0
+      || c.redemptionCodes.invalidCodeValues > 0
+      || c.apiKeyMemberships.orphanMemberships > 0
+      || c.apiKeyMemberships.ownerAlsoMemberCount > 0
+      || c.apiKeyMemberships.enabledKeysWithoutOwner > 0
+      || c.catalog.invalidIndexes > 0
+      || c.catalog.notReadyIndexes > 0
+      || c.catalog.unvalidatedConstraints > 0
+      || unexpectedTriggers.length > 0
+      || c.databaseEventTriggers.length > 0
+      || c.databaseRole.superuser
+      || c.databaseRole.createRole
+      || c.databaseRole.createDatabase
+      || c.databaseRole.replication
+      || c.databaseRole.bypassRls
+      || c.databaseRole.publicSchemaCreate
+      || c.sequences.behindCount > 0
       || report.checks.providers.suspiciousProviderNames.length > 0
       || report.checks.providers.suspiciousProviderScripts.length > 0
-      || report.checks.balancePreconsumes.stalePendingCount > 0
-      || report.checks.balancePreconsumes.incompleteSettlementCount > 0
-      || report.checks.balancePreconsumes.unknownStatusCount > 0
-      || report.checks.balancePreconsumes.negativeAmountCount > 0
-      || report.checks.balancePreconsumes.tableMissing === true
-      || report.checks.redemptionCodes.usedCountMismatches > 0
-      || report.checks.redemptionCodes.codesOverUseLimit > 0
-      || report.checks.redemptionCodes.invalidCodeValues > 0
-      || report.checks.redemptionCodes.tableMissing === true
-      || report.checks.apiKeyMemberships.orphanMemberships > 0
-      || report.checks.apiKeyMemberships.ownerAlsoMemberCount > 0
-      || report.checks.apiKeyMemberships.enabledKeysWithoutOwner > 0
-      || report.checks.apiKeyMemberships.tableMissing === true) process.exitCode = 1;
+      || c.balancePreconsumes.tableMissing === true
+      || c.redemptionCodes.tableMissing === true
+      || c.apiKeyMemberships.tableMissing === true
+      || c.plugins.tableMissing === true) process.exitCode = 1;
 }).catch(error => {
   // Deliberately omit error text and connection diagnostics that could expose config values.
   process.stderr.write(`Security audit failed (${error.activeCheck || 'database query'}): ${error.code || error.name || 'unknown error'}\n`);

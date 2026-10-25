@@ -10,10 +10,13 @@
 - 当前工作区位于 `detrital-server`；CrewRouter 以 root 运行，现有服务进程早于代码补丁启动。
 - 2026-10-25 10:15 CST 复核时，CrewRouter 监听 `*:20003`，仍运行旧源码和依赖；Tailnet ping 可达 `bloret-core`，但 TCP `5432` 与 `pg_isready` 均无响应。当前进程的 `proxy-addr` 仍为 2.0.7，旧代码固定信任一跳代理，公网直连时可能伪造客户端 IP。
 - 2026-10-25 10:22 CST 再核验：服务仍以 root 运行 PID 1407，监听 `*:20003`；`bloret-core` 可 ping，但 PostgreSQL TCP/`pg_isready` 无响应。当前进程没有 `CR_TRUST_PROXY`，且本机 INPUT 默认策略为 ACCEPT；上游防火墙是否保护应用端口未知。当前仓库生产依赖审计为 0 项，但运行服务仍是旧进程。
+- 2026-10-25 10:41–10:46 CST 最新复核：CrewRouter PID 1407 与图床 PID 901 仍以 root 运行，分别监听 `*:20003`、`*:28888`，进程未设置代理信任或本轮两个脚本开关；数据库 `bloret-core:5432` 仍无响应。主机具有全局 IPv6 地址，iptables IPv4/IPv6 INPUT、OUTPUT 默认策略均为 ACCEPT；上游 IPv6 入站过滤未知。活动 nft guard 在更早 priority 阻断 `.2`、`.7`，但管理端口规则只约束非 Tailscale 接口；其他 Tailnet 节点可访问 5901、6080、9090、40020。CrewRouter 与图床端口未被 guard 阻断，不能据此断言互联网直连已发生，需由上游路由器/防火墙核实。
+- 当前主机的 `/var/lib/pgsql/data` 是约 90 MiB 的 PostgreSQL 18 本地集群，`pg_controldata` 显示已关闭；CrewRouter 配置的数据库目标为远端 `bloret-core`，本机 `/var/lib/pgsql/backups` 为空。该本地集群身份及内容未确认，不作为 CrewRouter 恢复源；本轮未启动它。
 - PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。2026-10-25 09:30–09:52 tailnet 主机在线且 ping 成功，但 TCP 5432 无响应；CrewRouter 持续连接超时，新的只读审计无法连接。尚不能区分 PostgreSQL 停止与远端防火墙丢包，活库一致性查询也不能证明操作系统或数据库完整。
-- 当前主机的 `cr-incident-guard.service` 已阻断已知失陷 Tailscale 节点访问，并限制若干管理端口；它没有封锁公网 CrewRouter/API 端口，也没有隔离数据库出站连接。
+- 当前主机的 `cr-incident-guard.service` 只阻断清单中的已知失陷 Tailscale 节点；其管理端口限制不覆盖其他 Tailnet 节点，也没有封锁 CrewRouter/API 与图床端口或隔离数据库出站连接。
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
 - 截至本次审计，指定路径只找到 2026-08-29 的 API Key SQL 文件，没有找到可证明事件前后完整性的 CrewRouter 全库备份。先确认外部/离线备份，再决定恢复或数据抢救路径。
+- 当前主机 `/var/lib/pgsql/data` 是约 90 MiB、已关闭的 PostgreSQL 18 集群；CrewRouter 配置指向 `bloret-core`，本机备份目录为空，不能把该集群当作 CrewRouter 恢复源。本轮没有启动本地数据库。
 
 ## 按顺序执行
 
@@ -63,7 +66,7 @@
 3. 若找不到可信全库备份，仅将旧库/物理数据副本用于隔离环境中的数据抢救。恢复出的记录须标记为未验证，由业务负责人逐类确认后导入新库；不得把活库 `pg_dump` 或旧数据目录宣称为可信备份。
 4. 目前已知的 2026-08-29 API Key SQL 不是全库恢复点，且其中凭据需要撤销，不可直接作为线上密钥恢复源。
 
-数据库验收至少包括：外键与索引有效、关键表行数与备份清单相符、余额与退款对账、用户与团队归属核对、所有旧会话和用户 API Key 均失效、供应商及插件逐项复核。核验结果连同备份哈希异机归档。
+数据库验收至少包括：外键与索引有效、关键表行数与备份清单相符、余额与退款对账、用户与团队归属核对、所有旧会话和用户 API Key 均失效、供应商及插件逐项复核。可信隔离副本可连接后运行 `node server/scripts/security-audit.js`；脚本在只读、可重复读事务中审计，先检查业务对象类型与 RLS，再输出插件配置哈希和一致性结果。核验结果连同备份哈希异机归档。
 
 ### 6. 部署应用并切流
 
