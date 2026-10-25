@@ -315,3 +315,231 @@
 #modelLibraryPage .ml-model-uptime .blora-progress__fill.ml-uptime-danger {
   background: var(--blora-color-status-danger);
 }
+
+/* 6e: 绑定栏对齐 */
+#modelLibraryPage .model-library-binding-bar {
+  align-items: flex-start;
+}
+#modelLibraryPage .binding-key-row {
+  align-items: flex-start;
+}
+#modelLibraryPage .binding-arrow {
+  align-self: flex-start;
+  padding-block-start: calc(var(--blora-text-sm) + var(--blora-space-1) + 0.35em);
+  padding-block-end: 0;
+}
+#modelLibraryPage .model-library-key-selector,
+#modelLibraryPage .model-library-key-selector-inner {
+  align-self: flex-start;
+}
+#modelLibraryPage .ml-binding-item-value:has(> .binding-uptime) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--blora-space-2);
+}
+#modelLibraryPage .ml-binding-item-value > .binding-model-name,
+#modelLibraryPage .ml-binding-item-value > .binding-uptime {
+  flex-basis: auto;
+  inline-size: 100%;
+  max-inline-size: 280px;
+}
+#modelLibraryPage .ml-binding-item-value > .ml-model-test-badge,
+#modelLibraryPage .ml-binding-item-value > [class*="test"] {
+  align-self: flex-start;
+}
+
+/* 6e: 在线率单独一行，绑定链水平对齐 */
+#modelLibraryPage .binding-active > .ml-model-uptime,
+#modelLibraryPage .binding-active > .binding-uptime {
+  margin-block-start: var(--blora-space-3);
+  max-inline-size: 320px;
+}
+#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime {
+  margin: 0;
+}
+#modelLibraryPage .binding-key-row .ml-binding-item {
+  justify-content: flex-start;
+}
+#modelLibraryPage .model-library-key-label {
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-muted);
+  line-height: 1.2;
+  min-block-size: var(--blora-text-sm);
+}
+#modelLibraryPage .ml-binding-item-label {
+  line-height: 1.2;
+  min-block-size: var(--blora-text-sm);
+}
+#modelLibraryPage .ml-binding-item-value {
+  min-block-size: var(--blora-control-height, 2rem);
+  align-items: center;
+}
+#modelLibraryPage .model-library-key-chips,
+#modelLibraryPage .model-library-key-selector-inner > blora-segmented,
+#modelLibraryPage .model-library-key-selector-inner > blora-select {
+  min-block-size: var(--blora-control-height, 2rem);
+}
+
+/* 6e final: 绑定链对齐 + 在线率只往下长 */
+#modelLibraryPage .model-library-binding-bar { align-items: flex-start; }
+#modelLibraryPage .binding-key-row { align-items: flex-start; }
+#modelLibraryPage .ml-binding-item { align-items: stretch; }
+#modelLibraryPage .ml-binding-item-label,
+#modelLibraryPage .model-library-key-label {
+  font-size: var(--blora-text-sm);
+  line-height: 1.2;
+  color: var(--blora-color-text-muted);
+}
+#modelLibraryPage .ml-binding-item-value {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  min-block-size: var(--blora-control-height, 2rem);
+  font-size: var(--blora-text-base);
+}
+#modelLibraryPage .ml-binding-model-value {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--blora-space-2);
+}
+#modelLibraryPage .ml-binding-model-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  min-block-size: var(--blora-control-height, 2rem);
+}
+#modelLibraryPage .ml-binding-item-value .binding-uptime,
+#modelLibraryPage .ml-binding-model-value .binding-uptime,
+#modelLibraryPage .ml-binding-model-value .ml-model-uptime {
+  inline-size: 100%;
+  max-inline-size: 240px;
+  margin: 0;
+}
+#modelLibraryPage .binding-arrow {
+  align-self: flex-start;
+  padding-block-start: calc(var(--blora-text-sm) * 1.2 + var(--blora-space-1) + (var(--blora-control-height, 2rem) - 1em) / 2);
+  padding-block-end: 0;
+}
+#modelLibraryPage .model-library-key-selector { align-self: flex-start; }
+#modelLibraryPage .model-library-key-selector-inner { gap: var(--blora-space-1); }
+#modelLibraryPage .model-library-key-chips { display: flex; align-items: center; min-block-size: var(--blora-control-height, 2rem); }
+
+/* 6f: 绑定卡在线率去掉整卡分隔线观感，只贴在模型列下 */
+#modelLibraryPage .binding-active .ml-binding-model-value .ml-model-uptime,
+#modelLibraryPage .binding-active .binding-uptime .ml-model-uptime {
+  border-top: none;
+  border-bottom: none;
+  padding-block: 0;
+  max-inline-size: 240px;
+}
+#modelLibraryPage .binding-active .ml-binding-model-value .ml-model-uptime .blora-progress__bar {
+  block-size: 6px;
+}
+
+/* 6f A+C: Key+切换同列；测速 muted 跟模型名；在线率第二行全宽；侧栏切换列隐藏 */
+#modelLibraryPage .model-library-key-selector {
+  display: none !important;
+}
+#modelLibraryPage .model-library-binding-bar .model-library-binding-main {
+  flex: 1 1 auto;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+#modelLibraryPage .ml-binding-key-value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-3);
+  min-block-size: var(--blora-control-height, 2rem);
+}
+#modelLibraryPage .ml-binding-key-value .ml-key-switch {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--blora-control-height, 2rem);
+}
+#modelLibraryPage .ml-binding-key-value .ml-key-segmented,
+#modelLibraryPage .ml-binding-key-value .ml-key-select {
+  min-block-size: var(--blora-control-height, 2rem);
+}
+#modelLibraryPage .ml-binding-item-value {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  min-block-size: var(--blora-control-height, 2rem);
+}
+#modelLibraryPage .ml-binding-model-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  min-block-size: var(--blora-control-height, 2rem);
+}
+#modelLibraryPage .ml-binding-speed-meta {
+  font-size: var(--blora-text-sm);
+  font-weight: 400;
+  color: var(--blora-color-text-muted);
+  white-space: nowrap;
+}
+#modelLibraryPage .ml-binding-speed-meta.is-fail {
+  color: var(--blora-color-status-danger);
+}
+#modelLibraryPage .binding-active > .binding-uptime {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  inline-size: 100%;
+  max-inline-size: none;
+  margin-block-start: var(--blora-space-3);
+  padding-block-start: var(--blora-space-3);
+  border-top: 1px solid var(--blora-color-border-subtle);
+}
+#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime {
+  flex: 1 1 auto;
+  inline-size: 100%;
+  max-inline-size: none;
+  margin: 0;
+  padding-block: 0;
+  border-top: none;
+  border-bottom: none;
+}
+#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime .blora-progress__bar {
+  block-size: 6px;
+}
+#modelLibraryPage .binding-key-row {
+  align-items: flex-start;
+}
+#modelLibraryPage .binding-arrow {
+  align-self: flex-start;
+  padding-block-start: calc(var(--blora-text-sm) * 1.2 + var(--blora-space-1) + (var(--blora-control-height, 2rem) - 1em) / 2);
+  padding-block-end: 0;
+}
+
+
+/* 6g A+C hardened: ensure full-width uptime row wins over earlier 6e caps */
+#modelLibraryPage .binding-active > .binding-uptime {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  inline-size: 100%;
+  max-inline-size: none !important;
+  margin-block-start: var(--blora-space-3);
+  padding-block-start: var(--blora-space-3);
+  border-top: 1px solid var(--blora-color-border-subtle);
+}
+#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime,
+#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime .blora-progress {
+  inline-size: 100%;
+  max-inline-size: none !important;
+  flex: 1 1 auto;
+}
+#modelLibraryPage .ml-binding-item-value .ml-binding-key-value {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--blora-space-3);
+}

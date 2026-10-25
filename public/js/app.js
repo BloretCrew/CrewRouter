@@ -4155,6 +4155,28 @@ class ConsoleApp {
     return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
   }
 
+  _renderBindingSpeedMeta(model) {
+    if (!model) return '';
+    const testOk = model.current_model_test_ok;
+    const latency = model.current_model_test_latency_ms;
+    const tps = model.current_model_test_tokens_per_second;
+    const testedAt = model.current_model_test_tested_at;
+    if (testOk === true) {
+      const tpsText = this._formatTestTps(tps);
+      const parts = [];
+      if (latency != null) parts.push(`${latency}ms`);
+      if (tpsText) parts.push(`${tpsText} t/s`);
+      if (!parts.length) return '';
+      const title = testedAt ? this._formatTestTooltip(testedAt) : '';
+      return `<span class="ml-binding-speed-meta"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(parts.join(' · '))}</span>`;
+    }
+    if (testOk === false) {
+      const title = testedAt ? this._formatTestTooltip(testedAt) : '';
+      return `<span class="ml-binding-speed-meta is-fail"${title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(t('测试失败'))}</span>`;
+    }
+    return '';
+  }
+
   _renderTestCapsule(model) {
     if (!model) return '';
     const testOk = model.current_model_test_ok;
@@ -11098,7 +11120,7 @@ ${extractorBody}
               }
             ];
             return `
-            <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
+            <div class="model-library-provider ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
@@ -11126,7 +11148,7 @@ ${extractorBody}
                         <span class="placeholder-text">${provider.models.length} 个模型</span>
                       </div>`
                     : `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">
-                        <span class="placeholder-text">${provider.models_loaded ? t('该供应商下暂无模型') : t('点击展开以加载模型')}</span>
+                        <span class="placeholder-text">${provider.models_loaded ? t('该供应商下暂无模型') : t('加载中…')}</span>
                       </div>`}
               </div>
             </div>
@@ -11137,6 +11159,24 @@ ${extractorBody}
     }).join(''));
     // data-icon 按钮（测速等）在动态渲染后补上 Blora 图标
     window.bloraHydrateIcons?.(container);
+    // ml-step6g：供应商默认展开，进页即加载模型卡片
+    this._expandLibraryProvidersInitial(container);
+  }
+
+  async _expandLibraryProvidersInitial(container) {
+    if (!container) return;
+    const providerEls = Array.from(container.querySelectorAll('.model-library-provider:not(.collapsed)'));
+    await Promise.all(providerEls.map(async (providerEl) => {
+      const teamId = providerEl.getAttribute('data-team-id');
+      const providerId = providerEl.getAttribute('data-provider-id');
+      const { team, provider } = this._findLibraryTeamProvider(teamId, providerId);
+      if (!team || !provider) return;
+      if (!provider.models_loaded || provider.models_query_key !== this._getProviderModelsQueryKey(team, provider)) {
+        await this._loadProviderModels(team, provider, providerEl, { page: 1, force: true });
+      } else {
+        this._renderProviderModelsInto(providerEl, provider, team);
+      }
+    }));
   }
 
   // 渲染单个模型库条目（供 renderModelLibrary 与按需加载复用）
@@ -12266,6 +12306,8 @@ ${extractorBody}
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>`;
+    // ml-step6g A+C：切换 Key 紧跟 Key 按钮，不再单独占列
+    const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}<span id="libraryKeyChips" class="ml-key-switch"></span></span>`;
     const bindTarget = this._libraryBindTarget || 'default';
     const isHarnessMode = bindTarget !== 'default';
     const harnessMeta = isHarnessMode ? this._usageRequestSourceMeta(bindTarget) : null;
@@ -12320,7 +12362,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-active">
           <div class="binding-key-row">
-            ${item(t('Key'), keyBtn)}
+            ${item(t('Key'), keyValueHtml)}
             <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
             ${item(t('供应商'), '')}
             <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
@@ -12329,6 +12371,7 @@ ${extractorBody}
           ${harnessChips}
           <div class="binding-hint">在下方列表中点击一个模型即可绑定 · 再次点击 Key 可打开工具菜单</div>
         </div>`);
+      this._renderLibraryKeySelector();
       this._renderLibraryStickyKeyBtn();
       return;
     }
@@ -12336,7 +12379,7 @@ ${extractorBody}
     const providerName = key.current_model_provider_name
       || (currentMatchesKey ? (this._libraryCurrentModel.provider_name || '') : '')
       || '';
-    const testCapsule = this._renderTestCapsule(key);
+    const speedMeta = this._renderBindingSpeedMeta(key);
     const modelId = key.current_model_id || '';
     const uptimeHtml = modelId
       ? `<div class="binding-uptime">${this._renderLibraryUptime(String(modelId), modelName, null)}</div>`
@@ -12345,15 +12388,17 @@ ${extractorBody}
     setHTML(summary, `
       <div class="binding-active">
         <div class="binding-key-row">
-          ${item(t('Key'), keyBtn)}
+          ${item(t('Key'), keyValueHtml)}
           <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
           ${item(t('供应商'), providerName ? renderProviderNameTag(providerName) : '')}
           <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
-          ${item(t('模型'), `<span class="binding-model-name">${escapeHtml(modelName)}</span>${testCapsule}${uptimeHtml}`)}
+          ${item(t('模型'), `<span class="ml-binding-model-line"><span class="binding-model-name">${escapeHtml(modelName)}</span>${speedMeta}</span>`)}
         </div>
+        ${uptimeHtml}
         ${harnessChips}
       </div>`);
 
+    this._renderLibraryKeySelector();
     if (modelId) {
       this._loadModelUptimeForIds([String(modelId)]);
     }
@@ -12362,19 +12407,19 @@ ${extractorBody}
 
   _renderLibraryKeySelector() {
     const container = document.getElementById('modelLibraryKeySelector');
-    const chipsContainer = document.getElementById('libraryKeyChips');
-    if (!container || !chipsContainer) return;
+    // 优先取绑定卡内的切换控件宿主（侧栏已不再放 #libraryKeyChips）
+    const chipsContainer = document.querySelector('#modelLibraryBindingSummary #libraryKeyChips')
+      || document.getElementById('libraryKeyChips');
+    // ml-step6g：侧栏「切换 Key」列废弃，控件并入绑定卡 Key 值
+    if (container) container.style.display = 'none';
+    if (!chipsContainer) return;
 
     if (this._libraryKeys.length === 0) {
-      container.style.display = 'none';
       // Key 被全部关闭等场景下要清掉旧芯片，避免残留已不可用的 Key
       setHTML(chipsContainer, '');
       this._renderLibraryStickyKeyBtn();
       return;
     }
-
-    // 仅一个 Key 时仍展示芯片，以便二次点击打开气泡菜单
-    container.style.display = 'block';
 
     const keys = this._libraryKeys;
     // Blora 2.1：≤3 个 Key 用 segmented，更多时用 select；选项只写 Key 名（模型名左侧已显示）
