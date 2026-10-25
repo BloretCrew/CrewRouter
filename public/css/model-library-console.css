@@ -310,3 +310,8 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
+
+/* 6d: Outage / <99% 破例覆盖，仅模型库在线率 */
+#modelLibraryPage .ml-model-uptime .blora-progress__fill.ml-uptime-danger {
+  background: var(--blora-color-status-danger);
+}
