@@ -588,3 +588,9 @@
 /* 6m: 最小 radius token 仍成胶囊 → 不加圆角；示例标签进轴标签行右侧 */
 #modelLibraryPage .ml-uptime-seg { border-radius: 0; }
 #modelLibraryPage .ml-uptime-axis-end { display: inline-flex; align-items: center; gap: var(--blora-space-2); }
+/* 6n: 隐藏的 tooltip 不参与滚动宽度，悬停时才显示 */
+#modelLibraryPage .ml-uptime-seg-wrap > .blora-tooltip__bubble { display: none; }
+#modelLibraryPage .ml-uptime-seg-wrap:hover > .blora-tooltip__bubble,
+#modelLibraryPage .ml-uptime-seg-wrap:focus-visible > .blora-tooltip__bubble { display: block; }
+#modelLibraryPage .ml-uptime-seg-wrap:nth-child(-n+8) > .blora-tooltip__bubble { inset-inline-start: 0; transform: none; }
+#modelLibraryPage .ml-uptime-seg-wrap:nth-last-child(-n+8) > .blora-tooltip__bubble { inset-inline-start: auto; inset-inline-end: 0; transform: none; }
