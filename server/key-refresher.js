@@ -22,6 +22,12 @@ const { validateUrl } = require('./utils/url-validator');
 
 const KEY_SCRIPT_FETCH_TIMEOUT_MS = 8000;
 const KEY_SCRIPT_FETCH_MAX_BYTES = 1024 * 1024;
+const KEY_SCRIPT_DISABLED_ERROR = '密钥刷新脚本已禁用；经审阅后设置 CR_ENABLE_KEY_SCRIPTS=1 并重启服务以启用';
+const KEY_SCRIPTS_ENABLED = process.env.CR_ENABLE_KEY_SCRIPTS === '1';
+
+function keyScriptsEnabled() {
+  return KEY_SCRIPTS_ENABLED;
+}
 
 /** Broker script fetches without exposing a host Response, Promise, or function. */
 function keyScriptFetch(url, initJson, callback) {
@@ -140,6 +146,10 @@ const REFRESH_AHEAD = 30;
  * @returns {object} { key: string, expiresIn?: number }
  */
 async function executeKeyScript(provider) {
+  if (!keyScriptsEnabled()) {
+    throw new Error(KEY_SCRIPT_DISABLED_ERROR);
+  }
+
   const rawScript = (provider.key_script || '').trim();
   if (!rawScript) {
     throw new Error('密钥脚本为空');
@@ -196,6 +206,10 @@ function normalizeScriptResult(result) {
  * @returns {object} { success, key, expiresAt, error }
  */
 async function refreshProviderKeyInternal(providerId) {
+  if (!keyScriptsEnabled()) {
+    return { success: false, error: KEY_SCRIPT_DISABLED_ERROR };
+  }
+
   // 从数据库获取最新供应商数据
   const result = await pool.query('SELECT * FROM providers WHERE id = $1', [providerId]);
   if (result.rows.length === 0) {
@@ -292,6 +306,10 @@ function scheduleRefresh(providerId, intervalSeconds) {
   const cached = keyCache.get(providerId);
   if (cached?.timer) {
     clearTimeout(cached.timer);
+    cached.timer = null;
+  }
+  if (!keyScriptsEnabled()) {
+    return;
   }
 
   const ms = Math.max(intervalSeconds * 1000, 5000); // 最少 5 秒
@@ -376,6 +394,15 @@ async function ensureFreshKey(provider) {
  * 启动时初始化所有 script 模式的供应商
  */
 async function initAll() {
+  if (!keyScriptsEnabled()) {
+    for (const cached of keyCache.values()) {
+      if (cached.timer) clearTimeout(cached.timer);
+      cached.timer = null;
+    }
+    Logger.info(`[KeyRefresher] 密钥刷新脚本已禁用；${KEY_SCRIPT_DISABLED_ERROR}`);
+    return;
+  }
+
   try {
     const result = await pool.query(
       `SELECT * FROM providers WHERE key_mode = 'script' AND enabled = TRUE`
@@ -460,6 +487,15 @@ function registerProvider(provider) {
       clearTimeout(cached.timer);
     }
     keyCache.delete(provider.id);
+    return;
+  }
+
+  if (!keyScriptsEnabled()) {
+    const cached = keyCache.get(provider.id);
+    if (cached?.timer) {
+      clearTimeout(cached.timer);
+      cached.timer = null;
+    }
     return;
   }
 
