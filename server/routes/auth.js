@@ -170,6 +170,7 @@ router.post('/login', async (req, res) => {
       logAction({
         userId: user.id,
         username: user.username,
+        isAdmin: !!user.is_admin,
         action: ACTIONS.AUTH_LOGIN,
         resourceType: 'auth',
         description: `用户登录`,
@@ -269,6 +270,7 @@ router.post('/login/2fa', async (req, res) => {
       logAction({
         userId: user.id,
         username: user.username,
+        isAdmin: !!user.is_admin,
         action: ACTIONS.AUTH_LOGIN_2FA,
         resourceType: 'auth',
         description: `用户通过 2FA 登录`,
@@ -295,6 +297,7 @@ router.get('/logout', (req, res) => {
     logAction({
       userId: user.id,
       username: user.username,
+      isAdmin: user.isAdmin === true,
       action: ACTIONS.AUTH_LOGOUT,
       resourceType: 'auth',
       description: `用户登出`,
@@ -389,6 +392,7 @@ router.post('/set-password', async (req, res) => {
     logAction({
       userId: user.id,
       username: user.username,
+      isAdmin: req.session?.user?.isAdmin === true,
       action: ACTIONS.AUTH_SET_PASSWORD,
       resourceType: 'auth',
       description: `首次设置密码`,
@@ -466,6 +470,7 @@ router.post('/change-password', async (req, res) => {
     logAction({
       userId: req.session.user.id,
       username: req.session.user.username,
+      isAdmin: req.session.user.isAdmin === true,
       action: ACTIONS.AUTH_CHANGE_PASSWORD,
       resourceType: 'auth',
       description: `修改密码`,
