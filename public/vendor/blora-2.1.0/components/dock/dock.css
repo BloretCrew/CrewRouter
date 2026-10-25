@@ -1,0 +1,89 @@
+/* Blora Design 2.0 - dock component (beta, migrated from v1) */
+
+blora-dock {
+  display: block;
+}
+
+.blora-dock {
+  position: fixed;
+  left: 50%;
+  bottom: max(var(--blora-space-4), env(safe-area-inset-bottom, 0px));
+  z-index: var(--blora-z-sticky);
+  display: flex;
+  align-items: stretch;
+  gap: var(--blora-space-1);
+  min-height: 4rem;
+  padding: var(--blora-space-1);
+  transform: translateX(-50%);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-full);
+  background: color-mix(in srgb, var(--blora-color-surface-default) 88%, transparent);
+  box-shadow: var(--blora-shadow-3);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+
+/* Sliding active pill (segmented-style) */
+.blora-dock__indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--blora-z-base);
+  border-radius: var(--blora-radius-full);
+  background: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-shadow-primary);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    width var(--blora-duration-base) var(--blora-easing-standard),
+    height var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-dock--static {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  display: inline-flex;
+  transform: none;
+  z-index: auto;
+  overflow: visible;
+
+  /* Indicator is absolute; host needs a positioning context */
+
+  /* (relative already set above via position: relative) */
+}
+
+.blora-dock__item {
+  position: relative;
+  z-index: var(--blora-z-sticky);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.15rem;
+  min-width: 4rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--blora-radius-full);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+  background: transparent;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-dock__item svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.blora-dock__item:hover {
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-dock__item[data-active] {
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-dock {
+  max-width: calc(100vw - 2 * var(--blora-space-3));
+  overflow-x: auto;
+}

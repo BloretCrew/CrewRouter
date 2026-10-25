@@ -1,0 +1,71 @@
+/* Native nav list. Visual language matches sidebar-nav, not a daisyUI menu skin. */
+
+.blora-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  margin: 0;
+  padding: var(--blora-space-2);
+  list-style: none;
+}
+
+.blora-menu__title {
+  margin: 0;
+  padding: var(--blora-space-3) var(--blora-space-3) var(--blora-space-1);
+  color: var(--blora-color-text-disabled);
+  font-size: var(--blora-text-xs);
+  letter-spacing: var(--blora-tracking-caps);
+  text-transform: uppercase;
+}
+
+.blora-menu__item {
+  display: flex;
+  align-items: center;
+  min-height: var(--blora-space-6);
+  padding: var(--blora-space-2) var(--blora-space-3);
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-sm);
+  text-decoration: none;
+  border-radius: var(--blora-radius-md);
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background-color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-menu__item:hover,
+.blora-menu__item:focus-visible {
+  color: var(--blora-color-text-primary);
+  background-color: var(--blora-color-surface-raised);
+}
+
+.blora-menu__item[aria-current="page"] {
+  color: var(--blora-color-action-primary-default);
+  font-weight: 500;
+}
+
+.blora-menu__item[aria-disabled="true"],
+.blora-menu__item[data-disabled] {
+  color: var(--blora-color-text-disabled);
+  pointer-events: none;
+}
+
+.blora-menu[data-orientation="horizontal"] {
+  flex-flow: row wrap;
+  align-items: center;
+}
+
+.blora-menu[data-orientation="horizontal"] .blora-menu__title {
+  padding-block: var(--blora-space-2);
+}
+
+@media (pointer: coarse) {
+  .blora-menu__item {
+    min-height: calc(var(--blora-space-6) + var(--blora-space-3));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-menu__item {
+    transition-duration: 0.01ms;
+  }
+}

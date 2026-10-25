@@ -1,0 +1,64 @@
+/* Blora Design 2.0 - fab component (beta, migrated from v1) */
+
+.blora-fab {
+  position: fixed;
+  right: max(var(--blora-space-5), env(safe-area-inset-right, 0px));
+  bottom: max(var(--blora-space-5), env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+  display: grid;
+  place-items: center;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--blora-shadow-4), var(--blora-shadow-primary);
+  z-index: var(--blora-z-dropdown);
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-overshoot),
+    opacity var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-fab:hover {
+  transform: scale(1.12);
+}
+
+.blora-fab[data-variant="surface"] {
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+  border: 1px solid var(--blora-color-border-subtle);
+  box-shadow: var(--blora-shadow-3);
+}
+
+.blora-fab[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.86);
+}
+
+.blora-fab--static {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  inset: auto;
+  z-index: auto;
+  flex: none;
+}
+
+.blora-fab--static[data-hidden] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+@media (max-width: 560px) {
+  .blora-fab:not(.blora-fab--static) {
+    right: max(var(--blora-space-4), env(safe-area-inset-right, 0px));
+    bottom: max(var(--blora-space-4), env(safe-area-inset-bottom, 0px));
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+/* broken selector removed — BackTop styles live in backtop/backtop.css */

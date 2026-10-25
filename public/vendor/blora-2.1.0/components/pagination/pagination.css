@@ -1,0 +1,212 @@
+/* Blora Design 2.0 - Pagination
+   All page items (numbers + prev/next) share the same hit / highlight box. */
+
+blora-pagination {
+  display: block;
+}
+
+.blora-pagination {
+  --blora-pagination-hover-scale: 1.06;
+  --blora-pagination-item-size: 2em;
+  --blora-pagination-gap: var(--blora-space-1);
+  --blora-pagination-window: 5;
+  --blora-pagination-offset: 0;
+
+  display: flex;
+  align-items: center;
+  gap: var(--blora-pagination-gap);
+  max-width: 100%;
+  font-size: var(--blora-text-sm);
+
+  /* Keep hover scale inside the scrollport. overflow-x:auto otherwise
+     computes overflow-y to auto and a 2px scrollbar flashes on hover. */
+  padding: var(--blora-space-1);
+  overflow: auto hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+/* Unified control size for every item */
+.blora-pagination__item {
+  box-sizing: border-box;
+  width: var(--blora-pagination-item-size);
+  min-width: var(--blora-pagination-item-size);
+  max-width: var(--blora-pagination-item-size);
+  height: var(--blora-pagination-item-size);
+  min-height: var(--blora-pagination-item-size);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: inherit;
+  line-height: 1;
+  color: var(--blora-color-text-emphasis);
+  border: 1px solid transparent;
+  border-radius: var(--blora-radius-md);
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+  transition:
+    background var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-pagination__item:hover:not([disabled]) {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-pagination__item[aria-current="page"] {
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+  font-weight: 600;
+  box-shadow: var(--blora-shadow-primary);
+}
+
+.blora-pagination__item[aria-current="page"]:hover:not([disabled]) {
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+  transform: scale(var(--blora-pagination-hover-scale));
+}
+
+.blora-pagination__item[disabled] {
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Prev/next: same box as numbers; only the glyph is larger */
+.blora-pagination__nav {
+  /* intentionally no size overrides — inherits .blora-pagination__item */
+}
+
+.blora-pagination__nav > * {
+  font-size: 1.35em;
+  line-height: 1;
+  transform: translateY(-0.02em);
+}
+
+.blora-pagination__nav svg {
+  width: 1.15em;
+  height: 1.15em;
+  display: block;
+}
+
+.blora-pagination__ellipsis {
+  box-sizing: border-box;
+  width: var(--blora-pagination-item-size);
+  min-width: var(--blora-pagination-item-size);
+  height: var(--blora-pagination-item-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-pagination__ellipsis[data-inactive] {
+  display: none;
+}
+
+.blora-pagination__window {
+  flex: none;
+  width: calc(
+    var(--blora-pagination-window) * var(--blora-pagination-item-size) +
+      (var(--blora-pagination-window) - 1) * var(--blora-pagination-gap)
+  );
+
+  /* overflow-x:hidden + overflow-y:visible computes to overflow-y:auto,
+     so hover scale flashes a 2px scrollbar beside the ellipsis. hidden/clip
+     never make a scrollbar. padding-block keeps the 1.06 scale uncropped. */
+  overflow: hidden;
+  overflow: clip;
+  padding-block: calc(
+    (var(--blora-pagination-hover-scale) - 1) * var(--blora-pagination-item-size) / 2
+  );
+  margin-block: calc(
+    (1 - var(--blora-pagination-hover-scale)) * var(--blora-pagination-item-size) / 2
+  );
+}
+
+.blora-pagination__track {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-pagination-gap);
+  transform: translateX(
+    calc(
+      -1 * var(--blora-pagination-offset) *
+        (var(--blora-pagination-item-size) + var(--blora-pagination-gap))
+    )
+  );
+}
+
+.blora-pagination.is-animated .blora-pagination__track {
+  transition: transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-pagination.is-animated .blora-pagination__track {
+    transition: none;
+  }
+}
+
+[dir="rtl"] .blora-pagination__track {
+  transform: translateX(
+    calc(
+      var(--blora-pagination-offset) *
+        (var(--blora-pagination-item-size) + var(--blora-pagination-gap))
+    )
+  );
+}
+
+/* Compact prev / current / next as three separate capsules */
+.blora-pagination[data-variant="simple"] {
+  gap: var(--blora-space-2);
+  width: max-content;
+  padding: 0;
+  overflow: visible;
+}
+
+.blora-pagination[data-variant="simple"] .blora-pagination__item,
+.blora-pagination[data-variant="simple"] .blora-pagination__status {
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-full);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-pagination[data-variant="simple"] .blora-pagination__item {
+  width: var(--blora-pagination-item-size);
+  min-width: var(--blora-pagination-item-size);
+  max-width: var(--blora-pagination-item-size);
+}
+
+.blora-pagination[data-variant="simple"] .blora-pagination__item:hover:not([disabled]),
+.blora-pagination[data-variant="simple"]
+  .blora-pagination__item[aria-current="page"]:hover:not([disabled]) {
+  transform: none;
+  box-shadow: none;
+}
+
+.blora-pagination[data-variant="simple"] .blora-pagination__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 5.5em;
+  height: var(--blora-pagination-item-size);
+  padding-inline: 0.9em;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--blora-color-text-primary);
+  white-space: nowrap;
+}
+
+@supports (corner-shape: round) {
+  .blora-pagination[data-variant="simple"] .blora-pagination__item,
+  .blora-pagination[data-variant="simple"] .blora-pagination__status {
+    corner-shape: round;
+  }
+}

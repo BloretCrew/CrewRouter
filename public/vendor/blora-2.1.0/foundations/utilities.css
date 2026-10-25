@@ -1,0 +1,65 @@
+/* =========================================================================
+   Blora Design 2.0 - Minimal utilities
+   Spec §8.1: utilities 是最后一个 @layer，不覆盖组件样式
+   ========================================================================= */
+
+/* -- 文本对齐 -- */
+.blora-text-start {
+  text-align: start;
+}
+
+.blora-text-center {
+  text-align: center;
+}
+
+.blora-text-end {
+  text-align: end;
+}
+
+/* -- 显示 -- */
+.blora-hidden {
+  display: none;
+}
+
+.blora-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- 溢出 -- */
+.blora-overflow-hidden {
+  overflow: hidden;
+}
+
+.blora-overflow-auto {
+  overflow: auto;
+}
+
+/* -- 宽度 -- */
+.blora-w-full {
+  width: 100%;
+}
+
+.blora-w-auto {
+  width: auto;
+}
+
+/* -- 间距辅助 (gap) -- */
+.blora-gap-2 {
+  gap: var(--blora-space-2);
+}
+
+.blora-gap-3 {
+  gap: var(--blora-space-3);
+}
+
+.blora-gap-4 {
+  gap: var(--blora-space-4);
+}

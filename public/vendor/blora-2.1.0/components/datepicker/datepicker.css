@@ -1,0 +1,238 @@
+/* Blora Design 2.0 - datepicker component (beta, migrated from v1) */
+
+blora-datepicker {
+  display: block;
+}
+
+.blora-datepicker {
+  position: relative;
+}
+
+.blora-datepicker .blora-input {
+  padding-inline-end: 2.4em;
+  cursor: text;
+}
+
+.blora-datepicker .blora-input::-webkit-calendar-picker-indicator {
+  display: none !important;
+  appearance: none;
+}
+
+.blora-datepicker .blora-input::-webkit-inner-spin-button {
+  display: none;
+}
+
+.blora-datepicker__btn {
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.8em;
+  height: 1.8em;
+  display: grid;
+  place-items: center;
+  color: var(--blora-color-text-subtle);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--blora-radius-sm);
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-datepicker__btn:hover {
+  color: var(--blora-color-action-primary-default);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-datepicker__btn svg {
+  display: block;
+}
+
+.blora-datepicker__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+
+  /* Above sticky mask used for outside-click */
+  z-index: var(--blora-z-dropdown);
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  padding: var(--blora-space-3);
+  width: min(300px, calc(100vw - 2 * var(--blora-space-3)));
+  max-height: calc(100dvh - 2 * var(--blora-space-3));
+  overflow-y: auto;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-datepicker__panel[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.blora-datepicker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-datepicker__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-base);
+  color: var(--blora-color-text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2em 0.5em;
+  border-radius: var(--blora-radius-sm);
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+  user-select: none;
+}
+
+.blora-datepicker__title:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-datepicker__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8em;
+  height: 1.8em;
+  border-radius: var(--blora-radius-sm);
+  color: var(--blora-color-text-subtle);
+  cursor: pointer;
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+  border: none;
+  background: none;
+}
+
+.blora-datepicker__nav:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-datepicker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.blora-datepicker__dow {
+  text-align: center;
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  padding: var(--blora-space-1) 0;
+}
+
+.blora-datepicker__cell {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+  position: relative;
+}
+
+.blora-datepicker__cell:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-datepicker__cell[data-other] {
+  color: var(--blora-color-text-disabled);
+}
+
+.blora-datepicker__cell[data-today] {
+  font-weight: 700;
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-datepicker__cell[data-today]::after {
+  content: "";
+  position: absolute;
+  bottom: 0.15em;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+}
+
+.blora-datepicker__cell[data-selected] {
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-datepicker__cell[data-selected]::after {
+  background: var(--blora-color-text-on-accent);
+}
+
+.blora-datepicker__cell[disabled] {
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.blora-datepicker__cell[disabled]:hover {
+  background: none;
+}
+
+.blora-datepicker__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--blora-space-2);
+  margin-top: var(--blora-space-3);
+  padding-top: var(--blora-space-2);
+  border-top: 1px solid var(--blora-color-border-subtle);
+}
+
+.blora-datepicker__grid--months {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.blora-datepicker__grid--years {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.blora-datepicker__cell--month,
+.blora-datepicker__cell--year {
+  aspect-ratio: unset;
+  padding: 0.7em 0;
+  font-size: var(--blora-text-sm);
+}
+
+.blora-datepicker__panel,
+.blora-timepicker__panel {
+  background: color-mix(in srgb, var(--blora-color-surface-default) 84%, transparent);
+  backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+}

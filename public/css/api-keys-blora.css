@@ -341,3 +341,24 @@
 
 .blora-api-keys-page .api-key-name-row { flex-wrap: wrap; }
 .blora-api-keys-page .api-key-chips { flex-wrap: wrap; flex-shrink: 1; }
+
+/* API Key 页吸顶栏：原先在 main.css 的 .model-library-sticky-* 规则（afcadc4 移去后台），这里按页面限定补回 */
+#apiKeysPage .model-library-sticky-bar {position: fixed; top: 0px; left: 260px; right: 0px; z-index: 45; padding: 10px 32px; box-sizing: border-box; background: color-mix(in srgb, var(--card) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: rgba(0, 0, 0, 0.06) 0px 4px 16px; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-100%); transition: opacity 0.22s, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.28s, box-shadow 0.22s; will-change: transform, opacity;}
+
+#apiKeysPage .model-library-sticky-bar.is-visible {opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0px);}
+
+@media (prefers-reduced-motion: reduce) {
+#apiKeysPage .model-library-sticky-bar {transition: none; transform: none;}
+}
+
+#apiKeysPage .model-library-sticky-inner {display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; max-width: 100%; min-width: 0px;}
+
+#apiKeysPage .model-library-sticky-sentinel {height: 1px; width: 100%; margin: 0px; padding: 0px; pointer-events: none; visibility: hidden;}
+
+@media (max-width: 834px) {
+#apiKeysPage .model-library-sticky-bar {left: 70px; padding: 8px 16px;}
+}
+
+@media (max-width: 640px) {
+#apiKeysPage .model-library-sticky-bar {top: 56px; left: 0px; padding: 8px 12px;}
+}

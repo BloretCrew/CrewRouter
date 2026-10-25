@@ -1,0 +1,135 @@
+/* Blora Design 2.0 - tour component (beta, migrated from v1) */
+
+blora-tour,
+.blora-tour {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--blora-space-4);
+}
+
+.blora-tour__steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-3);
+}
+
+/* Tour overlay and tooltip (created by createTourController).
+   Hole is a radius-matched cutout — dim spread only, no stroke. Keep
+   overflow visible so the spread covers the classic scrollbar gutter. */
+.blora-tour__overlay {
+  --blora-tour-pad: 4px;
+
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: visible;
+  z-index: var(--blora-z-top);
+  pointer-events: auto;
+  background: transparent;
+  opacity: 0;
+  transition: opacity var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-tour__overlay[data-open] {
+  opacity: 1;
+}
+
+@starting-style {
+  .blora-tour__overlay[data-open] {
+    opacity: 0;
+  }
+}
+
+.blora-tour__ring {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--blora-color-text-primary) 45%, transparent);
+}
+
+.blora-tour__overlay[data-open] .blora-tour__ring {
+  transition-property: left, top, width, height, border-radius;
+  transition-duration: var(--blora-duration-base);
+  transition-timing-function: var(--blora-easing-standard);
+}
+
+.blora-tour__tooltip {
+  pointer-events: auto;
+  position: fixed;
+  z-index: var(--blora-z-top);
+  display: none;
+  width: min(20rem, calc(100vw - 2 * var(--blora-space-4)));
+  padding: var(--blora-space-4);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  box-shadow: var(--blora-shadow-4);
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transition-property: opacity, transform, display;
+  transition-duration: var(--blora-duration-base);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+.blora-tour__tooltip[data-open] {
+  display: block;
+  opacity: 1;
+  transform: none;
+  transition-property: opacity, transform, display, top, left;
+}
+
+@starting-style {
+  .blora-tour__tooltip[data-open] {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+.blora-tour__title {
+  font-weight: 600;
+  font-size: var(--blora-text-sm);
+  margin-bottom: 0.35em;
+}
+
+.blora-tour__desc {
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-muted);
+  line-height: 1.5;
+}
+
+.blora-tour__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-2);
+  margin-top: var(--blora-space-4);
+}
+
+.blora-tour__counter {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-tour__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--blora-space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-tour__overlay,
+  .blora-tour__overlay[data-open] .blora-tour__ring,
+  .blora-tour__tooltip,
+  .blora-tour__tooltip[data-open] {
+    transition-duration: 0.01ms !important;
+  }
+}

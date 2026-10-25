@@ -1,0 +1,23 @@
+/* =========================================================================
+   Blora Design 2.0 - Stack spacing
+   Loaded into blora.utilities (after blora.components) so a stack's rhythm
+   wins over component margin resets such as `fieldset { margin: 0 }` or a
+   field's own bottom margin. Only margins live here: other layout primitives
+   stay in the base layer so component sizing (e.g. badge min-width) wins.
+   ========================================================================= */
+
+.blora-stack > * + * {
+  margin-top: var(--blora-space-4);
+}
+
+.blora-stack--sm > * + * {
+  margin-top: var(--blora-space-2);
+}
+
+.blora-stack--lg > * + * {
+  margin-top: var(--blora-space-6);
+}
+
+.blora-stack--xl > * + * {
+  margin-top: var(--blora-space-8);
+}

@@ -1,0 +1,105 @@
+/* Blora Design 2.0 - search component (beta, migrated from v1) */
+
+blora-search {
+  display: block;
+}
+
+.blora-search {
+  position: relative;
+}
+
+.blora-search .blora-input {
+  padding-inline: 2.4em;
+}
+
+/* Search and AutoComplete share these styles */
+.blora-search .blora-input::-webkit-search-cancel-button,
+.blora-autocomplete .blora-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.blora-search__icon {
+  position: absolute;
+  left: 0.6em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  color: var(--blora-color-text-emphasis);
+  border-radius: var(--blora-radius-sm);
+  pointer-events: none;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-search__icon {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.blora-search:focus-within .blora-search__icon,
+button.blora-search__icon:hover {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-search__icon:hover {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 8%, transparent);
+}
+
+.blora-search__icon:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.blora-search__icon:focus-visible {
+  color: var(--blora-color-action-primary-default);
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: -4px;
+}
+
+.blora-search__clear {
+  position: absolute;
+  right: 0.6em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  color: var(--blora-color-text-subtle);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-search__clear[hidden] {
+  display: none;
+}
+
+.blora-search:not(:focus-within) .blora-search__clear,
+.blora-autocomplete__control:not(:focus-within) .blora-search__clear {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.blora-search__clear:hover {
+  color: var(--blora-color-text-primary);
+  background: var(--blora-color-surface-sunken);
+}
+
+.blora-search__clear:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.blora-search__clear:focus-visible {
+  color: var(--blora-color-action-primary-default);
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: -4px;
+}

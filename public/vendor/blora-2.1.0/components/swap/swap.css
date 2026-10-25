@@ -1,0 +1,52 @@
+blora-swap {
+  display: inline-block;
+}
+
+.blora-swap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  color: var(--blora-color-text-secondary);
+  cursor: pointer;
+}
+
+.blora-swap input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+
+.blora-swap__visual {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  color: var(--blora-color-text-secondary);
+  background: var(--blora-color-surface-raised);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-full);
+  transition:
+    background var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-swap input:checked + .blora-swap__visual {
+  color: var(--blora-color-text-on-accent);
+  background: var(--blora-color-action-primary-default);
+  border-color: var(--blora-color-action-primary-default);
+}
+
+.blora-swap input:focus-visible + .blora-swap__visual {
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: 3px;
+}
+
+.blora-swap input:disabled ~ * {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.blora-swap__label {
+  font-size: var(--blora-text-sm);
+}

@@ -1,0 +1,66 @@
+blora-sidebar-nav {
+  display: block;
+}
+
+.blora-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.blora-sidebar-nav__group {
+  display: flex;
+  flex-direction: column;
+}
+
+.blora-sidebar-nav__group-label {
+  padding: var(--blora-space-4) var(--blora-space-3) var(--blora-space-1);
+  color: var(--blora-color-text-disabled);
+  font-size: var(--blora-text-xs);
+  letter-spacing: var(--blora-tracking-caps);
+  text-transform: uppercase;
+}
+
+.blora-sidebar-nav__link {
+  display: flex;
+  align-items: center;
+  min-height: var(--blora-space-6);
+  padding: var(--blora-space-2) var(--blora-space-3);
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-sm);
+  text-decoration: none;
+  border-radius: var(--blora-radius-md);
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background-color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-sidebar-nav__link[aria-current="page"] {
+  color: var(--blora-color-action-primary-default);
+  background-color: transparent;
+  font-weight: 600;
+}
+
+.blora-sidebar-nav__link:hover,
+.blora-sidebar-nav__link[aria-current="page"]:hover {
+  color: var(--blora-color-text-primary);
+  background-color: var(--blora-color-surface-raised);
+}
+
+/* Sidebar nav commonly sits in a scrolling/clipped aside (overflow-x hidden),
+   so an outward ring would be cut off on the clipped side. Draw it inset like
+   Tabs so the keyboard ring stays complete on every side. */
+.blora-sidebar-nav__link:focus-visible {
+  outline-offset: calc(-1 * var(--blora-focus-ring-width));
+}
+
+@media (pointer: coarse) {
+  .blora-sidebar-nav__link {
+    min-height: calc(var(--blora-space-6) + var(--blora-space-3));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-sidebar-nav__link {
+    transition-duration: 0.01ms;
+  }
+}

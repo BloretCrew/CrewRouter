@@ -1,0 +1,52 @@
+/* =========================================================================
+   Blora Design 2.0 - Popconfirm component (popover with confirm/cancel)
+   Visual baseline: legacy/v1/blora.css line 2243 (title only, rest uses popover)
+   ========================================================================= */
+
+blora-popconfirm {
+  display: inline-block;
+}
+
+.blora-popconfirm {
+  position: relative;
+  display: inline-block;
+}
+
+.blora-popconfirm__panel {
+  position: absolute;
+  inset-block-start: calc(100% + 0.5em);
+  inset-inline-start: 0;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(20rem, calc(100vw - 2 * var(--blora-space-3)));
+  padding: var(--blora-space-4);
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+  z-index: var(--blora-z-dropdown);
+}
+
+.blora-popconfirm[data-open] .blora-popconfirm__panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.blora-popconfirm__title {
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  margin: 0 0 var(--blora-space-3);
+}
+
+.blora-popconfirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--blora-space-2);
+}
