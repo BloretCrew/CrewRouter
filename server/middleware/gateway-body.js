@@ -7,8 +7,13 @@ const { Transform } = require('stream');
 const BODY_LIMIT = 50 * 1024 * 1024;
 
 function isGatewayRequest(req) {
-  return req.path.startsWith('/v1/')
-    || /^\/api\/(chat|messages|responses|models)(\/|$)/.test(req.path);
+  const path = req.path || '';
+  return path.startsWith('/v1/')
+    || /^\/api\/(chat|messages|responses|models)(\/|$)/.test(path)
+    // Playground requests and saved conversation messages can carry image data.
+    || path === '/api/playground/chat'
+    || path === '/api/conversations'
+    || path.startsWith('/api/conversations/');
 }
 
 function createGatewayBodyParser({ limit = BODY_LIMIT, createDecompress = zlib.createZstdDecompress } = {}) {

@@ -2361,16 +2361,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// 网关先执行请求体限制，再由全局 50MB parser 解析其他请求。
-// 编码工具（Claude Code/Codex 等）长上下文请求常达数 MB，限制必须与全局一致，过低会误杀正常请求。
+// 网关先执行请求体限制，再由全局 2 MiB parser 解析普通 API 请求。
+// 编码工具（Claude Code/Codex 等）长上下文请求常达数 MB；普通 API 在认证前解析，单独限制体积降低内存 DoS 面。
 const { createGatewayBodyParser, gatewayBodyError } = require('./middleware/gateway-body');
 app.use(createGatewayBodyParser());
 app.use(gatewayBodyError);
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
-    return res.status(413).json({ error: { message: 'Request body exceeds the 50MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
+    return res.status(413).json({ error: { message: 'Request body exceeds the 2MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
   }
   return next(err);
 });

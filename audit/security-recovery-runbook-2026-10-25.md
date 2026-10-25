@@ -9,6 +9,7 @@
 - 复盘列出六台受影响主机：`jinan`、`bloret-core`、`detrital-server`、`bloret-oat`、`detrital-cloud`（0.7）和 `bloret-win`。凡仍承载业务的主机都应纳入重建范围。
 - 当前工作区位于 `detrital-server`；CrewRouter 以 root 运行，现有服务进程早于代码补丁启动。
 - 2026-10-25 10:15 CST 复核时，CrewRouter 监听 `*:20003`，仍运行旧源码和依赖；Tailnet ping 可达 `bloret-core`，但 TCP `5432` 与 `pg_isready` 均无响应。当前进程的 `proxy-addr` 仍为 2.0.7，旧代码固定信任一跳代理，公网直连时可能伪造客户端 IP。
+- 2026-10-25 10:22 CST 再核验：服务仍以 root 运行 PID 1407，监听 `*:20003`；`bloret-core` 可 ping，但 PostgreSQL TCP/`pg_isready` 无响应。当前进程没有 `CR_TRUST_PROXY`，且本机 INPUT 默认策略为 ACCEPT；上游防火墙是否保护应用端口未知。当前仓库生产依赖审计为 0 项，但运行服务仍是旧进程。
 - PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。2026-10-25 09:30–09:52 tailnet 主机在线且 ping 成功，但 TCP 5432 无响应；CrewRouter 持续连接超时，新的只读审计无法连接。尚不能区分 PostgreSQL 停止与远端防火墙丢包，活库一致性查询也不能证明操作系统或数据库完整。
 - 当前主机的 `cr-incident-guard.service` 已阻断已知失陷 Tailscale 节点访问，并限制若干管理端口；它没有封锁公网 CrewRouter/API 端口，也没有隔离数据库出站连接。
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
@@ -48,6 +49,8 @@
 - 若使用反向代理，将 `CR_TRUST_PROXY` 设为可信代理 IP/CIDR，并在网络层禁止客户端绕过代理直连应用端口；不要只依赖固定代理跳数。
 - 禁用 SSH root 密码登录；通过可信设备核准唯一管理密钥，使用独立普通账号与受控提权。
 - CrewRouter 以专用低权限服务用户运行；数据库只允许应用专用网络访问。迁移任务使用单独的受控角色，应用角色不应能在 `public` 任意创建对象。
+- 初始恢复时停用所有数据库脚本型 API Key；人工审阅每份密钥刷新脚本及其公网请求目标后才逐个启用，并轮换被脚本接触过的凭据。
+- 自动更新包必须在隔离构建/发布链路中验证独立签名或可信 SHA-256；当前 updater 只依赖 HTTPS 与 ZIP 结构校验。
 - 先部署日志、认证、进程执行和出站连接的异机留存，再接入业务流量。收集端不可由被监控主机删除或改写。
 - 为执行审计预留足够本地轮转空间；当前主机配置为每份 64 MiB、保留 14 份。日志可能包含命令参数，不得将原始日志直接发送到 LLM 或其他外部服务。
 
