@@ -1,0 +1,19 @@
+# Local incident monitoring rules for the current Linux host.
+# These records remain local until a clean, independent receiver is configured.
+-b 8192
+--backlog_wait_time 60000
+-a always,exit -F arch=b64 -S execve,execveat -k cr-exec
+-a always,exit -F arch=b32 -S execve,execveat -k cr-exec
+-w /etc/passwd -p wa -k cr-identity
+-w /etc/group -p wa -k cr-identity
+-w /etc/shadow -p wa -k cr-identity
+-w /etc/sudoers -p wa -k cr-identity
+-w /etc/sudoers.d -p wa -k cr-identity
+-w /root/.ssh -p wa -k cr-ssh
+-w /root/.ssh/authorized_keys -p wa -k cr-ssh
+-w /etc/ssh/sshd_config -p wa -k cr-ssh
+-w /etc/ssh/sshd_config.d -p wa -k cr-ssh
+-w /etc/systemd/system -p wa -k cr-persistence
+-w /etc/cron.d -p wa -k cr-persistence
+-w /var/spool/cron -p wa -k cr-persistence
+-w /usr/local/bin -p wa -k cr-binary
