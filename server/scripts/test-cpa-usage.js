@@ -5,6 +5,7 @@ const http = require('node:http');
 const { parseCpaQuotaConfig, normalizeCpaQuota, fetchCpaUsage, listCpaAccounts, normalizePassiveQuota, normalizeCodexUsage } = require('../utils/cpa-usage');
 
 async function main() {
+  process.env.CR_CPA_PRIVATE_ORIGINS = 'http://127.0.0.1:8317';
   assert.throws(() => parseCpaQuotaConfig('bad'), /JSON/);
   for (const value of ['null', '[]', '{}', '{"plugin_id":"p"}']) assert.throws(() => parseCpaQuotaConfig(value));
   assert.deepEqual(parseCpaQuotaConfig('{"plugin_id":" p ","auth_index":" a "}'), { pluginId: 'p', authIndex: 'a' });
@@ -144,6 +145,7 @@ async function main() {
   const provider = { quota_script: '{"plugin_id":"plugin/name","auth_index":"account index"}' };
   try {
     provider.cpa_management_url = `http://127.0.0.1:${server.address().port}/v8/management/`;
+    process.env.CR_CPA_PRIVATE_ORIGINS = new URL(provider.cpa_management_url).origin;
     delete provider.cpa_management_key;
     await assert.rejects(fetchCpaUsage(provider), /管理密钥/);
     assert.equal(requests, 0);

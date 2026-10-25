@@ -2,6 +2,7 @@ const axios = require('axios');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { validateUrl, normalizeAllowlistOrigin } = require('./url-validator');
+const { createPinnedHttpAgents } = require('./pinned-http-agents');
 
 const NOTIFICATION_TYPES = {
   QUOTA_INSUFFICIENT: 'quota_insufficient',
@@ -96,11 +97,17 @@ async function sendBark(userId, title, body) {
   if (!endpointCheck.ok) return { success: false, error: `Bark 服务地址安全校验失败: ${endpointCheck.error}` };
   const endpoint = endpointCheck.url.toString().replace(/\/$/, '');
   try {
-    await axios.post(`${endpoint}/${encodeURIComponent(settings.barkServerKey)}`, {
-      title: truncate(title, 200),
-      body: truncate(body),
-      group: 'CrewRouter',
-    }, { timeout: 10000, maxRedirects: 0, validateStatus: status => status >= 200 && status < 300 });
+    const agents = createPinnedHttpAgents(endpointCheck);
+    try {
+      await axios.post(`${endpoint}/${encodeURIComponent(settings.barkServerKey)}`, {
+        title: truncate(title, 200),
+        body: truncate(body),
+        group: 'CrewRouter',
+      }, { timeout: 10000, maxRedirects: 0, proxy: false, httpAgent: agents.httpAgent, httpsAgent: agents.httpsAgent,
+        validateStatus: status => status >= 200 && status < 300 });
+    } finally {
+      agents.destroy();
+    }
     return { success: true };
   } catch (error) {
     Logger.warn(`[通知] Bark 发送失败 userId=${userId}: ${error.message}`);

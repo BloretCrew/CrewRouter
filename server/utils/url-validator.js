@@ -164,6 +164,7 @@ function normalizeAllowlistOrigin(value) {
  */
 async function validateUrl(urlStr, options = {}) {
   const { allowPrivate = false, resolveDNS = true, allowedPrivateOrigins = [] } = options;
+  let resolvedAddresses;
 
   if (!urlStr || typeof urlStr !== 'string') {
     return { ok: false, error: 'URL 不能为空' };
@@ -200,7 +201,7 @@ async function validateUrl(urlStr, options = {}) {
       return { ok: false, error: `不允许请求内网 IPv6: ${url.hostname}` };
     }
 
-    // 解析域名并检查所有地址。请求仍按域名连接，无法完全消除 DNS rebinding。
+    // 解析并返回全部地址；使用固定 DNS 结果的调用方可将实际连接绑定到本次校验结果。
     if (resolveDNS && !net.isIP(normalizedHost)) {
       let addresses;
       try {
@@ -208,6 +209,7 @@ async function validateUrl(urlStr, options = {}) {
       } catch (err) {
         return { ok: false, error: `域名 DNS 解析失败: ${url.hostname}` };
       }
+      resolvedAddresses = addresses.map(({ address, family }) => ({ address, family }));
       if (!addresses.length || (!originExplicitlyAllowed && addresses.some(({ address }) => net.isIPv4(address)
         ? isPrivateIPv4(address)
         : isBlockedIPv6(address)))) {
@@ -216,7 +218,7 @@ async function validateUrl(urlStr, options = {}) {
     }
   }
 
-  return { ok: true, url };
+  return { ok: true, url, ...(resolvedAddresses ? { addresses: resolvedAddresses } : {}) };
 }
 
 /**

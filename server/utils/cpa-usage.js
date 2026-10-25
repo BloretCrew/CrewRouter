@@ -3,6 +3,8 @@
 const { quotaSignal } = require('./quota-http');
 const { decryptSecret } = require('./secret-crypto');
 const { validateUrl, normalizeAllowlistOrigin } = require('./url-validator');
+const axios = require('axios');
+const { createPinnedHttpAgents } = require('./pinned-http-agents');
 
 function cpaPrivateOriginAllowlist() {
   return String(process.env.CR_CPA_PRIVATE_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean);
@@ -170,10 +172,18 @@ function cpaRequest(provider) {
     const urlCheck = await validateCpaTargetUrl(url.toString());
     if (!urlCheck.ok) throw new Error(`CPA 管理地址安全校验失败: ${urlCheck.error}`);
     // 禁止重定向，避免把管理密钥发送到另一个目标。
-    const response = await fetch(urlCheck.url, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'error', signal: quotaSignal(AbortSignal.timeout(15000)) });
-    if (!response.ok) throw new Error(`CPA 管理接口请求失败（HTTP ${response.status}）`);
-    try { return await response.json(); } catch { throw new Error('CPA 额度响应不是有效 JSON'); }
+    const agents = createPinnedHttpAgents(urlCheck);
+    try {
+      const response = await axios.request({ url: urlCheck.url.toString(), method: body ? 'POST' : 'GET',
+        headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        ...(body ? { data: JSON.stringify(body) } : {}), responseType: 'text', maxRedirects: 0, proxy: false,
+        httpAgent: agents.httpAgent, httpsAgent: agents.httpsAgent, validateStatus: () => true,
+        signal: quotaSignal(AbortSignal.timeout(15000)) });
+      if (response.status < 200 || response.status >= 300) throw new Error(`CPA 管理接口请求失败（HTTP ${response.status}）`);
+      try { return JSON.parse(response.data); } catch { throw new Error('CPA 额度响应不是有效 JSON'); }
+    } finally {
+      agents.destroy();
+    }
   };
 }
 
