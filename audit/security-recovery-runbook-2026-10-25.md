@@ -11,12 +11,11 @@
 - 2026-10-25 10:15 CST 复核时，CrewRouter 监听 `*:20003`，仍运行旧源码和依赖；Tailnet ping 可达 `bloret-core`，但 TCP `5432` 与 `pg_isready` 均无响应。当前进程的 `proxy-addr` 仍为 2.0.7，旧代码固定信任一跳代理，公网直连时可能伪造客户端 IP。
 - 2026-10-25 10:22 CST 再核验：服务仍以 root 运行 PID 1407，监听 `*:20003`；`bloret-core` 可 ping，但 PostgreSQL TCP/`pg_isready` 无响应。当前进程没有 `CR_TRUST_PROXY`，且本机 INPUT 默认策略为 ACCEPT；上游防火墙是否保护应用端口未知。当前仓库生产依赖审计为 0 项，但运行服务仍是旧进程。
 - 2026-10-25 10:41–10:46 CST 最新复核：CrewRouter PID 1407 与图床 PID 901 仍以 root 运行，分别监听 `*:20003`、`*:28888`，进程未设置代理信任或本轮两个脚本开关；数据库 `bloret-core:5432` 仍无响应。主机具有全局 IPv6 地址，iptables IPv4/IPv6 INPUT、OUTPUT 默认策略均为 ACCEPT；上游 IPv6 入站过滤未知。活动 nft guard 在更早 priority 阻断 `.2`、`.7`，但管理端口规则只约束非 Tailscale 接口；其他 Tailnet 节点可访问 5901、6080、9090、40020。CrewRouter 与图床端口未被 guard 阻断，不能据此断言互联网直连已发生，需由上游路由器/防火墙核实。
-- 当前主机的 `/var/lib/pgsql/data` 是约 90 MiB 的 PostgreSQL 18 本地集群，`pg_controldata` 显示已关闭；CrewRouter 配置的数据库目标为远端 `bloret-core`，本机 `/var/lib/pgsql/backups` 为空。该本地集群身份及内容未确认，不作为 CrewRouter 恢复源；本轮未启动它。
+- 当前主机 `/var/lib/pgsql/data` 是 PostgreSQL 18.3 集群（system ID `7659998119049616475`），最新检查点为 2026-09-10 18:00:26 CST，原始集群保持关闭。隔离副本的系统目录显示数据库为 `ai_guess`、`sub2api`、`translation_collector`、`postgres` 和 `template1`；业务表不符合 CrewRouter schema，因此不是 CrewRouter 恢复源。副本在禁用 TCP/预加载、只读事务条件下检查后已停止并删除，原始目录未启动或更改。
 - PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。2026-10-25 09:30–09:52 tailnet 主机在线且 ping 成功，但 TCP 5432 无响应；CrewRouter 持续连接超时，新的只读审计无法连接。尚不能区分 PostgreSQL 停止与远端防火墙丢包，活库一致性查询也不能证明操作系统或数据库完整。
-- 当前主机的 `cr-incident-guard.service` 只阻断清单中的已知失陷 Tailscale 节点；其管理端口限制不覆盖其他 Tailnet 节点，也没有封锁 CrewRouter/API 与图床端口或隔离数据库出站连接。
+- 当前主机的 `cr-incident-guard.service` 会阻断清单中的已知失陷 Tailscale 节点；12:25 CST 又加入了对非 loopback、非 Tailscale 接口的 TCP `20003` 与 `28888` 阻断。其他 Tailnet 节点仍可访问这两个服务；该规则不隔离数据库出站连接，也不能替代上游隔离。
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
-- 截至本次审计，指定路径只找到 2026-08-29 的 API Key SQL 文件，没有找到可证明事件前后完整性的 CrewRouter 全库备份。先确认外部/离线备份，再决定恢复或数据抢救路径。
-- 当前主机 `/var/lib/pgsql/data` 是约 90 MiB、已关闭的 PostgreSQL 18 集群；CrewRouter 配置指向 `bloret-core`，本机备份目录为空，不能把该集群当作 CrewRouter 恢复源。本轮没有启动本地数据库。
+- 扩展本机候选路径搜索后仍未找到 CrewRouter PostgreSQL 全库备份。`/root/crewrouter-security-backup-20261023` 仅有旧 `sandbox.js.orig` 源码文件；CrewRouter Desktop runtime 的 PostgreSQL 子目录和 `runtime/data` 为空，配置所指向的 `127.0.0.1:40523` 没有监听。另有 2026-08-29 的 API Key SQL 文件，但它不是全库恢复点。先确认外部/离线备份，再决定恢复或数据抢救路径。
 - 2026-10-25 10:55 CST：Tailscale ping 到 `bloret-core` 成功，但 PostgreSQL `5432` 仍无响应；本机没有额外挂载数据盘，也未发现主机级 PostgreSQL/CrewRouter 定时备份。`/root/.cc-switch/backups/backup_20260606_060844.sql` 是 CC Switch SQLite 导出，与 CrewRouter 无关。该结论只涵盖本机已检查路径，不代表其他主机或异机存储没有备份。
 - 2026-10-25 11:08 CST 再测：Tailscale ping 成功，`pg_isready` 对 `100.64.0.2:5432` 仍返回 no response；未执行数据库查询。
 - 2026-10-25 对攻击残留归档 `/root/attacker-residue-20261023-113349.tar.gz` 做只读静态核验（SHA-256 `cfe83cc62c90507a4580144bf4525628154d8eda3cbe25938d662567cd1dc195`）：其中有浏览器采集脚本及结果、两个高熵 token 候选的重复副本，以及 Docker 网段端口扫描回显。输出没有证明这些候选令牌已外传；恢复时仍应从可信设备撤销/轮换浏览器内保存的凭据与会话，并核查重建环境的 Docker 端口暴露。归档成员时间戳不是可信时间证明。
