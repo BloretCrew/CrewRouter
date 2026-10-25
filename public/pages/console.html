@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/upstream-blora.css?v=unified-providers-20261010">
-  <link rel="stylesheet" href="/css/model-library-console.css?v=ml-step3i">
+  <link rel="stylesheet" href="/css/model-library-console.css?v=ml-step5f">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=desktop-compact-20261010-sticky1">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
@@ -209,7 +209,7 @@
               <blora-option value="all">全部供应商</blora-option>
             </blora-select>
             <blora-search id="libraryStickySearchInput" class="model-library-sticky-search" label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..."></blora-search>
-            <button type="button" id="libraryStickyMoreFiltersBtn" class="blora-button model-library-sticky-more-btn" data-variant="secondary" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">更多筛选</span></button>
+            <button type="button" id="libraryStickyMoreFiltersBtn" class="blora-button model-library-sticky-more-btn" data-variant="secondary" data-size="sm" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-icon="sliders-horizontal" aria-hidden="true"></span><span data-i18n="更多筛选">更多筛选</span></button>
             <div class="model-library-sticky-key-wrap" id="libraryStickyKeyWrap" style="display:none;">
               <button type="button" id="libraryStickyKeyBtn" class="blora-button model-library-sticky-key" data-variant="outline" aria-haspopup="menu" aria-expanded="false" onclick="app.toggleLibraryStickyKeyOrBubble(event)">
                 <span class="sticky-key-name">API Key</span>
@@ -251,12 +251,12 @@
         <!-- 顶部操作栏：主路径常驻，高级能力收入「更多」（blora-dropdown，由 app.js 渲染） -->
         <div class="model-library-header">
           <div class="model-library-header-left">
-            <h2><span data-i18n="模型库">模型库</span></h2>
+            <h2 class="ml-visually-hidden"><span data-i18n="模型库">模型库</span></h2>
             <span class="model-library-header-hint"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
           </div>
           <div class="model-library-header-actions" id="modelLibraryHeaderActions">
-            <button type="button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型"><span data-icon="package" aria-hidden="true"></span><span data-i18n="我的上游">我的上游</span></button>
-            <button type="button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商"><span data-i18n="添加供应商">添加供应商</span></button>
+            <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型"><span data-icon="package" aria-hidden="true"></span><span data-i18n="我的上游">我的上游</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商"><span data-i18n="添加供应商">添加供应商</span></button>
             <div class="model-library-header-more" id="libraryMoreDropdown"></div>
             <!-- 兼容旧脚本引用的隐藏挂点（不再单独展示） -->
             <div id="expandDropdown" style="display:none;">
@@ -271,7 +271,6 @@
         <!-- 当前 Key 绑定状态（主任务焦点） -->
         <div id="modelLibraryBindingBar" class="model-library-binding-bar">
           <div class="model-library-binding-main">
-            <div class="model-library-binding-label"><span data-i18n="当前 Key">当前 Key</span></div>
             <div id="modelLibraryBindingSummary" class="model-library-binding-summary">
               <span class="binding-placeholder library-inline-loading" role="status"><span aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></span>
             </div>
@@ -324,7 +323,7 @@
               <blora-option value="all">全部供应商</blora-option>
             </blora-select>
             <blora-search id="librarySearchInput" class="model-library-search" label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..."></blora-search>
-            <button type="button" id="libraryMoreFiltersBtn" class="blora-button" data-variant="secondary" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
+            <button type="button" id="libraryMoreFiltersBtn" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-icon="sliders-horizontal" aria-hidden="true"></span><span data-i18n="更多筛选">
               更多筛选
             </span></button>
           <div id="libraryAdvancedFilters" class="ml-model-filter-selects ml-model-filter-advanced" style="display:none;width:100%;">
@@ -2515,7 +2514,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=ml-step3i"></script>
+  <script src="/js/app.js?v=ml-step5f"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
