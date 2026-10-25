@@ -155,3 +155,24 @@
 @media (max-width: 768px) {
   #modelLibraryPage .model-library-sticky-bar { padding: var(--blora-space-2) var(--blora-space-3); }
 }
+
+/* 第 3 步：模型卡 */
+#modelLibraryPage .model-library-item { display: flex; flex-direction: column; gap: var(--blora-space-3); padding: var(--blora-space-4); background: var(--blora-color-surface-default); border: var(--blora-border-subtle); border-radius: var(--blora-radius-xl); cursor: pointer; transition: box-shadow var(--blora-duration-fast) var(--blora-ease); }
+#modelLibraryPage .model-library-item.selected { border-color: var(--blora-color-action-primary-default); }
+#modelLibraryPage .model-library-item.model-disabled { cursor: default; color: var(--blora-color-text-disabled); }
+#modelLibraryPage .model-library-item-info { display: flex; flex-direction: column; gap: var(--blora-space-2); flex: 1; min-width: 0; }
+#modelLibraryPage .model-library-item-name { display: flex; align-items: center; gap: var(--blora-space-2); font-size: var(--blora-text-sm); font-weight: 600; }
+#modelLibraryPage .model-library-item-name img { inline-size: 1.25em; block-size: 1.25em; }
+#modelLibraryPage .ml-model-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#modelLibraryPage .ml-model-star-btn.starred { color: var(--blora-color-text-primary); }
+#modelLibraryPage .ml-model-item-badges { display: flex; flex-wrap: wrap; gap: var(--blora-space-1); }
+#modelLibraryPage .model-library-item-desc { font-size: var(--blora-text-xs); color: var(--blora-color-text-secondary); }
+#modelLibraryPage .model-library-item-price { padding-top: var(--blora-space-2); border-top: var(--blora-border-subtle); font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+#modelLibraryPage .ml-model-price-item { display: inline-flex; gap: var(--blora-space-1); }
+#modelLibraryPage .model-library-item-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--blora-space-2); }
+#modelLibraryPage .ml-model-star-btn.starred svg { fill: currentColor; }
+#modelLibraryPage .ml-model-uptime { display: flex; align-items: center; gap: var(--blora-space-2); cursor: pointer; }
+#modelLibraryPage .ml-model-uptime .blora-progress { flex: 1; }
+#modelLibraryPage .ml-model-uptime-pct { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+#modelLibraryPage .blora-dropdown__item[aria-disabled="true"] { color: var(--blora-color-text-disabled); cursor: not-allowed; }
+#modelLibraryPage .ml-model-star-heading-icon svg { fill: currentColor; }
