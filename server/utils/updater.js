@@ -427,6 +427,10 @@ async function runCmd(bin, args, opts = {}) {
   }
 }
 
+function shellQuote(value) {
+  return "'" + String(value).replace(/'/g, "'\\''") + "'";
+}
+
 async function downloadPackage(destFile) {
   ensureDir(path.dirname(destFile));
   if (fs.existsSync(destFile)) fs.unlinkSync(destFile);
@@ -670,7 +674,10 @@ function scheduleRestart(appRoot) {
     return;
   }
 
-  const port = config.app?.port || 20003;
+  const configuredPort = Number(config.app?.port);
+  const port = Number.isInteger(configuredPort) && configuredPort >= 1 && configuredPort <= 65535
+    ? configuredPort
+    : 20003;
   const nodeBin = process.execPath;
   const serverEntry = path.join(appRoot, 'server.js');
   const helperPath = path.join(appRoot, 'data', 'updates', `restart-${process.pid}.sh`);
@@ -679,10 +686,10 @@ function scheduleRestart(appRoot) {
   const script = `#!/bin/bash
 # CrewRouter 自动更新重启助手 — 由 updater 生成
 set -e
-APP_DIR=${JSON.stringify(appRoot)}
-NODE_BIN=${JSON.stringify(nodeBin)}
-ENTRY=${JSON.stringify(serverEntry)}
-PORT=${JSON.stringify(String(port))}
+APP_DIR=${shellQuote(appRoot)}
+NODE_BIN=${shellQuote(nodeBin)}
+ENTRY=${shellQuote(serverEntry)}
+PORT=${port}
 LOG_FILE="$APP_DIR/data/updates/restart.log"
 
 mkdir -p "$(dirname "$LOG_FILE")"
@@ -690,7 +697,7 @@ echo "[$(date -Iseconds)] 等待端口 $PORT 释放后重启…" >> "$LOG_FILE"
 
 for i in $(seq 1 60); do
   if command -v ss >/dev/null 2>&1; then
-    if ! ss -ltn 2>/dev/null | grep -qE ":${port}\\\\s"; then
+    if ! ss -ltn 2>/dev/null | grep -qE ":\${PORT}[[:space:]]"; then
       break
     fi
   elif command -v lsof >/dev/null 2>&1; then

@@ -39,6 +39,7 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 | 2026-10-25 10:41–10:46 CST | 最新运行态复核仍见 `crewrouter.service` 以 root 运行（PID 1407）、图床服务以 root 运行（PID 901），均在 10-24 启动；前者监听 `*:20003`，后者监听 `*:28888`，两者没有设置 `CR_TRUST_PROXY`、`CR_ENABLE_KEY_SCRIPTS` 或 `CR_ENABLE_CUSTOM_QUOTA_SCRIPTS`。数据库 `bloret-core:5432` 仍无响应。当前主机网卡有全局 IPv6 地址，iptables IPv4/IPv6 INPUT 与 OUTPUT 默认策略均为 ACCEPT；上游路由器的 IPv6 入站策略未知。活动 nft guard 在 priority -10 阻止已知失陷节点 `.2`、`.7`，但管理端口规则明确排除 `tailscale0`，其他 Tailnet 节点仍可访问 5901、6080、9090、40020；CrewRouter 20003 与图床 28888 未被该 guard 封锁。进程快照未发现 frpc/frps/ngrok/chisel/socat，但这只表示采样时未运行。系统日志显示请求额度 worker 与实例心跳持续失败，具体原因未确认。 |
 | 2026-10-25 10:55 CST | `tailscale ping` 到 `bloret-core (100.64.0.2)` 成功，但 TCP `5432` 与 `pg_isready` 仍无响应，且没有已建立的数据库连接。`lsblk` 显示本机只有 root 与 boot 文件系统，没有额外挂载数据盘；常见本地备份目录为空，未发现 PostgreSQL/CrewRouter 定时备份任务或 cron 项。找到的 `/root/.cc-switch/backups/backup_20260606_060844.sql` 文件头标为 CC Switch SQLite 导出，只有 CC Switch 表结构，不是 CrewRouter 恢复源。 |
 | 2026-10-25 11:08 CST | 再次检查 `bloret-core`：Tailscale ping 成功，但 `pg_isready -h 100.64.0.2 -p 5432` 返回 no response；未建立数据库连接，也未执行 SQL。 |
+| 2026-10-25 11:49 CST | 再次确认 `bloret-core` 的 Tailscale ping 成功，但 PostgreSQL `5432` 仍无响应。`crewrouter.service` 仍为 active，PID 1407 以 root 运行，自 10-24 启动；当前仓库提交已前进至 `2613f86a`，未重启进程。`npm audit --omit=dev` 对当前锁文件报告 0 项，但不代表运行进程依赖已更新。 |
 | 2026-10-25 | 完成本轮 CrewRouter 代码与数据库状态审查，撤销残留会话、禁用遗留用户 API Key、修正序列及一条缺失的团队关联；继续加固 SSRF 出站请求。 |
 
 时间线口径存在冲突：第一份 HTML 的内嵌图片给出上述分钟级时间，并把删除 `/opt`、清空 PostgreSQL 的时间列为 10-21 22:52 至 23:03；同一材料的正文把发现与删除描述为 10-22，第二份复盘则称入侵精确时间因日志丢失不可考。现无这些时间对应的原始系统日志；遗留归档仅提供可被修改的成员时间戳，不能独立核实图片中的分钟时间。两份复盘材料的原始时区也未注明。
@@ -99,6 +100,7 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 - 请求体资源限制：通用 JSON 与表单解析上限收紧至 2 MiB；OpenAI/Anthropic 网关、Playground 对话及保存的对话接口仍保留 50 MiB，以兼容长上下文和图片。该限制只存在于当前仓库代码，尚未加载到运行服务。
 - 插件宿主默认拒绝执行后端 `main.js`；只有管理员显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 才会信任并在主进程加载插件代码。数据库中当前所有插件均为禁用状态。
 - `server/plugins/zip.js`：插件上传、商店安装、商店清单读取和自动更新共用 ZIP 校验；检查目录与本地文件头、路径、重复条目、压缩算法和体积，拒绝链接/特殊文件，以 Node zlib 限量解压并验证 CRC。安装更新包时不再调用 root 权限的 `unzip`，也不再展开内嵌 tar；更新包须直接包含程序文件。更新 URL 限定为公网 HTTPS 且不跟随重定向，下载上限 32 MiB；商店清单下载上限 25 MiB，单个清单上限 1 MiB。ZIP 仅支持单卷、非 ZIP64、文件名为 ASCII 或 UTF-8 的包；这些改动都需随可信重建部署后才生效。
+- 自动更新的手动重启辅助脚本现使用 shell 单引号安全引用应用路径与 Node 可执行文件，并将端口限制为有效整数，避免配置值通过 Bash 双引号触发命令替换；该代码仅在当前仓库，运行进程未加载。
 - 依赖审计：初始 `npm audit --omit=dev` 报告 9 项生产依赖漏洞，完整审计另有 2 项开发依赖漏洞。更新 `@simplewebauthn/server`、Axios、Express、Nodemailer 及锁文件中的传递依赖后，`npm audit` 与 `npm audit --omit=dev` 均为 0 项。Nodemailer 升至 10.x；项目声明最低 Node.js 版本为 20，与 CI 的 Node 20/22 一致。结果只反映当前仓库清单，尚未部署到正在运行的服务。
 - 新增只读安全审计脚本及默认 dry-run 的数据库序列修复脚本；数据库处置已在本轮之前执行并复查。
 - `server/scripts/security-audit.js` 提供只读检查：余额预扣、兑换码计数、API Key 成员关系、供应商/模型孤儿关联、公开 schema 触发器/事件触发器、插件启用状态及数据库角色权限。2026-10-25 10:33 重试时数据库仍无法连接，因此这些项目尚无现库结果。10:46 对审计器再加固：限定 `search_path`、拒绝读取被替换为 view/foreign table 或启用 RLS 的业务关系、输出插件配置哈希，并让余额/团队/身份/catalog/角色异常反映到退出码；本次未对数据库运行此脚本。
