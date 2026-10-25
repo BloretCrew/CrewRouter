@@ -279,3 +279,34 @@
 #modelLibraryPage .model-library-item .ml-model-star-btn > svg { max-inline-size: none; max-block-size: none; flex: none; }
 #modelLibraryPage .model-library-key-label { font-size: var(--blora-text-sm); }
 #modelLibraryPage #libraryMoreFiltersBtn [data-icon], #modelLibraryPage .model-library-sticky-more-btn [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
+
+/* 6a: 细节 */
+#modelLibraryPage .model-library-item { box-shadow: none; }
+#modelLibraryPage .model-library-item:hover { box-shadow: none; }
+#modelLibraryPage .ml-model-name { flex: 1; min-width: 0; }
+#modelLibraryPage .ml-model-test-badge { flex: none; }
+#modelLibraryPage .model-library-starred > .model-library-team-header h3 { font-size: var(--blora-text-lg); font-weight: 700; }
+#modelLibraryPage .model-library-item-price { border-top: var(--blora-border-subtle); border-bottom: none; }
+#modelLibraryPage .ml-model-uptime { border-top: var(--blora-border-subtle); border-bottom: var(--blora-border-subtle); margin-block-start: 0; }
+#modelLibraryPage .ml-binding-item-label { font-size: var(--blora-text-sm); }
+
+/* 6b: 名称完整显示 */
+#modelLibraryPage .model-library-item-name { flex-wrap: wrap; }
+#modelLibraryPage .ml-model-name { flex: 1 1 auto; min-width: min(12ch, 100%); overflow: visible; text-overflow: clip; white-space: nowrap; }
+#modelLibraryPage .ml-model-series-icon { inline-size: 1.25em; block-size: 1.25em; flex: none; }
+#modelLibraryPage .ml-model-series-icon[hidden],
+#modelLibraryPage .model-library-item-name img[style*="display: none"] { display: none; }
+
+/* 6c: 测速进标签行，名称最多两行 */
+#modelLibraryPage .model-library-item-name { flex-wrap: nowrap; }
+#modelLibraryPage .ml-model-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: normal;
+  text-overflow: unset;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}

@@ -11180,7 +11180,7 @@ ${extractorBody}
 
     let testBadgeHtml = '';
     if (testOk === true) {
-      const tpsText = testTpsText ? ` - ${testTpsText} t/s` : '';
+      const tpsText = testTpsText ? ` · ${testTpsText} t/s` : '';
       testBadgeHtml = `<span class="blora-badge model-test-badge pass" data-variant="success" data-tested-at="${escapeHtml(testTestedAt || '')}">${testLatency}ms${tpsText}</span>`;
     } else if (testOk === false) {
       testBadgeHtml = `<span class="blora-badge model-test-badge fail" data-variant="danger" data-tested-at="${escapeHtml(testTestedAt || '')}">${t('失败')}</span>`;
@@ -11222,11 +11222,11 @@ ${extractorBody}
     ];
 
     return `
-    <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-variant="hover" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
+    <div class="model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-variant="hover" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
       <div class="model-library-item-info">
         <div class="model-library-item-name">
           ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">${this._libIcon(isStarred ? 'star.fill' : 'star', 14)}</button>`}
-          ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
+          ${safeHttpUrl(model.series_icon_url) ? `<img class="ml-model-series-icon" src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.remove()">` : ''}
           <span>${escapeHtml(model.name)}</span>
           <div class="model-item-badges">
             ${testBadgeHtml}
@@ -11307,7 +11307,7 @@ ${extractorBody}
 
     let testBadgeHtml = '';
     if (testOk === true) {
-      const tpsText = testTpsText ? ` - ${testTpsText} t/s` : '';
+      const tpsText = testTpsText ? ` · ${testTpsText} t/s` : '';
       testBadgeHtml = `<span class="blora-tag ml-model-test-badge pass" data-variant="neutral" data-tested-at="${escapeHtml(testTestedAt || '')}">${testLatency}ms${tpsText}</span>`;
     } else if (testOk === false) {
       testBadgeHtml = `<span class="blora-tag ml-model-test-badge fail" data-variant="danger" data-tested-at="${escapeHtml(testTestedAt || '')}">${t('失败')}</span>`;
@@ -11350,15 +11350,15 @@ ${extractorBody}
     ];
 
     return `
-    <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" data-variant="hover" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
+    <div class="model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" data-variant="hover" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
       <div class="model-library-item-info">
         <div class="model-library-item-name">
           ${isKeyPicker ? '' : `<button type="button" class="blora-button ml-model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})" data-icon="star"></button>`}
-          ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
+          ${safeHttpUrl(model.series_icon_url) ? `<img class="ml-model-series-icon" src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.remove()">` : ''}
           <span class="ml-model-name">${escapeHtml(model.name || model.id || '')}</span>
-          ${testBadgeHtml}
         </div>
         <div class="ml-model-item-badges">
+          ${testBadgeHtml}
           ${providerTagHtml ? `<span class="blora-tag" data-variant="neutral">${providerTagHtml}</span>` : ''}
           ${subtitleHtml ? `<span class="blora-tag" data-variant="neutral">${subtitleHtml}</span>` : ''}
           ${model.series && model.series !== (model.provider_name || model.provider) ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
@@ -11962,7 +11962,7 @@ ${extractorBody}
       return;
     }
 
-    const _buildItem = (m) => this._renderModelLibraryItem(m, team, currentModel, isProviderDisabled);
+    const _buildItem = (m) => this._renderModelLibraryItem(m, team, currentModel, isProviderDisabled, { showProvider: false });
     setHTML(listEl, provider.models.map(m => _buildItem(m)).join('') + this._renderProviderPagination(team, provider));
     this._loadModelUptimeForIds(provider.models.map(m => m.model_id || m.id));
 
