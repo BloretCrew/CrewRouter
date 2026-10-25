@@ -543,3 +543,48 @@
   align-items: center;
   gap: var(--blora-space-3);
 }
+
+
+/* 6h: 在线率时间线 + 切换 Key 在时间线下方 */
+#modelLibraryPage .ml-uptime-timeline { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: var(--blora-space-3); row-gap: var(--blora-space-1); cursor: pointer; }
+#modelLibraryPage .ml-uptime-track { display: flex; gap: 1px; block-size: 16px; min-inline-size: 0; }
+#modelLibraryPage .ml-uptime-seg { flex: 1 1 0; min-inline-size: 1px; border-radius: 1px; background: var(--blora-color-border-subtle); }
+#modelLibraryPage .ml-uptime-seg[data-status="ok"] { background: var(--blora-color-status-success); }
+#modelLibraryPage .ml-uptime-seg[data-status="degraded"] { background: var(--blora-color-status-warning); }
+#modelLibraryPage .ml-uptime-seg[data-status="outage"] { background: var(--blora-color-status-danger); }
+#modelLibraryPage .ml-uptime-axis { grid-column: 1; grid-row: 2; display: flex; justify-content: space-between; font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+#modelLibraryPage .ml-uptime-timeline .ml-model-uptime-pct { grid-column: 2; grid-row: 1; font-size: var(--blora-text-sm); font-variant-numeric: tabular-nums; }
+#modelLibraryPage .ml-uptime-timeline.is-danger .ml-model-uptime-pct { color: var(--blora-color-status-danger); }
+#modelLibraryPage .model-library-item .ml-uptime-track { block-size: 10px; }
+#modelLibraryPage .ml-binding-key-switch-row { display: flex; align-items: center; margin-block-start: var(--blora-space-3); }
+#modelLibraryPage .ml-binding-key-switch-row:has(.ml-key-switch:empty) { display: none; }
+
+/* 6i: 时间线规格（Design Bot） */
+#modelLibraryPage .ml-uptime-seg { border-radius: var(--blora-radius-sm); }
+#modelLibraryPage .ml-uptime-seg[data-status="none"] { background: var(--blora-color-status-neutral-soft); }
+#modelLibraryPage .binding-active > .binding-uptime .ml-uptime-track { gap: 2px; block-size: 24px; }
+#modelLibraryPage .ml-uptime-timeline .ml-model-uptime-pct { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+
+/* 6j: blora-tooltip 悬停 + 示例数据标识 */
+#modelLibraryPage .ml-uptime-seg-wrap { flex: 1 1 0; min-inline-size: 1px; display: flex; }
+#modelLibraryPage .ml-uptime-seg-wrap > .ml-uptime-seg { flex: 1 1 auto; }
+#modelLibraryPage .ml-uptime-seg-wrap:hover > .blora-tooltip__bubble,
+#modelLibraryPage .ml-uptime-seg-wrap:focus-visible > .blora-tooltip__bubble { opacity: 1; transform: translateX(calc(-50% + var(--blora-float-shift-x))) translateY(0); }
+#modelLibraryPage .ml-uptime-seg-wrap:hover > .ml-uptime-seg { outline: 1px solid var(--blora-color-text-primary); outline-offset: 1px; }
+#modelLibraryPage .binding-active > .binding-uptime .ml-demo-tag { flex: none; }
+/* 6k: 示例数据标签放时间线右上角 */
+#modelLibraryPage .binding-active > .binding-uptime { flex-wrap: wrap; row-gap: var(--blora-space-1); }
+#modelLibraryPage .binding-active > .binding-uptime > .ml-model-uptime { flex-basis: 100%; }
+#modelLibraryPage .binding-active > .binding-uptime > .ml-demo-tag { order: -1; margin-inline-start: auto; }
+
+/* 6l: 格子小圆角、卡片按小时合并、示例标签不占行、切换 Key 间距 12px */
+#modelLibraryPage .ml-uptime-seg { border-radius: calc(var(--blora-radius-xs) / 3); }
+#modelLibraryPage .model-library-item .ml-uptime-track { gap: 2px; }
+#modelLibraryPage .ml-uptime-timeline .ml-uptime-meta { grid-column: 2; grid-row: 1; display: inline-flex; align-items: center; gap: var(--blora-space-2); }
+#modelLibraryPage .binding-active > .binding-uptime { flex-wrap: nowrap; }
+#modelLibraryPage .binding-active > .binding-uptime > .ml-model-uptime { flex-basis: auto; }
+#modelLibraryPage .ml-binding-key-switch-row { margin-block-start: calc(var(--blora-space-3) - var(--blora-space-2)); }
+
+/* 6m: 最小 radius token 仍成胶囊 → 不加圆角；示例标签进轴标签行右侧 */
+#modelLibraryPage .ml-uptime-seg { border-radius: 0; }
+#modelLibraryPage .ml-uptime-axis-end { display: inline-flex; align-items: center; gap: var(--blora-space-2); }

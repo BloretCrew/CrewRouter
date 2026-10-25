@@ -11159,7 +11159,7 @@ ${extractorBody}
     }).join(''));
     // data-icon 按钮（测速等）在动态渲染后补上 Blora 图标
     window.bloraHydrateIcons?.(container);
-    // ml-step6g：供应商默认展开，进页即加载模型卡片
+    // ml-step6m：供应商默认展开，进页即加载模型卡片
     this._expandLibraryProvidersInitial(container);
   }
 
@@ -11413,7 +11413,7 @@ ${extractorBody}
           </span>
         </div>
         ${isKeyPicker ? '' : `<div class="ml-trace-latest" data-trace-latest="${escapeHtml(modelId)}"></div>`}
-        ${this._renderLibraryUptime(modelId, model.name, null)}
+        ${this._renderLibraryUptime(modelId, model.name, null, { compact: true })}
       </div>
       <div class="model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
@@ -11491,16 +11491,42 @@ ${extractorBody}
   }
 
   // 控制台模型库：细进度条 + 右侧数值
-  _renderLibraryUptime(modelId, modelName, summary) {
+  _renderLibraryUptime(modelId, modelName, summary, opts = {}) {
+    // ml-step6m：在线率是 24h 时间线（每 15 分钟一格），不是单条进度条
     const pctNum = summary?.uptime_pct == null ? null : Number(summary.uptime_pct);
     const pct = pctNum == null ? '—' : `${pctNum.toFixed(2)}%`;
-    const width = pctNum == null ? 0 : Math.max(0, Math.min(100, pctNum));
-    const { variant, danger } = this._libraryUptimeFillState(summary);
-    const variantAttr = variant ? ` data-variant="${variant}"` : '';
-    const dangerClass = danger ? ' ml-uptime-danger' : '';
-    return `<div class="ml-model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="${t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情')}" onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
-      <div class="blora-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctNum == null ? 0 : pctNum}" aria-label="${t('可用率')}"><div class="blora-progress__bar"><div class="blora-progress__fill${dangerClass}"${variantAttr} style="width:${width}%"></div></div></div>
-      <span class="ml-model-uptime-pct">${escapeHtml(pct)}</span>
+    const n = this._uptimeSlotCount || 96;
+    const spark = Array.isArray(summary?.spark) ? summary.spark.slice(-n) : [];
+    let slots = spark.length < n ? Array(n - spark.length).fill('none').concat(spark) : spark;
+    // 模型卡宽度有限：每 4 格（1 小时）合并成一格，取最差状态
+    const group = opts.compact ? 4 : 1;
+    if (group > 1) {
+      const rank = { none: 0, ok: 1, degraded: 2, outage: 3 };
+      const merged = [];
+      for (let i = 0; i < slots.length; i += group) {
+        const chunk = slots.slice(i, i + group);
+        const real = chunk.filter(x => x && x !== 'none');
+        merged.push(real.length ? real.reduce((a, b) => ((rank[b] || 0) > (rank[a] || 0) ? b : a)) : 'none');
+      }
+      slots = merged;
+    }
+    const allowed = new Set(['ok', 'degraded', 'outage', 'none']);
+    const slotMs = 15 * 60 * 1000;
+    const end = Math.floor(Date.now() / slotMs) * slotMs;
+    const label = { ok: t('正常'), degraded: t('降级'), outage: t('故障'), none: t('无数据') };
+    const hhmm = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const segs = slots.map((st, i) => {
+      const k = allowed.has(st) ? st : 'none';
+      const span = slotMs * group;
+      const from = new Date(end + slotMs - (slots.length - i) * span);
+      const to = new Date(from.getTime() + span);
+      return `<span class="blora-tooltip ml-uptime-seg-wrap" tabindex="-1"><span class="ml-uptime-seg" data-status="${k}"></span><span class="blora-tooltip__bubble" role="tooltip">${hhmm(from)}–${hhmm(to)} · ${escapeHtml(label[k])}</span></span>`;
+    }).join('');
+    const { danger } = this._libraryUptimeFillState(summary);
+    return `<div class="ml-model-uptime ml-uptime-timeline${danger ? ' is-danger' : ''}" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="${t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情')}" onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
+      <div class="ml-uptime-track" role="img" aria-label="${escapeHtml(t('近 24 小时调用状态'))} ${escapeHtml(pct)}">${segs}</div>
+      <div class="ml-uptime-axis"><span>${escapeHtml(t('24 小时前'))}</span><span class="ml-uptime-axis-end">${!opts.compact && this._libraryIsDemo ? `<span class="blora-tag ml-demo-tag" data-variant="neutral">${t('示例数据')}</span>` : ''}<span>${escapeHtml(t('现在'))}</span></span></div>
+      <span class="ml-uptime-meta"><span class="ml-model-uptime-pct">${escapeHtml(pct)}</span></span>
     </div>`;
   }
 
@@ -11576,7 +11602,7 @@ ${extractorBody}
         const wrap = document.createElement('div');
         const html = this._renderModelUptimeCompact(id, name, summary);
         // 控制台模型库用 ml- 前缀类名，避开共享 CSS
-        setHTML(wrap, el.closest('#modelLibraryPage') ? this._renderLibraryUptime(id, name, summary) : html);
+        setHTML(wrap, el.closest('#modelLibraryPage') ? this._renderLibraryUptime(id, name, summary, { compact: !el.closest('.binding-uptime') }) : html);
         const next = wrap.firstElementChild;
         if (next) el.replaceWith(next);
       });
@@ -12280,6 +12306,12 @@ ${extractorBody}
   }
 
   _updateLibraryBindingBar() {
+    if (this._libraryIsDemo === undefined && !this._libraryDemoProbe) {
+      this._libraryDemoProbe = fetch('/api/config', { credentials: 'same-origin' })
+        .then(r => (r.ok ? r.json() : {}))
+        .then(cfg => { this._libraryIsDemo = !!cfg.demo; if (this._libraryIsDemo) this._updateLibraryBindingBar(); })
+        .catch(() => { this._libraryIsDemo = false; });
+    }
     const summary = document.getElementById('modelLibraryBindingSummary');
     if (!summary) return;
 
@@ -12306,8 +12338,10 @@ ${extractorBody}
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>`;
-    // ml-step6g A+C：切换 Key 紧跟 Key 按钮，不再单独占列
-    const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}<span id="libraryKeyChips" class="ml-key-switch"></span></span>`;
+    // ml-step6m A+C：切换 Key 紧跟 Key 按钮，不再单独占列
+    const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}</span>`;
+    // ml-step6m：切换 Key 放到状态时间线下方
+    const keySwitchRow = `<div class="ml-binding-key-switch-row"><span id="libraryKeyChips" class="ml-key-switch"></span></div>`;
     const bindTarget = this._libraryBindTarget || 'default';
     const isHarnessMode = bindTarget !== 'default';
     const harnessMeta = isHarnessMode ? this._usageRequestSourceMeta(bindTarget) : null;
@@ -12368,6 +12402,7 @@ ${extractorBody}
             <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
             ${item(t('模型'), '')}
           </div>
+          ${keySwitchRow}
           ${harnessChips}
           <div class="binding-hint">在下方列表中点击一个模型即可绑定 · 再次点击 Key 可打开工具菜单</div>
         </div>`);
@@ -12395,6 +12430,7 @@ ${extractorBody}
           ${item(t('模型'), `<span class="ml-binding-model-line"><span class="binding-model-name">${escapeHtml(modelName)}</span>${speedMeta}</span>`)}
         </div>
         ${uptimeHtml}
+        ${keySwitchRow}
         ${harnessChips}
       </div>`);
 
@@ -12410,7 +12446,7 @@ ${extractorBody}
     // 优先取绑定卡内的切换控件宿主（侧栏已不再放 #libraryKeyChips）
     const chipsContainer = document.querySelector('#modelLibraryBindingSummary #libraryKeyChips')
       || document.getElementById('libraryKeyChips');
-    // ml-step6g：侧栏「切换 Key」列废弃，控件并入绑定卡 Key 值
+    // ml-step6m：侧栏「切换 Key」列废弃，控件并入绑定卡 Key 值
     if (container) container.style.display = 'none';
     if (!chipsContainer) return;
 
