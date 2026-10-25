@@ -152,6 +152,7 @@ npm start          # 开发可用 npm run dev
 | `app.port` / `CR_APP_PORT` | 监听端口，默认 `20003` |
 | `app.sessionSecret` | 会话密钥，生产环境必须更换 |
 | `CR_ENABLE_KEY_SCRIPTS` | 供应商密钥刷新脚本默认禁用；审阅数据库中的脚本与外发目标后设为 `1` 才执行 |
+| `CR_ENABLE_CUSTOM_QUOTA_SCRIPTS` | 自定义额度查询配置默认禁用；审阅其中的请求地址与密钥发送方式后设为 `1` 才执行 |
 | `database.*` / `CR_DB_*` | PostgreSQL 连接 |
 | `initialProviders` / `initialModels` | 首次初始化写入的供应商与模型 |
 | `feishu` / GitHub OAuth | 可选企业登录 |

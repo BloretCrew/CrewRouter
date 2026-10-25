@@ -36,6 +36,7 @@ const QUOTA_SCHEDULE_INTERVALS = Object.freeze([
 const ALLOWED_INTERVALS = new Set(QUOTA_SCHEDULE_INTERVALS.map(i => i.value));
 const DEFAULT_INTERVAL = 3600;
 const SCHEDULER_TICK_MS = 60 * 1000;
+const CUSTOM_QUOTA_SCRIPTS_ENABLED = process.env.CR_ENABLE_CUSTOM_QUOTA_SCRIPTS === '1';
 
 let schedulerTimer = null;
 let schedulerRunning = false;
@@ -300,12 +301,22 @@ async function queryProviderQuotaInternal(provider, options = {}) {
     }
   }
 
+  const customQuotaScript = provider.quota_script?.trim();
+  if (customQuotaScript && !CUSTOM_QUOTA_SCRIPTS_ENABLED) {
+    return {
+      ok: false,
+      status: 503,
+      error: '自定义额度查询脚本已禁用；审阅脚本配置与请求地址后设置 CR_ENABLE_CUSTOM_QUOTA_SCRIPTS=1 并重启服务以启用',
+      provider: meta
+    };
+  }
+
   const baseUrl = provider.base_url?.replace(/\/+$/, '');
   const apiKey = getPrimaryApiKey(provider);
   if (!baseUrl) return { ok: false, status: 400, error: '供应商未配置 Base URL', provider: meta };
   if (!apiKey) return { ok: false, status: 400, error: '供应商未配置 API Key', provider: meta };
 
-  let scriptText = provider.quota_script?.trim();
+  let scriptText = customQuotaScript;
   if (!scriptText) scriptText = generateDefaultQuotaScript(provider);
 
   const cleaned = baseUrl
