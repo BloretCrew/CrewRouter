@@ -1945,17 +1945,21 @@ router.post('/avatar', requireAuth, auditMiddleware(ACTIONS.USER_AVATAR, {
   descriptionFrom: (req) => '更新头像',
 }), async (req, res) => {
   try {
-    const http = require('http');
     const https = require('https');
     const { IncomingForm } = require('formidable');
+    const { validateUrl } = require('../utils/url-validator');
+    const { createPinnedHttpAgents } = require('../utils/pinned-http-agents');
 
     const form = new IncomingForm({
       maxFileSize: 5 * 1024 * 1024,
+      maxTotalFileSize: 5 * 1024 * 1024,
+      maxFiles: 1,
+      maxFields: 0,
       keepExtensions: true,
     });
 
     const [fields, files] = await form.parse(req);
-    const imageFile = files.image?.[0];
+    const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;
     if (!imageFile) {
       return res.status(400).json({ error: '未选择图片' });
     }
@@ -1963,9 +1967,13 @@ router.post('/avatar', requireAuth, auditMiddleware(ACTIONS.USER_AVATAR, {
     const fs = require('fs');
     const fileData = fs.readFileSync(imageFile.filepath);
 
-    const boundary = '----FormBoundary' + Date.now().toString(16);
-    const fileName = imageFile.originalFilename || 'avatar.jpg';
-    const fileType = imageFile.mimetype || 'image/jpeg';
+    const boundary = '----FormBoundary' + crypto.randomBytes(16).toString('hex');
+    const fileName = String(imageFile.originalFilename || 'avatar.jpg')
+      .replace(/[\r\n"\\]/g, '_').slice(0, 128);
+    const candidateType = String(imageFile.mimetype || 'image/jpeg').trim().toLowerCase();
+    const fileType = /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/.test(candidateType)
+      ? candidateType
+      : 'application/octet-stream';
 
     let body = '';
     body += `--${boundary}\r\n`;
@@ -1978,50 +1986,99 @@ router.post('/avatar', requireAuth, auditMiddleware(ACTIONS.USER_AVATAR, {
     const bodyEndBuf = Buffer.from(bodyEnd, 'utf-8');
     const fullBody = Buffer.concat([bodyStart, fileData, bodyEndBuf]);
 
-    const options = {
-      hostname: 'img.bloret.net',
-      port: 80,
-      path: '/api/upload',
-      method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': fullBody.length,
-      },
-    };
+    const imageOrigin = 'https://img.bloret.net';
+    const uploadUrl = new URL('/api/upload', imageOrigin);
+    const urlCheck = await validateUrl(uploadUrl.toString());
+    if (!urlCheck.ok || urlCheck.url.protocol !== 'https:' || urlCheck.url.origin !== imageOrigin) {
+      throw new Error(`图床地址安全校验失败: ${urlCheck.error || '目标必须是官方 HTTPS 源'}`);
+    }
 
-    const proxyReq = http.request(options, (proxyRes) => {
-      let data = '';
-      proxyRes.on('data', (chunk) => { data += chunk; });
-      proxyRes.on('end', () => {
-        try {
-          const result = JSON.parse(data);
-          if (result.success && result.data?.url) {
-            const avatarUrl = `https://img.bloret.net${result.data.url}`;
-            pool.query(
-              'UPDATE users SET avatar = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-              [req.session.user.id, avatarUrl]
-            ).then(() => {
-              req.session.user.avatar = avatarUrl;
-              res.json({ success: true, url: avatarUrl });
-            }).catch(() => {
-              res.json({ success: true, url: avatarUrl });
-            });
-          } else {
-            res.status(500).json({ error: result.message || '上传失败' });
+    const agents = createPinnedHttpAgents(urlCheck);
+    let result;
+    try {
+      result = await new Promise((resolve, reject) => {
+        const proxyReq = https.request({
+          hostname: urlCheck.url.hostname,
+          port: urlCheck.url.port || 443,
+          path: `${urlCheck.url.pathname}${urlCheck.url.search}`,
+          method: 'POST',
+          agent: agents.httpsAgent,
+          headers: {
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            'Content-Length': fullBody.length,
+          },
+        }, (proxyRes) => {
+          const chunks = [];
+          let responseBytes = 0;
+          proxyRes.on('error', (error) => {
+            clearTimeout(deadline);
+            reject(error);
+          });
+          if (proxyRes.statusCode < 200 || proxyRes.statusCode >= 300) {
+            clearTimeout(deadline);
+            proxyRes.resume();
+            reject(new Error(`图床返回 HTTP ${proxyRes.statusCode}`));
+            return;
           }
-        } catch (e) {
-          res.status(500).json({ error: '上传响应解析失败' });
-        }
+          proxyRes.on('data', (chunk) => {
+            responseBytes += chunk.length;
+            if (responseBytes > 64 * 1024) {
+              const error = new Error('图床响应超过 64 KiB 限制');
+              clearTimeout(deadline);
+              proxyRes.destroy();
+              proxyReq.destroy(error);
+              reject(error);
+              return;
+            }
+            chunks.push(chunk);
+          });
+          proxyRes.on('end', () => {
+            clearTimeout(deadline);
+            try {
+              resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+            } catch {
+              reject(new Error('图床响应不是有效 JSON'));
+            }
+          });
+        });
+
+        const deadline = setTimeout(() => proxyReq.destroy(new Error('图床请求超时')), 10_000);
+        proxyReq.on('error', (error) => {
+          clearTimeout(deadline);
+          reject(error);
+        });
+        proxyReq.end(fullBody);
       });
-    });
+    } finally {
+      agents.destroy();
+    }
 
-    proxyReq.on('error', (err) => {
-      Logger.error('[上传头像] 代理请求失败:', err);
-      res.status(500).json({ error: '上传服务不可用' });
-    });
+    if (!result.success || !result.data?.url) {
+      return res.status(500).json({ error: result.message || '上传失败' });
+    }
 
-    proxyReq.write(fullBody);
-    proxyReq.end();
+    let avatarUrl;
+    try {
+      const returnedUrl = new URL(String(result.data.url), `${imageOrigin}/`);
+      if (returnedUrl.origin !== imageOrigin || returnedUrl.protocol !== 'https:'
+          || returnedUrl.username || returnedUrl.password || returnedUrl.hash) {
+        throw new Error('头像地址必须属于图床 HTTPS 源');
+      }
+      avatarUrl = returnedUrl.toString();
+    } catch {
+      return res.status(502).json({ error: '图床返回的头像地址无效' });
+    }
+
+    try {
+      await pool.query(
+        'UPDATE users SET avatar = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [req.session.user.id, avatarUrl]
+      );
+    } catch {
+      // 保持原接口行为：图床上传成功时仍向用户返回新头像地址。
+    }
+    req.session.user.avatar = avatarUrl;
+    res.json({ success: true, url: avatarUrl });
   } catch (error) {
     Logger.error('[上传头像] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
