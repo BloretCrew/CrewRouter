@@ -40,6 +40,7 @@ CrewRouter 数据库位于另一块盘，未随 `/opt` 删除，但应用数据�
 | 2026-10-25 10:55 CST | `tailscale ping` 到 `bloret-core (100.64.0.2)` 成功，但 TCP `5432` 与 `pg_isready` 仍无响应，且没有已建立的数据库连接。`lsblk` 显示本机只有 root 与 boot 文件系统，没有额外挂载数据盘；常见本地备份目录为空，未发现 PostgreSQL/CrewRouter 定时备份任务或 cron 项。找到的 `/root/.cc-switch/backups/backup_20260606_060844.sql` 文件头标为 CC Switch SQLite 导出，只有 CC Switch 表结构，不是 CrewRouter 恢复源。 |
 | 2026-10-25 11:08 CST | 再次检查 `bloret-core`：Tailscale ping 成功，但 `pg_isready -h 100.64.0.2 -p 5432` 返回 no response；未建立数据库连接，也未执行 SQL。 |
 | 2026-10-25 11:49 CST | 再次确认 `bloret-core` 的 Tailscale ping 成功，但 PostgreSQL `5432` 仍无响应。`crewrouter.service` 仍为 active，PID 1407 以 root 运行，自 10-24 启动；当前仓库提交已前进至 `2613f86a`，未重启进程。`npm audit --omit=dev` 对当前锁文件报告 0 项，但不代表运行进程依赖已更新。 |
+| 2026-10-25 11:53 CST | 只读 SSH 到 `100.64.0.2:22` 超时，未登录远端。Tailscale ping 仍成功，但 PostgreSQL `5432` 无响应；应用机活动日志在 09:30:17–11:52:17 记录 255 条 `ETIMEDOUT`、未见 `ECONNREFUSED`，本机 `ss` 未见已建立的数据库连接。现有证据更符合连接无响应，仍不能区分 PostgreSQL 未监听与远端防火墙/路由丢包。未运行数据库审计或 SQL。仓库最新提交为 `c7a1e1fb`；运行服务仍为 PID 1407，未加载本轮修复。 |
 | 2026-10-25 | 完成本轮 CrewRouter 代码与数据库状态审查，撤销残留会话、禁用遗留用户 API Key、修正序列及一条缺失的团队关联；继续加固 SSRF 出站请求。 |
 
 时间线口径存在冲突：第一份 HTML 的内嵌图片给出上述分钟级时间，并把删除 `/opt`、清空 PostgreSQL 的时间列为 10-21 22:52 至 23:03；同一材料的正文把发现与删除描述为 10-22，第二份复盘则称入侵精确时间因日志丢失不可考。现无这些时间对应的原始系统日志；遗留归档仅提供可被修改的成员时间戳，不能独立核实图片中的分钟时间。两份复盘材料的原始时区也未注明。
