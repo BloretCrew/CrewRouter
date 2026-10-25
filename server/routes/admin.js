@@ -3136,107 +3136,96 @@ router.post('/providers/:id/sync-models', requireAuth, requireProviderManager, a
   descriptionFrom: (req) => `同步供应商 #${req.params.id} 模型`,
 }), async (req, res) => {
   const { enabledModelIds, addOnly = false } = req.body;
-  if (typeof addOnly !== 'boolean') {
-    return res.status(400).json({ error: '参数错误：addOnly 必须是布尔值' });
+  if (typeof addOnly !== 'boolean' || !Array.isArray(enabledModelIds)
+      || enabledModelIds.length > 10000
+      || enabledModelIds.some(id => typeof id !== 'string' || !id.trim() || id.length > 100 || /[\x00-\x1f\x7f]/.test(id))) {
+    return res.status(400).json({ error: '参数错误：请提供有效模型列表及布尔 addOnly' });
   }
-  if (!Array.isArray(enabledModelIds)) {
-    return res.status(400).json({ error: '参数错误：enabledModelIds 必须是数组' });
-  }
+  const selectedIds = [...new Set(enabledModelIds.map(id => id.trim()))];
+  const providerId = req.params.id;
+  let client;
   try {
-    const providerResult = await pool.query('SELECT id, name FROM providers WHERE id = $1', [req.params.id]);
-    if (providerResult.rows.length === 0) {
-      return res.status(404).json({ error: '供应商不存在' });
+    const initial = await pool.query('SELECT * FROM providers WHERE id = $1', [providerId]);
+    if (!initial.rows.length) return res.status(404).json({ error: '供应商不存在' });
+    const snapshot = initial.rows[0];
+    // Complete network work before checking out a transaction connection.
+    const upstream = await fetchUpstreamModelsForProvider(snapshot);
+    if (!upstream.ok) return res.status(upstream.status || 502).json({ error: '无法获取有效上游模型列表，未修改本地配置' });
+    if (!Array.isArray(upstream.models) || upstream.models.length > 10000
+        || upstream.models.some(model => !model || typeof model.id !== 'string' || !model.id.trim()
+          || model.id.length > 100 || /[\x00-\x1f\x7f]/.test(model.id))) {
+      return res.status(502).json({ error: '上游模型列表格式无效，未修改本地配置' });
     }
-    const providerId = req.params.id;
-
-    // 查询当前已添加的模型
-    const existingResult = await pool.query(
-      'SELECT id, upstream_model_id, enabled FROM models WHERE provider = $1',
-      [providerId]
+    const available = new Set(upstream.models.map(model => model.id.trim()));
+    if (selectedIds.some(id => !available.has(id))) {
+      return res.status(409).json({ error: '所选模型已不在上游列表，请刷新后重试' });
+    }
+    const fingerprint = provider => JSON.stringify([
+      provider.base_url, provider.models_url, provider.api_key, provider.api_keys,
+      provider.format, provider.enabled, provider.created_by,
+    ]);
+    const expected = fingerprint(snapshot);
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const locked = await client.query('SELECT * FROM providers WHERE id = $1 FOR UPDATE', [providerId]);
+    if (!locked.rows.length) throw Object.assign(new Error('供应商不存在'), { status: 404 });
+    if (fingerprint(locked.rows[0]) !== expected) {
+      throw Object.assign(new Error('供应商配置已变更，请刷新模型列表后重试'), { status: 409 });
+    }
+    const existingResult = await client.query(
+      'SELECT id, upstream_model_id, enabled FROM models WHERE provider = $1 ORDER BY id FOR UPDATE', [providerId]
     );
     const existingByUpstream = new Map();
-    existingResult.rows.forEach(r => {
-      const key = r.upstream_model_id || r.id;
-      existingByUpstream.set(key, { systemId: r.id, enabled: r.enabled });
-    });
-
+    for (const row of existingResult.rows) {
+      const key = row.upstream_model_id || row.id;
+      if (existingByUpstream.has(key)) throw Object.assign(new Error('供应商存在重复上游模型映射，请先对账'), { status: 409 });
+      existingByUpstream.set(key, { systemId: row.id, enabled: row.enabled });
+    }
     const addedModels = [];
-    let added = 0;
-    let enabled = 0;
-    let disabled = 0;
-    // 需要挂载到前沿 Team 的模型（新建 + 重新启用）
     const frontierCandidateIds = [];
-
-    for (const modelId of enabledModelIds) {
+    let enabled = 0;
+    for (const modelId of selectedIds) {
       const existing = existingByUpstream.get(modelId);
       if (existing) {
-        // 已存在但被禁用 → 启用（禁用时会删 team_models，需重新挂前沿）
         if (!existing.enabled) {
-          await pool.query('UPDATE models SET enabled = TRUE WHERE id = $1', [existing.systemId]);
+          await client.query('UPDATE models SET enabled = TRUE WHERE id = $1', [existing.systemId]);
           frontierCandidateIds.push(existing.systemId);
           enabled++;
         }
       } else {
-        // 不存在 → 新建并启用
-        const uuid = crypto.randomUUID();
-        await pool.query(
-          `INSERT INTO models (id, name, provider, enabled, upstream_model_id)
-           VALUES ($1, $2, $3, TRUE, $4)`,
-          [uuid, modelId, providerId, modelId]
-        );
-        existingByUpstream.set(modelId, { systemId: uuid, enabled: true });
-        addedModels.push({ id: uuid, upstream_model_id: modelId });
-        frontierCandidateIds.push(uuid);
-        added++;
+        const id = crypto.randomUUID();
+        await client.query(`INSERT INTO models (id, name, provider, enabled, upstream_model_id)
+          VALUES ($1, $2, $3, TRUE, $4)`, [id, modelId, providerId, modelId]);
+        existingByUpstream.set(modelId, { systemId: id, enabled: true });
+        addedModels.push({ id, upstream_model_id: modelId });
+        frontierCandidateIds.push(id);
       }
     }
-
-    // 已存在但不在启用列表中的 → 彻底清理关联并禁用
-    for (const [upstreamId, existing] of existingByUpstream) {
-      if (!addOnly && !enabledModelIds.includes(upstreamId) && existing.enabled) {
-        const modelUuid = existing.systemId;
-        // 1) 删除 Team 关联（team_models 有 ON DELETE CASCADE 但显式删更安全）
-        await pool.query('DELETE FROM team_models WHERE model_id = $1', [modelUuid]);
-        // 2) 删除 API Key 模型映射
-        await pool.query('DELETE FROM api_key_models WHERE model_id = $1', [modelUuid]);
-        // 2b) 删除 Harness 单独绑定
-        await pool.query('DELETE FROM api_key_harness_models WHERE model_id = $1', [modelUuid]).catch(() => {});
-        // 3) 清空或提升 API Key 的 current_model_id（队列有剩余则升为首选）
-        await pool.query(
-          `UPDATE api_keys ak
-           SET current_model_id = (
-             SELECT akm.model_id FROM api_key_models akm
-             WHERE akm.api_key_id = ak.id
-             ORDER BY akm.sort_order ASC, akm.id ASC
-             LIMIT 1
-           )
-           WHERE ak.current_model_id = $1`,
-          [modelUuid]
-        );
-        // 4) 禁用模型
-        await pool.query('UPDATE models SET enabled = FALSE WHERE id = $1', [modelUuid]);
-        disabled++;
-      }
+    const disabledIds = addOnly ? [] : [...existingByUpstream]
+      .filter(([upstreamId, model]) => !selectedIds.includes(upstreamId) && model.enabled)
+      .map(([, model]) => model.systemId);
+    const keyIds = disabledIds.length ? await clearDisabledModelBindings(client, disabledIds) : [];
+    if (disabledIds.length) {
+      await client.query('DELETE FROM team_models WHERE model_id = ANY($1::text[])', [disabledIds]);
+      await client.query('UPDATE models SET enabled = FALSE WHERE id = ANY($1::text[])', [disabledIds]);
     }
-
-    // 新模型 / 重新启用的模型 → 自动挂载前沿 Team
-    if (frontierCandidateIds.length > 0) {
-      try {
-        await addModelsToFrontierTeams(frontierCandidateIds);
-      } catch (e) {
-        Logger.warn('[同步模型] 自动添加到前沿Team失败:', e.message);
-      }
+    if (frontierCandidateIds.length) {
+      await addModelsToFrontierTeamsIfEnabled(client, frontierCandidateIds);
     }
-
-    Logger.info(`[同步模型] 供应商 ${providerId}: 新增 ${added}, 启用 ${enabled}, 禁用 ${disabled}`);
-    const selectedModels = [...new Set(enabledModelIds)].map(upstreamId => ({
-      id: existingByUpstream.get(upstreamId).systemId, upstream_model_id: upstreamId
-    }));
-    res.json({ success: true, added, enabled, disabled, addedModels, selectedModels });
+    await client.query('COMMIT');
+    // Local cache changes follow successful commit; request-time checks protect
+    // other processes without relying on this process's cache eviction.
+    try { invalidateModelKeyCaches(keyIds); }
+    catch (error) { Logger.warn('[同步模型] 提交后缓存失效失败:', error.message); }
+    const selectedModels = selectedIds.map(upstreamId => ({ id: existingByUpstream.get(upstreamId).systemId, upstream_model_id: upstreamId }));
+    Logger.info(`[同步模型] 供应商 ${providerId}: 新增 ${addedModels.length}, 启用 ${enabled}, 禁用 ${disabledIds.length}`);
+    return res.json({ success: true, added: addedModels.length, enabled, disabled: disabledIds.length, addedModels, selectedModels });
   } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    if (error.status) return res.status(error.status).json({ error: error.message });
     Logger.error('[同步模型] 错误:', error);
-    res.status(500).json({ error: '同步失败: ' + error.message });
-  }
+    return res.status(500).json({ error: '同步失败' });
+  } finally { if (client) client.release(); }
 });
 
 // 获取供应商默认额度查询脚本

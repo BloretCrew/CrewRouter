@@ -3,7 +3,24 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { addModelsToFrontierTeams } = require('../utils/frontier-auto-add');
+
+// Keep configuration and database access outside this synthetic contract test.
+function loadHelper(file, dependencies) {
+  const module = { exports: {} };
+  const isolatedRequire = name => {
+    assert(Object.hasOwn(dependencies, name), `Unexpected fixture dependency: ${name}`);
+    return dependencies[name];
+  };
+  new Function('require', 'module', fs.readFileSync(path.join(__dirname, '../utils', file), 'utf8'))(isolatedRequire, module);
+  return module.exports;
+}
+const personalAccess = loadHelper('personal-model-access.js', {
+  '../config-loader': { edition: 'team' },
+  './instance-edition': require('../utils/instance-edition'),
+});
+const { addModelsToFrontierTeams } = loadHelper('frontier-auto-add.js', {
+  './personal-model-access': personalAccess,
+});
 
 function createDb({ frontierIds = [], insertCounts = [] } = {}) {
   const calls = [];
@@ -36,7 +53,11 @@ function createDb({ frontierIds = [], insertCounts = [] } = {}) {
 
   const adminSource = fs.readFileSync(path.join(__dirname, '../routes/admin.js'), 'utf8');
   assert.match(adminSource, /router\.post\('\/models\/batch-update'[\s\S]*?if \(enabled === true\)[\s\S]*?addModelsToFrontierTeams\(ids\)/, '批量启用入口必须走统一开关');
-  assert.strictEqual((adminSource.match(/await addModelsToFrontierTeams\(/g) || []).length, 5, '所有系统模型自动入口应调用前沿 Team 映射');
+  assert.strictEqual((adminSource.match(/await addModelsToFrontierTeams\(/g) || []).length, 4, '独立模型入口应调用前沿 Team 映射');
+  const syncStart = adminSource.indexOf("router.post('/providers/:id/sync-models'");
+  const syncRoute = adminSource.slice(syncStart, adminSource.indexOf('\n});', syncStart));
+  assert.match(syncRoute, /await addModelsToFrontierTeamsIfEnabled\(client, frontierCandidateIds\)/, '供应商同步必须复用事务连接自动挂载 Team');
+  assert(!syncRoute.includes('await addModelsToFrontierTeams('), '供应商同步不能退回独立提交的全局连接池写入');
 
   assert.strictEqual(await addModelsToFrontierTeams(enabledDb, []), 0);
   assert.ok(!enabledDb.calls.some(call => call.sql.includes('FROM settings')), '历史关闭设置不得阻断前沿 Team 自动启用');

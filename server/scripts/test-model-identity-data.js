@@ -178,7 +178,7 @@ async function testIndependentWrites() {
   const ctx = {
     createModelIdentity,
     loadProvider: async () => ({ format: 'anthropic' }), keyAttempts: () => ['key'],
-    upstreamUrl: () => 'https://mock.invalid/messages', validateUrl: async () => ({ ok: true }),
+    upstreamUrl: () => 'https://mock.invalid/messages', validateUrl: async url => ({ ok: true, url: new URL(url) }),
     systemPrompt: () => '', anthropicTools: () => [], toAnthropicMessages: value => value,
     quotaFetch: mockAgentFetch,
     fetch: mockAgentFetch,
@@ -191,21 +191,42 @@ async function testIndependentWrites() {
   assert.strictEqual(reply.identity.resolved_model, 'route');
   assert.strictEqual(reply.identity.requested_model, null);
   const billingSource = read('utils/agent-billing.js');
+  const billingWrites = [];
+  let released = false;
+  const billingClient = {
+    async query(sql, params) {
+      if (sql.includes('INSERT INTO usage_records')) {
+        billingWrites.push({ sql, params });
+        return { rows: [{ id: 71 }] };
+      }
+      if (sql.startsWith('SELECT')) return { rows: [{ team_id: null }] };
+      if (['BEGIN', 'COMMIT', 'ROLLBACK'].includes(sql) || sql.startsWith('UPDATE usage_records')) return { rows: [] };
+      throw new Error(`Unexpected billing fixture SQL: ${sql}`);
+    },
+    release() { released = true; }
+  };
   const billingContext = {
-    pool: context.pool,
+    pool: { connect: async () => billingClient },
     calculateCost: () => ({ weightedTokens: 12, pointsCost: 0.125 }),
-    calculatePointsToDeduct: context.calculatePointsToDeduct,
     clientMetaFromReq: context.clientMetaFromReq,
-    require: name => name === './quota-request-context'
-      ? { linkUsage: async () => {} }
-      : { deductPoints: async () => {} }
+    logAgentError(error) { throw error; },
+    require: name => {
+      if (name === './quota-request-context') return { linkUsage: async () => {} };
+      if (name === './balance') return { deductPoints: async (_userId, _points, client) => {
+        assert.strictEqual(client, billingClient);
+        return { ok: true, pointsToDeduct: 0.125 };
+      } };
+      throw new Error(`Unexpected billing fixture dependency: ${name}`);
+    }
   };
   vm.createContext(billingContext);
   vm.runInContext(`async ${functionSource(billingSource, 'recordAgentUsage')}`, billingContext);
   failFull = false;
   await billingContext.recordAgentUsage({ userId: 41, modelConfig: { id: 'local' }, requestType: 'agent_manage', promptTokens: 8, completionTokens: 4, identity: identity.snapshot() });
-  assert.deepStrictEqual(Array.from(calls.at(-1).params.slice(-3)), ['client', 'route', 'upstream']);
-  assert.strictEqual(calls.at(-1).params[2], 12);
+  assert.strictEqual(billingWrites.length, 1);
+  assert.deepStrictEqual(Array.from(billingWrites[0].params.slice(-3)), ['client', 'route', 'upstream']);
+  assert.strictEqual(billingWrites[0].params[2], 12);
+  assert.strictEqual(released, true);
   assert(agent.includes('identities.every(item => item?.response_model'));
 }
 

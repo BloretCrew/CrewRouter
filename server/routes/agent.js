@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { pool } = require('../models/database');
+const { claimThread, decideApproval } = require('../utils/agent-state');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { upstreamUrl, validateUrl } = require('../utils/url-validator');
 const { getPrimaryApiKey, buildKeyAttemptOrder } = require('../utils/provider-keys');
@@ -109,10 +110,11 @@ function normalizeMessage(row) {
   };
 }
 
-async function saveThreadMessages(threadId, messages) {
-  const client = await pool.connect();
+async function saveThreadMessages(threadId, messages, transaction) {
+  const client = transaction || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!transaction) await client.query('BEGIN');
+    await client.query('SELECT id FROM agent_threads WHERE id=$1 FOR UPDATE', [threadId]);
     await client.query('DELETE FROM agent_messages WHERE thread_id = $1', [threadId]);
     for (const message of messages) {
       await client.query(
@@ -129,12 +131,12 @@ async function saveThreadMessages(threadId, messages) {
       );
     }
     await client.query('UPDATE agent_threads SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [threadId]);
-    await client.query('COMMIT');
+    if (!transaction) await client.query('COMMIT');
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    if (!transaction) await client.query('ROLLBACK').catch(() => {});
     throw err;
   } finally {
-    client.release();
+    if (!transaction) client.release();
   }
 }
 
@@ -194,7 +196,7 @@ async function callManageModel(model, messages) {
   throw new Error(redactError(lastText) || `上游返回 ${lastStatus}`);
 }
 
-async function continueManage(req, res, { thread, messages, model }) {
+async function continueManage(req, res, { thread, messages, model, claim }) {
   const send = beginSse(res);
   send({ type: 'run.started', payload: { thread_id: thread.id } });
   const usages = [];
@@ -212,49 +214,49 @@ async function continueManage(req, res, { thread, messages, model }) {
       onEvent: async (event) => { send(event); },
       executeRead: (name, args) => executeTool(pool, { name, arguments: args }, { edition: edition || 'personal' })
     });
-    await saveThreadMessages(thread.id, result.messages);
-    if (result.status === 'waiting_approval') {
-      const approval = result.approval;
-      const saved = await pool.query(
-        `INSERT INTO agent_approvals (thread_id, user_id, tool_call_id, tool_name, arguments, status)
-         VALUES ($1, $2, $3, $4, $5::jsonb, 'pending') RETURNING id`,
-        [thread.id, req.session.user.id, approval.tool_call_id, approval.tool_name, JSON.stringify(approval.arguments || {})]
-      );
-      send({
-        type: 'approval.required',
-        payload: {
-          id: approval.tool_call_id,
-          name: approval.tool_name,
-          arguments: approval.arguments,
-          approval_id: saved.rows[0].id
+    let approvalId;
+    const persist = async client => {
+      await saveThreadMessages(thread.id, result.messages, client);
+      if (result.status === 'waiting_approval') {
+        const approval = result.approval;
+        const saved = await client.query(
+          `INSERT INTO agent_approvals (thread_id, user_id, tool_call_id, tool_name, arguments, status)
+           VALUES ($1, $2, $3, $4, $5::jsonb, 'pending') RETURNING id`,
+          [thread.id, req.session.user.id, approval.tool_call_id, approval.tool_name, JSON.stringify(approval.arguments || {})]
+        );
+        approvalId = saved.rows[0].id;
+      }
+    };
+    if (usages.length) {
+      await recordAgentUsage({
+        userId: req.session.user.id, modelConfig: model, requestType: 'agent_manage',
+        attempts: usages.map(usage => usage.quotaAttempt).filter(Boolean),
+        promptTokens: usages.reduce((sum, item) => sum + Number(item.prompt_tokens || 0), 0),
+        completionTokens: usages.reduce((sum, item) => sum + Number(item.completion_tokens || 0), 0),
+        req, persist, transactionClient: claim?.client,
+        identity: {
+          requested_model: normalizeModel(req.body?.model),
+          resolved_model: identities.every(item => item?.resolved_model === identities[0]?.resolved_model) ? identities[0]?.resolved_model : null,
+          response_model: identities.every(item => item?.response_model && item.response_model === identities[0]?.response_model) ? identities[0]?.response_model : null
         }
       });
+    } else {
+      const client = claim?.client || await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await persist(client);
+        await client.query('COMMIT');
+      } catch (error) { await client.query('ROLLBACK').catch(() => {}); throw error; }
+      finally { if (!claim?.client) client.release(); }
+    }
+    // Completion and approval events follow the atomic history/billing commit.
+    if (result.status === 'waiting_approval') {
+      send({ type: 'approval.required', payload: { id: result.approval.tool_call_id,
+        name: result.approval.tool_name, arguments: result.approval.arguments, approval_id: approvalId } });
     } else if (result.status === 'failed') {
       send({ type: 'run.failed', payload: { error: result.error || '管理对话失败' } });
     } else {
       send({ type: 'run.completed', payload: { content: result.content || '' } });
-    }
-    const promptTokens = usages.reduce((sum, item) => sum + Number(item.prompt_tokens || 0), 0);
-    const completionTokens = usages.reduce((sum, item) => sum + Number(item.completion_tokens || 0), 0);
-    if (usages.length) {
-      try {
-        await recordAgentUsage({
-          userId: req.session.user.id,
-          modelConfig: model,
-          requestType: 'agent_manage',
-          attempts: usages.map(usage => usage.quotaAttempt).filter(Boolean),
-          promptTokens,
-          completionTokens,
-          req,
-          identity: {
-            requested_model: normalizeModel(req.body?.model),
-            resolved_model: identities.every(item => item?.resolved_model === identities[0]?.resolved_model) ? identities[0]?.resolved_model : null,
-            response_model: identities.every(item => item?.response_model && item.response_model === identities[0]?.response_model) ? identities[0]?.response_model : null
-          }
-        });
-      } catch (billingErr) {
-        logAgentError('billing', billingErr);
-      }
     }
   } catch (err) {
     logAgentError('manage', err);
@@ -324,24 +326,17 @@ router.post('/images', requireAuth, async (req, res) => {
       mime = decoded.mime || sniffMime(bytes);
       usage = payload?.usage || null;
     }
-    const saved = await insertImage(pool, {
-      userId: req.session.user.id,
-      modelId: model.id,
-      prompt,
-      size: sizeCheck.size,
-      mime,
-      bytes
-    });
-    if (!saved.ok) return res.status(saved.status).json({ error: saved.error });
+    let saved;
     const tokens = imageUsageTokens(usage);
     await recordAgentUsage({
-      userId: req.session.user.id,
-      modelConfig: model,
-      requestType: 'imagine',
-      promptTokens: tokens.promptTokens,
-      completionTokens: tokens.completionTokens,
-      identity: identity.snapshot(),
-      req
+      userId: req.session.user.id, modelConfig: model, requestType: 'imagine',
+      promptTokens: tokens.promptTokens, completionTokens: tokens.completionTokens,
+      identity: identity.snapshot(), req,
+      persist: async client => {
+        saved = await insertImage(client, { userId: req.session.user.id, modelId: model.id,
+          prompt, size: sizeCheck.size, mime, bytes });
+        if (!saved.ok) throw new Error(saved.error);
+      }
     });
     res.json({
       id: saved.id,
@@ -354,6 +349,7 @@ router.post('/images', requireAuth, async (req, res) => {
     });
   } catch (err) {
     logAgentError('images', err);
+    if (err.billingFailure) return res.status(err.status || 500).json({ error: err.message });
     res.status(500).json({ error: '生成图片失败' });
   }
 });
@@ -403,37 +399,43 @@ router.get('/manage/threads', requireAuth, requireAdmin, async (req, res) => {
 });
 
 router.get('/manage/threads/:id', requireAuth, requireAdmin, async (req, res) => {
+  let client;
   try {
-    const thread = await pool.query(
+    client = await pool.connect();
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const thread = await client.query(
       `SELECT id, title, model_id, created_at, updated_at
        FROM agent_threads WHERE id = $1 AND user_id = $2 AND mode = 'manage'`,
       [req.params.id, req.session.user.id]
     );
-    if (!thread.rows[0]) return res.status(404).json({ error: '对话不存在' });
-    const messages = await pool.query(
+    if (!thread.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: '对话不存在' }); }
+    const messages = await client.query(
       `SELECT role, content, tool_calls, tool_call_id, tool_name
        FROM agent_messages WHERE thread_id = $1 ORDER BY id`,
       [req.params.id]
     );
-    const approval = await pool.query(
+    const approval = await client.query(
       `SELECT id, tool_call_id, tool_name, arguments, status
        FROM agent_approvals
        WHERE thread_id = $1 AND user_id = $2 AND status = 'pending'
        ORDER BY id DESC LIMIT 1`,
       [req.params.id, req.session.user.id]
     );
+    await client.query('COMMIT');
     res.json({
       ...thread.rows[0],
       messages: messages.rows.map(normalizeMessage),
       approval: approval.rows[0] || null
     });
   } catch (err) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
     logAgentError('thread', err);
     res.status(500).json({ error: '读取管理对话失败' });
-  }
+  } finally { if (client) client.release(); }
 });
 
 router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
+  let claim;
   try {
     const text = String(req.body?.text || '').trim();
     if (!text) return res.status(400).json({ error: '请输入内容' });
@@ -451,6 +453,8 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
         [threadId, req.session.user.id]
       );
       if (!existing.rows[0]) return res.status(404).json({ error: '对话不存在' });
+      claim = await claimThread(pool, threadId, req.session.user.id);
+      if (!claim) return res.status(409).json({ error: '对话正在处理中，请稍后重试' });
       const pending = await pool.query(
         `SELECT id FROM agent_approvals WHERE thread_id = $1 AND status = 'pending'`,
         [threadId]
@@ -470,17 +474,23 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
         [req.session.user.id, title, model.id]
       );
       threadId = created.rows[0].id;
+      claim = await claimThread(pool, threadId, req.session.user.id);
+      if (!claim) return res.status(409).json({ error: '对话正在处理中，请稍后重试' });
     }
     messages.push({ role: 'user', content: text, tool_calls: null, tool_call_id: null, tool_name: null });
-    await continueManage(req, res, { thread: { id: threadId }, messages, model });
+    await continueManage(req, res, { thread: { id: threadId }, messages, model, claim });
   } catch (err) {
     logAgentError('runs', err);
     if (!res.headersSent) res.status(500).json({ error: '管理对话失败' });
     else if (!res.writableEnded) res.end();
+  } finally {
+    if (claim) try { await claim.release(); } catch (error) { logAgentError('thread claim cleanup', error); }
   }
 });
 
 router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res) => {
+  let claim;
+  let committedApproval;
   try {
     const decision = req.body?.decision === 'allow' ? 'allow' : (req.body?.decision === 'deny' ? 'deny' : '');
     if (!decision) return res.status(400).json({ error: '无效决定' });
@@ -495,22 +505,18 @@ router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res)
     if (!approval) return res.status(404).json({ error: '审批不存在或已处理' });
     const model = await loadUsableModel(req.session.user.id, approval.model_id);
     if (!model) return res.status(404).json({ error: '模型不存在或已禁用' });
-    const stored = await pool.query(
-      `SELECT role, content, tool_calls, tool_call_id, tool_name
-       FROM agent_messages WHERE thread_id = $1 ORDER BY id`,
-      [approval.thread_id]
-    );
-    const messages = stored.rows.map(normalizeMessage);
+    claim = await claimThread(pool, approval.thread_id, req.session.user.id);
+    if (!claim) return res.status(409).json({ error: '对话正在处理中，请稍后重试' });
     const edition = await loadPersistedEdition(pool);
-    const output = await resolveToolDecision(
-      pool,
-      { name: approval.tool_name, arguments: approval.arguments },
-      decision,
-      { edition: edition || 'personal', approved: true }
-    );
+    const applied = await decideApproval(pool, { threadId: approval.thread_id,
+      approvalId: approval.id, userId: req.session.user.id, decision, edition: edition || 'personal', transactionClient: claim.client },
+    (db, call, contextDecision, ctx) => resolveToolDecision(db, call, contextDecision, ctx).then(redactSecrets));
+    if (!applied) return res.status(404).json({ error: '审批不存在或已处理' });
+    committedApproval = { id: approval.id, status: decision === 'allow' ? 'approved' : 'denied' };
+    const output = applied.output;
     if (decision === 'allow' && output && !output.error) {
       const action = approval.tool_name === 'set_provider_enabled' ? ACTIONS.ADMIN_PROVIDER_TOGGLE : ACTIONS.ADMIN_MODEL_UPDATE;
-      await logAction({
+      try { await logAction({
         userId: req.session.user.id,
         username: req.session.user.username,
         isAdmin: true,
@@ -521,24 +527,23 @@ router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res)
         details: redactSecrets(approval.arguments),
         ip: req.ip,
         userAgent: req.get('user-agent')
-      });
+      }); } catch (error) { logAgentError('audit after committed approval', error); }
     }
-    await pool.query(
-      `UPDATE agent_approvals SET status = $1, resolved_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [decision === 'allow' ? 'approved' : 'denied', approval.id]
-    );
-    messages.push({
-      role: 'tool',
-      content: JSON.stringify(redactSecrets(output)),
-      tool_calls: null,
-      tool_call_id: approval.tool_call_id,
-      tool_name: approval.tool_name
-    });
-    await continueManage(req, res, { thread: { id: approval.thread_id }, messages, model });
+    const stored = await pool.query(
+      `SELECT role, content, tool_calls, tool_call_id, tool_name
+       FROM agent_messages WHERE thread_id=$1 ORDER BY id`, [approval.thread_id]);
+    const messages = stored.rows.map(normalizeMessage);
+    await continueManage(req, res, { thread: { id: approval.thread_id }, messages, model, claim });
   } catch (err) {
     logAgentError('approval', err);
+    if (committedApproval && !res.headersSent) {
+      return res.status(503).json({ error: '审批已处理，后续对话暂不可用，请刷新查看审批结果',
+        approval_applied: true, approval_id: committedApproval.id, status: committedApproval.status });
+    }
     if (!res.headersSent) res.status(500).json({ error: '处理审批失败' });
     else if (!res.writableEnded) res.end();
+  } finally {
+    if (claim) try { await claim.release(); } catch (error) { logAgentError('thread claim cleanup', error); }
   }
 });
 

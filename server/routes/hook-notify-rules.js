@@ -69,26 +69,37 @@ router.put('/hook-notify-rules/push-enabled', requireAuth, async (req, res) => {
 router.put('/hook-notify-rules/selection', requireAuth, async (req, res) => {
   try {
     const uid = req.session.user.id;
-    let hs = Array.isArray(req.body?.harnesses) ? req.body.harnesses.filter(h => HARNESS_SET.has(h)) : [];
-    let ets = Array.isArray(req.body?.eventTypes) ? req.body.eventTypes.filter(e => EVENT_TYPE_SET.has(e)) : [];
+    let hs = Array.isArray(req.body?.harnesses) ? [...new Set(req.body.harnesses.filter(h => HARNESS_SET.has(h)))] : [];
+    let ets = Array.isArray(req.body?.eventTypes) ? [...new Set(req.body.eventTypes.filter(e => EVENT_TYPE_SET.has(e)))] : [];
     hs = hs.length ? hs : ['*'];
     ets = ets.length ? ets : ['*'];
 
-    await pool.query('BEGIN');
-    await pool.query('DELETE FROM hook_notify_rules WHERE user_id = $1', [uid]);
-    for (const h of hs) {
-      for (const e of ets) {
-        await pool.query(
-          `INSERT INTO hook_notify_rules (user_id, name, harness, event_type, tool_name_pattern, enabled)
-           VALUES ($1, '', $2, $3, '', TRUE)`,
-          [uid, h, e]
-        );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // A shared parent lock also serializes replacements when no rules exist.
+      const user = await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [uid]);
+      if (!user.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: '用户不存在' });
       }
-    }
-    await pool.query('COMMIT');
-    res.json({ success: true, ruleCount: hs.length * ets.length });
+      await client.query('DELETE FROM hook_notify_rules WHERE user_id = $1', [uid]);
+      for (const h of hs) {
+        for (const e of ets) {
+          await client.query(
+            `INSERT INTO hook_notify_rules (user_id, name, harness, event_type, tool_name_pattern, enabled)
+             VALUES ($1, '', $2, $3, '', TRUE)`,
+            [uid, h, e]
+          );
+        }
+      }
+      await client.query('COMMIT');
+      res.json({ success: true, ruleCount: hs.length * ets.length });
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally { client.release(); }
   } catch (error) {
-    try { await pool.query('ROLLBACK'); } catch (_) {}
     Logger.error('[事件通知] 保存失败:', error);
     res.status(500).json({ error: '保存失败' });
   }
