@@ -73,7 +73,7 @@ Docker 镜像会从容器仓库拉取，无需手动管理程序文件。
 | Docker | **不支持**容器内一键替换；请拉取新镜像后 `docker compose up -d` |
 | 环境变量 | `CR_UPDATE_VERSION_URL` / `CR_UPDATE_PACKAGE_URL` 可覆盖官方地址；`CR_DISABLE_AUTO_UPDATE=1` 禁用应用更新 |
 
-更新需要本机具备 `unzip`、`tar` 命令；失败时会尝试从 `dist/data/updates/backup-*` 回滚。
+更新包必须是 ZIP 格式，并直接包含可定位到 `server.js` 与 `package.json` 的程序目录；不支持 ZIP 内嵌 tar 包。下载上限为 32 MiB，更新 URL 必须是公网 HTTPS 且不能重定向。依赖发生变化时会调用 `npm install`，因此需要 Node.js 20 或更新版本及 npm registry 网络访问；失败时会尝试从 `dist/data/updates/backup-*` 回滚。
 
 ---
 

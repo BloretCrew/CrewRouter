@@ -27,6 +27,15 @@ const SUBSCRIPTION_CACHE_TTL = 5 * 60 * 1000; // 5 分钟缓存
 const affinityRoutes = new Map();
 const AFFINITY_MAX_KEYS = 1000;
 
+function redactSubscriptionUrl(value) {
+  try {
+    const url = new URL(String(value));
+    return `${url.origin}/…`;
+  } catch {
+    return '[invalid URL]';
+  }
+}
+
 function affinityRouteKey(providerId, affinityKey) {
   return `${providerId}:${affinityKey}`;
 }
@@ -80,7 +89,7 @@ async function fetchSubscriptionProxies(subscriptionUrl, providerId) {
   // SSRF 校验
   const urlCheck = await validateUrl(subscriptionUrl);
   if (!urlCheck.ok) {
-    Logger.warn(`[ProxyPool] 订阅地址安全校验失败: ${urlCheck.error} (${subscriptionUrl})`);
+    Logger.warn(`[ProxyPool] 订阅地址安全校验失败: ${urlCheck.error} (${redactSubscriptionUrl(subscriptionUrl)})`);
     return [];
   }
 
@@ -93,48 +102,57 @@ async function fetchSubscriptionProxies(subscriptionUrl, providerId) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const response = await fetch(subscriptionUrl, { signal: controller.signal, redirect: 'manual' });
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      Logger.warn(`[ProxyPool] 订阅地址获取失败: HTTP ${response.status} (${subscriptionUrl})`);
-      // 缓存失败时返回旧缓存（如果有）
-      return cached ? cached.proxies : [];
-    }
-
-    // 限制响应体 1MB
-    const MAX_BYTES = 1024 * 1024;
-    const reader = response.body.getReader();
-    const chunks = [];
-    let totalBytes = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalBytes += value.length;
-      if (totalBytes > MAX_BYTES) {
-        reader.cancel();
-        Logger.warn(`[ProxyPool] 订阅内容过大，已截断 (${subscriptionUrl})`);
-        break;
+    try {
+      const response = await fetch(urlCheck.url.toString(), { signal: controller.signal, redirect: 'manual' });
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
+        Logger.warn(`[ProxyPool] 订阅地址获取失败: HTTP ${response.status} (${redactSubscriptionUrl(subscriptionUrl)})`);
+        return cached ? cached.proxies : [];
       }
-      chunks.push(value);
+
+      // 限制响应体 1MB，并让同一超时覆盖响应头和完整响应体读取。
+      const MAX_BYTES = 1024 * 1024;
+      const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+      if (contentLength > MAX_BYTES) {
+        await response.body?.cancel().catch(() => {});
+        Logger.warn(`[ProxyPool] 订阅内容超过 1 MiB (${redactSubscriptionUrl(subscriptionUrl)})`);
+        return cached ? cached.proxies : [];
+      }
+      if (!response.body) return cached ? cached.proxies : [];
+
+      const reader = response.body.getReader();
+      const chunks = [];
+      let totalBytes = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_BYTES) {
+          await reader.cancel().catch(() => {});
+          Logger.warn(`[ProxyPool] 订阅内容超过 1 MiB (${redactSubscriptionUrl(subscriptionUrl)})`);
+          return cached ? cached.proxies : [];
+        }
+        chunks.push(value);
+      }
+      const text = new TextDecoder().decode(Buffer.concat(chunks));
+
+      const proxies = text.split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#') && l.match(/^(https?|socks[45]?h?):\/\//i))
+        .map(url => ({ id: uuidv4(), url, enabled: true }));
+
+      // 更新缓存
+      subscriptionCache.set(providerId, { proxies, fetchedAt: Date.now() });
+
+      if (proxies.length > 0) {
+        Logger.info(`[ProxyPool] 订阅地址拉取成功: ${proxies.length} 个代理 (${redactSubscriptionUrl(subscriptionUrl)})`);
+      }
+      return proxies;
+    } finally {
+      clearTimeout(timeout);
     }
-    const text = new TextDecoder().decode(Buffer.concat(chunks));
-
-    const proxies = text.split('\n')
-      .map(l => l.trim())
-      .filter(l => l && !l.startsWith('#') && l.match(/^(https?|socks[45]?h?):\/\//i))
-      .map(url => ({ id: uuidv4(), url, enabled: true }));
-
-    // 更新缓存
-    subscriptionCache.set(providerId, { proxies, fetchedAt: Date.now() });
-
-    if (proxies.length > 0) {
-      Logger.info(`[ProxyPool] 订阅地址拉取成功: ${proxies.length} 个代理 (${subscriptionUrl})`);
-    }
-    return proxies;
   } catch (error) {
-    Logger.warn(`[ProxyPool] 订阅地址拉取异常: ${error.message} (${subscriptionUrl})`);
+    Logger.warn(`[ProxyPool] 订阅地址拉取异常: ${error.message} (${redactSubscriptionUrl(subscriptionUrl)})`);
     return cached ? cached.proxies : [];
   }
 }

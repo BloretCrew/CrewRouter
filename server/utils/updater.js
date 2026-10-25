@@ -9,11 +9,16 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 const { promisify } = require('util');
+const { pipeline } = require('stream/promises');
+const { Transform } = require('stream');
 const axios = require('axios');
 const Logger = require('../logger');
 const config = require('../config-loader');
+const { validateUrl } = require('./url-validator');
+const { extractZipSafe } = require('../plugins/zip');
 
 const execFileAsync = promisify(execFile);
+const MAX_UPDATE_ARCHIVE_BYTES = 32 * 1024 * 1024;
 
 const UPDATE_VERSION_URL =
   process.env.CR_UPDATE_VERSION_URL || 'https://crewrouter.bloret.net/api/version';
@@ -252,11 +257,17 @@ async function checkForUpdate() {
   state.reason = runtime.reason;
 
   try {
+    const urlCheck = await validateUrl(UPDATE_VERSION_URL, { allowPrivate: false });
+    if (!urlCheck.ok || urlCheck.url.protocol !== 'https:' || urlCheck.url.username || urlCheck.url.password) {
+      throw new Error(`版本接口 URL 校验失败: ${urlCheck.error || '必须使用无凭据的 HTTPS URL'}`);
+    }
     Logger.info(
       `[update] 请求版本信息: url=${UPDATE_VERSION_URL} local=${runtime.currentVersion}`
     );
-    const resp = await axios.get(UPDATE_VERSION_URL, {
+    const resp = await axios.get(urlCheck.url.toString(), {
       timeout: 12000,
+      maxRedirects: 0,
+      maxContentLength: 1024 * 1024,
       headers: {
         Accept: 'application/json',
         'User-Agent': `CrewRouter-Updater/${runtime.currentVersion}`,
@@ -382,36 +393,6 @@ function findPayloadRoot(extractDir, maxDepth = 5) {
   return null;
 }
 
-function findArchives(dir, maxDepth = 3) {
-  const result = [];
-  const queue = [{ dir, depth: 0 }];
-  while (queue.length) {
-    const { dir: d, depth } = queue.shift();
-    if (depth > maxDepth) continue;
-    let entries;
-    try {
-      entries = fs.readdirSync(d);
-    } catch (_) {
-      continue;
-    }
-    for (const name of entries) {
-      const full = path.join(d, name);
-      let st;
-      try {
-        st = fs.statSync(full);
-      } catch (_) {
-        continue;
-      }
-      if (st.isDirectory()) {
-        queue.push({ dir: full, depth: depth + 1 });
-      } else if (/\.(tar\.gz|tgz)$/i.test(name)) {
-        result.push(full);
-      }
-    }
-  }
-  return result;
-}
-
 async function runCmd(bin, args, opts = {}) {
   Logger.info(`[update] 执行: ${bin} ${args.join(' ')}`);
   try {
@@ -429,7 +410,7 @@ async function runCmd(bin, args, opts = {}) {
     }
   } catch (err) {
     if (err.code === 'ENOENT') {
-      throw new Error(`未找到命令 ${bin}，请安装后重试（如 apt install unzip tar）`);
+      throw new Error(`未找到命令 ${bin}，请确保该命令已安装`);
     }
     const detail = (err.stderr || err.stdout || err.message || '').toString().slice(0, 800);
     throw new Error(`${bin} 失败: ${detail}`);
@@ -439,27 +420,41 @@ async function runCmd(bin, args, opts = {}) {
 async function downloadPackage(destFile) {
   ensureDir(path.dirname(destFile));
   if (fs.existsSync(destFile)) fs.unlinkSync(destFile);
+  const partialFile = `${destFile}.part`;
+  rmrf(partialFile);
+
+  const urlCheck = await validateUrl(UPDATE_PACKAGE_URL, { allowPrivate: false });
+  if (!urlCheck.ok || urlCheck.url.protocol !== 'https:' || urlCheck.url.username || urlCheck.url.password) {
+    throw new Error(`更新包 URL 校验失败: ${urlCheck.error || '必须使用无凭据的 HTTPS URL'}`);
+  }
 
   Logger.info(`[update] 开始下载: ${UPDATE_PACKAGE_URL} → ${destFile}`);
   setState({ phase: 'downloading', message: '正在下载更新包…', progress: 5, error: null });
 
-  const resp = await axios.get(UPDATE_PACKAGE_URL, {
+  const resp = await axios.get(urlCheck.url.toString(), {
     responseType: 'stream',
     timeout: 10 * 60 * 1000,
+    maxRedirects: 0,
+    maxContentLength: MAX_UPDATE_ARCHIVE_BYTES,
     headers: {
       'User-Agent': `CrewRouter-Updater/${state.currentVersion || 'unknown'}`,
     },
-    maxRedirects: 5,
     validateStatus: (s) => s >= 200 && s < 300,
   });
 
   const total = parseInt(resp.headers['content-length'] || '0', 10) || 0;
+  if (total > MAX_UPDATE_ARCHIVE_BYTES) {
+    resp.data.destroy();
+    throw new Error('更新包超过 32 MiB 限制');
+  }
   let received = 0;
-
-  await new Promise((resolve, reject) => {
-    const ws = fs.createWriteStream(destFile);
-    resp.data.on('data', (chunk) => {
+  const limiter = new Transform({
+    transform(chunk, encoding, callback) {
       received += chunk.length;
+      if (received > MAX_UPDATE_ARCHIVE_BYTES) {
+        callback(new Error('更新包超过 32 MiB 限制'));
+        return;
+      }
       if (total > 0) {
         const pct = Math.min(45, 5 + Math.floor((received / total) * 40));
         if (pct !== state.progress) {
@@ -467,17 +462,22 @@ async function downloadPackage(destFile) {
           state.message = `正在下载更新包… ${Math.round((received / total) * 100)}%`;
         }
       }
-    });
-    resp.data.on('error', reject);
-    ws.on('error', reject);
-    ws.on('finish', resolve);
-    resp.data.pipe(ws);
+      callback(null, chunk);
+    },
   });
+  try {
+    await pipeline(resp.data, limiter, fs.createWriteStream(partialFile, { flags: 'wx', mode: 0o600 }));
+  } catch (err) {
+    rmrf(partialFile);
+    throw new Error(`下载更新包失败: ${err.message}`);
+  }
 
-  const stat = fs.statSync(destFile);
+  const stat = fs.statSync(partialFile);
   if (stat.size < 100) {
+    rmrf(partialFile);
     throw new Error(`下载的更新包过小（${stat.size} 字节），可能不是有效文件`);
   }
+  fs.renameSync(partialFile, destFile);
   Logger.success(`[update] 下载完成: size=${stat.size} path=${destFile}`);
   setState({
     phase: 'downloading',
@@ -491,15 +491,7 @@ async function extractPackage(zipPath, extractDir) {
   setState({ phase: 'extracting', message: '正在解压更新包…', progress: 55, error: null });
   rmrf(extractDir);
   ensureDir(extractDir);
-
-  await runCmd('unzip', ['-o', zipPath, '-d', extractDir], { timeout: 180000 });
-
-  // 若 zip 内是 tar.gz，继续展开
-  const archives = findArchives(extractDir);
-  for (const archive of archives) {
-    Logger.info(`[update] 展开归档: ${archive}`);
-    await runCmd('tar', ['-xzf', archive, '-C', extractDir], { timeout: 180000 });
-  }
+  await extractZipSafe(zipPath, extractDir);
 
   const payloadRoot = findPayloadRoot(extractDir);
   if (!payloadRoot) {

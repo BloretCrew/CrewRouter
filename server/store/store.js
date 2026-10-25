@@ -11,6 +11,9 @@ const path = require('path');
 const { getPool } = require('./db');
 const Logger = require('../logger');
 const { validateUrl } = require('../utils/url-validator');
+const { readZipManifest } = require('../plugins/zip');
+
+const MAX_STORE_PLUGIN_ZIP_BYTES = 25 * 1024 * 1024;
 
 // 商店使用中央站点真实连接池（demo 模式下主连接池为 mock，此处直接取真实池）
 const pool = getPool();
@@ -962,26 +965,10 @@ async function clearAllData() {
 // ---------- 插件包信息（供实例拉取 / 商店详情「行为」展示） ----------
 const manifestCache = new Map(); // key -> { at, payload }
 const MANIFEST_CACHE_TTL_MS = 10 * 60 * 1000;
-
-// 从未解压的 zip（临时文件）中读取 plugin.json（防目录穿越，仅允许相对路径）
-function readManifestFromZip(zipPath, pluginId) {
-  const { execFile } = require('child_process');
-  return new Promise((resolve) => {
-    execFile('/usr/bin/unzip', ['-Z1', zipPath], { timeout: 15000 }, (err, stdout) => {
-      if (err) return resolve(null);
-      const entries = String(stdout).split('\n').map((s) => s.trim()).filter(Boolean);
-      let target = null;
-      if (entries.includes('plugin.json')) target = 'plugin.json';
-      else if (entries.includes(`${pluginId}/plugin.json`)) target = `${pluginId}/plugin.json`;
-      else target = entries.find((e) => /(^|\/)plugin\.json$/.test(e) && !e.includes('..') && !path.isAbsolute(e));
-      if (!target) return resolve(null);
-      execFile('/usr/bin/unzip', ['-p', zipPath, target], { timeout: 15000, maxBuffer: 8 * 1024 * 1024 }, (err2, data) => {
-        if (err2) return resolve(null);
-        try { resolve(JSON.parse(data)); } catch { resolve(null); }
-      });
-    });
-  });
-}
+const MANIFEST_FAILURE_CACHE_TTL_MS = 60 * 1000;
+const MAX_PARALLEL_MANIFEST_DOWNLOADS = 2;
+const manifestInflight = new Map();
+let activeManifestDownloads = 0;
 
 // 下载插件 zip（临时）并解析 plugin.json，带 TTL 缓存；只读不落 store 表
 async function fetchPluginManifest(plugin) {
@@ -989,27 +976,59 @@ async function fetchPluginManifest(plugin) {
   if (plugin.status !== 'approved') return null;
   const key = `${plugin.id}|${plugin.version}|${plugin.download}`;
   const hit = manifestCache.get(key);
-  if (hit && Date.now() - hit.at < MANIFEST_CACHE_TTL_MS) return hit.payload;
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-store-mf-'));
-  const zipPath = path.join(tmpDir, 'plugin.zip');
-  try {
-    const check = await validateUrl(String(plugin.download), { allowPrivate: false });
-    if (!check.ok) return null;
+  if (hit && Date.now() - hit.at < hit.ttl) return hit.payload;
+  if (hit) manifestCache.delete(key);
+  if (manifestInflight.has(key)) return manifestInflight.get(key);
+  if (activeManifestDownloads >= MAX_PARALLEL_MANIFEST_DOWNLOADS) return null;
+
+  activeManifestDownloads++;
+  const task = (async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-store-mf-'));
+    const zipPath = path.join(tmpDir, 'plugin.zip');
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 10000);
-    const res = await fetch(plugin.download, { signal: ac.signal, redirect: 'manual' });
-    clearTimeout(timer);
-    if (!res || !res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > 25 * 1024 * 1024) return null;
-    fs.writeFileSync(zipPath, buf);
-    const manifest = await readManifestFromZip(zipPath, plugin.id);
-    if (manifest) manifestCache.set(key, { at: Date.now(), payload: manifest });
+    try {
+      const check = await validateUrl(String(plugin.download), { allowPrivate: false });
+      if (!check.ok || check.url.protocol !== 'https:' || check.url.username || check.url.password) return null;
+      const res = await fetch(check.url.toString(), { signal: ac.signal, redirect: 'manual' });
+      if (!res || !res.ok || !res.body) return null;
+      const contentLength = Number(res.headers.get('content-length'));
+      if (Number.isFinite(contentLength) && contentLength > MAX_STORE_PLUGIN_ZIP_BYTES) {
+        await res.body.cancel().catch(() => {});
+        return null;
+      }
+      const reader = res.body.getReader();
+      const chunks = [];
+      let size = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > MAX_STORE_PLUGIN_ZIP_BYTES) {
+          await reader.cancel().catch(() => {});
+          return null;
+        }
+        chunks.push(Buffer.from(value));
+      }
+      fs.writeFileSync(zipPath, Buffer.concat(chunks, size), { mode: 0o600 });
+      return await readZipManifest(zipPath, plugin.id);
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* 忽略 */ }
+    }
+  })();
+  manifestInflight.set(key, task);
+  try {
+    const manifest = await task;
+    const ttl = manifest ? MANIFEST_CACHE_TTL_MS : MANIFEST_FAILURE_CACHE_TTL_MS;
+    manifestCache.set(key, { at: Date.now(), ttl, payload: manifest });
+    while (manifestCache.size > 256) manifestCache.delete(manifestCache.keys().next().value);
     return manifest;
-  } catch {
-    return null;
   } finally {
-    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* 忽略 */ }
+    activeManifestDownloads--;
+    if (manifestInflight.get(key) === task) manifestInflight.delete(key);
   }
 }
 

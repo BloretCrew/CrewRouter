@@ -8,7 +8,7 @@
 
 - 复盘列出六台受影响主机：`jinan`、`bloret-core`、`detrital-server`、`bloret-oat`、`detrital-cloud`（0.7）和 `bloret-win`。凡仍承载业务的主机都应纳入重建范围。
 - 当前工作区位于 `detrital-server`；CrewRouter 以 root 运行，现有服务进程早于代码补丁启动。
-- PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。当前应用仍与它建立连接，活库一致性查询不能证明操作系统或数据库完整。
+- PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。2026-10-25 09:30–09:52 tailnet 主机在线且 ping 成功，但 TCP 5432 无响应；CrewRouter 持续连接超时，新的只读审计无法连接。尚不能区分 PostgreSQL 停止与远端防火墙丢包，活库一致性查询也不能证明操作系统或数据库完整。
 - 当前主机的 `cr-incident-guard.service` 已阻断已知失陷 Tailscale 节点访问，并限制若干管理端口；它没有封锁公网 CrewRouter/API 端口，也没有隔离数据库出站连接。
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
 - 截至本次审计，指定路径只找到 2026-08-29 的 API Key SQL 文件，没有找到可证明事件前后完整性的 CrewRouter 全库备份。先确认外部/离线备份，再决定恢复或数据抢救路径。
@@ -65,6 +65,7 @@
 - 从可信 Git 源检出已审查提交；将本次 ZIP 校验与后端插件默认拒绝代码一起纳入新构建。构建机和制品需记录提交号与哈希。
 - 不复制旧主机的 `config.json`、插件目录、`node_modules`、systemd 单元、cron/timer、SSH 配置或二进制。逐项重建配置并使用新凭据。
 - 初始部署关闭所有插件，保持 `CR_TRUST_IN_PROCESS_PLUGINS` 未设置；需要插件时逐个审查源码和权限。
+- 使用 Node.js 20 或更新版本安装依赖；当前锁文件的 `npm audit` 没有已知漏洞，但这不替代可信构建与制品校验。
 - 先在隔离环境完成登录/2FA、供应商访问、数据库迁移、备份恢复、日志转发和出站限制验证，再由上游防火墙分阶段切入流量。
 - 旧主机和原始磁盘在完成取证前保持隔离，只能在明确的回滚/取证窗口中访问；不能将旧应用进程直接作为回滚方案。
 

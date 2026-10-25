@@ -62,7 +62,7 @@ cd "$RELEASE_DIR"
 tar czf "crewrouter-direct-v${VERSION}.tar.gz" crewrouter-direct/
 success "crewrouter-direct-v${VERSION}.tar.gz ($(du -h "crewrouter-direct-v${VERSION}.tar.gz" | cut -f1))"
 
-# 生成自动更新包 updates/latest.zip（官方站可托管；客户端兼容 zip 内嵌 tar.gz）
+# 生成自动更新包 updates/latest.zip（客户端要求 ZIP 内直接包含程序目录）
 info "生成 updates/latest.zip（自动更新用）..."
 UPDATES_DIR="$ROOT/updates"
 mkdir -p "$UPDATES_DIR"
@@ -72,8 +72,7 @@ rm -f "$UPDATES_DIR/latest.zip"
   cd "$RELEASE_DIR"
   zip -qr "$UPDATES_DIR/latest.zip" crewrouter-direct
 )
-# 同时放入 tar.gz，兼容仅提供归档的旧流程
-# （若已有目录树，zip 内再塞 tar.gz 非必须；此处额外复制一份到 release 便于分发）
+# 在 updates/ 目录额外保留 tar.gz 供手动分发；自动更新 ZIP 不包含嵌套归档。
 cp "$RELEASE_DIR/crewrouter-direct-v${VERSION}.tar.gz" "$UPDATES_DIR/crewrouter-direct-v${VERSION}.tar.gz" 2>/dev/null || true
 success "updates/latest.zip ($(du -h "$UPDATES_DIR/latest.zip" | cut -f1))"
 

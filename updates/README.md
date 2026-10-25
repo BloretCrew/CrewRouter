@@ -27,4 +27,4 @@ crewrouter-direct/dist/package.json
 crewrouter-direct/dist/public/
 ```
 
-亦兼容 zip 内嵌 `*.tar.gz` 的旧格式。
+ZIP 更新包最大 32 MiB，必须直接包含上述程序目录；不支持嵌套 `*.tar.gz`。更新程序会拒绝重定向，并要求更新 URL 为公网 HTTPS 地址。

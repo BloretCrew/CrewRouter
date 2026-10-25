@@ -14,6 +14,7 @@ const MAX_ARCHIVE_BYTES = 32 * 1024 * 1024;
 const MAX_ENTRIES = 1000;
 const MAX_ENTRY_BYTES = 40 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024;
+const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_PATH_BYTES = 1024;
 const MAX_PATH_DEPTH = 32;
 const MAX_EXTRACTED_ENTRIES = 5000;
@@ -253,6 +254,32 @@ function inflateRawBounded(data, maxOutputLength) {
   });
 }
 
+async function readZipEntryData(archive, entry, maxBytes = MAX_ENTRY_BYTES) {
+  if (!entry || entry.isDirectory || entry.size > maxBytes) throw new Error('zip 文件超过读取大小限制');
+  const compressedData = archive.subarray(entry.dataStart, entry.dataEnd);
+  const data = entry.method === 0
+    ? compressedData
+    : await inflateRawBounded(compressedData, Math.max(1, entry.size + 1));
+  if (data.length !== entry.size || crc32(data) !== entry.crc32) {
+    throw new Error(`zip 文件数据校验失败: ${entry.name}`);
+  }
+  return data;
+}
+
+async function readZipManifest(zipPath, pluginId) {
+  try {
+    const { archive, entries } = readZipDirectory(zipPath);
+    const target = entries.find(entry => entry.name === 'plugin.json' && !entry.isDirectory)
+      || entries.find(entry => entry.name === `${pluginId}/plugin.json` && !entry.isDirectory)
+      || entries.find(entry => /(^|\/)plugin\.json$/.test(entry.name) && !entry.isDirectory);
+    if (!target) return null;
+    const data = await readZipEntryData(archive, target, MAX_MANIFEST_BYTES);
+    return JSON.parse(UTF8_DECODER.decode(data));
+  } catch {
+    return null;
+  }
+}
+
 function inspectExtractedTree(rootDir, expectedEntries) {
   const rootStat = fs.lstatSync(rootDir);
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error('解压目标必须是普通目录');
@@ -315,13 +342,7 @@ async function extractZipSafe(zipPath, destDir) {
 
     const parent = path.dirname(target);
     fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
-    const compressedData = archive.subarray(entry.dataStart, entry.dataEnd);
-    const data = entry.method === 0
-      ? compressedData
-      : await inflateRawBounded(compressedData, Math.max(1, entry.size + 1));
-    if (data.length !== entry.size || crc32(data) !== entry.crc32) {
-      throw new Error(`zip 文件数据校验失败: ${entry.name}`);
-    }
+    const data = await readZipEntryData(archive, entry);
     fs.writeFileSync(target, data, { flag: 'wx', mode: 0o644 });
   }
 
@@ -385,4 +406,4 @@ function collectDirEntries(dir) {
   return out;
 }
 
-module.exports = { extractZipSafe, findZipManifest, zipPayloadDir, collectDirEntries };
+module.exports = { extractZipSafe, readZipManifest, findZipManifest, zipPayloadDir, collectDirEntries };

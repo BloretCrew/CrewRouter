@@ -3348,51 +3348,55 @@ router.post('/fetch-proxies-url', requireAuth, requireProviderManager, async (re
       return res.status(400).json({ error: '请提供代理列表 URL' });
     }
 
-    // SSRF 防护：校验 URL（管理员允许内网地址）
-    const urlCheck = await validateUrl(url, { allowPrivate: true });
+    // SSRF 防护：代理列表必须从公网地址获取，禁止访问内网、元数据和 tailnet。
+    const urlCheck = await validateUrl(url, { allowPrivate: false });
     if (!urlCheck.ok) {
       return res.status(400).json({ error: `URL 校验失败: ${urlCheck.error}` });
     }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-
-    const response = await fetch(url, { signal: controller.signal, redirect: 'manual' });
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      return res.status(502).json({ error: '获取失败: HTTP ' + response.status });
-    }
-
-    // 限制响应体最大 1MB，防止读入过大内容导致内存/性能问题
-    const MAX_BODY_BYTES = 1024 * 1024;
-    const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
-    if (contentLength > MAX_BODY_BYTES) {
-      return res.status(413).json({ error: `文件过大 (${(contentLength / 1024 / 1024).toFixed(1)}MB)，最大支持 1MB` });
-    }
-
-    const reader = response.body.getReader();
-    const chunks = [];
-    let totalBytes = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalBytes += value.length;
-      if (totalBytes > MAX_BODY_BYTES) {
-        reader.cancel();
-        return res.status(413).json({ error: '文件过大，最大支持 1MB' });
+    try {
+      const response = await fetch(urlCheck.url.toString(), { signal: controller.signal, redirect: 'manual' });
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
+        return res.status(502).json({ error: '获取失败: HTTP ' + response.status });
       }
-      chunks.push(value);
+
+      // 限制响应体最大 1MB，防止读入过大内容导致内存/性能问题
+      const MAX_BODY_BYTES = 1024 * 1024;
+      const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+      if (contentLength > MAX_BODY_BYTES) {
+        await response.body?.cancel().catch(() => {});
+        return res.status(413).json({ error: `文件过大 (${(contentLength / 1024 / 1024).toFixed(1)}MB)，最大支持 1MB` });
+      }
+
+      if (!response.body) return res.status(502).json({ error: '获取失败: 响应体为空' });
+      const reader = response.body.getReader();
+      const chunks = [];
+      let totalBytes = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_BODY_BYTES) {
+          await reader.cancel().catch(() => {});
+          return res.status(413).json({ error: '文件过大，最大支持 1MB' });
+        }
+        chunks.push(value);
+      }
+      const text = new TextDecoder().decode(Buffer.concat(chunks));
+
+      const MAX_PROXIES = 5000;
+      const proxies = text.split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#') && l.match(/^(https?|socks[45]?h?):\/\//i))
+        .slice(0, MAX_PROXIES);
+
+      res.json({ success: true, proxies, count: proxies.length });
+    } finally {
+      clearTimeout(timeout);
     }
-    const text = new TextDecoder().decode(Buffer.concat(chunks));
-
-    const MAX_PROXIES = 5000;
-    const proxies = text.split('\n')
-      .map(l => l.trim())
-      .filter(l => l && !l.startsWith('#') && l.match(/^(https?|socks[45]?h?):\/\//i))
-      .slice(0, MAX_PROXIES);
-
-    res.json({ success: true, proxies, count: proxies.length });
   } catch (error) {
     Logger.error('[ProxyPool] 获取代理列表失败:', error);
     res.status(500).json({ error: '获取失败: ' + error.message });
