@@ -17,6 +17,7 @@
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
 - 截至本次审计，指定路径只找到 2026-08-29 的 API Key SQL 文件，没有找到可证明事件前后完整性的 CrewRouter 全库备份。先确认外部/离线备份，再决定恢复或数据抢救路径。
 - 当前主机 `/var/lib/pgsql/data` 是约 90 MiB、已关闭的 PostgreSQL 18 集群；CrewRouter 配置指向 `bloret-core`，本机备份目录为空，不能把该集群当作 CrewRouter 恢复源。本轮没有启动本地数据库。
+- 2026-10-25 10:55 CST：Tailscale ping 到 `bloret-core` 成功，但 PostgreSQL `5432` 仍无响应；本机没有额外挂载数据盘，也未发现主机级 PostgreSQL/CrewRouter 定时备份。`/root/.cc-switch/backups/backup_20260606_060844.sql` 是 CC Switch SQLite 导出，与 CrewRouter 无关。该结论只涵盖本机已检查路径，不代表其他主机或异机存储没有备份。
 
 ## 按顺序执行
 
