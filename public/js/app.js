@@ -9619,13 +9619,19 @@ ${extractorBody}
     this.libraryProviderFilter = keepValue;
     for (const select of [providerSelect, stickyProviderSelect]) {
       if (!select) continue;
-      setHTML(select, optionsHtml);
+      setHTML(select, this._mlOptionsFor(select, optionsHtml));
       select.value = keepValue;
     }
 
     // 填充系列筛选器（主栏 + 悬浮栏，优先用服务端 available_series）
     this._renderSeriesFilter(seriesSelect, series);
     this._renderSeriesFilter(document.getElementById('libraryStickySeriesFilter'), series);
+  }
+
+  // 悬浮栏用 blora-select，主栏仍是原生 select：按目标元素输出对应的选项标签
+  _mlOptionsFor(select, html) {
+    if (!select || select.tagName !== 'BLORA-SELECT') return html;
+    return html.replace(/<option /g, '<blora-option ').replace(/<\/option>/g, '</blora-option>');
   }
 
   _populateProviderTagFilter() {
@@ -9639,7 +9645,7 @@ ${extractorBody}
     for (const id of ['libraryProviderTagFilter', 'libraryStickyProviderTagFilter']) {
       const tagSelect = document.getElementById(id);
       if (!tagSelect) continue;
-      setHTML(tagSelect, optionsHtml);
+      setHTML(tagSelect, this._mlOptionsFor(tagSelect, optionsHtml));
       tagSelect.value = keepValue;
     }
   }
@@ -9648,8 +9654,8 @@ ${extractorBody}
   _renderSeriesFilter(seriesSelect, seriesSet) {
     if (!seriesSelect) return;
     const prev = this.librarySeriesFilter;
-    setHTML(seriesSelect, '<option value="all">' + t('全部系列') + '</option>' +
-      [...seriesSet].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join(''));
+    setHTML(seriesSelect, this._mlOptionsFor(seriesSelect, '<option value="all">' + t('全部系列') + '</option>' +
+      [...seriesSet].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')));
     if ([...seriesSet].includes(prev) || prev === 'all') {
       seriesSelect.value = prev;
     } else {
@@ -12617,6 +12623,8 @@ ${extractorBody}
 
   _onLibrarySearchInput(value, source) {
     this.librarySearch = value;
+    // 在悬浮栏里搜索时，结果变少页面变短也要让悬浮栏留着，才能在里面清空
+    this._libraryStickySearchActive = source === 'sticky' && !!value;
     const mainInput = document.getElementById('librarySearchInput');
     const stickyInput = document.getElementById('libraryStickySearchInput');
     if (source !== 'main' && mainInput && mainInput.value !== value) mainInput.value = value;
@@ -12679,6 +12687,15 @@ ${extractorBody}
 
     if (!this._libraryStickyEventsBound) {
       this._libraryStickyEventsBound = true;
+      // 焦点离开悬浮栏且搜索为空时，回到按滚动位置判断显隐
+      document.getElementById('modelLibraryStickyBar')?.addEventListener('focusout', () => {
+        setTimeout(() => this._resyncLibraryStickyByScroll(), 0);
+      });
+      window.addEventListener('scroll', () => {
+        if (!this._libraryStickySearchActive) return;
+        const bar = document.getElementById('modelLibraryStickyBar');
+        if (bar && !bar.contains(document.activeElement) && !this.librarySearch) this._resyncLibraryStickyByScroll();
+      }, { passive: true });
       document.getElementById('libraryStickySearchInput')?.addEventListener('input', (e) => {
         this._onLibrarySearchInput(e.target.value, 'sticky');
       });
@@ -12729,13 +12746,33 @@ ${extractorBody}
   _syncLibraryStickyVisibility(visible) {
     const bar = document.getElementById('modelLibraryStickyBar');
     if (!bar) return;
-    const shouldShow = !!visible && this.currentPage === 'modelLibrary';
+    const onLibrary = this.currentPage === 'modelLibrary';
+    const keep = bar.contains(document.activeElement) || this._libraryStickySearchActive;
+    const shouldShow = onLibrary && (!!visible || (keep && !bar.hidden));
+    if (shouldShow) this._positionLibraryStickyBar(bar);
     const wasVisible = bar.classList.contains('is-visible');
     if (shouldShow === wasVisible) return;
     bar.classList.toggle('is-visible', shouldShow);
     bar.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
     bar.hidden = !shouldShow;
     if (!shouldShow) this.closeLibraryStickyKeyMenu();
+  }
+
+  _resyncLibraryStickyByScroll() {
+    const bar = document.getElementById('modelLibraryStickyBar');
+    const sentinel = document.getElementById('modelLibraryStickySentinel');
+    if (!bar || !sentinel || bar.contains(document.activeElement)) return;
+    if (!this.librarySearch) this._libraryStickySearchActive = false;
+    this._syncLibraryStickyVisibility(this._isStickySentinelPastTop(sentinel));
+  }
+
+  // 悬浮栏对齐内容区（侧栏宽度会随折叠/响应式变化，不写死）
+  _positionLibraryStickyBar(bar) {
+    const page = document.getElementById('modelLibraryPage');
+    if (!page) return;
+    const r = page.getBoundingClientRect();
+    bar.style.setProperty('--ml-sticky-left', `${r.left}px`);
+    bar.style.setProperty('--ml-sticky-width', `${r.width}px`);
   }
 
   _syncLibraryStickyControlsFromState() {
@@ -12801,14 +12838,14 @@ ${extractorBody}
     btn.title = tip;
     btn.onclick = (e) => this.toggleLibraryStickyKeyOrBubble(e);
     setHTML(btn, `
-      <span class="sticky-key-name">${keyName}</span>
+      <span class="ml-sticky-key-name">${keyName}</span>
       ${bindTarget !== 'default'
-        ? `<span class="sticky-key-harness-capsule">${this._harnessIconHtml(bindTarget, 12)} ${escapeHtml(this._harnessLabel(bindTarget))}</span>`
+        ? `<span class="blora-tag" data-variant="info">${this._harnessIconHtml(bindTarget, 12)} ${escapeHtml(this._harnessLabel(bindTarget))}</span>`
         : ''}
       ${modelName
-        ? `<span class="sticky-key-model-capsule">${escapeHtml(modelName)}</span>`
-        : `<span class="sticky-key-model-unset">${t('未绑定')}</span>`}
-      ${this._libIcon('chevron.down', 12, 'sticky-key-chevron')}
+        ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(modelName)}</span>`
+        : `<span class="blora-tag" data-variant="warning">${t('未绑定')}</span>`}
+      ${this._libIcon('chevron.down', 12, 'ml-sticky-key-chevron')}
     `);
   }
 

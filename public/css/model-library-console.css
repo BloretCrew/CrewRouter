@@ -1,0 +1,65 @@
+/* 控制台模型库（Blora Design 2.1）：仅作用于 #modelLibraryPage，只用 --blora-* 令牌 */
+
+/* 第 1 步：滚动后吸顶筛选栏 */
+#modelLibraryPage .model-library-sticky-bar {
+  /* 窗口滚动、祖先有 overflow，position: sticky 不生效；用 fixed 悬浮卡片，位置由 JS 按内容区写入 */
+  position: fixed;
+  top: var(--blora-space-3);
+  left: var(--ml-sticky-left);
+  width: var(--ml-sticky-width);
+  z-index: 45;
+  box-sizing: border-box;
+  padding: var(--blora-space-3) var(--blora-space-4);
+  background: var(--blora-color-surface-raised);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-1);
+}
+#modelLibraryPage .model-library-sticky-bar[hidden] { display: none; }
+#modelLibraryPage .model-library-sticky-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+}
+#modelLibraryPage .model-library-sticky-select,
+#modelLibraryPage #libraryProviderFilter { inline-size: 120px; flex: none; }
+#modelLibraryPage .model-library-sticky-search,
+#modelLibraryPage #librarySearchInput { flex: 0 1 260px; }
+#modelLibraryPage .model-library-sticky-more-btn { margin-left: auto; }
+#modelLibraryPage .model-library-sticky-more-btn,
+#modelLibraryPage .model-library-sticky-key,
+#modelLibraryPage #libraryMoreFiltersBtn { min-height: var(--blora-control-height); }
+#modelLibraryPage .model-library-sticky-advanced {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
+  margin-top: var(--blora-space-2);
+}
+#modelLibraryPage .model-library-sticky-more-btn,
+#modelLibraryPage .model-library-sticky-key-wrap { flex: none; }
+#modelLibraryPage .model-library-sticky-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  white-space: nowrap;
+}
+#modelLibraryPage .ml-sticky-key-chevron { inline-size: 1em; block-size: 1em; }
+
+/* 不吸顶时：同一套控件、同样排法，无背景无阴影 */
+#modelLibraryPage .ml-model-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  margin-block-end: var(--blora-space-4);
+}
+#modelLibraryPage #libraryMoreFiltersBtn { margin-inline-start: auto; }
+#modelLibraryPage .ml-model-filter-advanced {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
+  flex-basis: 100%;
+}
+
+@media (max-width: 768px) {
+  #modelLibraryPage .model-library-sticky-bar { padding: var(--blora-space-2) var(--blora-space-3); }
+}
