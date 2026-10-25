@@ -2175,10 +2175,12 @@ router.post('/providers/cpa/accounts', requireAuth, requireProviderManager, asyn
 });
 
 // 创建/更新供应商
-router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {
+router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
+  (req) => req.body?.id ? ACTIONS.ADMIN_PROVIDER_UPDATE : ACTIONS.ADMIN_PROVIDER_CREATE,
+  {
   resourceType: 'provider',
-  resourceIdFrom: (req, res) => res._logBody?.id,
-  descriptionFrom: (req) => `创建供应商「${req.body?.name || '-'}」`,
+  resourceIdFrom: (req, res) => res._logBody?.id || req.body?.id || null,
+  descriptionFrom: (req) => `${req.body?.id ? '更新' : '创建'}供应商「${req.body?.name || '-'}」`,
 }), async (req, res) => {
   const { id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
           key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
@@ -2331,6 +2333,7 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(A
     // 注册/更新密钥刷新计划
     keyRefresher.registerProvider({ id: providerId, key_mode: keyMode, key_refresh_interval: keyRefreshInterval });
 
+    res._logBody = { id: providerId };
     res.json({ success: true, id: providerId });
   } catch (error) {
     Logger.error('[创建/更新供应商] 错误:', error);
@@ -2655,9 +2658,12 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
     for (const url of candidates) {
       const start = Date.now();
       try {
+        const urlCheck = await validateUrl(url);
+        if (!urlCheck.ok) continue;
         const resp = await fetch(url, {
           headers,
-          signal: AbortSignal.timeout(5000)
+          signal: AbortSignal.timeout(5000),
+          redirect: 'manual'
         });
         const latency = Date.now() - start;
         if (resp.ok) {
@@ -2675,10 +2681,14 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
     // 所有候选都失败，用 base_url 做 TCP 连通性测试
     const start = Date.now();
     try {
+      const urlCheck = await validateUrl(baseUrl);
+      if (!urlCheck.ok) {
+        return res.json({ ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` });
+      }
       const resp = await fetch(baseUrl, {
         headers,
         signal: AbortSignal.timeout(5000),
-        redirect: 'follow'
+        redirect: 'manual'
       });
       const latency = Date.now() - start;
       return res.json({ ok: true, latency_ms: latency, url: baseUrl, note: `HTTP ${resp.status}` });
@@ -2745,7 +2755,8 @@ async function fetchUpstreamModelsForProvider(provider) {
     try {
       const response = await fetch(modelsUrl, {
         headers,
-        signal: AbortSignal.timeout(15000)
+        signal: AbortSignal.timeout(15000),
+        redirect: 'manual'
       });
       attempt.status = response.status;
       attempt.contentType = response.headers.get('content-type') || '';
@@ -3346,7 +3357,7 @@ router.post('/fetch-proxies-url', requireAuth, requireProviderManager, async (re
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetch(url, { signal: controller.signal, redirect: 'manual' });
     clearTimeout(timeout);
 
     if (!response.ok) {
@@ -3971,6 +3982,11 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
       if (!baseUrl || !apiKey) {
         return res.status(400).json({ error: 'Claude Code 配置缺少 ANTHROPIC_BASE_URL 或 ANTHROPIC_AUTH_TOKEN' });
       }
+      const modelsUrl = upstreamUrl(baseUrl, '/models');
+      const urlCheck = await validateUrl(modelsUrl);
+      if (!urlCheck.ok) {
+        return res.status(400).json({ error: `供应商 URL 校验失败: ${urlCheck.error}` });
+      }
 
       const existing = await pool.query('SELECT id FROM providers WHERE id = $1', [effectiveProviderId]);
       await pool.query(`
@@ -3983,9 +3999,10 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
 
       // 尝试获取模型列表
       try {
-        const modelsUrl = upstreamUrl(baseUrl, '/models');
         const modelsRes = await fetch(modelsUrl, {
-          headers: { 'Authorization': `Bearer ${apiKey}` }
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(15000),
+          redirect: 'manual'
         });
         if (modelsRes.ok) {
           const modelsData = await modelsRes.json();
@@ -4268,7 +4285,8 @@ async function tryAiRequest(bodyBuilder, { stream = false, excludeProviderId = n
         method: 'POST',
         headers,
         body: JSON.stringify(reqBody),
-        signal: AbortSignal.timeout(TIMEOUT_MS)
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        redirect: 'manual'
       });
       if (res.ok) {
         Logger.info(`[AI调用] 成功: provider=${provider.id}, model=${model}`);

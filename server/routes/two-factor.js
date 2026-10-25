@@ -182,12 +182,16 @@ router.post('/disable', requireAuth, async (req, res) => {
 });
 
 // 验证 2FA（用于登录流程）
-router.post('/verify', async (req, res) => {
+router.post('/verify', requireAuth, async (req, res) => {
   try {
     const { tempToken, code } = req.body;
 
     if (!tempToken || !code) {
       return res.status(400).json({ error: '缺少必要参数' });
+    }
+    // 此接口只验证已登录用户自己的设置；登录须走密码绑定的 /auth/login/2fa。
+    if (String(tempToken) !== String(req.session.user.id)) {
+      return res.status(403).json({ error: '无权验证其他用户' });
     }
 
     // 查找临时 token 对应的用户

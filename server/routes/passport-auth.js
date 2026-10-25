@@ -54,6 +54,7 @@ async function verifyPassport(code) {
       method: 'POST', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ app_id: passport.appId, app_secret: passport.appSecret, code }),
+      redirect: 'manual',
     });
     const text = await response.text();
     let data;

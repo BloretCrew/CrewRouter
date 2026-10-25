@@ -8,7 +8,7 @@
  * ctx 提供：
  *   - baseUrl, providerId, providerName
  *   - currentKey（当前缓存的密钥）
- *   - fetch（全局 fetch，仅在沙箱中安全注入）
+ *   - fetch（受控代理：公网 URL、无自动重定向、有限超时和响应体）
  *
  * 注意：出于安全考虑，不支持 require/module.exports 格式的脚本。
  * 需要使用 async function(ctx) { ... } 格式。
@@ -18,6 +18,75 @@ const Logger = require('./logger');
 const { pool } = require('./models/database');
 const { safeExecuteKeyScript } = require('./utils/sandbox');
 const { encryptSecret, decryptSecret } = require('./utils/secret-crypto');
+const { validateUrl } = require('./utils/url-validator');
+
+const KEY_SCRIPT_FETCH_TIMEOUT_MS = 8000;
+const KEY_SCRIPT_FETCH_MAX_BYTES = 1024 * 1024;
+
+/** Broker script fetches without exposing a host Response, Promise, or function. */
+function keyScriptFetch(url, initJson, callback) {
+  const finish = (error, responseJson) => {
+    try { callback(error ? String(error.message || error) : null, responseJson || ''); } catch (_) { /* sandbox may have timed out */ }
+  };
+  (async () => {
+    const check = await validateUrl(String(url), { allowPrivate: false });
+    if (!check.ok) throw new Error(`fetch URL 校验失败: ${check.error}`);
+
+    const init = JSON.parse(String(initJson || '{}'));
+    if (!init || typeof init !== 'object' || Array.isArray(init)) throw new Error('fetch options 格式无效');
+    const method = String(init.method || 'GET').toUpperCase();
+    if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'].includes(method)) {
+      throw new Error('fetch method 不受支持');
+    }
+    const headers = {};
+    const headerEntries = Array.isArray(init.headers) ? init.headers : Object.entries(init.headers || {});
+    if (headerEntries.length > 100) throw new Error('fetch headers 数量超限');
+    for (const entry of headerEntries) {
+      if (!Array.isArray(entry) || entry.length < 2) throw new Error('fetch headers 格式无效');
+      const [name, value] = entry;
+      if (typeof name !== 'string' || typeof value !== 'string') throw new Error('fetch headers 仅支持字符串');
+      headers[name] = value;
+    }
+    let body;
+    if (init.body !== undefined && init.body !== null) {
+      if (!['string', 'number', 'boolean'].includes(typeof init.body)) throw new Error('fetch body 必须是字符串或基础类型');
+      body = String(init.body);
+      if (Buffer.byteLength(body, 'utf8') > KEY_SCRIPT_FETCH_MAX_BYTES) throw new Error('fetch body 超过大小限制');
+    }
+
+    const response = await fetch(check.url.toString(), {
+      method,
+      headers,
+      ...(body === undefined ? {} : { body }),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(KEY_SCRIPT_FETCH_TIMEOUT_MS),
+    });
+    const reader = response.body?.getReader();
+    const chunks = [];
+    let size = 0;
+    if (reader) {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > KEY_SCRIPT_FETCH_MAX_BYTES) {
+          await reader.cancel();
+          throw new Error('fetch response 超过大小限制');
+        }
+        chunks.push(Buffer.from(value));
+      }
+    }
+    const payload = {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: Buffer.concat(chunks).toString('utf8'),
+    };
+    finish(null, JSON.stringify(payload));
+  })().catch(finish);
+}
 
 /**
  * 从语法错误信息中提取出错行号，并展示对应代码片段
@@ -85,7 +154,9 @@ async function executeKeyScript(provider) {
     providerId: provider.id,
     providerName: provider.name || '',
     currentKey: provider.api_key || '',
-    fetch: async (...args) => fetch(...args),
+    // safeEval wraps this broker in a VM-native function and serializes all
+    // request/response data. The host fetch function never enters the VM.
+    fetch: keyScriptFetch,
   };
 
   let result;

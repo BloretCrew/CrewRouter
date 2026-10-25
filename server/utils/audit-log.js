@@ -168,7 +168,7 @@ async function logAction({
  * @param {string} action        操作类型（见 ACTIONS）
  * @param {object} [opts]
  * @param {string} [opts.resourceType]  资源类型
- * @param {function} [opts.resourceIdFrom]  (req) => resourceId
+ * @param {function} [opts.resourceIdFrom]  (req, res) => resourceId
  * @param {function} [opts.descriptionFrom] (req, res) => description
  * @param {function} [opts.detailsFrom]     (req, res) => details
  * @param {boolean} [opts.onlySuccess]      仅记录 2xx（默认 true）
@@ -196,9 +196,9 @@ function auditMiddleware(action, opts = {}) {
         userId: user?.id || null,
         username: user?.username || (req.ip || '匿名'),
         isAdmin: !!user?.isAdmin,
-        action,
+        action: typeof action === 'function' ? (safeCall(action, req, res) || 'unknown') : action,
         resourceType,
-        resourceId: resourceIdFrom ? safeCall(resourceIdFrom, req) : null,
+        resourceId: resourceIdFrom ? safeCall(resourceIdFrom, req, res) : null,
         description: descriptionFrom ? safeCall(descriptionFrom, req, res) : '',
         details,
         ip: req.ip,

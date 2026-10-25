@@ -141,7 +141,7 @@ function buildFetch(pluginId) {
     if (!check.ok) {
       throw new Error(`[plugins:${pluginId}] fetch 目标被 SSRF 校验拒绝: ${check.error}`);
     }
-    const opts = { ...options, signal: AbortSignal.timeout(PLUGIN_FETCH_TIMEOUT_MS) };
+    const opts = { ...options, redirect: 'manual', signal: AbortSignal.timeout(PLUGIN_FETCH_TIMEOUT_MS) };
     return fetch(url, opts);
   };
 }
@@ -343,7 +343,7 @@ function buildContext(plugin, hooksBus, logPrefix) {
             const check = await validateUrl(w.url, { allowPrivate: false });
             if (check.ok) {
               await Promise.race([
-                fetch(w.url, { ...opts, signal: AbortSignal.timeout(10000) }),
+                fetch(w.url, { ...opts, redirect: 'manual', signal: AbortSignal.timeout(10000) }),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('webhook 超时')), 10000)),
               ]);
             }

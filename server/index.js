@@ -1456,7 +1456,9 @@ async function ensureReservedResources() {
     // 为现有用户补建个人账户 Team
     const usersWithoutTeam = await pool.query(`
       SELECT u.id, u.username FROM users u
-      WHERE NOT EXISTS (
+      WHERE u.team_id IS NULL
+        AND NOT EXISTS (SELECT 1 FROM user_teams assigned WHERE assigned.user_id = u.id)
+        AND NOT EXISTS (
         SELECT 1 FROM user_teams ut JOIN teams t ON ut.team_id = t.id
         WHERE ut.user_id = u.id AND t.is_personal = TRUE
       )

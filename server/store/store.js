@@ -10,6 +10,7 @@ const os = require('os');
 const path = require('path');
 const { getPool } = require('./db');
 const Logger = require('../logger');
+const { validateUrl } = require('../utils/url-validator');
 
 // 商店使用中央站点真实连接池（demo 模式下主连接池为 mock，此处直接取真实池）
 const pool = getPool();
@@ -992,9 +993,11 @@ async function fetchPluginManifest(plugin) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-store-mf-'));
   const zipPath = path.join(tmpDir, 'plugin.zip');
   try {
+    const check = await validateUrl(String(plugin.download), { allowPrivate: false });
+    if (!check.ok) return null;
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 10000);
-    const res = await fetch(plugin.download, { signal: ac.signal, redirect: 'follow' });
+    const res = await fetch(plugin.download, { signal: ac.signal, redirect: 'manual' });
     clearTimeout(timer);
     if (!res || !res.ok) return null;
     const buf = Buffer.from(await res.arrayBuffer());

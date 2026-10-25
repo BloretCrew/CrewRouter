@@ -34,9 +34,9 @@ function csrfProtection(req, res, next) {
   if (!req.session || SAFE_METHODS.has(req.method)) return next();
   if (EXEMPT_PREFIXES.some(prefix => req.path.startsWith(prefix))) return next();
   // API-key requests do not use the browser session cookie.
-  if (req.headers.authorization?.startsWith('Bearer ') || req.headers['x-api-key']) return next();
+  if (!req.session.user
+      && (req.headers.authorization?.startsWith('Bearer ') || req.headers['x-api-key'])) return next();
 
-  const expected = requestOrigin(req);
   const suppliedOrigin = getOrigin(req);
   const suppliedToken = req.get('x-csrf-token') || req.body?._csrf;
   const suppliedBuffer = Buffer.from(String(suppliedToken || ''));

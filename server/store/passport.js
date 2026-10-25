@@ -8,6 +8,7 @@
  */
 
 const Logger = require('../logger');
+const { validateUrl } = require('../utils/url-validator');
 
 function getPassportConfig(config = {}) {
   const s = (config.store) || {};
@@ -75,8 +76,19 @@ async function verifyCode(passportCfg, code) {
     code,
   });
   const url = `${passportCfg.baseUrl}/app/verify?${params.toString()}`;
+  const urlCheck = await validateUrl(url, { allowPrivate: false });
+  if (!urlCheck.ok) {
+    const err = new Error(`PassPort 地址校验失败: ${urlCheck.error}`);
+    err.code = 'PASSPORT_URL_REJECTED';
+    throw err;
+  }
 
-  const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    redirect: 'manual',
+    signal: AbortSignal.timeout(10000),
+  });
   const text = await res.text();
   let data;
   try {

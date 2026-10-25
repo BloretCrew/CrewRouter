@@ -102,7 +102,8 @@ async function getOpenCodeGoQuotaWarning(provider, enabled = false) {
     const response = await fetch(OPENCODE_GO_USAGE_URL, {
       method: 'GET',
       headers: { Authorization: `Bearer ${provider.api_key}` },
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(5000),
+      redirect: 'manual'
     });
     if (!response.ok) return '';
     const data = await response.json();

@@ -134,6 +134,7 @@ async function fetchArkUsage(provider) {
   });
   const response = await fetch(`https://${HOST}/?${signed.query}`, {
     method: 'POST', headers: signed.headers, body: signed.body, signal: quotaSignal(AbortSignal.timeout(15000)),
+    redirect: 'manual',
   });
   const text = await response.text();
   let data; try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text.slice(0, 500) }; }

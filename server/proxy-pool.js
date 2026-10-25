@@ -94,7 +94,7 @@ async function fetchSubscriptionProxies(subscriptionUrl, providerId) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(subscriptionUrl, { signal: controller.signal });
+    const response = await fetch(subscriptionUrl, { signal: controller.signal, redirect: 'manual' });
     clearTimeout(timeout);
 
     if (!response.ok) {

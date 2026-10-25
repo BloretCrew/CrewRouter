@@ -125,6 +125,12 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
   try {
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock($1)', [731946]);
+    // 中间件检查发生在事务外；并发请求必须在取得锁后重新确认初始化状态。
+    const initialized = await client.query("SELECT 1 FROM settings WHERE key = 'setup_complete'");
+    if (initialized.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: '系统已初始化，无法再次执行 OOBE' });
+    }
 
     const bcrypt = require('bcryptjs');
     const passwordHash = bcrypt.hashSync(password, 10);

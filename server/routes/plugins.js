@@ -136,7 +136,11 @@ function createPluginsRoutes() {
         });
         // 异步上报商店安装计数（失败不影响）
         try {
-          await fetch(`${source.replace(/\/+$/, '')}/store/api/plugins/${encodeURIComponent(id)}/install-click`, { method: 'POST' });
+          await fetch(`${source.replace(/\/+$/, '')}/store/api/plugins/${encodeURIComponent(id)}/install-click`, {
+            method: 'POST',
+            redirect: 'manual',
+            signal: AbortSignal.timeout(5000),
+          });
         } catch (e) { /* 忽略 */ }
         Logger.info(`[plugins-api] 插件 ${id} 已从商店安装并启用（管理员 ${req.session.user?.username}）`);
         res.json({ ok: true, id, name: manifest.name || id, version: manifest.version || '', reloadRequired: true });

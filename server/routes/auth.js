@@ -10,6 +10,7 @@ const { loadPersistedEdition } = require('../utils/instance-edition');
 const loginRateLimits = new Map();
 const LOGIN_LIMIT = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const TWO_FACTOR_TTL_MS = 5 * 60 * 1000;
 
 function consumeLoginAttempt(key) {
   const now = Date.now();
@@ -120,11 +121,20 @@ router.post('/login', async (req, res) => {
 
     // 检查是否启用了 2FA
     if (user.two_factor_enabled) {
-      // 返回需要 2FA 验证的提示，携带用户 ID 用于后续验证
-      return reply(200, {
-        require2FA: true,
+      // 密码验证结果只能由当前浏览器会话短时使用，不能把 userId 当成凭证。
+      await regenerateSession(req);
+      req.session.pendingTwoFactor = {
         userId: user.id,
-        message: '需要进行 2FA 验证' 
+        expiresAt: Date.now() + TWO_FACTOR_TTL_MS,
+        attempts: 0,
+      };
+      return req.session.save(err => {
+        if (err) return reply(503, { error: '验证状态保存失败，请重新登录' });
+        return reply(200, {
+          require2FA: true,
+          userId: user.id,
+          message: '需要进行 2FA 验证',
+        });
       });
     }
 
@@ -187,6 +197,16 @@ router.post('/login/2fa', async (req, res) => {
     if (!userId || !code) {
       return res.status(400).json({ error: '缺少必要参数' });
     }
+    const pending = req.session?.pendingTwoFactor;
+    if (!pending || String(pending.userId) !== String(userId)
+        || pending.expiresAt <= Date.now() || pending.attempts >= LOGIN_LIMIT) {
+      if (req.session) delete req.session.pendingTwoFactor;
+      return res.status(401).json({ error: '请先验证密码并重新登录', type: 'password_verification_required' });
+    }
+    if (!/^\d{6}$/.test(String(code))) {
+      return res.status(400).json({ error: '请输入6位验证码' });
+    }
+    pending.attempts += 1;
     if (!consumeLoginAttempt(`${req.ip || 'unknown'}:2fa:${userId}`)) {
       return res.status(429).json({ error: '验证尝试过于频繁，请稍后再试' });
     }

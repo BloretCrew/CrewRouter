@@ -334,6 +334,8 @@ async function queryProviderQuotaInternal(provider, options = {}) {
   const fetchOptions = {
     method: reqConfig.method || 'GET',
     headers: reqConfig.headers || {},
+    // URL 已校验；不跟随未经校验的 3xx 目标。
+    redirect: 'manual',
     signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000)
   };
 

@@ -12,6 +12,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { validateUrl } = require('../utils/url-validator');
 
 const router = express.Router();
 
@@ -36,11 +37,13 @@ function apiBase(cfg) {
   return String(cfg.baseUrl || 'https://tr.bloret.net').replace(/\/+$/, '');
 }
 
-function fetchJson(url, timeoutMs) {
+async function fetchJson(url, timeoutMs) {
   // Node 18+: global fetch available
+  const check = await validateUrl(url, { allowPrivate: false });
+  if (!check.ok) return null;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), timeoutMs);
-  return fetch(url, { signal: ac.signal, headers: { Accept: 'application/json' } })
+  return fetch(check.url.toString(), { signal: ac.signal, headers: { Accept: 'application/json' }, redirect: 'manual' })
     .then((r) => (r.ok ? r.json() : null))
     .finally(() => clearTimeout(timer));
 }

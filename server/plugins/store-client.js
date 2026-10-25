@@ -8,6 +8,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const Logger = require('../logger');
+const { validateUrl } = require('../utils/url-validator');
 
 const DEFAULT_STORE = 'https://crewrouter.bloret.net';
 
@@ -44,10 +45,12 @@ function isAllowedSource(url) {
 async function fetchPackageInfo(storeBase, pluginId) {
   const base = String(storeBase || '').replace(/\/+$/, '');
   const url = `${base}/store/api/plugins/${encodeURIComponent(pluginId)}/package-info`;
+  const check = await validateUrl(url, { allowPrivate: false });
+  if (!check.ok) throw new Error(`插件商店 URL 校验失败: ${check.error}`);
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 10000);
   try {
-    const res = await fetch(url, { signal: ac.signal, headers: { Accept: 'application/json' } });
+    const res = await fetch(url, { signal: ac.signal, headers: { Accept: 'application/json' }, redirect: 'manual' });
     if (!res.ok) {
       const err = new Error(`从商店获取插件信息失败（HTTP ${res.status}）`);
       err.status = res.status;
@@ -67,11 +70,14 @@ async function fetchPackageInfo(storeBase, pluginId) {
 
 /** 下载插件 zip 到本地文件；若提供 sha256 则校验；限制大小与超时 */
 async function downloadPackage(url, destPath, expectedSha256) {
+  const check = await validateUrl(String(url), { allowPrivate: false });
+  if (!check.ok) throw new Error(`插件下载 URL 校验失败: ${check.error}`);
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 60000);
   let res;
   try {
-    res = await fetch(url, { signal: ac.signal, redirect: 'follow' });
+    // 商店协议要求 ZIP 直链；拒绝重定向以免 URL 校验被绕过。
+    res = await fetch(url, { signal: ac.signal, redirect: 'manual' });
   } catch (e) {
     clearTimeout(timer);
     throw new Error('下载插件包失败: ' + e.message);

@@ -81,7 +81,9 @@ async function sendOnce(url, init, agent) {
  * 若已配置供应商/系统代理则先走代理，避免空等超时。
  */
 async function quotaRequest(url, init, provider = {}) {
-  init = { ...init, signal: quotaSignal(init.signal) };
+  // API credentials may be present in headers or bodies; never forward them to
+  // an unvalidated redirect target.
+  init = { ...init, redirect: 'manual', signal: quotaSignal(init.signal) };
   init.signal?.throwIfAborted();
   const requestContext = init.requestContext || null;
   const proxies = await listQuotaProxies(provider);
