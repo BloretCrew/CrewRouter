@@ -2,32 +2,47 @@ const { pool } = require('../models/database');
 const config = require('../config-loader');
 const { loadPersistedEdition, normalizeRuntime, normalizeEdition } = require('../utils/instance-edition');
 
+function sessionUserId(req) {
+  const value = req.session?.user?.id;
+  if (typeof value !== 'number' && (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))) return null;
+  return Number.isSafeInteger(Number(value)) && Number(value) > 0 ? value : null;
+}
+
 // 检查用户是否已登录
-function requireAuth(req, res, next) {
-  if (!req.session.user) {
+async function requireAuth(req, res, next) {
+  const userId = sessionUserId(req);
+  if (userId === null) {
     return res.status(401).json({ error: '请先登录' });
   }
-  next();
+  try {
+    const result = await pool.query('SELECT id, is_admin FROM users WHERE id = $1', [userId]);
+    if (result.rows.length !== 1) return res.status(401).json({ error: '请先登录' });
+    req.session.user.isAdmin = result.rows[0].is_admin === true;
+  } catch (err) {
+    return res.status(503).json({ error: '权限暂不可用' });
+  }
+  return next();
 }
 
 // 检查用户是否是管理员，并从数据库读取最新权限
 async function requireAdmin(req, res, next) {
-  if (!req.session.user) {
+  const userId = sessionUserId(req);
+  if (userId === null) {
     return res.status(401).json({ error: '请先登录' });
   }
   try {
-    const result = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.session.user.id]);
-    if (result.rows.length === 0) {
+    const result = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+    if (result.rows.length !== 1) {
       return res.status(401).json({ error: '请先登录' });
     }
-    if (!result.rows[0].is_admin) {
+    req.session.user.isAdmin = result.rows[0].is_admin === true;
+    if (!req.session.user.isAdmin) {
       return res.status(403).json({ error: '无管理员权限' });
     }
-    req.session.user.isAdmin = true;
-    next();
   } catch (err) {
     return res.status(503).json({ error: '权限暂不可用' });
   }
+  return next();
 }
 
 async function isPersonalProviderInstance() {
@@ -39,15 +54,17 @@ async function isPersonalProviderInstance() {
 }
 
 async function requireProviderAccessContext(req, res, next) {
-  if (!req.session?.user) return res.status(401).json({ error: '请先登录' });
+  const userId = sessionUserId(req);
+  if (userId === null) return res.status(401).json({ error: '请先登录' });
   try {
-    const result = await pool.query('SELECT id FROM users WHERE id = $1', [req.session.user.id]);
-    if (!result.rows.length) return res.status(401).json({ error: '请先登录' });
+    const result = await pool.query('SELECT id, is_admin FROM users WHERE id = $1', [userId]);
+    if (result.rows.length !== 1) return res.status(401).json({ error: '请先登录' });
+    req.session.user.isAdmin = result.rows[0].is_admin === true;
     req.personalProviderManager = await isPersonalProviderInstance();
-    return next();
   } catch (err) {
     return res.status(503).json({ error: '权限暂不可用' });
   }
+  return next();
 }
 
 async function requireProviderManager(req, res, next) {

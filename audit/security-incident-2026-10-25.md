@@ -6,6 +6,8 @@
 
 ## 结论
 
+**2026-10-25 仓库续审（没有接触生产）：** 新增会话/管理员 guard 存续与降权核验、incident guard 停止不主动删表的模板修复，以及默认只读、显式授权且默认回滚的 `public` CREATE 处置 SQL。专项通过，但扩大 Node 回归为 456 通过、1 既有失败、8 跳过，另有旧脚本失败/安全阻断；不能称为全绿。当前生产状态没有重新核验、修复没有部署或生产撤权。详见 [Guard 与权限续审](security-guard-permissions-review-2026-10-25.md) 和 [数据库权限处置步骤](security-public-schema-create-runbook-2026-10-25.md)。后文运行态均是原时间点的历史证据。
+
 **16:43:52 CST 认证专项更新：两名管理员均持有 PassKey，其中一名启用了本地 2FA；旧 PassKey 登录可跳过该 TOTP 步骤。** 仓库已修复 PassKey 的实例策略、TOTP 交接、会话重建/保存失败、挑战重放及并发丢失更新，并让 OAuth 复用普通 Key 的额度、限流和所有人检查。新只读快照中 OAuth token、授权码和邀请均为 0；新增关系检查无异常，唯一审计风险仍为 `publicSchemaCreate=true`。不能据此证明已利用、PassKey 归属可信或历史数据完整。旧 root/PID 1407 与未生效的 guard 状态未变，修复尚未部署。详见 [PassKey 与 OAuth 专项复核](security-passkey-oauth-review-2026-10-25.md)。
 
 **16:12:08 CST 最新运行态：incident guard 仍未生效，旧 root / PID 1407 仍运行。** `cr-incident-guard.service` 为 `not-found`，实时 nft 表清单没有 `cr_incident_guard`；本次未复查 INPUT 策略。14:27:10 的较早证据曾记录 IPv4/IPv6 INPUT 为 ACCEPT，上游路由器/防火墙状态未知，不能据此证明当前公网实际可达。journal 及后续审计记录显示，13:59:28–13:59:30 一个 root SSH 会话停用该服务并移动单元文件；现实操作者与授权意图仍未确认。本轮没有修改或自动恢复防火墙，不能据该差异判定二次入侵。此前 guard 生效的观测均属于历史状态；详见 [认证安全补充记录](security-auth-review-2026-10-25.md) 和 [当前数据库只读复核](security-current-data-review-2026-10-25.md)。

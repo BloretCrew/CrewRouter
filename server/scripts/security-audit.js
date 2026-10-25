@@ -42,7 +42,7 @@ const RISK_COUNTS = {
 };
 const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'], oauthTokens: ['oauth_tokens'], oauthCodes: ['oauth_auth_codes'], authInvites: ['auth_invites'] };
 const OPTIONAL_CHECKS = ['plugins', 'balancePreconsumes', 'redemptionCodes', 'apiKeyMemberships', ...Object.keys(NEW_CHECK_TABLES)];
-const ROLE_FLAGS = ['superuser', 'createRole', 'createDatabase', 'replication', 'bypassRls', 'publicSchemaCreate'];
+const ROLE_FLAGS = ['superuser', 'createRole', 'createDatabase', 'replication', 'bypassRls', 'publicSchemaCreate', 'publicSchemaMemberCreate', 'publicSchemaOwner', 'databaseOwner'];
 
 const INFORMATIONAL_COUNTS = {
   identities: ['usersWithPasskeys', 'adminsWithPasskeys', 'twoFactorEnabledAdmins', 'temporaryTotpSecrets'],
@@ -496,7 +496,15 @@ async function audit({ client: suppliedClient, configPath: suppliedConfigPath } 
       SELECT rolname AS name, rolsuper AS superuser, rolcreaterole AS "createRole",
              rolcreatedb AS "createDatabase", rolreplication AS replication,
              rolbypassrls AS "bypassRls",
-             has_schema_privilege(current_user, 'public', 'CREATE') AS "publicSchemaCreate"
+             has_schema_privilege(current_user, 'public', 'CREATE') AS "publicSchemaCreate",
+             EXISTS(SELECT 1 FROM pg_roles member_role
+               WHERE member_role.rolname <> current_user
+                 AND pg_has_role(current_user, member_role.oid, 'MEMBER')
+                 AND has_schema_privilege(member_role.oid, 'public', 'CREATE')) AS "publicSchemaMemberCreate",
+             EXISTS(SELECT 1 FROM pg_namespace
+               WHERE nspname='public' AND pg_has_role(current_user, nspowner, 'MEMBER')) AS "publicSchemaOwner",
+             EXISTS(SELECT 1 FROM pg_database
+               WHERE datname=current_database() AND pg_has_role(current_user, datdba, 'MEMBER')) AS "databaseOwner"
       FROM pg_roles WHERE rolname=current_user
     `)).rows[0];
 

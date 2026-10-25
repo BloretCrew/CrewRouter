@@ -7,7 +7,7 @@ After=local-fs.target
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/nft -f /etc/nftables/cr-incident-guard.nft
-ExecStop=/usr/bin/nft delete table inet cr_incident_guard
+ExecReload=/usr/bin/nft -f /etc/nftables/cr-incident-guard.nft
 RemainAfterExit=yes
 
 [Install]

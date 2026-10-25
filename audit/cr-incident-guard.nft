@@ -1,3 +1,5 @@
+add table inet cr_incident_guard
+delete table inet cr_incident_guard
 table inet cr_incident_guard {
   chain input {
     type filter hook input priority -10; policy accept;

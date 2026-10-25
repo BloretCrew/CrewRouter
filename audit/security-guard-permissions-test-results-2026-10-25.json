@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-25",
+  "baselineCommit": "c6b80287f426492f1db46f3d2f865f727d5fc171",
+  "productionAccessed": false,
+  "deployed": false,
+  "allTestsPassed": false,
+  "environment": { "node": "v24.13.1", "postgresql": "18.3", "psql": "18.3" },
+  "targeted": [
+    { "command": "npm run test:security-guards", "exitCode": 0, "tests": 71, "passed": 71, "failed": 0, "additionalPassingScripts": ["test-provider-manager-permissions.js", "test-batch-e-permissions.js"] },
+    { "command": "npm run test:public-schema-create", "exitCode": 0, "tests": 9, "passed": 9, "failed": 0 },
+    { "command": "npm run test:security-audit", "exitCode": 0, "tests": 41, "passed": 41, "failed": 0, "additionalPassingScripts": ["test-security-audit-postgres.js"] },
+    { "command": "node --test server/scripts/test-offline-security-preload.js", "exitCode": 0, "tests": 5, "passed": 5, "failed": 0 }
+  ],
+  "nodeRegression": {
+    "selectedFiles": 34,
+    "preload": "server/scripts/test-support/offline-security-preload.js",
+    "exitCode": 1,
+    "tests": 465,
+    "passed": 456,
+    "failed": 1,
+    "skipped": 8,
+    "failure": { "file": "server/scripts/test-model-identity.js", "line": 464, "name": "real transport and retry helper count each network attempt once", "expectedNetworkCalls": 12, "actualNetworkCalls": 0, "isolatedReproductionExitCode": 1, "extractedFixtureError": "proxyFetchTransport is not defined", "sourceUnchangedFromBaseline": true }
+  },
+  "standaloneRegression": {
+    "selectedFiles": 29,
+    "passedFiles": 26,
+    "nonzeroFiles": [
+      { "file": "server/scripts/test-plugin-capabilities.js", "exitCode": 1, "classification": "blocked-unsafe-test-database-dependency", "error": "OFFLINE_TEST_BLOCKED_APPLICATION_DATABASE_OPERATION" },
+      { "file": "server/scripts/test-inject-prompt-cache-lifecycle.js", "exitCode": 1, "classification": "existing-extracted-fixture-failure", "error": "validateApiKey is not defined" },
+      { "file": "server/scripts/test-upstream-stream-safety.js", "exitCode": 1, "classification": "existing-loopback-fixture-rejected-by-ssrf-check", "passedCases": 0, "totalCases": 42 }
+    ]
+  },
+  "limitations": [
+    "Test counts overlap and must not be summed as independent tests",
+    "No production database or service state was rechecked",
+    "No live nft parsing, kernel rule loading or systemd lifecycle validation was performed",
+    "Runtime/migration role separation and startup compatibility remain prerequisites for production revocation",
+    "Eight database-dependent Node subtests were skipped, not passed",
+    "Preload is a safety aid for trusted tests, not an adversarial sandbox"
+  ],
+  "evidence": [
+    { "path": "/tmp/crewrouter-final-security-guards-20261025.log", "sha256": "d783b2d446910d7f6d9d307f58a5b23b662308dc202b7056ade31af763e51789" },
+    { "path": "/tmp/crewrouter-final-public-schema-create-20261025.log", "sha256": "5e9eaf59b239dd22447889f4b20a2ca3f83caa33f387c2b3d491d174a2f2bfad" },
+    { "path": "/tmp/crewrouter-final-security-audit-20261025.log", "sha256": "03d0e59bfb80fde464e793b99c54c66263024e3bc4493045c2057ec9340e935a" },
+    { "path": "/tmp/crewrouter-full-node-regression-final-artifacts-20261025.log", "sha256": "6925c7c8439697ff6747bebcb63a36d9f1c85c74b7bc22409f599331acb946ce" },
+    { "path": "/tmp/crewrouter-standalone-regression-summary-20261025.txt", "sha256": "fab14830a2cfe22e52ee6bdcdc7a44b571aac24aebf4442770d5a31e53f9bc12" },
+    { "path": "/tmp/crewrouter-existing-model-identity-failure-20261025.log", "sha256": "4c54f1b2f820531b017fc2fd60be38d031ebbe39ba074010911e7e8719144699" },
+    { "path": "/tmp/crewrouter-node-regression-files-20261025.txt", "sha256": "477b52f0a70e7580ea0be2105a61f3467b1ab62295d7cc938518a2628f437844" },
+    { "path": "/tmp/crewrouter-standalone-regression-files-20261025.txt", "sha256": "d35bc62defe5e1c384a4f2147e35a2e86410fbf89032aba7dcbaca7993b8761b" }
+  ]
+}

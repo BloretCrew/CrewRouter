@@ -2,6 +2,14 @@
 
 日期：2026-10-25
 
+## 仓库续审与人工授权边界
+
+新增 [Guard、权限专项](security-guard-permissions-review-2026-10-25.md) 和 [public CREATE 可执行处置方案](security-public-schema-create-runbook-2026-10-25.md)。本次没有连接生产库、访问/重启生产服务、加载防火墙规则或处理凭证；旧运行态不等于本轮复查。代码修复未部署，完整回归仍有明确失败/跳过，不解除上线门槛。
+
+`audit/review-public-schema-create.sql` 默认仅只读；显式授权的撤权预演默认回滚，正式提交还需独立批准和 `commit=true`。schema/database 所有权、成员权限、高危角色属性、迁移/运行身份分离和启动 DDL 兼容性不满足时必须停止。不能直接对生产粘贴一句 REVOKE 或为启动重授全库 CREATE。
+
+incident guard 模板停止时不再主动删表，增加 reload 与专属表批次替换；只做离线模型验证。真实 nft/systemd 兼容性、当前管理白名单及 IPv4/IPv6 可达性仍须在明确授权后单独验收；不能把仓库文件或 unit 的 active 状态当作内核防护证明。
+
 本清单基于 `security-incident-2026-10-25.md` 与用户提供的两份复盘材料。目标是建立新的可信运行环境；它不把现有主机、活数据库或本机备份当成可信恢复源。
 
 ## 当前状态与边界

@@ -10,6 +10,8 @@
     "test:passkey-security": "node --test server/scripts/test-passkey-security.js && node server/scripts/test-passkey-store-postgres.js",
     "test:oauth-bearer-policy": "node --test server/scripts/test-oauth-bearer-policy.js",
     "test:security-audit": "node --test server/scripts/test-security-audit.js && node server/scripts/test-security-audit-postgres.js",
+    "test:security-guards": "node --test server/scripts/test-auth-guards.js server/scripts/test-incident-guard.js && node server/scripts/test-provider-manager-permissions.js && node server/scripts/test-batch-e-permissions.js",
+    "test:public-schema-create": "node --test server/scripts/test-public-schema-create-postgres.js",
     "test:responses-compat": "node server/scripts/test-responses-compat.js",
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",

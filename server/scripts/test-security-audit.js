@@ -30,7 +30,7 @@ function cleanChecks() {
     oauthCodes: { total: 0, orphanPrincipals: 0, ownerMismatches: 0, activeCodes: 0 },
     authInvites: { total: 0, orphanCreators: 0, orphanTeams: 0, activeInvites: 0 },
     catalog: { invalidIndexes: 0, notReadyIndexes: 0, unvalidatedConstraints: 0 },
-    databaseRole: { name: 'offline-auditor', superuser: false, createRole: false, createDatabase: false, replication: false, bypassRls: false, publicSchemaCreate: false },
+    databaseRole: { name: 'offline-auditor', superuser: false, createRole: false, createDatabase: false, replication: false, bypassRls: false, publicSchemaCreate: false, publicSchemaMemberCreate: false, publicSchemaOwner: false, databaseOwner: false },
   };
   for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings', 'oauthTokens', 'oauthCodes', 'authInvites']) Object.assign(checks[section], {tableMissing:false, missingTables:[]});
   return checks;
@@ -164,7 +164,7 @@ test('duplicate and blank external identity bindings affect the exit code withou
 });
 
 test('missing or incorrectly aliased critical query results cannot produce a clean or complete report', async t => {
-  for (const [section, field] of [['databaseRole', 'publicSchemaCreate'], ['identities', 'duplicateGitHubIds'], ['balances', 'refundDetailMismatches']]) {
+  for (const [section, field] of [['databaseRole', 'publicSchemaCreate'], ['databaseRole', 'publicSchemaMemberCreate'], ['databaseRole', 'publicSchemaOwner'], ['databaseRole', 'databaseOwner'], ['identities', 'duplicateGitHubIds'], ['balances', 'refundDetailMismatches']]) {
     await t.test(`${section}.${field}`, async () => {
       const checks = cleanChecks();
       checks[section][field.toLowerCase()] = checks[section][field];
@@ -219,6 +219,16 @@ test('role privileges remain findings and missing read-only proof is incomplete'
   assert.equal(auditExitCode(report), 1);
   assert.equal(auditExitCode({ ...report, readOnly: false }), 2);
   assert.equal(auditExitCode({ ...report, complete: false }), 2);
+});
+
+test('membership and ownership remain findings even without an effective CREATE grant', async context => {
+  for (const field of ['publicSchemaMemberCreate', 'publicSchemaOwner', 'databaseOwner']) await context.test(field, async () => {
+    const checks = cleanChecks();
+    checks.databaseRole[field] = true;
+    const report = await fixture({ checks }).run();
+    assert.equal(report.checks.databaseRole.publicSchemaCreate, false);
+    assert.equal(auditExitCode(report), 1);
+  });
 });
 
 test('兑换码历史关联新增风险字段进入退出码并对缺字段失败关闭', () => {
