@@ -72,6 +72,23 @@ async function releaseClient(client, isExternal) {
   }
 }
 
+async function getRefundBalanceDetails(q, userId) {
+  const result = await q.query(
+    `SELECT COALESCE(SUM(amount), 0)::text AS total,
+            COUNT(*) FILTER (WHERE amount < 0 OR fee_rate < 0)::int AS invalid_count
+     FROM user_code_balances WHERE user_id = $1`,
+    [userId]
+  );
+  return {
+    total: moneyToString(result.rows[0]?.total || 0),
+    invalidCount: Number(result.rows[0]?.invalid_count || 0),
+  };
+}
+
+function refundDetailsMatch(userRefundBalance, details) {
+  return details.invalidCount === 0 && compareMoney(userRefundBalance || 0, details.total) === 0;
+}
+
 /**
  * 核心扣款逻辑（需在事务中运行，且用户行已被 FOR UPDATE 锁定）
  *
@@ -81,33 +98,53 @@ async function releaseClient(client, isExternal) {
  * @returns {Promise<{ok: boolean, remaining?: number, error?: string}>}
  */
 async function executeDeduct(q, userId, cost) {
+  const requested = moneyToString(cost);
+  if (compareMoney(requested, 0) < 0) return { ok: false, error: '扣款金额不能为负数' };
+
   const result = await q.query(
     'SELECT balance, refund_balance FROM users WHERE id = $1 FOR UPDATE',
     [userId]
   );
   if (result.rows.length === 0) return { ok: false, error: '用户不存在' };
 
-  let remaining = moneyToString(cost);
+  let remaining = requested;
   const regularBalance = moneyToString(result.rows[0].balance || 0);
+  const userRefundBalance = moneyToString(result.rows[0].refund_balance || 0);
+  if (compareMoney(regularBalance, 0) < 0 || compareMoney(userRefundBalance, 0) < 0) {
+    return { ok: false, error: '账户余额包含负数，已暂停扣款' };
+  }
 
   // 先扣非退款余额
   const regularDeduct = compareMoney(regularBalance, remaining) < 0 ? regularBalance : remaining;
+  remaining = subtractMoney(remaining, regularDeduct);
+
+  let codeBalances = null;
+  if (compareMoney(remaining, 0) > 0) {
+    const details = await getRefundBalanceDetails(q, userId);
+    if (!refundDetailsMatch(userRefundBalance, details)) {
+      return { ok: false, error: '可退款余额汇总与明细不一致，已暂停扣款，请先完成余额对账' };
+    }
+    if (compareMoney(remaining, details.total) > 0) {
+      return { ok: false, remaining: moneyToApiNumber(subtractMoney(remaining, details.total)), error: '余额不足' };
+    }
+    codeBalances = await q.query(
+      `SELECT id, amount FROM user_code_balances
+       WHERE user_id = $1 AND amount > 0
+       ORDER BY fee_rate DESC, id ASC
+       FOR UPDATE`,
+      [userId]
+    );
+  }
+
   if (compareMoney(regularDeduct, 0) > 0) {
     await q.query(
       'UPDATE users SET balance = balance - $1 WHERE id = $2',
       [regularDeduct, userId]
     );
-    remaining = subtractMoney(remaining, regularDeduct);
   }
 
   // 再扣兑换码余额（退款余额），按 fee_rate 降序
   if (compareMoney(remaining, 0) > 0) {
-    const codeBalances = await q.query(
-      `SELECT id, amount FROM user_code_balances
-       WHERE user_id = $1 AND amount > 0
-       ORDER BY fee_rate DESC`,
-      [userId]
-    );
     for (const row of codeBalances.rows) {
       if (compareMoney(remaining, 0) <= 0) break;
       const available = moneyToString(row.amount);
@@ -265,6 +302,16 @@ async function preConsumeBalance(userId, estimatedCost) {
 
     const row = result.rows[0];
     const estimated = moneyToString(estimatedCost);
+    const regularBalance = moneyToString(row.balance || 0);
+    const userRefundBalance = moneyToString(row.refund_balance || 0);
+    if (compareMoney(estimated, 0) < 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, error: '预扣金额不能为负数' };
+    }
+    if (compareMoney(regularBalance, 0) < 0 || compareMoney(userRefundBalance, 0) < 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, error: '账户余额包含负数，已暂停预扣' };
+    }
     const totalBalance = addMoney(row.balance || 0, row.refund_balance || 0);
     if (compareMoney(totalBalance, estimated) < 0) {
       await client.query('ROLLBACK');
@@ -272,19 +319,30 @@ async function preConsumeBalance(userId, estimatedCost) {
     }
 
     let remaining = estimated;
-    const regularBalance = moneyToString(row.balance || 0);
-
     const regularDeduct = compareMoney(regularBalance, remaining) < 0 ? regularBalance : remaining;
+    remaining = subtractMoney(remaining, regularDeduct);
+
+    let codeBalances = null;
+    if (compareMoney(remaining, 0) > 0) {
+      const details = await getRefundBalanceDetails(client, userId);
+      if (!refundDetailsMatch(userRefundBalance, details)) {
+        await client.query('ROLLBACK');
+        return { ok: false, error: '可退款余额汇总与明细不一致，已暂停预扣，请先完成余额对账' };
+      }
+      codeBalances = await client.query(
+        `SELECT id, amount FROM user_code_balances
+         WHERE user_id = $1 AND amount > 0
+         ORDER BY fee_rate DESC, id ASC
+         FOR UPDATE`,
+        [userId]
+      );
+    }
+
     if (compareMoney(regularDeduct, 0) > 0) {
       await client.query('UPDATE users SET balance = balance - $1 WHERE id = $2', [regularDeduct, userId]);
-      remaining = subtractMoney(remaining, regularDeduct);
     }
 
     if (compareMoney(remaining, 0) > 0) {
-      const codeBalances = await client.query(
-        `SELECT id, amount FROM user_code_balances WHERE user_id = $1 AND amount > 0 ORDER BY fee_rate DESC`,
-        [userId]
-      );
       for (const codeRow of codeBalances.rows) {
         if (compareMoney(remaining, 0) <= 0) break;
         const available = moneyToString(codeRow.amount);
@@ -338,12 +396,33 @@ async function settleBalance(userId, preConsumeId, actualCost, estimatedCost) {
   try {
     await client.query('BEGIN');
 
+    const actual = moneyToString(actualCost);
+    let estimated = moneyToString(estimatedCost);
+    if (compareMoney(actual, 0) < 0 || compareMoney(estimated, 0) < 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, error: '结算金额不能为负数' };
+    }
+
     // 更新预扣记录状态
     if (preConsumeId) {
+      const pending = await client.query(
+        `SELECT amount::text AS amount FROM balance_preconsumes
+         WHERE id = $1 AND user_id = $2 AND status = 'pending' FOR UPDATE`,
+        [preConsumeId, userId]
+      );
+      if (pending.rowCount !== 1) {
+        await client.query('ROLLBACK');
+        return { ok: true, delta: 0, alreadySettled: true };
+      }
+      estimated = moneyToString(pending.rows[0].amount);
+      if (compareMoney(estimated, 0) < 0) {
+        await client.query('ROLLBACK');
+        return { ok: false, error: '预扣记录金额为负数，已暂停结算' };
+      }
       const result = await client.query(
         `UPDATE balance_preconsumes SET status = 'settled', actual_amount = $1, settled_at = CURRENT_TIMESTAMP
          WHERE id = $2 AND user_id = $3 AND status = 'pending'`,
-        [actualCost, preConsumeId, userId]
+        [actual, preConsumeId, userId]
       );
       if (result.rowCount !== 1) {
         await client.query('ROLLBACK');
@@ -351,8 +430,6 @@ async function settleBalance(userId, preConsumeId, actualCost, estimatedCost) {
       }
     }
 
-    const actual = moneyToString(actualCost);
-    const estimated = moneyToString(estimatedCost);
     const delta = subtractMoney(actual, estimated);
 
     if (compareMoney(delta, 0) > 0) {

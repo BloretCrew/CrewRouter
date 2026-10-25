@@ -4,6 +4,7 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { requireAuth, requireProviderAccessContext } = require('../middleware/auth');
 const Logger = require('../logger');
+const { compareMoney } = require('../utils/money');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const config = require('../config-loader');
 const { fetchProvidersIndex, lookupProvider } = require('../provider-lookup');
@@ -2102,7 +2103,7 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
     await client.query('BEGIN');
 
     // 与余额扣款/退款保持 user → 余额明细的锁顺序，避免并发兑换与退款形成死锁。
-    const userLock = await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [req.session.user.id]);
+    const userLock = await client.query('SELECT id, refund_balance FROM users WHERE id = $1 FOR UPDATE', [req.session.user.id]);
     if (userLock.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(401).json({ error: '用户不存在，请重新登录' });
@@ -2120,6 +2121,28 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
     }
 
     const rc = result.rows[0];
+    if (compareMoney(rc.amount, 0) <= 0 || Number(rc.max_uses) < 0 || Number(rc.used_count) < 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: '兑换码金额或次数配置异常，已暂停兑换' });
+    }
+
+    if (rc.refundable) {
+      if (compareMoney(rc.fee_rate || 0, 0) < 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: '兑换码手续费配置异常，已暂停兑换' });
+      }
+      const detailState = await client.query(
+        `SELECT COALESCE(SUM(amount), 0)::text AS total,
+                COUNT(*) FILTER (WHERE amount < 0 OR fee_rate < 0)::int AS invalid_count
+         FROM user_code_balances WHERE user_id = $1`,
+        [req.session.user.id]
+      );
+      if (Number(detailState.rows[0].invalid_count || 0) > 0
+          || compareMoney(detailState.rows[0].total, userLock.rows[0].refund_balance || 0) !== 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: '可退款余额汇总与明细不一致，已暂停兑换；请先完成余额对账' });
+      }
+    }
 
     // 检查是否过期
     if (rc.expires_at && new Date(rc.expires_at) < new Date()) {
@@ -2156,12 +2179,12 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
       );
       // 同步 users.refund_balance
       const refundSum = await client.query(
-        'SELECT COALESCE(SUM(amount), 0) AS total FROM user_code_balances WHERE user_id = $1',
+        'SELECT COALESCE(SUM(amount), 0)::text AS total FROM user_code_balances WHERE user_id = $1',
         [req.session.user.id]
       );
       await client.query(
         'UPDATE users SET refund_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [parseFloat(refundSum.rows[0].total), req.session.user.id]
+        [refundSum.rows[0].total, req.session.user.id]
       );
     } else {
       await client.query(

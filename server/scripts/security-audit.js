@@ -198,9 +198,9 @@ async function audit() {
              count(*) FILTER(WHERE refund_balance<0)::int AS "negativeRefundBalances",
              (SELECT count(*)::int FROM user_code_balances WHERE amount < 0) AS "negativeCodeBalanceAmounts",
              (SELECT count(*)::int FROM user_code_balances WHERE fee_rate < 0) AS "negativeCodeBalanceFeeRates",
-             (SELECT count(*)::int FROM users u WHERE abs(COALESCE(u.refund_balance,0)-(
+             (SELECT count(*)::int FROM users u WHERE COALESCE(u.refund_balance,0) <> (
                SELECT COALESCE(sum(ucb.amount),0) FROM user_code_balances ucb WHERE ucb.user_id=u.id
-             ))>0.0001) AS "refundDetailMismatches",
+             )) AS "refundDetailMismatches",
              (SELECT count(*)::int FROM user_code_balances b LEFT JOIN users u ON u.id=b.user_id
                LEFT JOIN redemption_codes rc ON rc.id=b.code_id WHERE u.id IS NULL OR rc.id IS NULL) AS "orphanCodeBalances",
              (SELECT round(COALESCE(sum(balance),0)::numeric,4)::text FROM users) AS "regularBalanceTotal",

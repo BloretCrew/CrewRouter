@@ -58,6 +58,21 @@ const {
 const { quickAddSystemProvider, QuickAddError } = require('../utils/quick-add-provider');
 
 const USER_BALANCE_DB_UNIT = MONEY_FACTOR / 10000n;
+const MAX_REDEMPTION_AMOUNT_MICROS = toMoneyMicros('999999.9999');
+const MAX_REDEMPTION_FEE_RATE_MICROS = toMoneyMicros('9.9999');
+
+function normalizeRedemptionMoney(value, { allowZero = false, maxMicros }) {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  try {
+    const micros = toMoneyMicros(value);
+    if ((allowZero ? micros < 0n : micros <= 0n)
+        || micros > maxMicros
+        || micros % USER_BALANCE_DB_UNIT !== 0n) return null;
+    return moneyMicrosToString(micros);
+  } catch (_) {
+    return null;
+  }
+}
 
 function ceilDivide(numerator, denominator) {
   return (numerator + denominator - 1n) / denominator;
@@ -3858,28 +3873,83 @@ router.post('/redemption-codes/generate', requireAuth, requireAdmin, auditMiddle
   detailsFrom: (req) => ({ count: req.body?.count, amount: req.body?.amount, batch_name: req.body?.batch_name }),
 }), async (req, res) => {
   const { amount, count, maxUses, expiresAt, batchName, refundable, feeRate } = req.body;
-  if (!amount || amount <= 0) {
+  const normalizedAmount = normalizeRedemptionMoney(amount, { maxMicros: MAX_REDEMPTION_AMOUNT_MICROS });
+  if (normalizedAmount === null) {
     return res.status(400).json({ error: '请输入有效的兑换金额' });
   }
-  if (!count || count < 1 || count > 1000) {
+  const normalizedCount = Number(count);
+  if (!Number.isInteger(normalizedCount) || normalizedCount < 1 || normalizedCount > 1000) {
     return res.status(400).json({ error: '生成数量必须在 1-1000 之间' });
   }
+  const normalizedMaxUses = maxUses === undefined || maxUses === null ? 1 : Number(maxUses);
+  if (!Number.isInteger(normalizedMaxUses) || normalizedMaxUses < 0 || normalizedMaxUses > 2147483647) {
+    return res.status(400).json({ error: '最大使用次数必须为 0 到 2147483647 之间的整数' });
+  }
+  if (refundable !== undefined && typeof refundable !== 'boolean') {
+    return res.status(400).json({ error: '可退款属性必须为布尔值' });
+  }
+  const normalizedRefundable = refundable === true;
+  const normalizedFeeRate = normalizeRedemptionMoney(feeRate === undefined || feeRate === null ? 0 : feeRate, {
+    allowZero: true,
+    maxMicros: MAX_REDEMPTION_FEE_RATE_MICROS,
+  });
+  if (normalizedFeeRate === null) {
+    return res.status(400).json({ error: '手续费率必须为 0 到 9.9999 之间且最多 4 位小数' });
+  }
+  if (batchName !== undefined && batchName !== null
+      && (typeof batchName !== 'string' || batchName.length > 255)) {
+    return res.status(400).json({ error: '批次名称最多 255 个字符' });
+  }
+  if (expiresAt !== undefined && expiresAt !== null && expiresAt !== ''
+      && (typeof expiresAt !== 'string' || Number.isNaN(Date.parse(expiresAt)))) {
+    return res.status(400).json({ error: '兑换码有效期格式无效' });
+  }
+
+  const generatedCodes = new Set();
+  while (generatedCodes.size < normalizedCount) {
+    // 兑换码含货币价值，使用密码学安全随机数，并在本批次内先去重。
+    generatedCodes.add(crypto.randomBytes(8).toString('hex').toUpperCase());
+  }
+  const codes = [...generatedCodes];
+  const params = [];
+  const values = codes.map((code, index) => {
+    const offset = index * 8;
+    params.push(
+      code,
+      normalizedAmount,
+      normalizedMaxUses,
+      expiresAt || null,
+      batchName || null,
+      req.session.user.id,
+      normalizedRefundable,
+      normalizedRefundable ? normalizedFeeRate : '0.000000'
+    );
+    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
+  });
+
+  let client;
   try {
-    const generatedCodes = [];
-    for (let i = 0; i < count; i++) {
-      const code = Math.random().toString(36).slice(2, 10).toUpperCase();
-      const result = await pool.query(
-        `INSERT INTO redemption_codes (code, amount, max_uses, expires_at, batch_name, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [code, amount, maxUses || 1, expiresAt || null, batchName || null, req.session.user.id]
-      );
-      generatedCodes.push(result.rows[0]);
-    }
-    res.json({ success: true, codes: generatedCodes });
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const result = await client.query(
+      `INSERT INTO redemption_codes
+         (code, amount, max_uses, expires_at, batch_name, created_by, refundable, fee_rate)
+       VALUES ${values.join(', ')}
+       RETURNING *`,
+      params
+    );
+    if (result.rows.length !== normalizedCount) throw new Error('生成的兑换码数量与请求不符');
+    await client.query('COMMIT');
+    res.json({ success: true, codes: result.rows });
   } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    if (error.code === '23505') {
+      return res.status(409).json({ error: '兑换码随机冲突，请重试' });
+    }
     Logger.error('[生成兑换码] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
+  } finally {
+    if (client) client.release();
   }
 });
 
@@ -3904,19 +3974,25 @@ router.post('/redemption-codes/batch-set-refundable', requireAuth, requireAdmin,
   if (!ids || !Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择要设置的兑换码' });
   }
+  if (ids.length > 1000 || ids.some(id => !Number.isInteger(Number(id)) || Number(id) <= 0)) {
+    return res.status(400).json({ error: '兑换码 ID 列表无效' });
+  }
+  if (typeof refundable !== 'boolean') {
+    return res.status(400).json({ error: '可退款属性必须为布尔值' });
+  }
+  const normalizedFeeRate = normalizeRedemptionMoney(feeRate === undefined || feeRate === null ? 0 : feeRate, {
+    allowZero: true,
+    maxMicros: MAX_REDEMPTION_FEE_RATE_MICROS,
+  });
+  if (normalizedFeeRate === null) {
+    return res.status(400).json({ error: '手续费率必须为 0 到 9.9999 之间且最多 4 位小数' });
+  }
   try {
-    // 注意：redemption_codes 表可能没有 refundable 和 fee_rate 字段
-    // 这里先尝试更新，如果字段不存在则跳过
-    try {
-      await pool.query(
-        'UPDATE redemption_codes SET refundable = $1, fee_rate = $2 WHERE id = ANY($3)',
-        [refundable || false, feeRate || 0, ids]
-      );
-    } catch (e) {
-      // 字段可能不存在，忽略错误
-      Logger.warn('[批量设置兑换码属性] 字段可能不存在:', e.message);
-    }
-    res.json({ success: true });
+    const result = await pool.query(
+      'UPDATE redemption_codes SET refundable = $1, fee_rate = $2 WHERE id = ANY($3::int[]) RETURNING id',
+      [refundable, refundable ? normalizedFeeRate : '0.000000', ids.map(Number)]
+    );
+    res.json({ success: true, updatedCount: result.rowCount });
   } catch (error) {
     Logger.error('[批量设置兑换码属性] 错误:', error);
     res.status(500).json({ error: '服务器错误' });

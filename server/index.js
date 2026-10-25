@@ -155,8 +155,13 @@ async function ensureBalanceAndRedemptionUseTable() {
 
 // ========== 自动迁移：用户兑换码余额明细表 ==========
 async function ensureUserCodeBalancesTable() {
+  const client = await pool.connect();
   try {
-    await pool.query(`
+    await client.query('BEGIN');
+    // Serialize this startup migration across application instances and keep
+    // table creation plus legacy balance import in one atomic transaction.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('crewrouter:user-code-balances-import'))");
+    await client.query(`
       CREATE TABLE IF NOT EXISTS user_code_balances (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -168,50 +173,70 @@ async function ensureUserCodeBalancesTable() {
         UNIQUE(user_id, code_id)
       )
     `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ucb_user ON user_code_balances(user_id)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ucb_user_code ON user_code_balances(user_id, code_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_ucb_user ON user_code_balances(user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_ucb_user_code ON user_code_balances(user_id, code_id)`);
 
     // 迁移：将已有的 refund_balance 按 redemption_code_uses 拆分到 user_code_balances
-    const hasData = await pool.query(`SELECT 1 FROM user_code_balances LIMIT 1`);
+    const hasData = await client.query(`SELECT 1 FROM user_code_balances LIMIT 1`);
     if (hasData.rows.length === 0) {
       // 查找有 refund_balance 的用户
-      const usersWithRefund = await pool.query(
-        `SELECT id, refund_balance FROM users WHERE refund_balance > 0`
+      const { compareMoney, moneyToString, subtractMoney } = require('./utils/money');
+      const usersWithRefund = await client.query(
+        `SELECT id, refund_balance::text AS refund_balance
+         FROM users WHERE refund_balance > 0 ORDER BY id FOR UPDATE`
       );
       for (const user of usersWithRefund.rows) {
         // 查找该用户使用过的可退款兑换码（按 fee_rate 降序）
-        const usedCodes = await pool.query(
-          `SELECT rcu.code_id, rc.amount, rc.fee_rate
+        const usedCodes = await client.query(
+          `SELECT rcu.code_id, rc.amount::text AS amount, rc.fee_rate::text AS fee_rate
            FROM redemption_code_uses rcu
            JOIN redemption_codes rc ON rc.id = rcu.code_id
            WHERE rcu.user_id = $1 AND rc.refundable = TRUE
-           ORDER BY rc.fee_rate DESC`,
+           ORDER BY rc.fee_rate DESC, rcu.code_id ASC`,
           [user.id]
         );
-        let remaining = parseFloat(user.refund_balance);
+        let remaining = moneyToString(user.refund_balance);
         for (const code of usedCodes.rows) {
-          if (remaining <= 0) break;
-          const codeAmount = parseFloat(code.amount);
-          const deduct = Math.min(remaining, codeAmount);
-          await pool.query(
+          if (compareMoney(remaining, 0) <= 0) break;
+          const codeAmount = moneyToString(code.amount);
+          if (compareMoney(codeAmount, 0) < 0 || compareMoney(code.fee_rate || 0, 0) < 0) {
+            throw new Error(`用户 ${user.id} 的历史兑换码余额来源无效`);
+          }
+          if (compareMoney(codeAmount, 0) === 0) continue;
+          const deduct = compareMoney(remaining, codeAmount) < 0 ? remaining : codeAmount;
+          await client.query(
             `INSERT INTO user_code_balances (user_id, code_id, amount, fee_rate)
              VALUES ($1, $2, $3, $4)
-             ON CONFLICT (user_id, code_id) DO UPDATE SET amount = EXCLUDED.amount`,
-            [user.id, code.code_id, deduct, code.fee_rate]
+             ON CONFLICT (user_id, code_id) DO UPDATE SET amount = EXCLUDED.amount, fee_rate = EXCLUDED.fee_rate`,
+            [user.id, code.code_id, deduct, code.fee_rate || 0]
           );
-          remaining -= deduct;
+          remaining = subtractMoney(remaining, deduct);
         }
-        // 如果还有剩余（没有对应兑换码记录），用 fee_rate=0 兜底
-        if (remaining > 0) {
-          // 找一个可退款的兑换码兜底，或跳过
-          Logger.error(`[迁移] 用户 ${user.id} 有 ¥${remaining.toFixed(4)} 退款余额无法匹配兑换码`);
+        // 缺少可追溯来源时回滚整次导入，不能写入部分明细后继续运行。
+        if (compareMoney(remaining, 0) > 0) {
+          throw new Error(`用户 ${user.id} 有 ¥${remaining} 退款余额无法匹配可退款兑换码`);
         }
       }
       Logger.info('[迁移] 已将 refund_balance 拆分到 user_code_balances');
+    } else {
+      const mismatches = await client.query(`
+        SELECT count(*)::int AS count
+        FROM users u
+        WHERE abs(COALESCE(u.refund_balance, 0) - COALESCE((
+          SELECT sum(ucb.amount) FROM user_code_balances ucb WHERE ucb.user_id = u.id
+        ), 0)) > 0.0001
+      `);
+      if (mismatches.rows[0].count > 0) {
+        Logger.error(`[迁移] 检测到 ${mismatches.rows[0].count} 个用户的可退款汇总与明细不一致；未自动修正`);
+      }
     }
+    await client.query('COMMIT');
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     Logger.error(`[迁移] user_code_balances 表迁移跳过: ${err.message}`);
     throw err;
+  } finally {
+    client.release();
   }
 }
 
