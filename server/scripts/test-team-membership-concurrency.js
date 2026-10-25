@@ -78,7 +78,7 @@ async function main() {
     await pool.query(`
       CREATE TABLE teams (id serial PRIMARY KEY, name text UNIQUE, description text, is_personal boolean DEFAULT false, is_default boolean DEFAULT false);
       CREATE TABLE users (id serial PRIMARY KEY, username text, is_admin boolean DEFAULT false, team_id int REFERENCES teams(id), email text, updated_at timestamptz DEFAULT now());
-      CREATE TABLE user_teams (user_id int PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, team_id int REFERENCES teams(id));
+      CREATE TABLE user_teams (user_id int REFERENCES users(id) ON DELETE CASCADE, team_id int REFERENCES teams(id), UNIQUE(user_id, team_id));
       CREATE TABLE user_group_team_map (team_id int REFERENCES teams(id));
       INSERT INTO teams(id,name,is_default) VALUES(10,'A',true),(20,'B',false),(30,'C',false);
       SELECT setval('teams_id_seq',100);

@@ -531,27 +531,38 @@ async function ensureAuthEnhancements() {
 /**
  * 历史 usage_records.model_id 误存了上游模型名（upstream_model_id），
  * 导致 JOIN models.id 串到其它供应商的同名模型。
- * 按 provider_id + upstream_model_id 回填为本地 models.id（幂等）。
+ * 保留同供应商的有效本地 id，仅将唯一匹配的上游名回填为本地 id。
+ * 无法唯一归属的历史保留原值，等待可信账目对照，不按字典序猜测。
  */
 async function migrateUsageModelIdToLocalId() {
   const key = 'migration_usage_model_id_to_local_id_v1';
+  const client = await pool.connect();
   try {
-    const flag = await pool.query('SELECT value FROM settings WHERE key = $1', [key]);
-    if (flag.rows.length > 0) return;
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
+    const flag = await client.query('SELECT value FROM settings WHERE key = $1', [key]);
+    if (flag.rows.length > 0) {
+      await client.query('COMMIT');
+      return;
+    }
 
-    const r = await pool.query(`
+    const r = await client.query(`
       WITH resolved AS (
-        SELECT DISTINCT ON (u.id)
+        SELECT
           u.id AS usage_id,
-          m.id AS local_id
+          MIN(m.id) AS local_id
         FROM usage_records u
         JOIN models m
           ON m.provider = u.provider_id
          AND m.upstream_model_id = u.model_id
         WHERE u.model_id IS NOT NULL
           AND u.provider_id IS NOT NULL
-          AND m.id IS DISTINCT FROM u.model_id
-        ORDER BY u.id, m.id
+          AND NOT EXISTS (
+            SELECT 1 FROM models local
+            WHERE local.id = u.model_id AND local.provider = u.provider_id
+          )
+        GROUP BY u.id
+        HAVING COUNT(*) = 1
       )
       UPDATE usage_records u
       SET model_id = r.local_id
@@ -559,15 +570,28 @@ async function migrateUsageModelIdToLocalId() {
       WHERE u.id = r.usage_id
     `);
 
-    await pool.query(
+    const unresolved = (await client.query(`
+      SELECT COUNT(*)::int AS count FROM usage_records u
+      WHERE u.model_id IS NOT NULL AND u.provider_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM models local
+          WHERE local.id = u.model_id AND local.provider = u.provider_id
+        )
+    `)).rows[0].count;
+    await client.query(
       `INSERT INTO settings (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      [key, JSON.stringify({ updated: r.rowCount, at: new Date().toISOString() })]
+      [key, JSON.stringify({ updated: r.rowCount, unresolved, at: new Date().toISOString() })]
     );
+    await client.query('COMMIT');
     Logger.info(`[迁移] usage_records.model_id 上游名 → 本地 id，更新 ${r.rowCount} 行`);
+    if (unresolved > 0) Logger.warn(`[迁移] ${unresolved} 条模型历史无法唯一确认，保留原值待对账`);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     Logger.error(`[迁移] usage model_id 回填跳过: ${err.message}`);
     throw err;
+  } finally {
+    client.release();
   }
 }
 
@@ -578,9 +602,15 @@ async function migrateUsageModelIdToLocalId() {
  */
 async function migrateUtcWallTimestampsToShanghai() {
   const key = 'migration_utc_wall_timestamps_to_shanghai_v1';
+  const client = await pool.connect();
   try {
-    const flag = await pool.query('SELECT value FROM settings WHERE key = $1', [key]);
-    if (flag.rows.length > 0) return;
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
+    const flag = await client.query('SELECT value FROM settings WHERE key = $1', [key]);
+    if (flag.rows.length > 0) {
+      await client.query('COMMIT');
+      return;
+    }
 
     // 仅迁移「默认 CURRENT_TIMESTAMP、由 DB 会话墙钟写入」的表；
     // quota_data.created_at 由 Node Date 按进程本地小时写入，不在此列。
@@ -590,7 +620,7 @@ async function migrateUtcWallTimestampsToShanghai() {
     ];
     const results = {};
     for (const table of tables) {
-      const exists = await pool.query(
+      const exists = await client.query(
         `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
         [table]
       );
@@ -598,7 +628,7 @@ async function migrateUtcWallTimestampsToShanghai() {
         results[table] = 'skip-missing';
         continue;
       }
-      const col = await pool.query(
+      const col = await client.query(
         `SELECT data_type FROM information_schema.columns
          WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'created_at'`,
         [table]
@@ -612,22 +642,26 @@ async function migrateUtcWallTimestampsToShanghai() {
         results[table] = `skip-type:${col.rows[0].data_type}`;
         continue;
       }
-      const r = await pool.query(
+      const r = await client.query(
         `UPDATE ${table} SET created_at = created_at + INTERVAL '8 hours'`
       );
       results[table] = r.rowCount;
       Logger.info(`[迁移] ${table}.created_at UTC墙钟 → 上海墙钟，更新 ${r.rowCount} 行`);
     }
 
-    await pool.query(
+    await client.query(
       `INSERT INTO settings (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
       [key, JSON.stringify({ results, at: new Date().toISOString() })]
     );
+    await client.query('COMMIT');
     Logger.info('[迁移] UTC 墙钟时间对齐上海完成');
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     Logger.error(`[迁移] UTC 墙钟对齐跳过: ${err.message}`);
     throw err;
+  } finally {
+    client.release();
   }
 }
 
@@ -1465,7 +1499,7 @@ async function ensureReservedResources() {
       }
     } catch (e) {
       Logger.error(`[迁移] 清除 is_system 标记跳过: ${e.message}`);
-    throw err;
+      throw e;
     }
 
     // 为 teams 添加 is_personal 字段
@@ -1489,22 +1523,29 @@ async function ensureReservedResources() {
       )
     `);
     for (const user of usersWithoutTeam.rows) {
-      const teamName = `${user.username} 的个人账户`;
+      const client = await pool.connect();
       try {
-        const teamResult = await pool.query(
+        await client.query('BEGIN');
+        // A new personal Team is invisible to other transactions until commit.
+        // Lock the existing user first, then recheck both assignment projections.
+        const current = await client.query('SELECT id, username, team_id FROM users WHERE id = $1 FOR UPDATE', [user.id]);
+        const assigned = await client.query('SELECT team_id FROM user_teams WHERE user_id = $1', [user.id]);
+        if (!current.rows.length || current.rows[0].team_id != null || assigned.rows.length) {
+          await client.query('COMMIT');
+          continue;
+        }
+        const teamResult = await client.query(
           'INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id',
-          [teamName, '个人账户，系统自动创建']
+          [`${current.rows[0].username} 的个人账户`, '个人账户，系统自动创建']
         );
-        const teamId = teamResult.rows[0].id;
-        await pool.query(
-          'INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-          [user.id, teamId]
-        );
+        await require('./utils/team-membership').setUserTeam(client, user.id, teamResult.rows[0].id);
+        await client.query('COMMIT');
         Logger.info(`[迁移] 已为用户 ${user.username} 创建个人账户 Team`);
       } catch (e) {
-        // 名称冲突等错误忽略
-        Logger.error(`[迁移] 为用户 ${user.username} 创建个人账户 Team 跳过: ${e.message}`);
-      }
+        await client.query('ROLLBACK').catch(() => {});
+        Logger.error(`[迁移] 为用户 ${user.username} 创建个人账户 Team 失败: ${e.message}`);
+        throw e;
+      } finally { client.release(); }
     }
     if (usersWithoutTeam.rows.length > 0) {
       Logger.info(`[迁移] 共为 ${usersWithoutTeam.rows.length} 个用户补建了个人账户 Team`);

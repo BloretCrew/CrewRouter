@@ -45,19 +45,12 @@ async function getFusionConfig(configName = 'general') {
 }
 
 // 获取模型配置
-async function getModelConfig(modelId) {
+async function getModelConfig(modelId, userId) {
   try {
-    // 1. 先尝试 id 匹配
-    const byId = await pool.query('SELECT * FROM models WHERE id = $1 AND enabled = TRUE', [modelId]);
-    if (byId.rows[0]) return byId.rows[0];
-
-    // 2. 尝试 alias 匹配
-    const byAlias = await pool.query("SELECT * FROM models WHERE alias = $1 AND alias != '' AND enabled = TRUE", [modelId]);
-    if (byAlias.rows[0]) return byAlias.rows[0];
-
-    // 3. 尝试 upstream_model_id 匹配
-    const byUpstream = await pool.query('SELECT * FROM models WHERE upstream_model_id = $1 AND enabled = TRUE', [modelId]);
-    return byUpstream.rows[0] || null;
+    const access = require('../utils/resolved-model-access');
+    return await (userId === undefined
+      ? access.resolveModelConfig(pool, modelId, { allowUpstream: true })
+      : access.resolveAuthorizedModelConfig(pool, userId, modelId, { allowUpstream: true }));
   } catch (err) {
     Logger.error(`[Fusion] 获取模型配置失败: ${err.message}`);
     return null;
@@ -67,18 +60,13 @@ async function getModelConfig(modelId) {
 // 获取供应商配置
 async function assertModelAccessForUser(modelIds, userId) {
   const ids = [...new Set((modelIds || []).map(id => String(id || '').trim()).filter(Boolean))];
-  if (!ids.length || !userId) return;
-  const result = await pool.query(
-    `SELECT DISTINCT m.id, m.alias, m.upstream_model_id
-       FROM models m
-       JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
-       JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
-       JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $2
-      WHERE (m.id = ANY($1::text[]) OR m.alias = ANY($1::text[]) OR m.upstream_model_id = ANY($1::text[]))
-        AND m.enabled = TRUE`,
-    [ids, userId]
-  );
-  const allowed = new Set(result.rows.flatMap(row => [row.id, row.alias, row.upstream_model_id].filter(Boolean).map(String)));
+  if (!userId) {
+    const error = new Error('Fusion 请求缺少用户身份');
+    error.code = 'model_access_denied';
+    throw error;
+  }
+  if (!ids.length) return;
+  const allowed = await require('../utils/resolved-model-access').getAuthorizedModelInputs(pool, userId, ids, { allowUpstream: true });
   const forbidden = ids.find(id => !allowed.has(String(id)));
   if (forbidden) {
     const error = new Error(`用户无权使用 Fusion 模型: ${forbidden}`);
@@ -116,7 +104,7 @@ async function getProviderForRequest(providerId) {
 
 // 调用单个模型（非流式）
 async function callModel(modelId, messages, options = {}) {
-  const modelConfig = await getModelConfig(modelId);
+  const modelConfig = await getModelConfig(modelId, options.requestUserId ?? null);
   if (!modelConfig) {
     throw new Error(`模型 ${modelId} 未找到或未启用`);
   }
@@ -380,6 +368,8 @@ async function processFusion(body, req, options = {}) {
   const startTime = Date.now();
   const { messages, temperature, max_tokens, fusion_preset, tools, tool_choice, response_format } = body;
   const { res, format = 'openai' } = options;
+  const requestUserId = options.requestUserId || req?.apiUser?.userId || req?.apiUser?.user_id;
+  await assertModelAccessForUser([], requestUserId);
   const requestContext = options.requestContext || { upstreamAttempts: 0 };
   requestContext.purpose = 'fusion';
   const signal = options.signal || requestContext.signal;
@@ -392,7 +382,7 @@ async function processFusion(body, req, options = {}) {
   };
   const budgetedCallModel = (modelId, messages, callOptions = {}) => {
     throwIfAborted();
-    return callModel(modelId, messages, { ...callOptions, requestContext, signal });
+    return callModel(modelId, messages, { ...callOptions, requestContext, signal, requestUserId });
   };
 
   Logger.info(`[Fusion] 开始处理: preset=${fusion_preset || 'default'}, messages=${messages?.length}, format=${format}, stream=${options.stream}, hasRes=${!!res}`);
@@ -427,7 +417,6 @@ async function processFusion(body, req, options = {}) {
     Logger.info(`[Fusion] 使用预设配置: ${fusionConfig.name}`);
   }
 
-  const requestUserId = options.requestUserId || req?.apiUser?.userId || req?.apiUser?.user_id;
   await assertModelAccessForUser([
     ...(fusionConfig.panel_models || []),
     fusionConfig.judge_model_id,
@@ -438,7 +427,7 @@ async function processFusion(body, req, options = {}) {
 
   // 流式模式下，先校验外层合成模型配置，避免发送 SSE 头后才发现错误
   if (options.stream && res) {
-    const outerModelConfig = await getModelConfig(fusionConfig.outer_model_id);
+    const outerModelConfig = await getModelConfig(fusionConfig.outer_model_id, requestUserId ?? null);
     if (!outerModelConfig) {
       throw new Error(`Fusion 外层合成模型 ${fusionConfig.outer_model_id} 未找到或未启用`);
     }
@@ -549,7 +538,7 @@ async function processFusion(body, req, options = {}) {
     format,
     anthropicBlockIndex,
     callModel: budgetedCallModel,
-    getModelConfig,
+    getModelConfig: modelId => getModelConfig(modelId, requestUserId ?? null),
     getProviderForRequest,
     tools,
     tool_choice,

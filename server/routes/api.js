@@ -393,26 +393,18 @@ function resolveModelQueue(apiUser) {
  * @returns {{ queue: string[], requestSource: string, harnessOverride: boolean }}
  */
 async function getAuthorizedModelIds(userId, modelIds) {
-  const ids = [...new Set((modelIds || []).map(id => String(id || '').trim()).filter(Boolean))];
-  if (!ids.length) return new Set();
-  const result = await pool.query(
-    `SELECT DISTINCT m.id, m.alias, m.upstream_model_id
-       FROM models m
-       JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
-       JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
-       JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $2
-      WHERE (m.id = ANY($1::text[]) OR m.alias = ANY($1::text[]) OR m.upstream_model_id = ANY($1::text[]))
-        AND m.enabled = TRUE`,
-    [ids, userId]
-  );
-  return new Set(result.rows.flatMap(row => [row.id, row.alias, row.upstream_model_id].filter(Boolean).map(String)));
+  // This preflight also covers Fusion bindings, which support upstream names.
+  // Each ordinary execution still uses its narrower id/alias resolver below.
+  return require('../utils/resolved-model-access').getAuthorizedModelInputs(pool, userId, modelIds, { allowUpstream: true });
 }
 
 async function refreshApiUserModelAuthorization(apiUser) {
   const [keyResult, queueResult, harnessResult] = await Promise.all([
     pool.query(
-      `SELECT current_model_id, fusion_panel_models, fusion_judge_model_id, fusion_outer_model_id
-         FROM api_keys WHERE id = $1 AND user_id = $2`,
+      `SELECT ak.current_model_id, ak.fusion_panel_models, ak.fusion_judge_model_id, ak.fusion_outer_model_id,
+              ak.enabled, ak.expires_at
+         FROM api_keys ak JOIN users u ON u.id = ak.user_id
+        WHERE ak.id = $1 AND ak.user_id = $2`,
       [apiUser.keyId, apiUser.userId]
     ),
     pool.query(
@@ -426,7 +418,19 @@ async function refreshApiUserModelAuthorization(apiUser) {
       [apiUser.keyId]
     ),
   ]);
-  const key = keyResult.rows[0] || {};
+  const key = keyResult.rows[0];
+  let lifecycleError;
+  if (!key) lifecycleError = new ApiKeyLifecycleError(401, 'Invalid API key');
+  else if (key.enabled === false) lifecycleError = new ApiKeyLifecycleError(403,
+    'API key is disabled. Enable it in your console to resume access.', 'key_disabled');
+  else if (key.expires_at != null && (!Number.isFinite(new Date(key.expires_at).getTime())
+      || new Date(key.expires_at).getTime() <= Date.now())) {
+    lifecycleError = new ApiKeyLifecycleError(401, 'API key has expired');
+  }
+  if (lifecycleError) {
+    invalidateApiKeyCacheByKeyId(apiUser.keyId);
+    throw lifecycleError;
+  }
   const queue = queueResult.rows.map(row => String(row.model_id || '').trim()).filter(Boolean);
   const currentModelId = key.current_model_id || null;
   const harnessModels = Object.fromEntries(harnessResult.rows
@@ -444,6 +448,26 @@ async function refreshApiUserModelAuthorization(apiUser) {
   apiUser.fusionJudgeModelId = key.fusion_judge_model_id || '';
   apiUser.fusionOuterModelId = key.fusion_outer_model_id || '';
   return apiUser;
+}
+
+async function refreshApiUserForRequest(req, res) {
+  try {
+    await refreshApiUserModelAuthorization(req.apiUser);
+    return true;
+  } catch (error) {
+    if (!(error instanceof ApiKeyLifecycleError)) throw error;
+    res.status(error.status).json(buildApiErrorBody(req, error.type, error.message, error.extra));
+    return false;
+  }
+}
+
+class ApiKeyLifecycleError extends Error {
+  constructor(status, message, code) {
+    super(message);
+    this.status = status;
+    this.type = 'authentication_error';
+    this.extra = code ? { code } : {};
+  }
 }
 
 function resolveModelQueueForRequest(apiUser, req, metadata = {}) {
@@ -721,13 +745,11 @@ async function applyProviderSelect(provider) {
   return provider;
 }
 
-async function getModelConfig(modelId) {
-  // 先尝试直接 id 匹配
-  const byId = await pool.query('SELECT * FROM models WHERE id = $1 AND enabled = TRUE', [modelId]);
-  if (byId.rows[0]) return byId.rows[0];
-  // 再尝试别名匹配
-  const byAlias = await pool.query("SELECT * FROM models WHERE alias = $1 AND alias != '' AND enabled = TRUE", [modelId]);
-  return byAlias.rows[0] || null;
+async function getModelConfig(modelId, userId) {
+  const access = require('../utils/resolved-model-access');
+  return userId === undefined
+    ? access.resolveModelConfig(pool, modelId)
+    : access.resolveAuthorizedModelConfig(pool, userId, modelId);
 }
 
 // 用量落库前的统计元数据：stats:record 钩子可附加维度（写入 usage_records.plugin_meta）
@@ -1215,6 +1237,9 @@ async function validateApiKey(req, res, next) {
       // 缓存命中：直接使用缓存的数据，但仍需检查额度
       Logger.debug(`[API密钥验证] 缓存命中: user=${cached.username}`);
 
+      // Cached fields never substitute for current credential lifecycle state.
+      await refreshApiUserModelAuthorization(cached);
+
       // 检查密钥是否被禁用
       if (cached.enabled === false) {
         return sendAuthError(403, 'authentication_error', 'API key is disabled. Enable it in your console to resume access.', { code: 'key_disabled' });
@@ -1239,7 +1264,6 @@ async function validateApiKey(req, res, next) {
         [cached.keyId]
       ).catch(err => Logger.warn('[API密钥验证] 更新 last_used_at 失败:', err.message));
 
-      await refreshApiUserModelAuthorization(cached);
       req.apiUser = cached;
       return next();
     }
@@ -1287,12 +1311,6 @@ async function validateApiKey(req, res, next) {
       }
     }
 
-    // 异步更新 last_used_at（不阻塞请求）
-    pool.query(
-      'UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1',
-      [keyData.id]
-    ).catch(err => Logger.warn('[API密钥验证] 更新 last_used_at 失败:', err.message));
-
     const currentModelId = keyData.current_model_id || null;
     const modelQueue = await loadModelQueueForKey(keyData.id, currentModelId);
     const harnessModels = await loadHarnessModelsForKey(keyData.id);
@@ -1338,13 +1356,19 @@ async function validateApiKey(req, res, next) {
       apiUser.injectPrompt = null;
     }
 
-    // 缓存验证结果
-    setCachedApiKey(apiKey, apiUser);
-
     await refreshApiUserModelAuthorization(apiUser);
+    // Do not repopulate the cache until the current lifecycle check succeeds.
+    setCachedApiKey(apiKey, apiUser);
+    pool.query(
+      'UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [keyData.id]
+    ).catch(err => Logger.warn('[API密钥验证] 更新 last_used_at 失败:', err.message));
     req.apiUser = apiUser;
     next();
   } catch (error) {
+    if (error instanceof ApiKeyLifecycleError) {
+      return sendAuthError(error.status, error.type, error.message, error.extra);
+    }
     Logger.error('[API密钥验证] 错误:', error);
     res.status(500).json(buildApiErrorBody(req, 'server_error', 'Internal server error'));
   }
@@ -2671,6 +2695,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
+  if (!await refreshApiUserForRequest(req, res)) return;
   if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
   req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -2708,7 +2733,6 @@ async function handleChatCompletion(req, res) {
 
   // CrewRouter: 使用 API Key 绑定的有序模型队列，忽略请求中的 model；
   // 若识别到 harness 且有单独绑定，则优先使用该模型。
-  await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
   if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
@@ -2736,7 +2760,7 @@ async function handleChatCompletion(req, res) {
     const hasMore = i < modelQueue.length - 1;
     const suppressErrorResponse = hasMore;
 
-    const modelConfig = await getModelConfig(queueModelId);
+    const modelConfig = await getModelConfig(queueModelId, req.apiUser.userId);
     if (!modelConfig) {
       Logger.warn(`[Chat] 队列模型未找到 attempt=${i + 1}/${modelQueue.length}: ${queueModelId}`);
       lastError = {
@@ -3330,6 +3354,7 @@ router.get('/models', oauthBearer, async (req, res) => {
 router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
+  if (!await refreshApiUserForRequest(req, res)) return;
   if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
   req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -3387,7 +3412,6 @@ async function handleAnthropicMessage(req, res) {
   }
 
   // CrewRouter: 使用 API Key 绑定的有序模型队列；harness 单独绑定优先
-  await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
   if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
@@ -3420,7 +3444,7 @@ async function handleAnthropicMessage(req, res) {
     const hasMore = i < modelQueue.length - 1;
     const suppressErrorResponse = hasMore;
 
-    const modelConfig = await getModelConfig(queueModelId);
+    const modelConfig = await getModelConfig(queueModelId, req.apiUser.userId);
     if (!modelConfig) {
       Logger.warn(`[Anthropic] 队列模型未找到 attempt=${i + 1}/${modelQueue.length}: ${queueModelId}`);
       lastError = {
@@ -5617,6 +5641,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
+  if (!await refreshApiUserForRequest(req, res)) return;
   if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
   req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -5662,7 +5687,6 @@ async function handleResponses(req, res) {
   }
 
   // CrewRouter: 使用 API Key 绑定的有序模型队列；harness 单独绑定优先
-  await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
   if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
@@ -5698,7 +5722,7 @@ async function handleResponses(req, res) {
     req._upstreamAttemptContext.modelIdentity = null;
     const queueModelId = modelQueue[i];
     const hasMore = i < modelQueue.length - 1;
-    const cfg = await getModelConfig(queueModelId);
+    const cfg = await getModelConfig(queueModelId, req.apiUser.userId);
     if (!cfg) {
       Logger.warn(`[Responses] 队列模型未找到 attempt=${i + 1}/${modelQueue.length}: ${queueModelId}`);
       lastError = { status: 404, body: { error: { message: `Model '${queueModelId}' not found`, type: 'not_found_error' } }, retryable: false };

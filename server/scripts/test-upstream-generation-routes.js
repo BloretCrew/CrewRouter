@@ -7,6 +7,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const express = require('express');
 const axios = require('axios');
+const realUrlValidator = require('../utils/url-validator');
 
 const noop = () => {};
 const asyncNoop = async () => {};
@@ -17,11 +18,23 @@ const mock = (relative, exports) => mocks.set(path.resolve(__dirname, '..', rela
 const logger = { info: noop, warn: noop, error: noop, debug: noop, stream: noop };
 const pool = {
   async query(sql, values = []) {
-    if (/SELECT DISTINCT m\.id/.test(sql)) return { rows: state.queue.map(id => ({ id })) };
+    if (/SELECT DISTINCT m\.id/.test(sql)) {
+      assert.equal(values[1], 1, 'model authorization belongs to the synthetic Key owner');
+      return { rows: state.queue.filter(id => values[0].includes(id)).map(id => ({ id })) };
+    }
+    if (/SELECT m\.id FROM models m/.test(sql)) {
+      assert.equal(values[1], 1, 'the final resolved model is checked for the same owner');
+      return { rows: state.queue.includes(values[0]) ? [{ id: values[0] }] : [] };
+    }
     if (/SELECT DISTINCT p\.format/.test(sql)) return { rows: [{ format: state.provider.format }] };
     if (/FROM api_key_harness_models/.test(sql)) return { rows: [] };
     if (/FROM api_key_models/.test(sql)) return { rows: state.queue.map(model_id => ({ model_id })) };
-    if (/SELECT current_model_id/.test(sql)) return { rows: [{ current_model_id: state.queue[0] }] };
+    if (/SELECT ak\.current_model_id/.test(sql)) {
+      assert.deepEqual(values, [1, 1], 'lifecycle lookup requires both synthetic Key and owner');
+      assert.match(sql, /JOIN users u ON u\.id = ak\.user_id/);
+      assert.match(sql, /ak\.enabled, ak\.expires_at/);
+      return { rows: [{ current_model_id: state.queue[0], enabled: true, expires_at: null }] };
+    }
     if (/SELECT \* FROM models WHERE id/.test(sql)) {
       return { rows: state.queue.includes(values[0]) ? [{ id: values[0], upstream_model_id: `upstream-${values[0]}`, provider: 'local-provider', enabled: true }] : [] };
     }
@@ -56,6 +69,17 @@ mock('plugins/hooks.js', { hasSubscribers: () => false, applyStatsRecord: async 
 mock('fusion.js', { processFusion: async () => { throw new Error('Fusion is outside this test'); } });
 mock('utils/secret-crypto.js', { decryptSecret: value => value });
 mock('utils/crewrouter-command.js', { tryHandleCrewRouterCommand: async () => false });
+// Keep the real URL/SSRF validator. This isolated fixture explicitly allows
+// only its currently active loopback origin, including the random port.
+mock('utils/url-validator.js', {
+  ...realUrlValidator,
+  async validateUrl(input, options) {
+    const target = new URL(input);
+    assert.equal(target.origin, `http://127.0.0.1:${state.upstreamPort}`);
+    assert.equal(options.allowPrivate, false);
+    return realUrlValidator.validateUrl(input, { ...options, allowedPrivateOrigins: [target.origin] });
+  },
+});
 
 const originalLoad = Module._load;
 const originalSetInterval = global.setInterval;
