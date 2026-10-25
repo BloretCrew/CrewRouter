@@ -24,6 +24,7 @@ const path = require('path');
 const vm = require('vm');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
+const proxyPool = require('../proxy-pool');
 
 // 网关类钩子统一要求 gateway:modify 权限
 const GATEWAY_HOOKS = new Set([
@@ -147,7 +148,7 @@ function buildFetch(pluginId) {
       throw new Error(`[plugins:${pluginId}] fetch 目标被 SSRF 校验拒绝: ${check.error}`);
     }
     const opts = { ...options, redirect: 'manual', signal: AbortSignal.timeout(PLUGIN_FETCH_TIMEOUT_MS) };
-    return fetch(check.url.toString(), opts);
+    return proxyPool.pinnedFetchValidated(check, opts);
   };
 }
 
@@ -348,7 +349,7 @@ function buildContext(plugin, hooksBus, logPrefix) {
             const check = await validateUrl(w.url, { allowPrivate: false });
             if (check.ok) {
               await Promise.race([
-                fetch(check.url.toString(), { ...opts, redirect: 'manual', signal: AbortSignal.timeout(10000) }),
+                proxyPool.pinnedFetchValidated(check, { ...opts, redirect: 'manual', signal: AbortSignal.timeout(10000) }),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('webhook 超时')), 10000)),
               ]);
             }

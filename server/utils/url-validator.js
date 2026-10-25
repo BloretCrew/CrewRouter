@@ -160,7 +160,7 @@ function normalizeAllowlistOrigin(value) {
  * @param {boolean} options.allowPrivate - 是否允许内网地址（默认 false）
  * @param {boolean} options.resolveDNS - 是否解析域名检查 IP（默认 true，依赖 dns 模块）
  * @param {string[]} options.allowedPrivateOrigins - 按协议、主机名/IP、端口精确允许访问内网的目标列表
- * @returns {{ ok: boolean, error?: string, url?: URL }}
+ * @returns {{ ok: boolean, error?: string, url?: URL, addresses?: Array<{address: string, family: number}> }}
  */
 async function validateUrl(urlStr, options = {}) {
   const { allowPrivate = false, resolveDNS = true, allowedPrivateOrigins = [] } = options;

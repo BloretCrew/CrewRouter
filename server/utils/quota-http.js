@@ -2,6 +2,7 @@
 
 const proxyPool = require('../proxy-pool');
 const { AsyncLocalStorage } = require('node:async_hooks');
+const { validateUrl } = require('./url-validator');
 const quotaSignals = new AsyncLocalStorage();
 
 function withQuotaSignal(signal, fn) { return quotaSignals.run(signal, fn); }
@@ -68,12 +69,12 @@ async function listQuotaProxies(provider) {
   return list;
 }
 
-async function sendOnce(url, init, agent) {
+async function sendOnce(url, init, agent, validation) {
   const requestContext = init.requestContext;
   if (agent) {
-    return proxyPool.proxyFetch(url, { ...init, agent, requestContext });
+    return proxyPool.proxyFetch(url, { ...init, agent, requestContext, pinnedTarget: validation });
   }
-  return fetch(url, init);
+  return proxyPool.pinnedFetchValidated(validation, init);
 }
 
 /**
@@ -81,9 +82,12 @@ async function sendOnce(url, init, agent) {
  * 若已配置供应商/系统代理则先走代理，避免空等超时。
  */
 async function quotaRequest(url, init, provider = {}) {
+  const validation = await validateUrl(String(url), { allowPrivate: false });
+  if (!validation.ok) throw new Error(`额度请求 URL 未通过 SSRF 校验: ${validation.error}`);
+  url = validation.url.toString();
   // API credentials may be present in headers or bodies; never forward them to
   // an unvalidated redirect target.
-  init = { ...init, redirect: 'manual', signal: quotaSignal(init.signal) };
+  init = { ...init, redirect: 'manual', signal: quotaSignal(init.signal), pinnedTarget: validation };
   init.signal?.throwIfAborted();
   const requestContext = init.requestContext || null;
   const proxies = await listQuotaProxies(provider);
@@ -96,7 +100,7 @@ async function quotaRequest(url, init, provider = {}) {
   for (const agent of attempts) {
     init.signal?.throwIfAborted();
     try {
-      return await sendOnce(url, { ...init, requestContext }, agent);
+      return await sendOnce(url, { ...init, requestContext }, agent, validation);
     } catch (err) {
       lastError = err;
       if (!isNetworkError(err)) throw err;

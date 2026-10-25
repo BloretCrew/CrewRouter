@@ -12,9 +12,9 @@
  * 可靠性：fire-and-forget，5 秒超时，任何失败仅记录 warn，绝不阻塞主流程。
  */
 
-const axios = require('axios');
 const Logger = require('../logger');
 const config = require('../config-loader');
+const { pinnedAxiosRequest } = require('./pinned-axios');
 
 const { resolveInstanceId } = require('./login-reporter');
 
@@ -279,7 +279,9 @@ async function reportNow() {
       },
     };
 
-    await axios.post(REPORT_URL, report, {
+    await pinnedAxiosRequest(REPORT_URL, {
+      method: 'POST',
+      data: report,
       timeout: REQUEST_TIMEOUT_MS,
       headers: {
         'Content-Type': 'application/json',

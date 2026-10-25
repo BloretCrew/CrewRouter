@@ -11,6 +11,7 @@ const path = require('path');
 const { getPool } = require('./db');
 const Logger = require('../logger');
 const { validateUrl } = require('../utils/url-validator');
+const proxyPool = require('../proxy-pool');
 const { readZipManifest } = require('../plugins/zip');
 
 const MAX_STORE_PLUGIN_ZIP_BYTES = 25 * 1024 * 1024;
@@ -990,7 +991,7 @@ async function fetchPluginManifest(plugin) {
     try {
       const check = await validateUrl(String(plugin.download), { allowPrivate: false });
       if (!check.ok || check.url.protocol !== 'https:' || check.url.username || check.url.password) return null;
-      const res = await fetch(check.url.toString(), { signal: ac.signal, redirect: 'manual' });
+      const res = await proxyPool.pinnedFetchValidated(check, { signal: ac.signal, redirect: 'manual' });
       if (!res || !res.ok || !res.body) return null;
       const contentLength = Number(res.headers.get('content-length'));
       if (Number.isFinite(contentLength) && contentLength > MAX_STORE_PLUGIN_ZIP_BYTES) {

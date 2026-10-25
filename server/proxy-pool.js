@@ -13,9 +13,11 @@ const { SocksProxyAgent } = require('socks-proxy-agent');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const { Readable } = require('stream');
+const net = require('node:net');
 const Logger = require('./logger');
 const pool = require('./models/database').pool;
 const { validateUrl } = require('./utils/url-validator');
+const { createPinnedHttpAgents } = require('./utils/pinned-http-agents');
 const { combineAbortSignals, releaseCombinedAbortSignal } = require('./utils/request-lifecycle');
 
 // 代理状态缓存：providerId -> proxyId -> 运行时状态
@@ -103,7 +105,7 @@ async function fetchSubscriptionProxies(subscriptionUrl, providerId) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const response = await fetch(urlCheck.url.toString(), { signal: controller.signal, redirect: 'manual' });
+      const response = await pinnedFetchValidated(urlCheck, { signal: controller.signal, redirect: 'manual' });
       if (!response.ok) {
         await response.body?.cancel().catch(() => {});
         Logger.warn(`[ProxyPool] 订阅地址获取失败: HTTP ${response.status} (${redactSubscriptionUrl(subscriptionUrl)})`);
@@ -389,6 +391,42 @@ function createProxyAgent(proxyUrl) {
   return new HttpsProxyAgent(proxyUrl);
 }
 
+function createPinnedProxyAgent(agent, validation, attempt = 0) {
+  const host = String(validation?.url?.hostname || '').replace(/^\[|\]$/g, '');
+  if (!host || net.isIP(host)) return null;
+  const proxyUrl = agent?.proxyUrl || agent?.proxy?.href;
+  if (!proxyUrl) throw new Error('代理无法固定已校验的上游地址');
+  const addresses = validation.addresses || [];
+  if (!addresses.length) throw new Error('代理请求缺少已校验的 DNS 地址');
+  const attemptNumber = Number.isSafeInteger(attempt) && attempt >= 0 ? attempt : 0;
+  const candidate = addresses[attemptNumber % addresses.length];
+  const family = net.isIP(candidate.address);
+  if (!family || (candidate.family && candidate.family !== family)) throw new Error('代理请求的已校验 DNS 地址无效');
+
+  if (/^socks(?:4|5|5h)?:/i.test(proxyUrl)) {
+    return new class extends SocksProxyAgent {
+      constructor() {
+        super(proxyUrl);
+        this.pinnedAddress = candidate.address;
+        this.pinnedServername = host;
+      }
+      connect(req, options) {
+        return super.connect(req, { ...options, host: this.pinnedAddress, servername: this.pinnedServername });
+      }
+    }();
+  }
+  return new class extends HttpsProxyAgent {
+    constructor() {
+      super(proxyUrl);
+      this.pinnedAddress = candidate.address;
+      this.pinnedServername = host;
+    }
+    connect(req, options) {
+      return super.connect(req, { ...options, host: this.pinnedAddress, servername: this.pinnedServername });
+    }
+  }();
+}
+
 /**
  * 基于 axios 的 fetch 兼容包装层
  *
@@ -406,6 +444,88 @@ async function proxyFetch(url, options = {}) {
   }
   const { quotaFetch } = require('./utils/quota-request-context');
   return quotaFetch(url, options, proxyFetchTransport);
+}
+
+/**
+ * 经过 URL 校验并固定 DNS 结果的直连 fetch 包装。
+ * 该接口不走 HTTP/SOCKS 代理；需要代理的供应商继续使用 proxyFetch + agent。
+ */
+async function pinnedFetch(url, options = {}) {
+  const check = await validateUrl(String(url), { allowPrivate: false });
+  if (!check.ok) throw new Error(`出站 URL 安全校验失败: ${check.error}`);
+  return pinnedFetchValidated(check, options);
+}
+
+async function pinnedFetchValidated(validation, options = {}) {
+  if (!validation?.ok || !validation.url) throw new Error('缺少已校验的出站 URL');
+  if (options.agent) throw new Error('固定 DNS 的直连请求不能使用代理 agent');
+  const initialUrl = validation.url instanceof URL ? validation.url : new URL(validation.url);
+  if (initialUrl.username || initialUrl.password) throw new TypeError('出站 URL 不得包含用户凭据');
+  initialUrl.hash = '';
+  const redirect = options.redirect || 'follow';
+  if (!['follow', 'manual', 'error'].includes(redirect)) throw new TypeError('redirect 选项无效');
+  const headers = new Headers(options.headers || undefined);
+  let method = String(options.method || 'GET').toUpperCase();
+  let body = options.body;
+  if (body === null) body = undefined;
+  if (body instanceof URLSearchParams) {
+    body = body.toString();
+    if (!headers.has('content-type')) headers.set('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+  }
+  if (body !== undefined && ['GET', 'HEAD'].includes(method)) throw new TypeError('GET/HEAD 请求不能包含 body');
+  let currentValidation = validation;
+  let currentUrl = initialUrl;
+
+  for (let redirects = 0; ; redirects++) {
+    const response = await proxyFetchTransport(currentUrl.toString(), {
+      ...options,
+      method,
+      headers: Object.fromEntries(headers.entries()),
+      body,
+      redirect: 'manual',
+      agent: undefined,
+      pinnedTarget: currentValidation,
+    });
+    if (![301, 302, 303, 307, 308].includes(response.status) || redirect === 'manual') return response;
+    if (redirect === 'error') {
+      await response.body?.cancel().catch(() => {});
+      throw new TypeError('出站请求收到重定向响应');
+    }
+    const location = response.headers.get('location');
+    if (!location) return response;
+    if (redirects >= 20) {
+      await response.body?.cancel().catch(() => {});
+      throw new TypeError('出站请求重定向次数超限');
+    }
+    let nextUrl;
+    try { nextUrl = new URL(location, currentUrl); }
+    catch {
+      await response.body?.cancel().catch(() => {});
+      throw new TypeError('出站请求重定向地址无效');
+    }
+    if (nextUrl.username || nextUrl.password) {
+      await response.body?.cancel().catch(() => {});
+      throw new TypeError('出站重定向 URL 不得包含用户凭据');
+    }
+    if (currentUrl.protocol === 'https:' && nextUrl.protocol !== 'https:') {
+      await response.body?.cancel().catch(() => {});
+      throw new TypeError('出站请求拒绝从 HTTPS 降级到非 HTTPS');
+    }
+    nextUrl.hash = '';
+    await response.body?.cancel().catch(() => {});
+    if (nextUrl.origin !== currentUrl.origin) {
+      for (const name of ['authorization', 'proxy-authorization', 'cookie', 'cookie2']) headers.delete(name);
+    }
+    if ((response.status === 303 && method !== 'HEAD')
+        || ((response.status === 301 || response.status === 302) && method === 'POST')) {
+      method = 'GET';
+      body = undefined;
+      for (const name of ['content-encoding', 'content-language', 'content-location', 'content-type', 'content-length']) headers.delete(name);
+    }
+    currentUrl = nextUrl;
+    currentValidation = await validateUrl(currentUrl.toString(), { allowPrivate: false });
+    if (!currentValidation.ok) throw new Error(`重定向目标未通过安全校验: ${currentValidation.error}`);
+  }
 }
 
 async function proxyFetchTransport(url, options = {}) {
@@ -426,9 +546,19 @@ async function proxyFetchTransport(url, options = {}) {
     error.cause = err;
     return error;
   };
+  let pinnedAgents;
+  let pinnedProxyAgent;
   const cleanupSignal = () => {
     if (signal && signal !== options.signal && signal !== context?.signal) {
       releaseCombinedAbortSignal(signal);
+    }
+    if (pinnedAgents) {
+      pinnedAgents.destroy();
+      pinnedAgents = null;
+    }
+    if (pinnedProxyAgent) {
+      pinnedProxyAgent.destroy();
+      pinnedProxyAgent = null;
     }
   };
   if (signal?.aborted) {
@@ -443,6 +573,17 @@ async function proxyFetchTransport(url, options = {}) {
   }
   const isHttps = url.startsWith('https://');
   const method = (options.method || 'GET').toLowerCase();
+  try {
+    if (options.agent && options.pinnedTarget) {
+      pinnedProxyAgent = createPinnedProxyAgent(options.agent, options.pinnedTarget, context?.upstreamAttempts || 0);
+    } else if (options.pinnedTarget) {
+      pinnedAgents = createPinnedHttpAgents(options.pinnedTarget);
+    }
+  } catch (error) {
+    cleanupSignal();
+    throw error;
+  }
+  const requestAgent = pinnedProxyAgent || options.agent;
   const axiosConfig = {
     method,
     url,
@@ -452,8 +593,9 @@ async function proxyFetchTransport(url, options = {}) {
     maxRedirects: 0,
     validateStatus: () => true,
     signal,
-    httpAgent: !isHttps ? options.agent : undefined,
-    httpsAgent: isHttps ? options.agent : undefined,
+    httpAgent: !isHttps ? (requestAgent || pinnedAgents?.httpAgent) : undefined,
+    httpsAgent: isHttps ? (requestAgent || pinnedAgents?.httpsAgent) : undefined,
+    ...(pinnedAgents || requestAgent ? { proxy: false } : {}),
     transformRequest: [(data) => data],
     transformResponse: [(data) => data]
   };
@@ -518,52 +660,28 @@ async function proxyFetchTransport(url, options = {}) {
   stream.once('error', onError);
   stream.once('close', onClose);
 
-  let bodyBuffer = null;
-  let consumed = false;
-
-  const readBodyBuffer = async () => {
-    if (bodyBuffer !== null) return bodyBuffer;
-    const chunks = [];
-    for await (const chunk of axiosResponse.data) {
-      chunks.push(chunk);
-    }
-    bodyBuffer = Buffer.concat(chunks);
-    return bodyBuffer;
-  };
-
-  const response = {
-    ok: axiosResponse.status >= 200 && axiosResponse.status < 300,
-    status: axiosResponse.status,
-    statusText: axiosResponse.statusText,
-    headers: axiosResponse.headers,
-    url: axiosResponse.config.url,
-
-    text: async () => {
-      if (consumed) {
-        throw new TypeError('Body has already been consumed');
-      }
-      consumed = true;
-      const buf = await readBodyBuffer();
-      return buf.toString('utf-8');
-    },
-
-    json: async () => {
-      const text = await response.text();
-      return JSON.parse(text);
-    },
-
-    body: {
-      getReader: () => {
-        if (consumed) {
-          throw new TypeError('Body has already been consumed');
-        }
-        consumed = true;
-        const webStream = Readable.toWeb(axiosResponse.data);
-        return webStream.getReader();
-      }
-    }
-  };
-
+  const responseHeaders = new Headers();
+  const rawHeaders = axiosResponse.headers.toJSON?.() || axiosResponse.headers;
+  for (const [name, rawValue] of Object.entries(rawHeaders)) {
+    if (rawValue == null) continue;
+    const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+    for (const value of values) responseHeaders.append(name, String(value));
+  }
+  const bodyless = [204, 205, 304].includes(axiosResponse.status);
+  let response;
+  try {
+    response = new Response(bodyless ? null : Readable.toWeb(axiosResponse.data), {
+      status: axiosResponse.status,
+      statusText: axiosResponse.statusText,
+      headers: responseHeaders,
+    });
+    Object.defineProperty(response, 'url', { value: axiosResponse.config.url, enumerable: true });
+  } catch (error) {
+    axiosResponse.data.destroy?.();
+    cleanupSignal();
+    throw error;
+  }
+  if (bodyless) axiosResponse.data.resume?.();
   return response;
 }
 
@@ -679,6 +797,8 @@ module.exports = {
   getProxyAgent,
   getProxies,
   proxyFetch,
+  pinnedFetch,
+  pinnedFetchValidated,
   markProxy429,
   markProxySuccess,
   createProxyEntry,

@@ -3,6 +3,7 @@
 const Logger = require('../logger');
 const { pool } = require('../models/database');
 const { validateUrl } = require('./url-validator');
+const proxyPool = require('../proxy-pool');
 const { getPrimaryApiKey, normalizeProviderKeyEntries } = require('./provider-keys');
 const { fetchCodexUsage } = require('./codex-usage');
 const { fetchGrokUsage } = require('./grok-usage');
@@ -359,7 +360,7 @@ async function queryProviderQuotaInternal(provider, options = {}) {
 
   let responseData;
   try {
-    const response = await fetch(urlCheck.url.toString(), fetchOptions);
+    const response = await proxyPool.pinnedFetchValidated(urlCheck, fetchOptions);
     const text = await response.text();
     if (!response.ok) {
       try { responseData = JSON.parse(text); } catch { responseData = { _status: response.status, _body: text.substring(0, 500) }; }

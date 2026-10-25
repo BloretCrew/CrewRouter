@@ -1,4 +1,5 @@
 const Logger = require('./logger');
+const proxyPool = require('./proxy-pool');
 
 const MODELS_DEV_URL = 'https://models.dev/api.json';
 let providersCache = null;
@@ -59,7 +60,7 @@ async function fetchProvidersIndex() {
   cacheStats.lastMissTime = now;
 
   try {
-    const res = await fetch(MODELS_DEV_URL, { signal: AbortSignal.timeout(15000), redirect: 'manual' });
+    const res = await proxyPool.pinnedFetch(MODELS_DEV_URL, { signal: AbortSignal.timeout(15000), redirect: 'manual' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     providersCache = data;

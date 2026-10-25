@@ -19,6 +19,7 @@ const { pool } = require('./models/database');
 const { safeExecuteKeyScript } = require('./utils/sandbox');
 const { encryptSecret, decryptSecret } = require('./utils/secret-crypto');
 const { validateUrl } = require('./utils/url-validator');
+const proxyPool = require('./proxy-pool');
 
 const KEY_SCRIPT_FETCH_TIMEOUT_MS = 8000;
 const KEY_SCRIPT_FETCH_MAX_BYTES = 1024 * 1024;
@@ -60,7 +61,7 @@ function keyScriptFetch(url, initJson, callback) {
       if (Buffer.byteLength(body, 'utf8') > KEY_SCRIPT_FETCH_MAX_BYTES) throw new Error('fetch body 超过大小限制');
     }
 
-    const response = await fetch(check.url.toString(), {
+    const response = await proxyPool.pinnedFetchValidated(check, {
       method,
       headers,
       ...(body === undefined ? {} : { body }),

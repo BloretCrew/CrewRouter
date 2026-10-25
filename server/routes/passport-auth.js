@@ -7,6 +7,8 @@ const Logger = require('../logger');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const { getAuthMode } = require('../utils/auth-mode');
 const { loadPersistedEdition } = require('../utils/instance-edition');
+const { validateUrl } = require('../utils/url-validator');
+const proxyPool = require('../proxy-pool');
 
 const router = express.Router();
 const passport = config.passport || {};
@@ -50,7 +52,12 @@ async function verifyPassport(code) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(`${baseUrl}/app/verify`, {
+    const verificationUrl = `${baseUrl}/app/verify`;
+    const urlCheck = await validateUrl(verificationUrl, { allowPrivate: false });
+    if (!urlCheck.ok || urlCheck.url.protocol !== 'https:' || urlCheck.url.username || urlCheck.url.password) {
+      throw new Error(`PassPort 地址安全校验失败: ${urlCheck.error || '必须使用无凭据的公网 HTTPS 地址'}`);
+    }
+    const response = await proxyPool.pinnedFetchValidated(urlCheck, {
       method: 'POST', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ app_id: passport.appId, app_secret: passport.appSecret, code }),

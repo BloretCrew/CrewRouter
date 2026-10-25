@@ -9,6 +9,7 @@
 
 const Logger = require('../logger');
 const { validateUrl } = require('../utils/url-validator');
+const proxyPool = require('../proxy-pool');
 
 function getPassportConfig(config = {}) {
   const s = (config.store) || {};
@@ -77,13 +78,13 @@ async function verifyCode(passportCfg, code) {
   });
   const url = `${passportCfg.baseUrl}/app/verify?${params.toString()}`;
   const urlCheck = await validateUrl(url, { allowPrivate: false });
-  if (!urlCheck.ok) {
-    const err = new Error(`PassPort 地址校验失败: ${urlCheck.error}`);
+  if (!urlCheck.ok || urlCheck.url.protocol !== 'https:' || urlCheck.url.username || urlCheck.url.password) {
+    const err = new Error(`PassPort 地址校验失败: ${urlCheck.error || '必须使用无凭据的公网 HTTPS 地址'}`);
     err.code = 'PASSPORT_URL_REJECTED';
     throw err;
   }
 
-  const res = await fetch(urlCheck.url.toString(), {
+  const res = await proxyPool.pinnedFetchValidated(urlCheck, {
     method: 'GET',
     headers: { Accept: 'application/json' },
     redirect: 'manual',

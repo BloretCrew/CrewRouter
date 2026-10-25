@@ -15,6 +15,7 @@ const axios = require('axios');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { validateUrl } = require('./url-validator');
+const { createPinnedHttpAgents } = require('./pinned-http-agents');
 const { extractZipSafe } = require('../plugins/zip');
 
 const execFileAsync = promisify(execFile);
@@ -264,16 +265,25 @@ async function checkForUpdate() {
     Logger.info(
       `[update] 请求版本信息: url=${UPDATE_VERSION_URL} local=${runtime.currentVersion}`
     );
-    const resp = await axios.get(urlCheck.url.toString(), {
-      timeout: 12000,
-      maxRedirects: 0,
-      maxContentLength: 1024 * 1024,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': `CrewRouter-Updater/${runtime.currentVersion}`,
-      },
-      validateStatus: (s) => s >= 200 && s < 300,
-    });
+    const agents = createPinnedHttpAgents(urlCheck);
+    let resp;
+    try {
+      resp = await axios.get(urlCheck.url.toString(), {
+        timeout: 12000,
+        maxRedirects: 0,
+        maxContentLength: 1024 * 1024,
+        proxy: false,
+        httpAgent: agents.httpAgent,
+        httpsAgent: agents.httpsAgent,
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': `CrewRouter-Updater/${runtime.currentVersion}`,
+        },
+        validateStatus: (s) => s >= 200 && s < 300,
+      });
+    } finally {
+      agents.destroy();
+    }
 
     const remote = resp.data || {};
     const latestVersion = remote.version || remote.latest || null;
@@ -431,60 +441,68 @@ async function downloadPackage(destFile) {
   Logger.info(`[update] 开始下载: ${UPDATE_PACKAGE_URL} → ${destFile}`);
   setState({ phase: 'downloading', message: '正在下载更新包…', progress: 5, error: null });
 
-  const resp = await axios.get(urlCheck.url.toString(), {
-    responseType: 'stream',
-    timeout: 10 * 60 * 1000,
-    maxRedirects: 0,
-    maxContentLength: MAX_UPDATE_ARCHIVE_BYTES,
-    headers: {
-      'User-Agent': `CrewRouter-Updater/${state.currentVersion || 'unknown'}`,
-    },
-    validateStatus: (s) => s >= 200 && s < 300,
-  });
-
-  const total = parseInt(resp.headers['content-length'] || '0', 10) || 0;
-  if (total > MAX_UPDATE_ARCHIVE_BYTES) {
-    resp.data.destroy();
-    throw new Error('更新包超过 32 MiB 限制');
-  }
-  let received = 0;
-  const limiter = new Transform({
-    transform(chunk, encoding, callback) {
-      received += chunk.length;
-      if (received > MAX_UPDATE_ARCHIVE_BYTES) {
-        callback(new Error('更新包超过 32 MiB 限制'));
-        return;
-      }
-      if (total > 0) {
-        const pct = Math.min(45, 5 + Math.floor((received / total) * 40));
-        if (pct !== state.progress) {
-          state.progress = pct;
-          state.message = `正在下载更新包… ${Math.round((received / total) * 100)}%`;
-        }
-      }
-      callback(null, chunk);
-    },
-  });
+  const agents = createPinnedHttpAgents(urlCheck);
   try {
-    await pipeline(resp.data, limiter, fs.createWriteStream(partialFile, { flags: 'wx', mode: 0o600 }));
-  } catch (err) {
-    rmrf(partialFile);
-    throw new Error(`下载更新包失败: ${err.message}`);
-  }
+    const resp = await axios.get(urlCheck.url.toString(), {
+      responseType: 'stream',
+      timeout: 10 * 60 * 1000,
+      maxRedirects: 0,
+      maxContentLength: MAX_UPDATE_ARCHIVE_BYTES,
+      proxy: false,
+      httpAgent: agents.httpAgent,
+      httpsAgent: agents.httpsAgent,
+      headers: {
+        'User-Agent': `CrewRouter-Updater/${state.currentVersion || 'unknown'}`,
+      },
+      validateStatus: (s) => s >= 200 && s < 300,
+    });
 
-  const stat = fs.statSync(partialFile);
-  if (stat.size < 100) {
-    rmrf(partialFile);
-    throw new Error(`下载的更新包过小（${stat.size} 字节），可能不是有效文件`);
+    const total = parseInt(resp.headers['content-length'] || '0', 10) || 0;
+    if (total > MAX_UPDATE_ARCHIVE_BYTES) {
+      resp.data.destroy();
+      throw new Error('更新包超过 32 MiB 限制');
+    }
+    let received = 0;
+    const limiter = new Transform({
+      transform(chunk, encoding, callback) {
+        received += chunk.length;
+        if (received > MAX_UPDATE_ARCHIVE_BYTES) {
+          callback(new Error('更新包超过 32 MiB 限制'));
+          return;
+        }
+        if (total > 0) {
+          const pct = Math.min(45, 5 + Math.floor((received / total) * 40));
+          if (pct !== state.progress) {
+            state.progress = pct;
+            state.message = `正在下载更新包… ${Math.round((received / total) * 100)}%`;
+          }
+        }
+        callback(null, chunk);
+      },
+    });
+    try {
+      await pipeline(resp.data, limiter, fs.createWriteStream(partialFile, { flags: 'wx', mode: 0o600 }));
+    } catch (err) {
+      rmrf(partialFile);
+      throw new Error(`下载更新包失败: ${err.message}`);
+    }
+
+    const stat = fs.statSync(partialFile);
+    if (stat.size < 100) {
+      rmrf(partialFile);
+      throw new Error(`下载的更新包过小（${stat.size} 字节），可能不是有效文件`);
+    }
+    fs.renameSync(partialFile, destFile);
+    Logger.success(`[update] 下载完成: size=${stat.size} path=${destFile}`);
+    setState({
+      phase: 'downloading',
+      message: `下载完成（${(stat.size / 1024 / 1024).toFixed(2)} MB）`,
+      progress: 50,
+    });
+    return destFile;
+  } finally {
+    agents.destroy();
   }
-  fs.renameSync(partialFile, destFile);
-  Logger.success(`[update] 下载完成: size=${stat.size} path=${destFile}`);
-  setState({
-    phase: 'downloading',
-    message: `下载完成（${(stat.size / 1024 / 1024).toFixed(2)} MB）`,
-    progress: 50,
-  });
-  return destFile;
 }
 
 async function extractPackage(zipPath, extractDir) {

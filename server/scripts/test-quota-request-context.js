@@ -27,6 +27,10 @@ function harness({ realIdentity = false } = {}) {
       if (name === '../models/database') return { pool: { async query() {} } };
       if (name === './billing') return require('../utils/billing');
       if (name === './request-lifecycle') return require('../utils/request-lifecycle');
+      if (name === './url-validator') return { validateUrl: async value => {
+        try { return { ok: true, url: new URL(value), addresses: [] }; }
+        catch { return { ok: true, url: { toString: () => String(value) }, addresses: [] }; }
+      } };
       if (name === '../logger') return { info() {}, warn() {} };
       if (name === './request-source') return { clientMetaFromReq: () => ({ requestSource: 'test' }) };
       if (name === './session-identity' && realIdentity) return require('../utils/session-identity');

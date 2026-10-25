@@ -163,15 +163,19 @@ async function quotaFetch(url, options = {}, transport = globalThis.fetch) {
     throw new Error(`上游 URL 未通过 SSRF 校验: ${urlCheck.error}`);
   }
   url = urlCheck.url.toString();
+  options = { ...options, pinnedTarget: urlCheck };
+  const dispatch = (targetUrl, requestOptions) => transport === globalThis.fetch
+    ? require('../proxy-pool').pinnedFetchValidated(urlCheck, requestOptions)
+    : transport(targetUrl, requestOptions);
   const provider = options.quotaProvider;
   const state = options.quotaState || storage.getStore();
-  if (!provider) return transport(url, options);
+  if (!provider) return dispatch(url, options);
   const signal = combineAbortSignals(options.signal, options.requestContext?.signal, state?.signal);
   options = { ...options, signal };
   if (signal?.aborted) {
     recordSkip(state, 'aborted_before_upstream');
     releaseCombinedAbortSignal(signal);
-    return transport(url, options);
+    return dispatch(url, options);
   }
   const attempt = { id: null, providerId: provider.id, modelConfig: options.quotaModel, metadata: { usage_quality: 'unknown' }, ended: false, persistence: Promise.resolve(), persistedMetadata: null };
   state?.attempts.push(attempt);
@@ -217,7 +221,7 @@ async function quotaFetch(url, options = {}, transport = globalThis.fetch) {
     throw signal.reason || Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
   }
   let response;
-  try { response = await transport(url, { ...options, quotaOnTerminal: (status, error) => { void end(attempt.cancelling ? 'cancelled' : status, error); } }); }
+  try { response = await dispatch(url, { ...options, quotaOnTerminal: (status, error) => { void end(attempt.cancelling ? 'cancelled' : status, error); } }); }
   catch (error) { await end(failureStatus(error, signal), error); throw error; }
   attempt.responseOk = response.ok;
   const terminal = () => end(response.ok ? 'success' : 'rejected');

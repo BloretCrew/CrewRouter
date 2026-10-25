@@ -1,6 +1,7 @@
 'use strict';
 
 const { quotaSignal } = require('./quota-http');
+const proxyPool = require('../proxy-pool');
 
 const crypto = require('crypto');
 
@@ -132,7 +133,7 @@ async function fetchArkUsage(provider) {
     region: provider.ark_region || REGION,
     service: provider.ark_service || SERVICE,
   });
-  const response = await fetch(`https://${HOST}/?${signed.query}`, {
+  const response = await proxyPool.pinnedFetch(`https://${HOST}/?${signed.query}`, {
     method: 'POST', headers: signed.headers, body: signed.body, signal: quotaSignal(AbortSignal.timeout(15000)),
     redirect: 'manual',
   });

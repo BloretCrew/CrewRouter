@@ -2660,7 +2660,7 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
       try {
         const urlCheck = await validateUrl(url);
         if (!urlCheck.ok) continue;
-        const resp = await fetch(urlCheck.url.toString(), {
+        const resp = await proxyPool.pinnedFetchValidated(urlCheck, {
           headers,
           signal: AbortSignal.timeout(5000),
           redirect: 'manual'
@@ -2685,7 +2685,7 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
       if (!urlCheck.ok) {
         return res.json({ ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` });
       }
-      const resp = await fetch(urlCheck.url.toString(), {
+      const resp = await proxyPool.pinnedFetchValidated(urlCheck, {
         headers,
         signal: AbortSignal.timeout(5000),
         redirect: 'manual'
@@ -2753,7 +2753,7 @@ async function fetchUpstreamModelsForProvider(provider) {
     Logger.info(`[获取供应商模型] 尝试: ${modelsUrl}`);
     const attempt = { url: modelsUrl };
     try {
-      const response = await fetch(urlCheck.url.toString(), {
+      const response = await proxyPool.pinnedFetchValidated(urlCheck, {
         headers,
         signal: AbortSignal.timeout(15000),
         redirect: 'manual'
@@ -3357,7 +3357,7 @@ router.post('/fetch-proxies-url', requireAuth, requireProviderManager, async (re
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
     try {
-      const response = await fetch(urlCheck.url.toString(), { signal: controller.signal, redirect: 'manual' });
+      const response = await proxyPool.pinnedFetchValidated(urlCheck, { signal: controller.signal, redirect: 'manual' });
       if (!response.ok) {
         await response.body?.cancel().catch(() => {});
         return res.status(502).json({ error: '获取失败: HTTP ' + response.status });
@@ -4003,7 +4003,7 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
 
       // 尝试获取模型列表
       try {
-        const modelsRes = await fetch(urlCheck.url.toString(), {
+        const modelsRes = await proxyPool.pinnedFetchValidated(urlCheck, {
           headers: { 'Authorization': `Bearer ${apiKey}` },
           signal: AbortSignal.timeout(15000),
           redirect: 'manual'
@@ -4291,7 +4291,7 @@ async function tryAiRequest(bodyBuilder, { stream = false, excludeProviderId = n
     Logger.info(`[AI调用] 尝试 (${i + 1}/${MAX_ATTEMPTS}): provider=${provider.id}, model=${model}, format=${provider.format}, url=${url}`);
 
     try {
-      const res = await fetch(urlCheck.url.toString(), {
+      const res = await proxyPool.pinnedFetchValidated(urlCheck, {
         method: 'POST',
         headers,
         body: JSON.stringify(reqBody),

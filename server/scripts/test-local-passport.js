@@ -119,6 +119,8 @@ async function main() {
       if (name === '../models/database') return { pool };
       if (name === '../config-loader') return testConfig;
       if (name === '../utils/auth-mode') return { getAuthMode: async () => 'feishu' };
+      if (name === '../utils/url-validator') return { validateUrl: async value => ({ ok: true, url: new URL(value) }) };
+      if (name === '../proxy-pool') return { pinnedFetchValidated: async (check, options) => global.fetch(check.url.toString(), options) };
     }
     if (name === '../utils/login-reporter') return { reportLoginEvent() {}, reportLogoutEvent() {} };
     if (name === '../utils/inject-prompt') return { seedDefaultPrompt: async () => {} };

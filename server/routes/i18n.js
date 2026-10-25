@@ -13,6 +13,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { validateUrl } = require('../utils/url-validator');
+const proxyPool = require('../proxy-pool');
 
 const router = express.Router();
 
@@ -43,7 +44,7 @@ async function fetchJson(url, timeoutMs) {
   if (!check.ok) return null;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), timeoutMs);
-  return fetch(check.url.toString(), { signal: ac.signal, headers: { Accept: 'application/json' }, redirect: 'manual' })
+  return proxyPool.pinnedFetchValidated(check, { signal: ac.signal, headers: { Accept: 'application/json' }, redirect: 'manual' })
     .then((r) => (r.ok ? r.json() : null))
     .finally(() => clearTimeout(timer));
 }

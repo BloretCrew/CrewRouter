@@ -1,6 +1,7 @@
 const { pool } = require('../models/database');
 const { getUserQuotaBuffer } = require('./quota-data');
 const Logger = require('../logger');
+const proxyPool = require('../proxy-pool');
 
 const OPENCODE_GO_USAGE_URL = 'https://opencode.ai/zen/go/v1/usage';
 
@@ -99,7 +100,7 @@ async function getTodayStats(userId) {
 async function getOpenCodeGoQuotaWarning(provider, enabled = false) {
   if (!enabled || provider?.quota_mode !== 'opencode_go' || !provider?.api_key) return '';
   try {
-    const response = await fetch(OPENCODE_GO_USAGE_URL, {
+    const response = await proxyPool.pinnedFetch(OPENCODE_GO_USAGE_URL, {
       method: 'GET',
       headers: { Authorization: `Bearer ${provider.api_key}` },
       signal: AbortSignal.timeout(5000),

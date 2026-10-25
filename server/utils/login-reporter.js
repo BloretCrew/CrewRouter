@@ -14,9 +14,9 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const axios = require('axios');
 const Logger = require('../logger');
 const config = require('../config-loader');
+const { pinnedAxiosRequest } = require('./pinned-axios');
 
 // ---------- 配置 ----------
 const REPORT_URL =
@@ -142,7 +142,9 @@ async function report(event, req) {
       time: new Date().toISOString(),
     };
 
-    await axios.post(REPORT_URL, payload, {
+    await pinnedAxiosRequest(REPORT_URL, {
+      method: 'POST',
+      data: payload,
       timeout: REQUEST_TIMEOUT_MS,
       headers: {
         'Content-Type': 'application/json',

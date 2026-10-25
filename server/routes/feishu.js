@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
 const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
@@ -14,6 +13,7 @@ const {
 const { reportLoginEvent } = require('../utils/login-reporter');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const { loadPersistedEdition } = require('../utils/instance-edition');
+const { pinnedAxiosRequest } = require('../utils/pinned-axios');
 
 async function getAppAccessToken() {
   const cached = getCachedAppAccessToken();
@@ -27,9 +27,12 @@ async function getAppAccessToken() {
   }
 
   Logger.info(`[飞书] 正在获取 App Access Token, appId=${cfg.appId.slice(0, 8)}…`);
-  const res = await axios.post(
+  const res = await pinnedAxiosRequest(
     'https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal',
-    { app_id: cfg.appId, app_secret: cfg.appSecret }
+    {
+      method: 'POST',
+      data: { app_id: cfg.appId, app_secret: cfg.appSecret },
+    }
   );
 
   if (res.data.code !== 0) {
@@ -118,10 +121,11 @@ router.get('/feishu/callback', async (req, res) => {
 
     // 1. 用 code 换取 user access_token
     const appToken = await getAppAccessToken();
-    const tokenRes = await axios.post(
+    const tokenRes = await pinnedAxiosRequest(
       'https://open.feishu.cn/open-apis/authen/v1/oidc/access_token',
-      { grant_type: 'authorization_code', code },
       {
+        method: 'POST',
+        data: { grant_type: 'authorization_code', code },
         headers: {
           'Authorization': `Bearer ${appToken}`,
           'Content-Type': 'application/json'
@@ -138,9 +142,9 @@ router.get('/feishu/callback', async (req, res) => {
     Logger.info(`[飞书回调] 获取 access_token 成功`);
 
     // 2. 获取用户信息
-    const userRes = await axios.get(
+    const userRes = await pinnedAxiosRequest(
       'https://open.feishu.cn/open-apis/authen/v1/user_info',
-      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+      { method: 'GET', headers: { 'Authorization': `Bearer ${accessToken}` } }
     );
 
     if (userRes.data.code !== 0) {
@@ -155,9 +159,9 @@ router.get('/feishu/callback', async (req, res) => {
     if (!userInfo.email && userInfo.open_id) {
       try {
         Logger.info(`[飞书回调] 尝试通过 contact API 获取邮箱, open_id=${userInfo.open_id}`);
-        const contactRes = await axios.get(
+        const contactRes = await pinnedAxiosRequest(
           `https://open.feishu.cn/open-apis/contact/v3/users/${userInfo.open_id}?user_id_type=open_id`,
-          { headers: { 'Authorization': `Bearer ${await getAppAccessToken()}` } }
+          { method: 'GET', headers: { 'Authorization': `Bearer ${await getAppAccessToken()}` } }
         );
         Logger.info(`[飞书回调] contact API 响应: code=${contactRes.data.code}`);
         if (contactRes.data.code === 0) {

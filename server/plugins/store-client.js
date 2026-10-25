@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const Logger = require('../logger');
 const { validateUrl } = require('../utils/url-validator');
+const proxyPool = require('../proxy-pool');
 
 const DEFAULT_STORE = 'https://crewrouter.bloret.net';
 const MAX_PACKAGE_INFO_BYTES = 1024 * 1024;
@@ -80,7 +81,7 @@ async function fetchPackageInfo(storeBase, pluginId) {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 10000);
   try {
-    const res = await fetch(check.url.toString(), { signal: ac.signal, headers: { Accept: 'application/json' }, redirect: 'manual' });
+    const res = await proxyPool.pinnedFetchValidated(check, { signal: ac.signal, headers: { Accept: 'application/json' }, redirect: 'manual' });
     if (!res.ok) {
       await res.body?.cancel().catch(() => {});
       const err = new Error(`从商店获取插件信息失败（HTTP ${res.status}）`);
@@ -112,7 +113,7 @@ async function downloadPackage(url, destPath, expectedSha256) {
   let out;
   try {
     // 商店协议要求 ZIP 直链；拒绝重定向以免 URL 校验被绕过。
-    res = await fetch(check.url.toString(), { signal: ac.signal, redirect: 'manual' });
+    res = await proxyPool.pinnedFetchValidated(check, { signal: ac.signal, redirect: 'manual' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const contentLength = Number(res.headers.get('content-length'));
     if (Number.isFinite(contentLength) && contentLength > MAX_PLUGIN_PACKAGE_BYTES) {

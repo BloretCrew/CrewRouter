@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { reportLoginEvent } = require('../utils/login-reporter');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
+const { pinnedAxiosRequest } = require('../utils/pinned-axios');
 
 // GitHub OAuth 配置
 const GITHUB_CLIENT_ID = config.github?.clientId || '';
@@ -42,12 +42,14 @@ router.get('/github/callback', async (req, res) => {
 
   try {
     // 用 code 换取 access_token
-    const tokenResponse = await axios.post('https://github.com/login/oauth/access_token', {
-      client_id: GITHUB_CLIENT_ID,
-      client_secret: GITHUB_CLIENT_SECRET,
-      code: code,
-      redirect_uri: GITHUB_REDIRECT_URI
-    }, {
+    const tokenResponse = await pinnedAxiosRequest('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      data: {
+        client_id: GITHUB_CLIENT_ID,
+        client_secret: GITHUB_CLIENT_SECRET,
+        code: code,
+        redirect_uri: GITHUB_REDIRECT_URI
+      },
       headers: { Accept: 'application/json' }
     });
 
@@ -60,7 +62,8 @@ router.get('/github/callback', async (req, res) => {
     }
 
     // 获取用户信息
-    const userResponse = await axios.get('https://api.github.com/user', {
+    const userResponse = await pinnedAxiosRequest('https://api.github.com/user', {
+      method: 'GET',
       headers: { Authorization: `token ${accessToken}` }
     });
 
@@ -104,7 +107,8 @@ router.get('/github/callback', async (req, res) => {
       let githubEmail = githubUser.email;
       if (!githubEmail) {
         try {
-          const emailResponse = await axios.get('https://api.github.com/user/emails', {
+          const emailResponse = await pinnedAxiosRequest('https://api.github.com/user/emails', {
+            method: 'GET',
             headers: { Authorization: `token ${accessToken}` }
           });
           const primaryEmail = emailResponse.data.find(e => e.primary && e.verified);

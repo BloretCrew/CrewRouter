@@ -23,6 +23,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { logAction } = require('../utils/audit-log');
 const { extractZipSafe, findZipManifest, zipPayloadDir, collectDirEntries } = require('../plugins/zip');
 const storeClient = require('../plugins/store-client');
+const proxyPool = require('../proxy-pool');
 const Logger = require('../logger');
 
 function createPluginsRoutes() {
@@ -136,7 +137,7 @@ function createPluginsRoutes() {
         });
         // 异步上报商店安装计数（失败不影响）
         try {
-          await fetch(`${source.replace(/\/+$/, '')}/store/api/plugins/${encodeURIComponent(id)}/install-click`, {
+          await proxyPool.pinnedFetch(`${source.replace(/\/+$/, '')}/store/api/plugins/${encodeURIComponent(id)}/install-click`, {
             method: 'POST',
             redirect: 'manual',
             signal: AbortSignal.timeout(5000),

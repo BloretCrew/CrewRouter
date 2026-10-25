@@ -19,9 +19,10 @@ const sandbox = {
   require(name) {
     if (name === './models/database') return { pool: { query() { assert.fail('Database access is forbidden'); } } };
     if (name === './logger') return { info: line => logs.push(line), warn: line => logs.push(line) };
+    if (name === './utils/quota-request-context') return { quotaFetch: (url, options, transport) => transport(url, options) };
     return localRequire(name);
   },
-  process, Buffer, URL, URLSearchParams, AbortController, AbortSignal, setTimeout, clearTimeout
+  process, Buffer, URL, URLSearchParams, AbortController, AbortSignal, Response, Headers, ReadableStream, setTimeout, clearTimeout
 };
 vm.runInNewContext(fs.readFileSync(filename, 'utf8'), sandbox, { filename });
 const { proxyFetch } = sandbox.module.exports;
