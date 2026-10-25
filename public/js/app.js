@@ -4261,6 +4261,21 @@ class ConsoleApp {
     return `<span class="provider-test-summary ${formatted.className}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
   }
 
+  // 全部成功 success，有失败 warning，未测试 neutral
+  _libraryTestSummaryVariant(className) {
+    return { pass: 'success', fail: 'warning', mixed: 'warning' }[className] || 'neutral';
+  }
+
+  _providerHasFailures(provider) {
+    const summary = this._computeProviderTestSummary(provider);
+    return Number(summary?.failed) > 0;
+  }
+
+  _renderLibraryTestSummaryTag(provider) {
+    const formatted = this._formatProviderTestSummary(this._computeProviderTestSummary(provider));
+    return `<span class="blora-tag ml-provider-test-summary" data-variant="${this._libraryTestSummaryVariant(formatted.className)}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
+  }
+
   _refreshProviderTestSummary(team, provider) {
     if (!team || !provider) return;
     const providerEl = document.querySelector(`.model-library-provider[data-team-id="${CSS.escape(String(team.team_id))}"][data-provider-id="${CSS.escape(String(provider.provider_id))}"]`);
@@ -4268,7 +4283,8 @@ class ConsoleApp {
     if (!summaryEl) return;
     const summary = this._computeProviderTestSummary(provider);
     const formatted = this._formatProviderTestSummary(summary);
-    summaryEl.className = `ml-provider-test-summary ${formatted.className}`;
+    summaryEl.className = 'blora-tag ml-provider-test-summary';
+    summaryEl.dataset.variant = this._libraryTestSummaryVariant(formatted.className);
     summaryEl.title = formatted.title;
     summaryEl.textContent = formatted.text;
   }
@@ -9784,10 +9800,10 @@ ${extractorBody}
       }).join('');
       return `
         <div class="model-library-team model-search-team">
-          <div class="model-library-team-header" style="cursor:default;">
+          <div class="model-library-team-header ml-starred-header">
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="ml-team-badge">' + t('个人') + '</span>' : ''}
-            ${team.is_default ? '<span class="ml-team-badge">' + t('默认') + '</span>' : ''}
+            ${team.is_personal ? '<span class="blora-tag" data-variant="primary">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="blora-tag" data-variant="neutral">' + t('默认') + '</span>' : ''}
             <div style="flex:1;"></div>
             <span class="ml-provider-model-count">${team.models.length} 个结果</span>
           </div>
@@ -10356,10 +10372,12 @@ ${extractorBody}
 
     return `
       <div class="model-library-team model-library-starred" data-starred-section="1">
-        <div class="model-library-team-header" style="cursor:default;">
+        <div class="model-library-team-header ml-starred-header" onclick="this.parentElement.classList.toggle('collapsed')">
+          ${this._libIcon('chevron.down', 14, 'ml-collapse-icon')}
           ${this._libIcon('star.fill', 16, 'ml-model-star-heading-icon')}
-          <h3>星标</h3>
-          <div style="flex:1;"></div>
+          <h3>${t('已收藏')}</h3>
+          <span class="blora-tag" data-variant="neutral">${starredModels.length}</span>
+          <span class="ml-header-spacer"></span>
           <span class="ml-provider-model-count">${starredModels.length} 个模型</span>
         </div>
         <div class="model-library-list ml-model-search-list">${items}</div>
@@ -11026,17 +11044,17 @@ ${extractorBody}
           <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
             ${this._libIcon('chevron.down', 16, 'ml-collapse-icon')}
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="ml-team-badge">' + t('个人') + '</span>' : ''}
-            ${team.is_default ? '<span class="ml-team-badge">' + t('默认') + '</span>' : ''}
+            ${team.is_personal ? '<span class="blora-tag" data-variant="primary">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="blora-tag" data-variant="neutral">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
-            <div style="flex:1;"></div>
+            <span class="ml-header-spacer"></span>
             ${this._renderLibraryMoreMenu([
               {
                 label: t('测试全部'),
                 icon: 'test',
                 onClick: `app.testTeamModels('${this._jsString(team.team_id)}')`
               }
-            ])}
+            ], { variant: 'secondary' })}
           </div>
 
           <div class="model-library-team-content">
@@ -11070,17 +11088,18 @@ ${extractorBody}
                 <div class="model-library-provider-title">
                   ${this._libIcon('chevron.down', 14, 'ml-collapse-icon')}
                   ${this._mlClass(renderProviderNameTag(provider.provider_name, { tag: false }))}
-                  ${this._mlClass(this._renderProviderTestSummary(provider))}
+                  ${this._renderLibraryTestSummaryTag(provider)}
                   ${(provider.tags || []).map(t =>
-                    `<span class="model-provider-tag-chip" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
+                    `<span class="blora-tag" data-variant="info">${escapeHtml(t.name)}</span>`
                   ).join('')}
                   ${this._renderLibraryMoveControls('provider', team.team_id, provider.provider_id)}
-                  ${isProviderDisabled ? '<span>' + t('已禁用') + '</span>' : ''}
-                  ${isProviderHidden ? '<span>' + t('已隐藏') + '</span>' : ''}
+                  ${isProviderDisabled ? '<span class="blora-tag" data-variant="danger">' + t('已禁用') + '</span>' : ''}
+                  ${isProviderHidden ? '<span class="blora-tag" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
                 </div>
                 <div class="model-library-provider-actions">
+                  ${this._providerHasFailures(provider) ? `<span class="ml-provider-fail-text">${t('失败')}</span>` : ''}
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}"></span>
-                  <button type="button" class="model-action-icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">${this._libIcon('dot.radiowaves.left.and.right', 14)}</button>
+                  <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" data-icon="radio-tower" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')"></button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
                   <span class="ml-provider-model-count">${displayCount} 个模型</span>
                 </div>
@@ -11100,6 +11119,8 @@ ${extractorBody}
         </div>
       `;
     }).join(''));
+    // data-icon 按钮（测速等）在动态渲染后补上 Blora 图标
+    window.bloraHydrateIcons?.(container);
   }
 
   // 渲染单个模型库条目（供 renderModelLibrary 与按需加载复用）
@@ -11570,23 +11591,26 @@ ${extractorBody}
         separator = true;
         return '';
       }
-      const dangerAttr = item.className === 'danger' ? '' : '';
+      const dangerAttr = item.className === 'danger' ? ' data-variant="danger"' : '';
       const separatorAttr = separator ? ' separator' : '';
       const disabledAttr = item.disabled ? ' disabled' : '';
       separator = false;
       const action = encodeURIComponent(String(item.onClick || ''));
-      return `${separatorAttr ? '<hr>' : ''}<button type="button" data-library-action="library-action:${action}"${disabledAttr} onclick="event.stopPropagation();this.closest('details').open=false;app._handleLibraryMoreMenuSelect({ detail: { value: this.dataset.libraryAction } })">${escapeHtml(item.label)}</button>`;
+      return `<blora-dropdown-item value="library-action:${action}"${separatorAttr}${dangerAttr}${disabledAttr}>${escapeHtml(item.label)}</blora-dropdown-item>`;
     }).join('');
 
     const triggerLabel = options.label || t('更多操作');
     const extraClass = options.className ? ` ${options.className}` : '';
-    // 模型库为纯原生 HTML：用 <details> 代替 blora-dropdown
+    // 选中项由 #modelLibraryPage 上的 blora-select 监听统一分发
     return `
-      <details class="ml-library-more-menu${extraClass}" onclick="event.stopPropagation()">
-        <summary class="library-more-trigger" aria-label="${escapeHtml(triggerLabel)}">${escapeHtml(triggerLabel)}</summary>
+      <blora-dropdown class="ml-library-more-menu${extraClass}" align="end" onclick="event.stopPropagation()">
+        <button slot="trigger" type="button" class="blora-button ml-library-more-trigger" data-variant="${options.variant || 'secondary'}" data-size="sm" data-icon="chevron-down" data-icon-position="end" aria-label="${escapeHtml(triggerLabel)}">
+          <span>${escapeHtml(triggerLabel)}</span>
+        </button>
         ${menuItems}
-      </details>`;
+      </blora-dropdown>`;
   }
+
 
   // 顶部操作栏「更多」菜单：标签随显示已隐藏 / 排序模式 / 连通性检测状态整体重绘
   _renderLibraryHeaderMoreMenu() {
@@ -11627,7 +11651,6 @@ ${extractorBody}
 
   closeLibraryMoreMenus() {
     document.querySelectorAll('.ml-library-more-menu').forEach(menu => {
-      if (menu.tagName === 'DETAILS') menu.open = false;
       menu.close?.();
     });
   }
