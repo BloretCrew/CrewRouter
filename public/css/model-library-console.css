@@ -10,7 +10,7 @@
   z-index: 45;
   box-sizing: border-box;
   padding: var(--blora-space-3) var(--blora-space-4);
-  background: var(--blora-color-surface-raised);
+  background: var(--blora-color-surface-default);
   border-radius: var(--blora-radius-lg);
   box-shadow: var(--blora-shadow-1);
 }
@@ -176,3 +176,106 @@
 #modelLibraryPage .ml-model-uptime-pct { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
 #modelLibraryPage .blora-dropdown__item[aria-disabled="true"] { color: var(--blora-color-text-disabled); cursor: not-allowed; }
 #modelLibraryPage .ml-model-star-heading-icon svg { fill: currentColor; }
+
+/* 第 4 步：顶部绑定信息区 */
+#modelLibraryPage .model-library-binding-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--blora-space-4); margin-bottom: var(--blora-space-4); padding: var(--blora-space-4) var(--blora-space-5); background: var(--blora-color-surface-default); border-radius: var(--blora-radius-lg); box-shadow: var(--blora-shadow-1); }
+#modelLibraryPage .model-library-binding-main { display: flex; flex-direction: column; gap: var(--blora-space-2); flex: 1 1 auto; min-width: 0; }
+#modelLibraryPage .model-library-binding-label,
+#modelLibraryPage .model-library-key-label { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+#modelLibraryPage .binding-active { display: flex; flex-direction: column; gap: var(--blora-space-2); }
+#modelLibraryPage .binding-key-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-3); }
+#modelLibraryPage .ml-binding-item { display: flex; flex-direction: column; gap: var(--blora-space-1); min-width: 0; }
+#modelLibraryPage .ml-binding-item-label { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+#modelLibraryPage .ml-binding-item-value { display: flex; align-items: center; gap: var(--blora-space-2); font-size: var(--blora-text-sm); color: var(--blora-color-text-primary); }
+#modelLibraryPage .ml-binding-unset,
+#modelLibraryPage .binding-model-unset { color: var(--blora-color-text-disabled); }
+#modelLibraryPage .binding-model-name { font-weight: 600; }
+#modelLibraryPage .binding-arrow { display: inline-flex; align-self: flex-end; padding-bottom: var(--blora-space-1); color: var(--blora-color-text-muted); }
+#modelLibraryPage .binding-hint { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+#modelLibraryPage .binding-harness-chips { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
+#modelLibraryPage .binding-mode-banner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); font-size: var(--blora-text-sm); }
+#modelLibraryPage .binding-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-3); color: var(--blora-color-text-secondary); }
+#modelLibraryPage .model-library-key-selector-inner { display: flex; flex-direction: column; gap: var(--blora-space-2); }
+#modelLibraryPage .model-library-key-chips { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
+#modelLibraryPage .model-library-binding-main .binding-empty { flex-direction: column; justify-content: center; gap: var(--blora-space-2); padding: var(--blora-space-4); text-align: center; }
+#modelLibraryPage .binding-empty-icon { color: var(--blora-color-text-muted); font-size: var(--blora-text-2xl); }
+#modelLibraryPage .binding-empty-title { font-size: var(--blora-text-sm); font-weight: 600; color: var(--blora-color-text-primary); }
+#modelLibraryPage .binding-empty-desc { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+
+/* 第 5 步：整页规格（Design Bot 5b） */
+/* 一、层级与间距：canvas → surface-default 区块（1px subtle，radius-xl，无阴影）→ sunken 仅供应商标题条 */
+#modelLibraryPage { background: var(--blora-color-surface-canvas); }
+#modelLibraryPage .model-library-header,
+#modelLibraryPage .model-library-binding-bar,
+#modelLibraryPage .ml-model-filter-bar,
+#modelLibraryPage .model-library-team,
+#modelLibraryPage .model-library-starred { margin-block-end: var(--blora-space-6); }
+#modelLibraryPage .model-library-team,
+#modelLibraryPage .model-library-starred { padding: var(--blora-space-4); background: var(--blora-color-surface-default); border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-xl); }
+#modelLibraryPage .model-library-starred > .model-library-team-header { padding: 0; background: transparent; }
+#modelLibraryPage .model-library-team-header h3 { font-size: var(--blora-text-lg); font-weight: 700; }
+#modelLibraryPage .model-library-starred > .model-library-team-header h3 { font-size: var(--blora-text-lg); font-weight: 700; }
+#modelLibraryPage .model-library-starred .model-library-list { padding: var(--blora-space-4) 0 0; }
+
+/* 二、页头 */
+#modelLibraryPage .library-quick-add-system-provider { display: none; }
+#modelLibraryPage .ml-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#modelLibraryPage .model-library-header { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-4); flex-wrap: wrap; }
+#modelLibraryPage .model-library-header-left { flex: 1 1 320px; min-width: 0; }
+#modelLibraryPage .model-library-header-hint { font-size: var(--blora-text-sm); color: var(--blora-color-text-muted); }
+#modelLibraryPage .model-library-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: var(--blora-space-2); }
+#modelLibraryPage .model-library-header-actions [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
+
+/* 三、绑定栏：在线率放进「模型」一栏 */
+#modelLibraryPage .model-library-binding-bar { border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-xl); box-shadow: none; }
+#modelLibraryPage .ml-binding-item-label { font-size: var(--blora-text-sm); }
+#modelLibraryPage .ml-binding-item-value { flex-wrap: wrap; font-size: var(--blora-text-base); }
+#modelLibraryPage .ml-binding-item-value .binding-uptime { flex-basis: 100%; min-inline-size: 200px; }
+
+/* 四、筛选栏 */
+#modelLibraryPage #libraryProviderFilter,
+#modelLibraryPage .model-library-sticky-select { inline-size: 160px; }
+#modelLibraryPage #librarySearchInput,
+#modelLibraryPage .model-library-sticky-search { flex: 1 1 auto; }
+
+/* 五、供应商头 */
+#modelLibraryPage .model-library-provider { border-radius: var(--blora-radius-lg); }
+#modelLibraryPage .model-library-provider-header { border-radius: var(--blora-radius-lg) var(--blora-radius-lg) 0 0; }
+#modelLibraryPage .model-library-provider-title { font-size: var(--blora-text-base); font-weight: 700; }
+#modelLibraryPage .ml-provider-model-count { font-size: var(--blora-text-sm); }
+
+/* 六、卡片 */
+#modelLibraryPage .model-library-provider .model-library-list,
+#modelLibraryPage .model-library-starred .model-library-list { gap: var(--blora-space-4); }
+#modelLibraryPage .model-library-provider .model-library-list { padding: var(--blora-space-4); }
+#modelLibraryPage .model-library-item { padding: var(--blora-space-4); border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-lg); box-shadow: none; }
+#modelLibraryPage .model-library-item.selected { border-color: var(--blora-color-action-primary-default); }
+#modelLibraryPage .model-library-item-name { font-size: var(--blora-text-base); font-weight: 700; color: var(--blora-color-text-primary); }
+#modelLibraryPage .model-library-item-desc { font-size: var(--blora-text-sm); color: var(--blora-color-text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#modelLibraryPage .model-library-item-price,
+#modelLibraryPage .ml-model-uptime-pct { font-size: var(--blora-text-sm); }
+#modelLibraryPage .ml-model-uptime { padding-block-end: var(--blora-space-2); border-bottom: var(--blora-border-subtle); }
+#modelLibraryPage .ml-model-test-badge { flex: none; white-space: nowrap; }
+#modelLibraryPage .binding-key-row { align-items: flex-start; }
+#modelLibraryPage .binding-arrow { align-self: auto; padding-block-start: calc(var(--blora-text-sm) + var(--blora-space-2)); }
+
+/* 5c */
+#modelLibraryPage .model-library-starred > .model-library-team-header { padding: var(--blora-space-3) var(--blora-space-4); margin: calc(-1 * var(--blora-space-4)) calc(-1 * var(--blora-space-4)) 0; background: var(--blora-color-surface-sunken); border-radius: var(--blora-radius-xl) var(--blora-radius-xl) 0 0; }
+#modelLibraryPage .model-library-binding-main { flex: 0 1 auto; }
+#modelLibraryPage .model-library-binding-bar { justify-content: flex-start; column-gap: var(--blora-space-4); }
+#modelLibraryPage .ml-model-star-btn [data-icon], #modelLibraryPage .ml-model-star-btn svg { inline-size: var(--blora-text-lg); block-size: var(--blora-text-lg); }
+#modelLibraryPage .model-library-item-name { gap: var(--blora-space-2); }
+#modelLibraryPage .ml-model-uptime { padding-block: var(--blora-space-2); border-top: var(--blora-border-subtle); }
+#modelLibraryPage .model-library-header-actions { padding-inline-end: var(--blora-space-2); }
+#modelLibraryPage .model-library-key-selector { margin-inline-start: 0; flex: 0 0 auto; }
+#modelLibraryPage .model-library-binding-main { flex: 0 1 auto; }
+#modelLibraryPage .model-library-binding-bar .model-library-binding-main { inline-size: fit-content; max-inline-size: 100%; }
+#modelLibraryPage .model-library-item .ml-model-star-btn > svg { inline-size: var(--blora-text-lg); block-size: var(--blora-text-lg); }
+#modelLibraryPage .ml-binding-item-value .binding-uptime { flex: 0 0 auto; flex-basis: 100%; inline-size: 240px; min-inline-size: 0; max-inline-size: 240px; }
+#modelLibraryPage .ml-binding-item-value:has(> .binding-uptime) { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--blora-space-2); row-gap: var(--blora-space-2); }
+#modelLibraryPage .ml-binding-item-value > .binding-uptime { grid-column: 1 / -1; }
+/* 5d */
+#modelLibraryPage .model-library-header-actions { padding-inline-end: var(--blora-space-6); }
+#modelLibraryPage .model-library-item .ml-model-star-btn > svg { max-inline-size: none; max-block-size: none; flex: none; }
+#modelLibraryPage .model-library-key-label { font-size: var(--blora-text-sm); }
+#modelLibraryPage #libraryMoreFiltersBtn [data-icon], #modelLibraryPage .model-library-sticky-more-btn [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
