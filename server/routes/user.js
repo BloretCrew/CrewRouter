@@ -2101,6 +2101,13 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
   try {
     await client.query('BEGIN');
 
+    // 与余额扣款/退款保持 user → 余额明细的锁顺序，避免并发兑换与退款形成死锁。
+    const userLock = await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [req.session.user.id]);
+    if (userLock.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(401).json({ error: '用户不存在，请重新登录' });
+    }
+
     // 查找兑换码并加行锁
     const result = await client.query(
       'SELECT * FROM redemption_codes WHERE code = $1 FOR UPDATE',

@@ -31,6 +31,7 @@ router.use(['/users', '/users/:id', '/teams', '/teams/:id', '/teams/:id/rules', 
   return requireTeamAdminEdition(req, res, next);
 });
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
+const { MONEY_FACTOR, addMoney, compareMoney, moneyMicrosToString, moneyToString, toMoneyMicros } = require('../utils/money');
 const {
   normalizeProviderKeyEntries,
   getPrimaryApiKey,
@@ -55,6 +56,22 @@ const {
   normalizeQuotaScheduleInterval
 } = require('../utils/provider-quota');
 const { quickAddSystemProvider, QuickAddError } = require('../utils/quick-add-provider');
+
+const USER_BALANCE_DB_UNIT = MONEY_FACTOR / 10000n;
+
+function ceilDivide(numerator, denominator) {
+  return (numerator + denominator - 1n) / denominator;
+}
+
+function netRefundableMicros(grossAmount, feeRate) {
+  const grossMicros = toMoneyMicros(grossAmount);
+  const feeMicros = toMoneyMicros(feeRate);
+  const denominator = MONEY_FACTOR + feeMicros;
+  if (grossMicros < 0n || feeMicros < 0n || denominator <= 0n) {
+    throw new Error('兑换码余额或手续费数据无效');
+  }
+  return (grossMicros * MONEY_FACTOR) / denominator;
+}
 
 /**
  * 按系统开关将模型挂载到所有前沿 Team；仅补缺失映射。
@@ -141,17 +158,16 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
   descriptionFrom: (req) => `更新用户 #${req.params.id}`,
   detailsFrom: (req) => ({ username: req.body?.username, is_admin: req.body?.is_admin, balance: req.body?.balance, team_id: req.body?.team_id }),
 }), async (req, res) => {
-  const { email, email_verified, isAdmin, balance, refundBalance, tags, rate_limit_rpm, rate_limit_tpm, team_id } = req.body;
+  const { email, email_verified, isAdmin, balance, tags, rate_limit_rpm, rate_limit_tpm, team_id } = req.body;
   if (Object.prototype.hasOwnProperty.call(req.body, 'group_id')) return res.status(400).json({ error: '请使用 team_id 设置唯一 Team 归属' });
+  if (Object.prototype.hasOwnProperty.call(req.body, 'refundBalance')) {
+    return res.status(400).json({ error: '可退款余额由兑换码余额明细维护，请使用退款功能调整' });
+  }
   const userId = req.params.id;
 
   if (balance !== undefined && (typeof balance !== 'number' || isNaN(balance) || balance < 0 || balance >= 1000000)) {
     return res.status(400).json({ error: '余额必须是 0 到 999999.9999 之间的数字' });
   }
-  if (refundBalance !== undefined && (typeof refundBalance !== 'number' || !Number.isFinite(refundBalance) || refundBalance < 0 || refundBalance >= 1000000)) {
-    return res.status(400).json({ error: '可退款余额必须是 0 到 999999.9999 之间的数字' });
-  }
-
   try {
     const client = await pool.connect();
     try {
@@ -210,10 +226,6 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
     if (balance !== undefined) {
       sets.push(`balance = $${idx++}`);
       params.push(balance);
-    }
-    if (refundBalance !== undefined) {
-      sets.push(`refund_balance = $${idx++}`);
-      params.push(refundBalance);
     }
     if (tags !== undefined) {
       sets.push(`tags = $${idx++}`);
@@ -274,31 +286,113 @@ router.post('/users/:id/refund', requireAuth, requireAdmin, auditMiddleware(ACTI
   const { refundAmount } = req.body;
   const userId = req.params.id;
 
-  if (typeof refundAmount !== 'number' || isNaN(refundAmount) || refundAmount <= 0) {
-    return res.status(400).json({ error: '退款金额必须大于 0' });
+  if (typeof refundAmount !== 'number' || !Number.isFinite(refundAmount) || refundAmount <= 0 || refundAmount >= 1000000
+      || !/^\d+(?:\.\d{1,2})?$/.test(String(refundAmount))) {
+    return res.status(400).json({ error: '退款金额必须为 0 到 999999.99 之间、最多 2 位小数的有限数字' });
   }
 
   try {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      // 获取用户当前可退款余额
+      // refund_balance 是 user_code_balances.amount 的汇总；锁用户行以与扣费流程保持一致的锁顺序。
       const userResult = await client.query('SELECT refund_balance FROM users WHERE id = $1 FOR UPDATE', [userId]);
       if (userResult.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: '用户不存在' });
       }
 
-      const userRefundBalance = parseFloat(userResult.rows[0].refund_balance || 0);
-      if (refundAmount > userRefundBalance) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ error: `退款金额不能超过可退款余额 ¥${userRefundBalance.toFixed(4)}` });
+      const codeBalances = await client.query(
+        `SELECT ucb.id, ucb.amount::text AS amount, ucb.fee_rate::text AS fee_rate, rc.code
+         FROM user_code_balances ucb
+         LEFT JOIN redemption_codes rc ON rc.id = ucb.code_id
+         WHERE ucb.user_id = $1
+         ORDER BY ucb.fee_rate DESC, ucb.id ASC
+         FOR UPDATE OF ucb`,
+        [userId]
+      );
+      let detailBalance = '0';
+      let availableNetMicros = 0n;
+      for (const row of codeBalances.rows) {
+        if (row.code == null) {
+          await client.query('ROLLBACK');
+          return res.status(409).json({ error: '兑换码余额明细关联不存在，已暂停退款；请先完成余额对账' });
+        }
+        if (compareMoney(row.amount, 0) < 0 || compareMoney(row.fee_rate, 0) < 0) {
+          await client.query('ROLLBACK');
+          return res.status(409).json({ error: '兑换码余额明细包含负数，已暂停退款；请先完成余额对账' });
+        }
+        detailBalance = addMoney(detailBalance, row.amount);
+        availableNetMicros += netRefundableMicros(row.amount, row.fee_rate);
       }
 
-      await client.query('UPDATE users SET refund_balance = refund_balance - $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [userId, refundAmount]);
+      const userRefundBalance = moneyToString(userResult.rows[0].refund_balance || 0);
+      if (compareMoney(detailBalance, userRefundBalance) !== 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: '用户可退款汇总与兑换码明细不一致，已暂停退款；请先完成余额对账' });
+      }
+
+      const requestedNetMicros = toMoneyMicros(refundAmount);
+      if (requestedNetMicros > availableNetMicros) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `退款金额不能超过可退金额 ¥${moneyMicrosToString(availableNetMicros)}` });
+      }
+
+      let remainingNetMicros = requestedNetMicros;
+      const deductions = [];
+      let totalGrossDeducted = 0n;
+      for (const row of codeBalances.rows) {
+        if (remainingNetMicros <= 0n) break;
+        const rowGrossMicros = toMoneyMicros(row.amount);
+        const rowNetMicros = netRefundableMicros(row.amount, row.fee_rate);
+        if (rowNetMicros <= 0n) continue;
+        const requestedFromRow = rowNetMicros < remainingNetMicros ? rowNetMicros : remainingNetMicros;
+        const feeMicros = toMoneyMicros(row.fee_rate);
+        const denominator = MONEY_FACTOR + feeMicros;
+        let grossDeductMicros = requestedFromRow === rowNetMicros
+          ? rowGrossMicros
+          : ceilDivide(requestedFromRow * denominator, MONEY_FACTOR);
+        grossDeductMicros = ceilDivide(grossDeductMicros, USER_BALANCE_DB_UNIT) * USER_BALANCE_DB_UNIT;
+        if (grossDeductMicros > rowGrossMicros) grossDeductMicros = rowGrossMicros;
+
+        const grossDeduct = moneyMicrosToString(grossDeductMicros);
+        const update = await client.query(
+          `UPDATE user_code_balances
+           SET amount = amount - $1, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2 AND user_id = $3 AND amount >= $1`,
+          [grossDeduct, row.id, userId]
+        );
+        if (update.rowCount !== 1) throw new Error('兑换码余额明细在退款时发生变化');
+
+        deductions.push({
+          code: row.code,
+          fee_rate: Number(row.fee_rate),
+          deducted: Number(moneyMicrosToString(requestedFromRow)),
+          grossDeducted: Number(grossDeduct),
+        });
+        totalGrossDeducted += grossDeductMicros;
+        remainingNetMicros -= requestedFromRow;
+      }
+      if (remainingNetMicros > 0n) throw new Error('退款明细不足，事务已回滚');
+
+      const updatedBalance = await client.query(
+        'SELECT COALESCE(SUM(amount), 0)::text AS total FROM user_code_balances WHERE user_id = $1',
+        [userId]
+      );
+      const newRefundBalance = moneyToString(updatedBalance.rows[0].total);
+      await client.query(
+        'UPDATE users SET refund_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [newRefundBalance, userId]
+      );
       await client.query('COMMIT');
-      Logger.info(`[退款] 管理员退款: userId=${userId}, amount=${refundAmount}`);
-      res.json({ success: true, newRefundBalance: userRefundBalance - refundAmount });
+      Logger.info(`[退款] 管理员退款: userId=${userId}, actualAmount=${refundAmount}, grossDeducted=${moneyMicrosToString(totalGrossDeducted)}`);
+      res.json({
+        success: true,
+        deductions,
+        actualRefundAmount: refundAmount,
+        grossDeducted: Number(moneyMicrosToString(totalGrossDeducted)),
+        newRefundBalance: Number(newRefundBalance),
+      });
     } catch (error) {
       await client.query('ROLLBACK').catch(() => {});
       throw error;
@@ -315,10 +409,12 @@ router.post('/users/:id/refund', requireAuth, requireAdmin, auditMiddleware(ACTI
 router.get('/users/:id/code-balances', requireAuth, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT cb.*, rc.code FROM code_balances cb 
-       LEFT JOIN redemption_codes rc ON cb.redemption_code_id = rc.id 
-       WHERE cb.user_id = $1 AND cb.remaining_amount > 0 
-       ORDER BY cb.created_at DESC`,
+      `SELECT ucb.id, ucb.amount, ucb.fee_rate, rc.code,
+              ucb.amount / (1 + ucb.fee_rate) AS net_amount
+       FROM user_code_balances ucb
+       JOIN redemption_codes rc ON rc.id = ucb.code_id
+       WHERE ucb.user_id = $1 AND ucb.amount > 0
+       ORDER BY ucb.fee_rate DESC, ucb.id ASC`,
       [req.params.id]
     );
     res.json(result.rows);

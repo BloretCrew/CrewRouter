@@ -1015,6 +1015,7 @@ class AdminApp {
     document.getElementById('editUserRateLimitTpm').value = user.rate_limit_tpm || 0;
 
     this.loadTeamsForUserSelect(user.team_id);
+    this.loadUserCodeBalances(user.id);
     this.showModal('editUserModal');
   }
 
@@ -1049,7 +1050,7 @@ class AdminApp {
         const feeLabel = parseFloat(b.fee_rate) > 0 ? `${t('(费率')}${feePercent}%)` : '';
         const netAmount = parseFloat(b.net_amount || 0).toFixed(2);
         return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
-          <span><code style="font-size:11px;">${b.code}</code>${feeLabel}</span>
+          <span><code style="font-size:11px;">${escapeHtml(b.code || '')}</code>${feeLabel}</span>
           <span style="font-weight:600;">¥${netAmount}</span>
         </div>`;
       }).join(''));
@@ -1081,7 +1082,11 @@ class AdminApp {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert(`${t('退款成功！实际扣除 ¥')}${result.deductions.reduce((s, d) => s + d.deducted, 0).toFixed(2)}${t('，新可退款余额 ¥')}${result.newRefundBalance.toFixed(2)}`);
+        const actualRefundAmount = Number.isFinite(Number(result.actualRefundAmount))
+          ? Number(result.actualRefundAmount)
+          : refundAmount;
+        const newRefundBalance = Number(result.newRefundBalance || 0);
+        alert(`${t('退款成功！实际扣除 ¥')}${actualRefundAmount.toFixed(2)}${t('，新可退款余额 ¥')}${newRefundBalance.toFixed(2)}`);
         document.getElementById('editUserRefundAmount').value = '';
         document.getElementById('refundPreview').textContent = '';
         this.loadUserCodeBalances(userId);

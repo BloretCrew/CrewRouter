@@ -182,10 +182,22 @@ async function audit() {
       FROM user_sessions
     `)).rows[0];
 
+    activeCheck = 'refund history';
+    report.checks.refundHistory = (await client.query(`
+      SELECT id, user_id AS "operatorUserId", username AS operator,
+             resource_id AS "affectedUserId", details->'refund_amount' AS "requestedNetAmount",
+             status, created_at AS "createdAt"
+      FROM operation_logs
+      WHERE action = 'admin.user_refund'
+      ORDER BY created_at, id
+    `)).rows;
+
     activeCheck = 'balances';
     report.checks.balances = (await client.query(`
       SELECT count(*) FILTER(WHERE balance<0)::int AS "negativeBalances",
              count(*) FILTER(WHERE refund_balance<0)::int AS "negativeRefundBalances",
+             (SELECT count(*)::int FROM user_code_balances WHERE amount < 0) AS "negativeCodeBalanceAmounts",
+             (SELECT count(*)::int FROM user_code_balances WHERE fee_rate < 0) AS "negativeCodeBalanceFeeRates",
              (SELECT count(*)::int FROM users u WHERE abs(COALESCE(u.refund_balance,0)-(
                SELECT COALESCE(sum(ucb.amount),0) FROM user_code_balances ucb WHERE ucb.user_id=u.id
              ))>0.0001) AS "refundDetailMismatches",
@@ -352,6 +364,8 @@ audit().then(report => {
       || c.identities.duplicateEmails > 0
       || c.balances.negativeBalances > 0
       || c.balances.negativeRefundBalances > 0
+      || c.balances.negativeCodeBalanceAmounts > 0
+      || c.balances.negativeCodeBalanceFeeRates > 0
       || c.balances.refundDetailMismatches > 0
       || c.balances.orphanCodeBalances > 0
       || c.balancePreconsumes.stalePendingCount > 0
