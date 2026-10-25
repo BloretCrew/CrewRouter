@@ -25,7 +25,7 @@ const RISK_COUNTS = {
   identities: ['emptyUsernames', 'duplicateUsernames', 'duplicateEmails', 'duplicateGitHubIds', 'duplicateFeishuOpenIds', 'duplicatePassportUsernames', 'blankExternalIdentities'],
   balances: ['negativeBalances', 'negativeRefundBalances', 'negativeCodeBalanceAmounts', 'negativeCodeBalanceFeeRates', 'refundDetailMismatches', 'orphanCodeBalances'],
   balancePreconsumes: ['stalePendingCount', 'incompleteSettlementCount', 'unknownStatusCount', 'negativeAmountCount'],
-  redemptionCodes: ['usedCountMismatches', 'codesOverUseLimit', 'invalidCodeValues', 'orphanCreators'],
+  redemptionCodes: ['usedCountMismatches', 'codesOverUseLimit', 'invalidCodeValues', 'orphanCreators', 'orphanUses', 'duplicateUses', 'balancesWithoutUse'],
   apiKeyMemberships: ['orphanMemberships', 'ownerAlsoMemberCount', 'orphanOwners', 'enabledKeysWithoutOwner'],
   catalog: ['invalidIndexes', 'notReadyIndexes', 'unvalidatedConstraints'],
   sequences: ['behindCount'],
@@ -326,8 +326,13 @@ async function audit({ client: suppliedClient, configPath: suppliedConfigPath } 
       ? (await client.query(`
       SELECT count(*) FILTER(WHERE COALESCE(rc.used_count,0) <> COALESCE(uses.actual_uses,0))::int AS "usedCountMismatches",
              count(*) FILTER(WHERE rc.max_uses > 0 AND COALESCE(uses.actual_uses,0) > rc.max_uses)::int AS "codesOverUseLimit",
-             count(*) FILTER(WHERE rc.used_count < 0 OR rc.max_uses < 0 OR rc.amount < 0)::int AS "invalidCodeValues",
-             count(*) FILTER(WHERE rc.created_by IS NOT NULL AND u.id IS NULL)::int AS "orphanCreators"
+             count(*) FILTER(WHERE rc.used_count IS NULL OR rc.max_uses IS NULL OR rc.amount IS NULL OR rc.fee_rate IS NULL OR rc.used_count < 0 OR rc.max_uses < 0 OR rc.amount <= 0 OR rc.fee_rate < 0)::int AS "invalidCodeValues",
+             count(*) FILTER(WHERE rc.created_by IS NOT NULL AND u.id IS NULL)::int AS "orphanCreators",
+             (SELECT count(*)::int FROM redemption_code_uses r LEFT JOIN redemption_codes c ON c.id=r.code_id
+               LEFT JOIN users u ON u.id=r.user_id WHERE c.id IS NULL OR u.id IS NULL) AS "orphanUses",
+             (SELECT count(*)::int FROM (SELECT code_id,user_id FROM redemption_code_uses GROUP BY code_id,user_id HAVING count(*)>1) d) AS "duplicateUses",
+             (SELECT count(*)::int FROM user_code_balances b WHERE NOT EXISTS
+               (SELECT 1 FROM redemption_code_uses r WHERE r.code_id=b.code_id AND r.user_id=b.user_id)) AS "balancesWithoutUse"
       FROM redemption_codes rc
       LEFT JOIN users u ON u.id = rc.created_by
       LEFT JOIN (

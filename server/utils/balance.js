@@ -187,12 +187,12 @@ async function executeDeduct(q, userId, cost) {
  *
  * @param {number} userId
  * @param {number} cost - 扣除金额
- * @param {object} [client] - 可选的外部 pg 客户端（用于与其他操作组合事务）
+ * @param {object} [client] - 外部事务客户端；调用方负责 BEGIN/COMMIT/ROLLBACK、释放连接，
+ *   并在提交后触发余额预警和缓存失效。失败结果也必须由调用方回滚事务。
  * @returns {Promise<{ok: boolean, error?: string}>}
  */
 async function deductBalance(userId, cost, client) {
-  const isExternal = !!client;
-  const q = client || pool;
+  let q = client;
   let ownClient = null;
 
   try {
@@ -200,6 +200,7 @@ async function deductBalance(userId, cost, client) {
     if (!client) {
       ownClient = await pool.connect();
       await ownClient.query('BEGIN');
+      q = ownClient;
     }
 
     const result = await executeDeduct(q, userId, cost);
@@ -214,7 +215,8 @@ async function deductBalance(userId, cost, client) {
       await ownClient.query('COMMIT');
     }
 
-    // 扣费后异步操作（不参与事务，不阻塞主流程）
+    // 仅自有事务确认提交后通知。外部事务尚未提交，由调用方负责通知。
+    if (!ownClient) return { ok: true };
     try {
       // 余额预警检查
       const alertChecker = getCheckBalanceAlert();

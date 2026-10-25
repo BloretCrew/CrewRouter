@@ -217,8 +217,11 @@ router.post('/teams/:id/members', requireAuth, requireAdmin, auditMiddleware(ACT
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('SELECT id FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
-      const existingUsers = await client.query('SELECT id FROM users WHERE id = ANY($1::int[])', [normalizedUserIds]);
+      const lockedTeam = await client.query('SELECT id, is_personal FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
+      if (!lockedTeam.rows.length) throw Object.assign(new Error('Team 不存在'), { status: 404 });
+      if (lockedTeam.rows[0].is_personal) throw Object.assign(new Error('个人账户 Team 不可添加成员'), { status: 403 });
+      normalizedUserIds.sort((a, b) => a - b);
+      const existingUsers = await client.query('SELECT id FROM users WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [normalizedUserIds]);
       if (existingUsers.rows.length !== normalizedUserIds.length) throw Object.assign(new Error('用户不存在'), { status: 400 });
       for (const userId of normalizedUserIds) {
         await require('../utils/team-membership').setUserTeam(client, userId, teamId);
@@ -260,7 +263,10 @@ router.delete('/teams/:id/members/:userId', requireAuth, requireAdmin, auditMidd
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('SELECT id FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
+      const lockedTeam = await client.query('SELECT id, is_personal FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
+      if (!lockedTeam.rows.length) throw Object.assign(new Error('Team 不存在'), { status: 404 });
+      if (lockedTeam.rows[0].is_personal) throw Object.assign(new Error('个人账户 Team 不可移除成员'), { status: 403 });
+      await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
       const membership = await client.query('SELECT 1 FROM user_teams WHERE user_id = $1 AND team_id = $2', [userId, teamId]);
       if (membership.rows.length) await require('../utils/team-membership').setUserTeam(client, userId, null);
       await client.query('COMMIT');
@@ -271,6 +277,7 @@ router.delete('/teams/:id/members/:userId', requireAuth, requireAdmin, auditMidd
       throw error;
     } finally { client.release(); }
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     Logger.error('[移除Team成员] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }

@@ -357,18 +357,12 @@ router.get('/feishu/callback', async (req, res) => {
           Logger.warn('[飞书注册] 默认注入提示词播种跳过:', e.message);
         }
 
-        // 自动加入默认 Team
+        // 两个 Team 投影在同一事务写入；保留注册期间管理员已设置的归属。
         try {
-          const defaultTeam = await pool.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
-          if (defaultTeam.rows.length > 0) {
-            const teamId = defaultTeam.rows[0].id;
-            await require('../utils/team-membership').setUserTeam(pool, user.id, teamId);
-            Logger.info(`[飞书注册] 用户 ${feishuName} 已自动加入默认 Team (id=${teamId})`);
-          }
+          await require('../utils/team-membership').assignInitialUserTeam(pool, user.id, feishuName);
         } catch (teamErr) {
-          Logger.error('[飞书注册] 自动加入默认 Team 失败:', teamErr);
+          Logger.error('[飞书注册] 分配 Team 失败:', teamErr);
         }
-
 
         // 自动创建默认 API Key（与普通 Key 无异，可删除）
         try {
@@ -382,23 +376,6 @@ router.get('/feishu/callback', async (req, res) => {
           Logger.info(`[飞书注册] 已为用户 ${feishuName} 创建默认 API Key`);
         } catch (keyErr) {
           Logger.error('[飞书注册] 创建默认 API Key 失败:', keyErr);
-        }
-
-        // 无默认 Team 时创建个人账户 Team
-        try {
-          const defaultTeam = await pool.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
-          if (defaultTeam.rows.length) throw Object.assign(new Error('默认 Team 已分配'), { code: 'TEAM_ASSIGNED' });
-          const assigned = await pool.query('SELECT team_id FROM user_teams WHERE user_id = $1', [user.id]);
-          if (assigned.rows.length) throw Object.assign(new Error('用户已有 Team 归属'), { code: 'TEAM_ASSIGNED' });
-          const teamName = `${feishuName} 的个人账户`;
-          const teamResult = await pool.query(
-            'INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id',
-            [teamName, '个人账户，系统自动创建']
-          );
-          await require('../utils/team-membership').setUserTeam(pool, user.id, teamResult.rows[0].id);
-          Logger.info(`[飞书注册] 已为用户 ${feishuName} 创建个人账户 Team`);
-        } catch (teamErr) {
-          if (teamErr.code !== 'TEAM_ASSIGNED') Logger.error('[飞书注册] 创建个人账户 Team 失败:', teamErr);
         }
       }
     }

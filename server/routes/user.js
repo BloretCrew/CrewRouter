@@ -2043,6 +2043,17 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
       return res.status(409).json({ error: '兑换码金额或次数配置异常，已暂停兑换' });
     }
 
+    const actualUses = await client.query(
+      'SELECT COUNT(*)::text AS total, COUNT(DISTINCT user_id)::text AS unique_users FROM redemption_code_uses WHERE code_id = $1',
+      [rc.id]
+    );
+    if (!Number.isInteger(rc.used_count) || !Number.isInteger(rc.max_uses)
+        || String(rc.used_count) !== actualUses.rows[0].total
+        || actualUses.rows[0].total !== actualUses.rows[0].unique_users) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: '兑换码使用历史与计数不一致，已暂停兑换；请先完成对账' });
+    }
+
     if (rc.refundable) {
       if (compareMoney(rc.fee_rate || 0, 0) < 0) {
         await client.query('ROLLBACK');

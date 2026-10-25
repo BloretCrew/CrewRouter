@@ -20,7 +20,7 @@ function cleanChecks() {
     sessions: { activeSessions: 0, expiredSessions: 0, enabledUserApiKeys: 0, recoverableEnabledUserApiKeys: 0 },
     balances: { negativeBalances: 0, negativeRefundBalances: 0, negativeCodeBalanceAmounts: 0, negativeCodeBalanceFeeRates: 0, refundDetailMismatches: 0, orphanCodeBalances: 0, regularBalanceTotal: '0.0000', refundBalanceTotal: '0.0000' },
     balancePreconsumes: { pendingCount: 0, stalePendingCount: 0, incompleteSettlementCount: 0, unknownStatusCount: 0, negativeAmountCount: 0 },
-    redemptionCodes: { usedCountMismatches: 0, codesOverUseLimit: 0, invalidCodeValues: 0, orphanCreators: 0 },
+    redemptionCodes: { usedCountMismatches: 0, codesOverUseLimit: 0, invalidCodeValues: 0, orphanCreators: 0, orphanUses: 0, duplicateUses: 0, balancesWithoutUse: 0 },
     apiKeyMemberships: { orphanMemberships: 0, ownerAlsoMemberCount: 0, orphanOwners: 0, enabledKeysWithoutOwner: 0 },
     catalog: { invalidIndexes: 0, notReadyIndexes: 0, unvalidatedConstraints: 0 },
     databaseRole: { name: 'offline-auditor', superuser: false, createRole: false, createDatabase: false, replication: false, bypassRls: false, publicSchemaCreate: false },
@@ -203,4 +203,19 @@ test('role privileges remain findings and missing read-only proof is incomplete'
   assert.equal(auditExitCode(report), 1);
   assert.equal(auditExitCode({ ...report, readOnly: false }), 2);
   assert.equal(auditExitCode({ ...report, complete: false }), 2);
+});
+
+test('兑换码历史关联新增风险字段进入退出码并对缺字段失败关闭', () => {
+  for (const field of ['orphanUses', 'duplicateUses', 'balancesWithoutUse']) {
+    const checks = cleanChecks();
+    // Reuse a complete schema fixture through the existing audit path below.
+    checks.redemptionCodes[field] = 1;
+    const report = { readOnly: true, complete: true, checks: { ...checks,
+      schemaShape: { missingRequired: [], nonTableRelations: [], rowSecurityEnabled: [], optionalMissing: [] },
+      providers: { plaintextApiKeyCount: 0, scriptKeyCount: 0, customQuotaScriptCount: 0, suspiciousProviderNames: [], suspiciousProviderScripts: [] },
+      plugins: { enabledCount: 0 }, databaseHooks: [], databaseEventTriggers: [], sequences: { behindCount: 0 } } };
+    assert.equal(auditExitCode(report), 1);
+    delete checks.redemptionCodes[field];
+    assert.equal(auditExitCode(report), 2);
+  }
 });

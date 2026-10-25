@@ -58,7 +58,6 @@ const {
 const { quickAddSystemProvider, QuickAddError } = require('../utils/quick-add-provider');
 
 const USER_BALANCE_DB_UNIT = MONEY_FACTOR / 10000n;
-const MAX_REDEMPTION_AMOUNT_MICROS = toMoneyMicros('999999.9999');
 const MAX_REDEMPTION_FEE_RATE_MICROS = toMoneyMicros('9.9999');
 
 function normalizeRedemptionMoney(value, { allowZero = false, maxMicros }) {
@@ -187,6 +186,20 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      if (isAdmin !== undefined && !isAdmin) {
+        // CRWR / ADMN: every future operation that reduces the administrator
+        // set must share this transaction lock, before any Team or User locks.
+        const adminLockNamespace = 0x43525752;
+        const adminMembershipLock = 0x41444d4e;
+        await client.query('SELECT pg_advisory_xact_lock($1, $2)', [adminLockNamespace, adminMembershipLock]);
+      }
+      if (team_id !== undefined && team_id !== null && team_id !== '') {
+        const team = await client.query('SELECT id FROM teams WHERE id = $1 FOR SHARE', [team_id]);
+        if (!team.rows.length) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Team 不存在' });
+        }
+      }
       const target = await client.query('SELECT id, is_admin FROM users WHERE id = $1 FOR UPDATE', [userId]);
       if (target.rows.length === 0) {
         await client.query('ROLLBACK');
@@ -197,13 +210,6 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
         try { normalizedEmail = normalizeEmail(email); } catch (error) {
           await client.query('ROLLBACK');
           return res.status(400).json({ error: error.message });
-        }
-      }
-      if (team_id !== undefined && team_id !== null && team_id !== '') {
-        const team = await client.query('SELECT id FROM teams WHERE id = $1 FOR SHARE', [team_id]);
-        if (!team.rows.length) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({ error: 'Team 不存在' });
         }
       }
       const sets = [];
@@ -223,6 +229,7 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
       if (!isAdmin) {
         const target = await client.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
         if (target.rows.length === 0) {
+          await client.query('ROLLBACK');
           return res.status(404).json({ error: '用户不存在' });
         }
         if (target.rows[0].is_admin) {
@@ -231,6 +238,7 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
             [userId]
           );
           if ((adminCount.rows[0].count || 0) === 0) {
+            await client.query('ROLLBACK');
             return res.status(400).json({ error: '系统至少需要保留一名管理员，无法取消该用户的管理员权限' });
           }
         }
@@ -260,6 +268,7 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
     }
 
     if (sets.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: '未提供任何可更新字段' });
     }
 
@@ -271,12 +280,12 @@ router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, aud
     if (team_id !== undefined) {
       await require('../utils/team-membership').setUserTeam(client, userId, team_id);
     }
-    require('./api').invalidateUserApiKeyCache(userId);
     if (result.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: '用户不存在' });
     }
     await client.query('COMMIT');
+    require('./api').invalidateUserApiKeyCache(Number(userId));
     res.json({ success: true });
     } catch (error) {
       await client.query('ROLLBACK').catch(() => {});
@@ -3804,170 +3813,42 @@ router.get('/redemption-codes', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// 创建兑换码
-router.post('/redemption-codes', requireAuth, requireAdmin, async (req, res) => {
-  const { code, amount, max_uses, expires_at, batch_name } = req.body;
-  if (!code || !amount) {
-    return res.status(400).json({ error: '兑换码和金额不能为空' });
-  }
-  try {
-    const result = await pool.query(
-      `INSERT INTO redemption_codes (code, amount, max_uses, expires_at, batch_name, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [code, amount, max_uses || 1, expires_at || null, batch_name || null, req.session.user.id]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ error: '兑换码已存在' });
+// 所有创建别名共用校验和密码学安全生成；保留原响应形状。
+const { createCodes, deleteUnusedCodes } = require('../utils/redemption-code-security');
+function redemptionCreateHandler(mode) {
+  return async (req, res) => {
+    try {
+      const codes = await createCodes(pool, req.body, req.session.user.id, { manual: mode === 'manual' });
+      if (mode === 'manual') return res.json(codes[0]);
+      if (mode === 'batch') return res.json({ success: true, count: codes.length });
+      return res.json({ success: true, codes });
+    } catch (error) {
+      if (error.code === '23505') return res.status(409).json({ error: '兑换码已存在或随机冲突，请重试' });
+      if (error.status) return res.status(error.status).json({ error: error.message });
+      Logger.error('[创建兑换码] 错误:', error);
+      return res.status(500).json({ error: '服务器错误' });
     }
-    Logger.error('[创建兑换码] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 删除兑换码
-router.delete('/redemption-codes/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM redemption_codes WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    Logger.error('[删除兑换码] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 批量生成兑换码
-router.post('/redemption-codes/batch', requireAuth, requireAdmin, async (req, res) => {
-  const { count, amount, max_uses, expires_at, batch_name, prefix } = req.body;
-  if (!count || !amount) {
-    return res.status(400).json({ error: '数量和金额不能为空' });
-  }
-  try {
-    const codes = [];
-    for (let i = 0; i < count; i++) {
-      const code = prefix
-        ? `${prefix}${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-        : Math.random().toString(36).slice(2, 10).toUpperCase();
-      codes.push(code);
-    }
-
-    const values = codes.map((code, i) => `($${i * 6 + 1}, $${i * 6 + 2}, $${i * 6 + 3}, $${i * 6 + 4}, $${i * 6 + 5}, $${i * 6 + 6})`).join(', ');
-    const params = codes.flatMap(code => [code, amount, max_uses || 1, expires_at || null, batch_name || null, req.session.user.id]);
-
-    await pool.query(
-      `INSERT INTO redemption_codes (code, amount, max_uses, expires_at, batch_name, created_by) VALUES ${values}`,
-      params
-    );
-    res.json({ success: true, count: codes.length });
-  } catch (error) {
-    Logger.error('[批量生成兑换码] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 生成兑换码（前端调用的接口）
+  };
+}
+router.post('/redemption-codes', requireAuth, requireAdmin, redemptionCreateHandler('manual'));
+router.post('/redemption-codes/batch', requireAuth, requireAdmin, redemptionCreateHandler('batch'));
 router.post('/redemption-codes/generate', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_REDEMPTION_CODE, {
   resourceType: 'redemption_code',
-  descriptionFrom: (req) => `生成兑换码`,
+  descriptionFrom: () => '生成兑换码',
   detailsFrom: (req) => ({ count: req.body?.count, amount: req.body?.amount, batch_name: req.body?.batch_name }),
-}), async (req, res) => {
-  const { amount, count, maxUses, expiresAt, batchName, refundable, feeRate } = req.body;
-  const normalizedAmount = normalizeRedemptionMoney(amount, { maxMicros: MAX_REDEMPTION_AMOUNT_MICROS });
-  if (normalizedAmount === null) {
-    return res.status(400).json({ error: '请输入有效的兑换金额' });
-  }
-  const normalizedCount = Number(count);
-  if (!Number.isInteger(normalizedCount) || normalizedCount < 1 || normalizedCount > 1000) {
-    return res.status(400).json({ error: '生成数量必须在 1-1000 之间' });
-  }
-  const normalizedMaxUses = maxUses === undefined || maxUses === null ? 1 : Number(maxUses);
-  if (!Number.isInteger(normalizedMaxUses) || normalizedMaxUses < 0 || normalizedMaxUses > 2147483647) {
-    return res.status(400).json({ error: '最大使用次数必须为 0 到 2147483647 之间的整数' });
-  }
-  if (refundable !== undefined && typeof refundable !== 'boolean') {
-    return res.status(400).json({ error: '可退款属性必须为布尔值' });
-  }
-  const normalizedRefundable = refundable === true;
-  const normalizedFeeRate = normalizeRedemptionMoney(feeRate === undefined || feeRate === null ? 0 : feeRate, {
-    allowZero: true,
-    maxMicros: MAX_REDEMPTION_FEE_RATE_MICROS,
-  });
-  if (normalizedFeeRate === null) {
-    return res.status(400).json({ error: '手续费率必须为 0 到 9.9999 之间且最多 4 位小数' });
-  }
-  if (batchName !== undefined && batchName !== null
-      && (typeof batchName !== 'string' || batchName.length > 255)) {
-    return res.status(400).json({ error: '批次名称最多 255 个字符' });
-  }
-  if (expiresAt !== undefined && expiresAt !== null && expiresAt !== ''
-      && (typeof expiresAt !== 'string' || Number.isNaN(Date.parse(expiresAt)))) {
-    return res.status(400).json({ error: '兑换码有效期格式无效' });
-  }
-
-  const generatedCodes = new Set();
-  while (generatedCodes.size < normalizedCount) {
-    // 兑换码含货币价值，使用密码学安全随机数，并在本批次内先去重。
-    generatedCodes.add(crypto.randomBytes(8).toString('hex').toUpperCase());
-  }
-  const codes = [...generatedCodes];
-  const params = [];
-  const values = codes.map((code, index) => {
-    const offset = index * 8;
-    params.push(
-      code,
-      normalizedAmount,
-      normalizedMaxUses,
-      expiresAt || null,
-      batchName || null,
-      req.session.user.id,
-      normalizedRefundable,
-      normalizedRefundable ? normalizedFeeRate : '0.000000'
-    );
-    return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
-  });
-
-  let client;
+}), redemptionCreateHandler('generate'));
+async function redemptionDeleteHandler(req, res) {
   try {
-    client = await pool.connect();
-    await client.query('BEGIN');
-    const result = await client.query(
-      `INSERT INTO redemption_codes
-         (code, amount, max_uses, expires_at, batch_name, created_by, refundable, fee_rate)
-       VALUES ${values.join(', ')}
-       RETURNING *`,
-      params
-    );
-    if (result.rows.length !== normalizedCount) throw new Error('生成的兑换码数量与请求不符');
-    await client.query('COMMIT');
-    res.json({ success: true, codes: result.rows });
+    await deleteUnusedCodes(pool, req.params.id === undefined ? req.body.ids : [req.params.id]);
+    return res.json({ success: true });
   } catch (error) {
-    if (client) await client.query('ROLLBACK').catch(() => {});
-    if (error.code === '23505') {
-      return res.status(409).json({ error: '兑换码随机冲突，请重试' });
-    }
-    Logger.error('[生成兑换码] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  } finally {
-    if (client) client.release();
+    if (error.status) return res.status(error.status).json({ error: error.message });
+    Logger.error('[删除兑换码] 错误:', error);
+    return res.status(500).json({ error: '服务器错误' });
   }
-});
-
-// 批量删除兑换码
-router.post('/redemption-codes/batch-delete', requireAuth, requireAdmin, async (req, res) => {
-  const { ids } = req.body;
-  if (!ids || !Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: '请选择要删除的兑换码' });
-  }
-  try {
-    await pool.query('DELETE FROM redemption_codes WHERE id = ANY($1)', [ids]);
-    res.json({ success: true });
-  } catch (error) {
-    Logger.error('[批量删除兑换码] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
+}
+router.delete('/redemption-codes/:id', requireAuth, requireAdmin, redemptionDeleteHandler);
+router.post('/redemption-codes/batch-delete', requireAuth, requireAdmin, redemptionDeleteHandler);
 
 // 批量设置兑换码可退款属性
 router.post('/redemption-codes/batch-set-refundable', requireAuth, requireAdmin, async (req, res) => {
