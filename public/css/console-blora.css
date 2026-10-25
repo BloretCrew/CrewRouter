@@ -117,78 +117,6 @@
   color: var(--blora-color-text-primary);
 }
 
-.blora-model-library .model-library-key-chips {
-  align-items: center;
-  gap: var(--blora-space-2);
-  padding: var(--blora-space-1) 0;
-}
-
-.blora-model-library .model-library-team-header > .model-action-test {
-  min-height: 2.25rem;
-  padding-inline: var(--blora-space-3);
-  border: 0;
-  border-radius: var(--blora-radius-lg);
-  color: var(--blora-color-text-muted);
-}
-
-.blora-model-library .model-library-team-header > .model-action-test:hover {
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-action-primary-default);
-}
-
-.blora-model-library .model-library-provider-title .model-provider-name {
-  max-width: min(100%, 16rem);
-  color: var(--blora-color-text-primary);
-  font-size: var(--blora-text-sm);
-  font-weight: 600;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.blora-model-library .model-library-item-name .model-provider-name {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.5rem;
-  max-width: min(100%, 12rem);
-  padding: 0 var(--blora-space-2);
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-pill);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-  font-size: var(--blora-text-xs);
-  font-weight: 600;
-}
-
-.blora-model-library .model-library-item-actions .model-action-test {
-  display: none;
-}
-
-.blora-model-library .model-library-team-header > .library-more-menu {
-  flex: 0 0 auto;
-}
-
-.blora-model-library .model-library-provider-actions > .model-action-test {
-  display: none;
-}
-
-.blora-model-library .model-library-sticky-inner {
-  align-items: center;
-}
-
-.blora-model-library .model-library-sticky-inner > .model-library-sticky-select,
-.blora-model-library .model-library-sticky-inner > .model-library-sticky-search,
-.blora-model-library .model-library-sticky-inner > .model-library-sticky-more-btn,
-.blora-model-library .model-library-sticky-inner > .model-library-sticky-key-wrap {
-  min-height: 2.25rem;
-}
-
-.blora-model-library .model-library-sticky-search {
-  display: flex;
-  align-items: center;
-}
-
 @media (max-width: 834px) {
   .blora-page .sidebar {
     width: 4.375rem;
@@ -219,17 +147,6 @@
     width: 2.25rem !important;
     max-width: 2.25rem;
     padding-inline: 0;
-  }
-}
-
-@media (max-width: 640px) {
-  .blora-model-library .model-library-key-selector-inner {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .blora-model-library .model-library-key-chips {
-    width: 100%;
   }
 }
 
@@ -373,8 +290,7 @@
 .blora-page .usage-logs-table .model-identity-summary { width: 100%; max-width: 100%; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .blora-page #usageLogsList { overflow-x: auto; } .blora-page .usage-logs-table { min-width: 82rem; } }
 
-.blora-page .content-section h2,
-.blora-page .model-library-page h2 {
+.blora-page .content-section h2 {
   color: var(--blora-color-text-primary);
   font-family: var(--blora-font-heading);
   letter-spacing: -0.025em;

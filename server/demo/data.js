@@ -233,7 +233,24 @@ module.exports = {
 
   modelLibrary() {
     return {
-      starred_models: DEMO_STARRED.slice(),
+      starred_models: DEMO_STARRED.map(star => {
+        const model = DEMO_MODELS.find(m => m.id === star.model_id) || {};
+        const team = DEMO_TEAMS.find(t => t.id === star.team_id) || {};
+        const provider = DEMO_PROVIDERS.find(p => p.id === model.provider) || {};
+        return {
+          ...model,
+          id: star.model_id,
+          provider_id: model.provider || '',
+          provider_name: provider.name || model.provider_name || '',
+          provider_enabled: provider.enabled !== false,
+          team_id: star.team_id,
+          team_name: team.name || '',
+          is_personal: !!team.is_personal,
+          is_default: !!team.is_default,
+          is_hidden: false,
+          is_starred: true,
+        };
+      }),
       teams: DEMO_TEAMS.map(team => ({
         team_id: team.id,
         team_name: team.name,
@@ -337,7 +354,8 @@ module.exports = {
   },
 
   currentModel() {
-    return { currentModel: 'gpt-4.1' };
+    // 与真实接口一致：返回模型行对象，而不是字符串
+    return { currentModel: { id: 'gpt-4.1', name: 'GPT-4.1', provider_name: 'OpenAI' } };
   },
 
   providerTags() {
