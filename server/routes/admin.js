@@ -2290,7 +2290,7 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
   (req) => req.body?.id ? ACTIONS.ADMIN_PROVIDER_UPDATE : ACTIONS.ADMIN_PROVIDER_CREATE,
   {
   resourceType: 'provider',
-  resourceIdFrom: (req, res) => res._logBody?.id || req.body?.id || null,
+  resourceIdFrom: (req) => req.providerAuditId || req.body?.id || null,
   descriptionFrom: (req) => `${req.body?.id ? '更新' : '创建'}供应商「${req.body?.name || '-'}」`,
 }), async (req, res) => {
   const { id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
@@ -2329,6 +2329,7 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
 
     // 有 id → 更新已有供应商；无 id → 生成随机 id 创建新供应商
     const providerId = id || crypto.randomUUID();
+    req.providerAuditId = providerId;
     const keyMode = key_mode || 'fixed';
     const keyScript = key_mode === 'script' ? (key_script || '') : '';
     const keyRefreshInterval = parseInt(key_refresh_interval) || 3600;
@@ -2565,12 +2566,12 @@ router.delete('/providers/:id', requireAuth, requireProviderManager, auditMiddle
   const providerId = req.params.id;
   const client = await pool.connect();
   try {
-    const exists = await client.query('SELECT id, name FROM providers WHERE id = $1', [providerId]);
+    await client.query('BEGIN');
+    const exists = await client.query('SELECT id, name FROM providers WHERE id = $1 FOR UPDATE', [providerId]);
     if (exists.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: '供应商不存在' });
     }
-
-    await client.query('BEGIN');
 
     const modelsResult = await client.query(
       'SELECT id FROM models WHERE provider = $1',
