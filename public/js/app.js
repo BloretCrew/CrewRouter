@@ -63,6 +63,9 @@ function formatDisplayName(format) {
 }
 
 // 用户控制台应用
+// 控制台模型库里改为 ml- 前缀的类名
+const _ML_CLASS_NAMES = new Set('loading-spinner model-provider-tag collapse-icon key-tag-dot library-more-menu library-reorder-toolbar library-reorder-toolbar-actions library-reorder-toolbar-hint library-reorder-toolbar-main model-filter-advanced model-filter-bar model-filter-selects model-item-badges model-price-item model-price-label model-price-value model-provider-tag model-quota-card model-quota-grid model-quota-header model-quota-name model-quota-numbers model-quota-period-header model-quota-plan model-quota-refresh model-quota-remaining model-quota-section model-quota-section-header model-quota-total model-quota-updated model-search-list model-star-btn model-star-heading-icon model-test-badge model-uptime model-uptime-bar model-uptime-check model-uptime-pct model-uptime-spark provider-model-count provider-test-summary team-badge trace-latest trace-reports-banner'.split(' '));
+
 class ConsoleApp {
   constructor() {
     this.user = null;
@@ -414,7 +417,7 @@ class ConsoleApp {
     });
     this._renderLibraryHeaderMoreMenu();
     document.getElementById('modelLibraryContent')?.addEventListener('mouseover', (e) => {
-      const badge = e.target.closest('.model-test-badge');
+      const badge = e.target.closest('.ml-model-test-badge');
       if (!badge) return;
       const testedAt = badge.getAttribute('data-tested-at');
       if (!testedAt || badge.getAttribute('title')) return;
@@ -4255,17 +4258,17 @@ class ConsoleApp {
   _renderProviderTestSummary(provider) {
     const summary = this._computeProviderTestSummary(provider);
     const formatted = this._formatProviderTestSummary(summary);
-    return `<span class="blora-badge provider-test-summary ${formatted.className}" data-variant="${formatted.className === 'pass' ? 'success' : formatted.className === 'fail' ? 'danger' : formatted.className === 'mixed' ? 'warning' : 'neutral'}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
+    return `<span class="provider-test-summary ${formatted.className}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
   }
 
   _refreshProviderTestSummary(team, provider) {
     if (!team || !provider) return;
     const providerEl = document.querySelector(`.model-library-provider[data-team-id="${CSS.escape(String(team.team_id))}"][data-provider-id="${CSS.escape(String(provider.provider_id))}"]`);
-    const summaryEl = providerEl?.querySelector('.provider-test-summary');
+    const summaryEl = providerEl?.querySelector('.ml-provider-test-summary');
     if (!summaryEl) return;
     const summary = this._computeProviderTestSummary(provider);
     const formatted = this._formatProviderTestSummary(summary);
-    summaryEl.className = `provider-test-summary ${formatted.className}`;
+    summaryEl.className = `ml-provider-test-summary ${formatted.className}`;
     summaryEl.title = formatted.title;
     summaryEl.textContent = formatted.text;
   }
@@ -9608,8 +9611,8 @@ ${extractorBody}
     });
 
     // 填充供应商筛选器（主栏 + 悬浮栏）
-    const optionsHtml = '<blora-option value="all">' + t('全部供应商') + '</blora-option>' +
-      [...providers].sort().map(p => `<blora-option value="${escapeHtml(p)}">${escapeHtml(p)}</blora-option>`).join('');
+    const optionsHtml = '<option value="all">' + t('全部供应商') + '</option>' +
+      [...providers].sort().map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
     const keepValue = [...providers].includes(this.libraryProviderFilter) || this.libraryProviderFilter === 'all'
       ? this.libraryProviderFilter
       : 'all';
@@ -9628,8 +9631,8 @@ ${extractorBody}
   _populateProviderTagFilter() {
     const tags = this._providerTags || [];
     const prev = this.libraryProviderTagFilter;
-    const optionsHtml = '<blora-option value="all">' + t('全部标签') + '</blora-option>' +
-      tags.map(t => `<blora-option value="tag:${t.id}">${escapeHtml(t.name)}</blora-option>`).join('');
+    const optionsHtml = '<option value="all">' + t('全部标签') + '</option>' +
+      tags.map(t => `<option value="tag:${t.id}">${escapeHtml(t.name)}</option>`).join('');
     const values = ['all', ...tags.map(t => `tag:${t.id}`)];
     const keepValue = values.includes(prev) ? prev : 'all';
     this.libraryProviderTagFilter = keepValue;
@@ -9645,8 +9648,8 @@ ${extractorBody}
   _renderSeriesFilter(seriesSelect, seriesSet) {
     if (!seriesSelect) return;
     const prev = this.librarySeriesFilter;
-    setHTML(seriesSelect, '<blora-option value="all">' + t('全部系列') + '</blora-option>' +
-      [...seriesSet].sort().map(s => `<blora-option value="${escapeHtml(s)}">${escapeHtml(s)}</blora-option>`).join(''));
+    setHTML(seriesSelect, '<option value="all">' + t('全部系列') + '</option>' +
+      [...seriesSet].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join(''));
     if ([...seriesSet].includes(prev) || prev === 'all') {
       seriesSelect.value = prev;
     } else {
@@ -9777,12 +9780,12 @@ ${extractorBody}
         <div class="model-library-team model-search-team">
           <div class="model-library-team-header" style="cursor:default;">
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
-            ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
+            ${team.is_personal ? '<span class="ml-team-badge">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="ml-team-badge">' + t('默认') + '</span>' : ''}
             <div style="flex:1;"></div>
-            <span class="provider-model-count">${team.models.length} 个结果</span>
+            <span class="ml-provider-model-count">${team.models.length} 个结果</span>
           </div>
-          <div class="model-library-list model-search-list">${items}</div>
+          <div class="model-library-list ml-model-search-list">${items}</div>
         </div>`;
     }).join('');
 
@@ -9791,10 +9794,10 @@ ${extractorBody}
       const page = pagination.page || 1;
       paginationHtml = `
         <div class="model-library-pagination" style="margin-top:12px;">
-          <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'}
+          <button class="model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'}
             onclick="app.loadLibraryGlobalSearchPage(${page - 1})">上一页</button>
           <span class="model-library-page-summary">第 ${page} / ${pagination.total_pages} 页 · 共 ${pagination.total} 个</span>
-          <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'}
+          <button class="model-library-page-btn" ${pagination.has_next ? '' : 'disabled'}
             onclick="app.loadLibraryGlobalSearchPage(${page + 1})">下一页</button>
         </div>`;
     }
@@ -9941,6 +9944,14 @@ ${extractorBody}
         this._renderProviderModelsInto(providerEl, provider, team);
       }
     }
+    // 星标区也要跟着刷新，否则「已绑定」状态停在旧模型上
+    const starredEl = document.querySelector('#modelLibraryContent [data-starred-section]');
+    if (starredEl && this._libraryData) {
+      const wrap = document.createElement('div');
+      setHTML(wrap, this._renderStarredModelsSection(this._libraryData.starred_models || [], this._libraryCurrentModel));
+      const next = wrap.firstElementChild;
+      if (next) starredEl.replaceWith(next);
+    }
   }
 
   _sortTestModels(list, sortField, direction) {
@@ -10057,7 +10068,7 @@ ${extractorBody}
       if (!btn) continue;
       const highlight = shouldOpen || this._hasLibraryAdvancedFiltersActive();
       btn.setAttribute('aria-pressed', highlight ? 'true' : 'false');
-      btn.setAttribute('data-variant', highlight ? 'primary' : 'secondary');
+
       btn.textContent = shouldOpen ? t('收起筛选') : t('更多筛选');
       btn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     }
@@ -10079,7 +10090,7 @@ ${extractorBody}
       const highlight = open || this._hasLibraryAdvancedFiltersActive();
       // Blora 按钮没有自定义高亮 class：用 aria-pressed + variant 表达筛选生效态
       btn.setAttribute('aria-pressed', highlight ? 'true' : 'false');
-      btn.setAttribute('data-variant', highlight ? 'primary' : 'secondary');
+
       if (!open) btn.textContent = t('更多筛选');
     }
   }
@@ -10333,19 +10344,19 @@ ${extractorBody}
         is_personal: model.is_personal
       };
       const isDisabled = model.provider_enabled === false;
-      const subtitle = model.team_name ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(model.team_name)}</span>` : '';
+      const subtitle = model.team_name ? `<span>${escapeHtml(model.team_name)}</span>` : '';
       return this._renderModelLibraryItem(model, team, currentModel, isDisabled, { subtitle });
     }).join('');
 
     return `
       <div class="model-library-team model-library-starred" data-starred-section="1">
         <div class="model-library-team-header" style="cursor:default;">
-          ${this._libIcon('star.fill', 16, 'model-star-heading-icon')}
+          ${this._libIcon('star.fill', 16, 'ml-model-star-heading-icon')}
           <h3>星标</h3>
           <div style="flex:1;"></div>
-          <span class="provider-model-count">${starredModels.length} 个模型</span>
+          <span class="ml-provider-model-count">${starredModels.length} 个模型</span>
         </div>
-        <div class="model-library-list model-search-list">${items}</div>
+        <div class="model-library-list ml-model-search-list">${items}</div>
       </div>`;
   }
 
@@ -10816,24 +10827,24 @@ ${extractorBody}
 
     const usageBadge = (pct) => {
       const variant = pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : 'success';
-      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${pct}%</span>`;
+      return `<span>${t('已用')} ${pct}%</span>`;
     };
-    const progressBar = (pct, label) => `<blora-progress class="model-quota-progress" value="${Math.max(0, Math.min(100, Number(pct) || 0))}" label="${escapeHtml(label)}"></blora-progress>`;
+    const progressBar = (pct, label) => `<progress class="model-quota-progress" max="100" value="${Math.max(0, Math.min(100, Number(pct) || 0))}" aria-label="${escapeHtml(label)}"></progress>`;
 
     section.style.display = 'block';
     setHTML(grid, providers.map(p => {
-      const historyLink = `<button type="button" class="blora-button" data-variant="ghost" data-size="sm" data-quota-provider="${escapeHtml(String(p.id ?? p.provider_id ?? ''))}">${t('额度历史')}</button>`;
+      const historyLink = `<button type="button" data-quota-provider="${escapeHtml(String(p.id ?? p.provider_id ?? ''))}">${t('额度历史')}</button>`;
       const latest = p.latest_valid_quota || p.last_valid_quota || p.latest_valid?.quota;
       const lastValidAt = p.last_valid_at || p.latest_valid?.observed_at || p.observed_at;
       const quota = latest || p.quota;
       const failed = !!p.error || ['failed', 'error'].includes(p.status);
-      const stateHtml = `<div class="model-quota-updated">${failed ? t('最近查询失败，保留上次有效值') : p.status === 'stale' ? t('已过期') : p.status === 'partial' ? t('部分成功') : ''}${lastValidAt ? ' · ' + t('最后有效观测') + ' ' + escapeHtml(this._formatQuotaCheckedAt(lastValidAt)) : ''}</div>`;
+      const stateHtml = `<div class="ml-model-quota-updated">${failed ? t('最近查询失败，保留上次有效值') : p.status === 'stale' ? t('已过期') : p.status === 'partial' ? t('部分成功') : ''}${lastValidAt ? ' · ' + t('最后有效观测') + ' ' + escapeHtml(this._formatQuotaCheckedAt(lastValidAt)) : ''}</div>`;
       if (failed && !quota) {
         return `
-          <article class="blora-card model-quota-card error" data-variant="flat">
-            <div class="model-quota-header">
-              <span class="model-quota-name">${escapeHtml(p.name)}</span>
-              <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
+          <article class="ml-model-quota-card error">
+            <div class="ml-model-quota-header">
+              <span class="ml-model-quota-name">${escapeHtml(p.name)}</span>
+              <span>${t('查询失败')}</span>
             </div>
             ${historyLink}
           </article>`;
@@ -10870,7 +10881,7 @@ ${extractorBody}
               : '';
             return `
               <div class="model-quota-period">
-                <div class="model-quota-period-header">
+                <div class="ml-model-quota-period-header">
                   <span>${escapeHtml(periodLabel)}</span>
                   ${periodPct == null ? t('未知') : usageBadge(periodPct)}
                 </div>
@@ -10880,7 +10891,7 @@ ${extractorBody}
           }).join('')}
         </div>` : `
         <div class="model-quota-period">
-          <div class="model-quota-period-header">
+          <div class="ml-model-quota-period-header">
             <span>${t('额度')}</span>
             ${pct == null ? `<span>${t('未知')}</span>` : usageBadge(Math.min(pct, 100))}
           </div>
@@ -10899,9 +10910,9 @@ ${extractorBody}
             if (!key.ok && !key.quota) {
               return `
                 <div class="model-quota-key" style="opacity:0.75;">
-                  <div class="model-quota-period-header">
+                  <div class="ml-model-quota-period-header">
                     <span><code style="font-size:11px;">${escapeHtml(keyLabel)}</code></span>
-                    <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
+                    <span>${t('查询失败')}</span>
                   </div>
                   ${key.error ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;" title="${escapeHtml(key.error)}">${escapeHtml(key.error.length > 60 ? key.error.slice(0, 60) + '…' : key.error)}</div>` : ''}
                 </div>`;
@@ -10910,7 +10921,7 @@ ${extractorBody}
             const kCurrent = kRaw == null || kRaw === '' ? null : Number(kRaw);
             return `
               <div class="model-quota-key">
-                <div class="model-quota-period-header">
+                <div class="ml-model-quota-period-header">
                   <span><code style="font-size:11px;">${escapeHtml(keyLabel)}</code></span>
                   ${!key.ok ? `<span>${t('最近查询失败，保留上次有效值')}</span>` : ''}${kCurrent == null ? t('未知') : usageBadge(Math.max(0, Math.min(100, kCurrent)))}
                 </div>
@@ -10921,16 +10932,16 @@ ${extractorBody}
         </div>` : '';
 
       return `
-        <article class="blora-card model-quota-card" data-variant="flat">
-          <div class="model-quota-header">
-            <span class="model-quota-name">${escapeHtml(p.name)}</span>
-            ${q.planName ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${escapeHtml(q.planName)}</span>` : ''}
-            ${keyEntries.length > 1 ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${t('共')} ${keyEntries.length} ${t('个 Key')}</span>` : ''}
+        <article class="ml-model-quota-card">
+          <div class="ml-model-quota-header">
+            <span class="ml-model-quota-name">${escapeHtml(p.name)}</span>
+            ${q.planName ? `<span class="ml-model-quota-plan">${escapeHtml(q.planName)}</span>` : ''}
+            ${keyEntries.length > 1 ? `<span class="ml-model-quota-plan">${t('共')} ${keyEntries.length} ${t('个 Key')}</span>` : ''}
           </div>
           ${periods.length ? periodHtml : `
-          <div class="model-quota-numbers">
-            <span class="model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? t('未知')))}</span>
-            <span class="model-quota-total">/ ${escapeHtml(String((agg || q).total ?? t('未知')))}</span>
+          <div class="ml-model-quota-numbers">
+            <span class="ml-model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? t('未知')))}</span>
+            <span class="ml-model-quota-total">/ ${escapeHtml(String((agg || q).total ?? t('未知')))}</span>
           </div>
           ${periodHtml}`}
           ${keysHtml}
@@ -10961,7 +10972,7 @@ ${extractorBody}
     const noKeys = !this._libraryKeys || this._libraryKeys.length === 0;
     // Key 全部被关闭时，引导动作是去启用而不是去创建
     const keyCtaHtml = noKeys
-      ? `<button type="button" class="blora-button" onclick="app.navigateTo('apiKeys')" data-variant="primary" data-size="sm">${this._libraryAllKeysClosed ? t('去启用 API Key') : t('创建 API Key')}</button>`
+      ? `<button type="button" onclick="app.navigateTo('apiKeys')">${this._libraryAllKeysClosed ? t('去启用 API Key') : t('创建 API Key')}</button>`
       : '';
 
     const starredModels = libraryData.starred_models || [];
@@ -10974,8 +10985,8 @@ ${extractorBody}
           <blora-empty title="${escapeHtml(t('暂无可用模型'))}" description="${escapeHtml(t('请联系管理员添加模型或加入 Team，也可添加自己的供应商'))}"></blora-empty>
           <div class="model-library-empty-actions">
             ${keyCtaHtml}
-            <button type="button" class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">${t('添加供应商')}</button>
-            <button type="button" class="blora-button" onclick="app.navigateTo('myUpstream')" data-variant="secondary" data-size="sm">${t('管理我的上游')}</button>
+            <button type="button" onclick="app.showAddProviderModal()">${t('添加供应商')}</button>
+            <button type="button" onclick="app.navigateTo('myUpstream')">${t('管理我的上游')}</button>
           </div>
         </div>
       `);
@@ -10990,7 +11001,7 @@ ${extractorBody}
           <blora-empty title="${escapeHtml(t('暂无可用模型'))}" description="${escapeHtml(t('可调整筛选，或添加自己的上游供应商导入模型'))}"></blora-empty>
           <div class="model-library-empty-actions">
             ${keyCtaHtml}
-            <button type="button" class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">${t('添加供应商')}</button>
+            <button type="button" onclick="app.showAddProviderModal()">${t('添加供应商')}</button>
           </div>
         </div>
       `);
@@ -11007,10 +11018,10 @@ ${extractorBody}
       return `
         <div class="model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
           <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
-            ${this._libIcon('chevron.down', 16, 'collapse-icon')}
+            ${this._libIcon('chevron.down', 16, 'ml-collapse-icon')}
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
-            ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
+            ${team.is_personal ? '<span class="ml-team-badge">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="ml-team-badge">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
             ${this._renderLibraryMoreMenu([
@@ -11047,25 +11058,25 @@ ${extractorBody}
               }
             ];
             return `
-            <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-variant="hover" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
+            <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
-                  ${this._libIcon('chevron.down', 14, 'collapse-icon')}
-                  ${renderProviderNameTag(provider.provider_name, { tag: false })}
-                  ${this._renderProviderTestSummary(provider)}
+                  ${this._libIcon('chevron.down', 14, 'ml-collapse-icon')}
+                  ${this._mlClass(renderProviderNameTag(provider.provider_name, { tag: false }))}
+                  ${this._mlClass(this._renderProviderTestSummary(provider))}
                   ${(provider.tags || []).map(t =>
-                    `<span class="blora-tag model-provider-tag-chip" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
+                    `<span class="model-provider-tag-chip" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
                   ).join('')}
                   ${this._renderLibraryMoveControls('provider', team.team_id, provider.provider_id)}
-                  ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
-                  ${isProviderHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
+                  ${isProviderDisabled ? '<span>' + t('已禁用') + '</span>' : ''}
+                  ${isProviderHidden ? '<span>' + t('已隐藏') + '</span>' : ''}
                 </div>
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}"></span>
-                  <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">${this._libIcon('dot.radiowaves.left.and.right', 14)}</button>
+                  <button type="button" class="model-action-icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">${this._libIcon('dot.radiowaves.left.and.right', 14)}</button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
-                  <span class="provider-model-count">${displayCount} 个模型</span>
+                  <span class="ml-provider-model-count">${displayCount} 个模型</span>
                 </div>
               </div>
               <div class="model-library-list">
@@ -11086,7 +11097,8 @@ ${extractorBody}
   }
 
   // 渲染单个模型库条目（供 renderModelLibrary 与按需加载复用）
-  _renderModelLibraryItem(model, team, currentModel, isProviderDisabled, options = {}) {
+  // Key 选择器沿用原 Blora 样式；控制台模型库走下面的原生版本
+  _renderKeyPickerModelItem(model, team, currentModel, isProviderDisabled, options = {}) {
     if (!model) return '';
     const isOwner = !!(team?.is_personal && this.user && model.created_by === this.user.id);
     const modelId = model.model_id || model.id;
@@ -11212,6 +11224,133 @@ ${extractorBody}
     </div>
     `;
   }
+  _renderModelLibraryItem(model, team, currentModel, isProviderDisabled, options = {}) {
+    if (options.mode === 'keyPicker') return this._renderKeyPickerModelItem(model, team, currentModel, isProviderDisabled, options);
+    if (!model) return '';
+    const isOwner = !!(team?.is_personal && this.user && model.created_by === this.user.id);
+    const modelId = model.model_id || model.id;
+    if (modelId == null || modelId === '') return '';
+    const isKeyPicker = options.mode === 'keyPicker';
+    let queueIndex = -1;
+    let inQueue = false;
+    if (isKeyPicker && this._keyModelPicker) {
+      const assigned = this._keyModelPicker.assignedModelIds;
+      if (assigned && typeof assigned.has === 'function') {
+        inQueue = assigned.has(String(modelId));
+      }
+      if (Array.isArray(this._keyModelPicker.queue)) {
+        queueIndex = this._keyModelPicker.queue.findIndex(m => String(m?.id) === String(modelId));
+        if (queueIndex >= 0) inQueue = true;
+      }
+    }
+    const isCurrent = (currentModel && String(currentModel.id) === String(modelId)) || inQueue;
+    const modelMult = parseFloat(model.model_multiplier || 1.0);
+    const isModelHidden = !!model.is_hidden;
+    const isStarred = !!model.is_starred;
+    const providerId = model.provider_id || model.provider || '';
+    const teamId = team?.team_id || model.team_id || '';
+    const onClick = options.onClick || `app.selectModel('${this._jsString(modelId)}')`;
+    const providerTagHtml = options.showProvider === false
+      ? ''
+      : this._mlClass(renderProviderNameTag(model.provider_name || model.provider, { tag: true }));
+    const subtitleHtml = options.subtitle || '';
+
+    const testOk = model.test_ok;
+    const testLatency = model.test_latency_ms;
+    const testTps = model.test_tokens_per_second;
+    const testTestedAt = model.test_tested_at;
+
+    const testTpsText = this._formatTestTps(testTps);
+
+    let testBadgeHtml = '';
+    if (testOk === true) {
+      const tpsText = testTpsText ? ` - ${testTpsText} t/s` : '';
+      testBadgeHtml = `<span class="ml-model-test-badge pass" data-tested-at="${escapeHtml(testTestedAt || '')}">${testLatency}ms${tpsText}</span>`;
+    } else if (testOk === false) {
+      testBadgeHtml = `<span class="ml-model-test-badge fail" data-tested-at="${escapeHtml(testTestedAt || '')}">${t('失败')}</span>`;
+    }
+
+    const modelMoreItems = isKeyPicker ? [] : [
+      { label: t('模型归因'), icon: 'test', onClick: `app.openModelTrace('${this._jsString(modelId)}')` },
+      {
+        label: t('测试'),
+        icon: 'test',
+        onClick: `app.testModel('${this._jsString(modelId)}')`
+      },
+      {
+        label: isStarred ? t('取消星标') : t('星标此模型'),
+        icon: isStarred ? 'star' : 'star-off',
+        onClick: `app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})`
+      },
+      {
+        label: isModelHidden ? t('取消隐藏') : t('隐藏此模型'),
+        icon: isModelHidden ? 'eye' : 'eye-off',
+        onClick: `app.hideLibraryModel('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isModelHidden ? 'false' : 'true'})`
+      },
+      ...(isOwner ? [
+        { type: 'divider' },
+        {
+          label: t('编辑'),
+          onClick: `app.showEditModelModal('${this._jsString(modelId)}')`
+        },
+        {
+          label: t('发布'),
+          onClick: `app.publishModel('${this._jsString(modelId)}')`
+        },
+        {
+          label: t('删除'),
+          className: 'danger',
+          onClick: `app.deleteUserModel('${this._jsString(modelId)}')`
+        }
+      ] : [])
+    ];
+
+    return `
+    <div class="model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
+      <div class="model-library-item-info">
+        <div class="model-library-item-name">
+          ${isKeyPicker ? '' : `<button type="button" class="ml-model-star-btn ${isStarred ? 'starred' : ''}" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">${this._libIcon(isStarred ? 'star.fill' : 'star', 14)}</button>`}
+          ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
+          <span>${escapeHtml(model.name || model.id || '')}</span>
+          <div class="ml-model-item-badges">
+            ${testBadgeHtml}
+            ${providerTagHtml}
+            ${subtitleHtml}
+            ${model.series ? `<span>${escapeHtml(model.series)}</span>` : ''}
+            ${isOwner ? '<span>' + t('我的') + '</span>' : ''}
+            ${isModelHidden ? '<span>' + t('已隐藏') + '</span>' : ''}
+          </div>
+        </div>
+        ${model.description ? `<div class="model-library-item-desc">${escapeHtml(model.description)}</div>` : ''}
+        <div class="model-library-item-price">
+          <span class="ml-model-price-item">
+            <span class="ml-model-price-label">倍率</span>
+            <span class="ml-model-price-value">×${modelMult.toFixed(2)}</span>
+          </span>
+        </div>
+        ${isKeyPicker ? '' : `<div class="ml-trace-latest" data-trace-latest="${escapeHtml(modelId)}"></div>`}
+        ${this._mlClass(this._renderModelUptimeSlot(modelId, model.name))}
+      </div>
+      <div class="model-library-item-actions">
+        ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
+        ${isProviderDisabled
+          ? '<button type="button" class="model-action-disabled" disabled>' + t('供应商已禁用') + '</button>'
+          : isKeyPicker
+            ? (queueIndex >= 0
+              ? `<button type="button" class="model-action-bound" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
+              : '<button type="button" class="model-action-primary">' + t('加入队列') + '</button>')
+          : `
+            ${isOwner
+              ? ''
+              : isCurrent
+                ? '<button type="button" class="model-action-bound" disabled>' + t('已绑定') + '</button>'
+                : '<button type="button" class="model-action-primary">' + t('绑定') + '</button>'}
+          `}
+        ${isKeyPicker ? '' : this._renderLibraryMoreMenu(modelMoreItems)}
+      </div>
+    </div>
+    `;
+  }
 
   // 模型状态：近 24 小时、每 15 分钟一槽（96 根）；前端缓存最多 15 分钟
   _uptimeDays = 1;
@@ -11326,10 +11465,12 @@ ${extractorBody}
     for (const id of ids) {
       const summary = this._uptimeCache[id];
       if (!summary) continue;
-      document.querySelectorAll(`.model-uptime[data-uptime-model="${CSS.escape(String(id))}"]`).forEach(el => {
+      document.querySelectorAll(`.model-uptime[data-uptime-model="${CSS.escape(String(id))}"], .ml-model-uptime[data-uptime-model="${CSS.escape(String(id))}"]`).forEach(el => {
         const name = el.getAttribute('data-uptime-name') || id;
         const wrap = document.createElement('div');
-        setHTML(wrap, this._renderModelUptimeCompact(id, name, summary));
+        const html = this._renderModelUptimeCompact(id, name, summary);
+        // 控制台模型库用 ml- 前缀类名，避开共享 CSS
+        setHTML(wrap, el.closest('#modelLibraryPage') ? this._mlClass(html) : html);
         const next = wrap.firstElementChild;
         if (next) el.replaceWith(next);
       });
@@ -11409,6 +11550,12 @@ ${extractorBody}
   }
 
   // 渲染模型库「更多」菜单（blora-dropdown）；动作通过 blora-select 事件统一分发，避免自定义菜单项重渲染后丢失事件。
+  // 控制台模型库的类名统一加 ml- 前缀，共享 CSS 匹配不到；用于共享模板（测试摘要、调用状态）的输出
+  _mlClass(html) {
+    const names = _ML_CLASS_NAMES;
+    return String(html || '').replace(/class="([^"]*)"/g, (m, list) => `class="${list.split(/\s+/).map(c => names.has(c) ? `ml-${c}` : c).join(' ')}"`);
+  }
+
   _renderLibraryMoreMenu(items = [], options = {}) {
     if (!items || !items.length) return '';
     let separator = false;
@@ -11417,25 +11564,22 @@ ${extractorBody}
         separator = true;
         return '';
       }
-      const dangerAttr = item.className === 'danger' ? ' data-variant="danger"' : '';
+      const dangerAttr = item.className === 'danger' ? '' : '';
       const separatorAttr = separator ? ' separator' : '';
       const disabledAttr = item.disabled ? ' disabled' : '';
       separator = false;
       const action = encodeURIComponent(String(item.onClick || ''));
-      return `<blora-dropdown-item value="library-action:${action}"${separatorAttr}${dangerAttr}${disabledAttr}>${escapeHtml(item.label)}</blora-dropdown-item>`;
+      return `${separatorAttr ? '<hr>' : ''}<button type="button" data-library-action="library-action:${action}"${disabledAttr} onclick="event.stopPropagation();this.closest('details').open=false;app._handleLibraryMoreMenuSelect({ detail: { value: this.dataset.libraryAction } })">${escapeHtml(item.label)}</button>`;
     }).join('');
 
     const triggerLabel = options.label || t('更多操作');
-    const variant = options.variant || 'outline';
     const extraClass = options.className ? ` ${options.className}` : '';
+    // 模型库为纯原生 HTML：用 <details> 代替 blora-dropdown
     return `
-      <blora-dropdown class="library-more-menu${extraClass}" align="end" onclick="event.stopPropagation()">
-        <button slot="trigger" type="button" class="blora-button library-more-trigger" data-variant="${variant}" data-size="sm" aria-label="${escapeHtml(triggerLabel)}">
-          <span>${escapeHtml(triggerLabel)}</span>
-          ${this._libIcon('chevron.down', 12)}
-        </button>
+      <details class="ml-library-more-menu${extraClass}" onclick="event.stopPropagation()">
+        <summary class="library-more-trigger" aria-label="${escapeHtml(triggerLabel)}">${escapeHtml(triggerLabel)}</summary>
         ${menuItems}
-      </blora-dropdown>`;
+      </details>`;
   }
 
   // 顶部操作栏「更多」菜单：标签随显示已隐藏 / 排序模式 / 连通性检测状态整体重绘
@@ -11476,14 +11620,15 @@ ${extractorBody}
   }
 
   closeLibraryMoreMenus() {
-    document.querySelectorAll('.library-more-menu').forEach(menu => {
+    document.querySelectorAll('.ml-library-more-menu').forEach(menu => {
+      if (menu.tagName === 'DETAILS') menu.open = false;
       menu.close?.();
     });
   }
 
   toggleLibraryMoreMenu(event, btn) {
     event.stopPropagation();
-    btn?.closest('.library-more-menu')?.toggle?.();
+    btn?.closest('.ml-library-more-menu')?.toggle?.();
   }
 
   toggleTeam(teamIndex) {
@@ -11752,7 +11897,7 @@ ${extractorBody}
     this._loadModelUptimeForIds(provider.models.map(m => m.model_id || m.id));
 
     // 更新计数显示
-    const countEl = providerEl.querySelector('.provider-model-count');
+    const countEl = providerEl.querySelector('.ml-provider-model-count');
     if (countEl) {
       const displayCount = this.libraryShowHidden
         ? (provider.model_count ?? provider.pagination?.total ?? provider.models.length)
@@ -11790,9 +11935,9 @@ ${extractorBody}
 
     return `
       <div class="model-library-pagination">
-        <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
+        <button class="model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
         ${pageButtons}
-        <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
+        <button class="model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
         <span class="model-library-page-summary">共 ${pagination.total} 个</span>
       </div>
     `;
@@ -12017,7 +12162,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-empty">
           <span>${allClosed ? t('API Key 已全部关闭，启用后才能绑定模型') : t('还没有 API Key，创建后才能绑定模型')}</span>
-          <button type="button" class="blora-button" onclick="app.navigateTo('apiKeys')" data-variant="primary" data-size="sm">${allClosed ? t('去启用 API Key') : t('去创建 API Key')}</button>
+          <button type="button" onclick="app.navigateTo('apiKeys')">${allClosed ? t('去启用 API Key') : t('去创建 API Key')}</button>
         </div>`);
       this._renderLibraryStickyKeyBtn();
       return;
@@ -12039,7 +12184,7 @@ ${extractorBody}
           <div class="binding-mode-banner">
             ${iconHtml}
             <span>正在为 <strong>${escapeHtml(harnessMeta.label)}</strong> 选择模型</span>
-            <button type="button" class="blora-button binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()" data-variant="secondary" data-size="sm">退出</button>
+            <button type="button" class="binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()">退出</button>
           </div>
           <div class="binding-key-row">
             <span class="binding-key-name">${keyName}</span>
@@ -12069,7 +12214,7 @@ ${extractorBody}
     const harnessChips = harnessList.length
       ? `<div class="binding-harness-chips">${harnessList.map(h => {
           const meta = this._usageRequestSourceMeta(h.harness);
-          return `<button type="button" class="blora-button binding-harness-chip" style="--h-color:${meta.color};"
+          return `<button type="button" class="binding-harness-chip" style="--h-color:${meta.color};"
             title="${escapeHtml(meta.label)} → ${escapeHtml(h.name || h.model_id || '')}"
             onclick="event.stopPropagation();app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')">
             ${this._harnessIconHtml(h.harness, 12)}
@@ -12084,7 +12229,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-active">
           <div class="binding-key-row">
-            <button type="button" class="blora-button binding-key-button" data-variant="secondary" data-size="sm"
+            <button type="button" class="binding-key-button"
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -12110,7 +12255,7 @@ ${extractorBody}
     setHTML(summary, `
       <div class="binding-active">
         <div class="binding-key-row">
-          <button type="button" class="blora-button binding-key-button" data-variant="secondary" data-size="sm"
+          <button type="button" class="binding-key-button"
             data-key-id="${key.id}"
             onclick="app.selectLibraryKey(${key.id}, event)"
             title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -12163,16 +12308,16 @@ ${extractorBody}
         : `${name}${modelName ? ' → ' + modelName : ''}`;
       // 官方 Filter 模式（radio 芯片）；label 的 click 先交给业务处理，再次点击同一 Key 打开工具气泡
       return `
-        <label class="blora-filter__item model-library-key-item ${isActive ? 'active' : ''}"
+        <label class="model-library-key-item ${isActive ? 'active' : ''}"
              data-key-id="${key.id}"
              onclick="event.preventDefault();app.selectLibraryKey(${key.id}, event)"
              title="${escapeHtml(tip)}">
           <input type="radio" name="libraryKeyChip" value="${key.id}"${isActive ? ' checked' : ''}>
-          <span class="blora-filter__label">
+          <span>
             <span class="key-name">${escapeHtml(name)}</span>
-            ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
-            ${modelName ? `<span class="blora-badge key-model-badge" data-variant="neutral">${escapeHtml(modelName)}</span>` : ''}
-            ${harnessCount ? `<span class="blora-badge" data-variant="info" title="${harnessCount}${escapeHtml(t('个工具单独绑定'))}">${harnessCount}</span>` : ''}
+            ${tags.map(t => `<span class="ml-key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
+            ${modelName ? `<span class="key-model-badge">${escapeHtml(modelName)}</span>` : ''}
+            ${harnessCount ? `<span title="${harnessCount}${escapeHtml(t('个工具单独绑定'))}">${harnessCount}</span>` : ''}
           </span>
         </label>
       `;
@@ -12190,7 +12335,7 @@ ${extractorBody}
       }
       const hiddenCount = keys.length - KEY_VISIBLE_COUNT - (selectedKey && !selectedVisible ? 1 : 0);
       html += `
-        <button type="button" class="blora-button model-library-key-expand" data-variant="ghost" data-size="sm"
+        <button type="button" class="model-library-key-expand"
                 onclick="app.toggleLibraryKeysExpand()"
                 title="${escapeHtml(t('展开余下的'))} ${hiddenCount} ${escapeHtml(t('个key'))}">
           ${escapeHtml(t('展开余下的'))} ${hiddenCount} ${escapeHtml(t('个key'))}
@@ -12200,7 +12345,7 @@ ${extractorBody}
       // 展开态：Key 数仍超阈值时，末尾提供「收起」
       if (keys.length > KEY_COLLAPSE_THRESHOLD) {
         html += `
-          <button type="button" class="blora-button model-library-key-expand" data-variant="ghost" data-size="sm"
+          <button type="button" class="model-library-key-expand"
                   onclick="app.toggleLibraryKeysExpand()"
                   title="${escapeHtml(t('收起'))}">
             ${escapeHtml(t('收起'))}
@@ -12292,7 +12437,7 @@ ${extractorBody}
       const modelText = bound?.name || t('跟随默认');
       const hasOverride = !!bound;
       return `
-        <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item" role="menuitem"
+        <button type="button" class="library-key-bubble-item" role="menuitem"
                 onclick="app.onLibraryKeyBubbleHarness('${h.id}')">
           <span class="library-key-bubble-item-main">
             ${this._harnessIconHtml(h.id, 14)}
@@ -12303,13 +12448,13 @@ ${extractorBody}
     }).join('');
 
     setHTML(menu, `
-      <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item" role="menuitem"
+      <button type="button" class="library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleLocate()">
         <span class="library-key-bubble-item-main">跳转到绑定模型</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
       </button>
       <div class="expand-dropdown-divider"></div>
-      <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
+      <button type="button" class="library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
               onclick="app.onLibraryKeyBubbleDefault()">
         <span class="library-key-bubble-item-main">默认绑定</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
@@ -12317,7 +12462,7 @@ ${extractorBody}
       <div class="library-key-bubble-section-label">按工具绑定</div>
       ${harnessItems}
       <div class="expand-dropdown-divider"></div>
-      <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item" role="menuitem"
+      <button type="button" class="library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleExportConfig()">
         <span class="library-key-bubble-item-main">导出客户端配置</span>
       </button>
@@ -12589,6 +12734,7 @@ ${extractorBody}
     if (shouldShow === wasVisible) return;
     bar.classList.toggle('is-visible', shouldShow);
     bar.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+    bar.hidden = !shouldShow;
     if (!shouldShow) this.closeLibraryStickyKeyMenu();
   }
 
@@ -12657,11 +12803,11 @@ ${extractorBody}
     setHTML(btn, `
       <span class="sticky-key-name">${keyName}</span>
       ${bindTarget !== 'default'
-        ? `<span class="blora-badge sticky-key-harness-capsule" data-variant="info">${this._harnessIconHtml(bindTarget, 12)} ${escapeHtml(this._harnessLabel(bindTarget))}</span>`
+        ? `<span class="sticky-key-harness-capsule">${this._harnessIconHtml(bindTarget, 12)} ${escapeHtml(this._harnessLabel(bindTarget))}</span>`
         : ''}
       ${modelName
-        ? `<span class="blora-badge sticky-key-model-capsule" data-variant="neutral">${escapeHtml(modelName)}</span>`
-        : `<span class="blora-badge sticky-key-model-unset" data-variant="warning">${t('未绑定')}</span>`}
+        ? `<span class="sticky-key-model-capsule">${escapeHtml(modelName)}</span>`
+        : `<span class="sticky-key-model-unset">${t('未绑定')}</span>`}
       ${this._libIcon('chevron.down', 12, 'sticky-key-chevron')}
     `);
   }

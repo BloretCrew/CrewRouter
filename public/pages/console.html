@@ -25,8 +25,7 @@
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
-  <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
-  <link rel="stylesheet" href="/css/model-library-blora.css?v=team-picker-20261005">
+  <link rel="stylesheet" href="/css/main.css?v=ml-reset-20261025">
   <link rel="stylesheet" href="/css/sidebar-blora.css?v=mobile-sidebar-avatar-20261018">
   <link rel="stylesheet" href="/css/console-blora.css?v=usage-table-widths-20261008">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
@@ -198,53 +197,53 @@
       </div>
 
       <!-- 模型库页面 (CrewRouter) - 首页 -->
-      <div id="modelLibraryPage" class="page blora-model-library">
+      <div id="modelLibraryPage" class="page">
         <!-- 后台任务通知条：会话总结等长任务的进行中提示 -->
         <div id="modelLibraryTaskBar" style="display:none;margin-bottom:12px;"><div id="sessionSummaryTaskBar"></div><div id="modelTraceTaskBar" hidden></div></div>
         <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
-        <div id="modelLibraryStickyBar" class="model-library-sticky-bar" aria-hidden="true">
+        <div id="modelLibraryStickyBar" class="model-library-sticky-bar" aria-hidden="true" hidden>
           <div class="model-library-sticky-inner">
-            <blora-select id="libraryStickyProviderFilter" class="model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选">
-              <blora-option value="all">全部供应商</blora-option>
-            </blora-select>
-            <blora-search id="libraryStickySearchInput" class="model-library-sticky-search" label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..."></blora-search>
-            <button type="button" id="libraryStickyMoreFiltersBtn" class="blora-button model-library-sticky-more-btn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">更多筛选</span></button>
+            <select id="libraryStickyProviderFilter" class="model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选">
+              <option value="all">全部供应商</option>
+            </select>
+            <input type="search" id="libraryStickySearchInput" class="model-library-sticky-search" aria-label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team...">
+            <button type="button" id="libraryStickyMoreFiltersBtn" class="model-library-sticky-more-btn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">更多筛选</span></button>
             <div class="model-library-sticky-key-wrap" id="libraryStickyKeyWrap" style="display:none;">
-              <button type="button" id="libraryStickyKeyBtn" class="blora-button model-library-sticky-key" data-variant="outline" data-size="sm" aria-haspopup="menu" aria-expanded="false" onclick="app.toggleLibraryStickyKeyOrBubble(event)">
+              <button type="button" id="libraryStickyKeyBtn" class="model-library-sticky-key" aria-haspopup="menu" aria-expanded="false" onclick="app.toggleLibraryStickyKeyOrBubble(event)">
                 <span class="sticky-key-name">API Key</span>
               </button>
             </div>
           </div>
           <div id="libraryStickyAdvancedFilters" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
-            <blora-select id="libraryStickySeriesFilter" class="model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选">
-              <blora-option value="all">全部系列</blora-option>
-            </blora-select>
-            <blora-select id="libraryStickyProviderTagFilter" class="model-library-sticky-select" aria-label="标签筛选" data-i18n-title="标签筛选">
-              <blora-option value="all">全部标签</blora-option>
-            </blora-select>
-            <blora-select id="libraryStickyTestFilter" class="model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态">
-              <blora-option value="all">全部状态</blora-option>
-              <blora-option value="pass">测试通过</blora-option>
-              <blora-option value="fail">测试失败</blora-option>
-              <blora-option value="untested">未测试</blora-option>
-            </blora-select>
-            <blora-select id="libraryStickySort" class="model-library-sticky-select model-library-sticky-sort" aria-label="排序" data-i18n-title="排序">
-              <blora-option value="default">默认 / 自定义排序</blora-option>
-              <blora-option value="price_asc">价格低→高</blora-option>
-              <blora-option value="price_desc">价格高→低</blora-option>
-              <blora-option value="name_asc">名称 A-Z</blora-option>
-              <blora-option value="name_desc">名称 Z-A</blora-option>
-              <blora-option value="test_latency_asc">测试最快</blora-option>
-              <blora-option value="test_latency_desc">测试最慢</blora-option>
-              <blora-option value="test_tps_desc">吞吐最高</blora-option>
-            </blora-select>
+            <select id="libraryStickySeriesFilter" class="model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选">
+              <option value="all">全部系列</option>
+            </select>
+            <select id="libraryStickyProviderTagFilter" class="model-library-sticky-select" aria-label="标签筛选" data-i18n-title="标签筛选">
+              <option value="all">全部标签</option>
+            </select>
+            <select id="libraryStickyTestFilter" class="model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态">
+              <option value="all">全部状态</option>
+              <option value="pass">测试通过</option>
+              <option value="fail">测试失败</option>
+              <option value="untested">未测试</option>
+            </select>
+            <select id="libraryStickySort" class="model-library-sticky-select model-library-sticky-sort" aria-label="排序" data-i18n-title="排序">
+              <option value="default">默认 / 自定义排序</option>
+              <option value="price_asc">价格低→高</option>
+              <option value="price_desc">价格高→低</option>
+              <option value="name_asc">名称 A-Z</option>
+              <option value="name_desc">名称 Z-A</option>
+              <option value="test_latency_asc">测试最快</option>
+              <option value="test_latency_desc">测试最慢</option>
+              <option value="test_tps_desc">吞吐最高</option>
+            </select>
           </div>
         </div>
 
-        <div id="traceReportsBanner" class="trace-reports-banner" style="display:none;"></div>
+        <div id="traceReportsBanner" class="ml-trace-reports-banner" style="display:none;"></div>
 
         <div id="libraryQuickAddSystemProvider" class="library-quick-add-system-provider" hidden>
-          <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showQuickAddSystemProviderDialog()"><span data-i18n="快速添加供应商到系统">快速添加供应商到系统</span></button>
+          <button type="button" onclick="app.showQuickAddSystemProviderDialog()"><span data-i18n="快速添加供应商到系统">快速添加供应商到系统</span></button>
         </div>
 
         <!-- 顶部操作栏：主路径常驻，高级能力收入「更多」（blora-dropdown，由 app.js 渲染） -->
@@ -254,8 +253,8 @@
             <span class="model-library-header-hint"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
           </div>
           <div class="model-library-header-actions" id="modelLibraryHeaderActions">
-            <button type="button" class="blora-button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型" data-variant="secondary" data-size="sm"><img src="https://img.bloret.net/SF/shippingbox?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="shippingbox"><span data-i18n="我的上游">我的上游</span></button>
-            <button type="button" class="blora-button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商" data-variant="primary" data-size="sm"><span data-i18n="添加供应商">添加供应商</span></button>
+            <button type="button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型"><img src="https://img.bloret.net/SF/shippingbox?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="shippingbox"><span data-i18n="我的上游">我的上游</span></button>
+            <button type="button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商"><span data-i18n="添加供应商">添加供应商</span></button>
             <div class="model-library-header-more" id="libraryMoreDropdown"></div>
             <!-- 兼容旧脚本引用的隐藏挂点（不再单独展示） -->
             <div id="expandDropdown" style="display:none;">
@@ -272,85 +271,85 @@
           <div class="model-library-binding-main">
             <div class="model-library-binding-label"><span data-i18n="当前 Key">当前 Key</span></div>
             <div id="modelLibraryBindingSummary" class="model-library-binding-summary">
-              <span class="binding-placeholder library-inline-loading" role="status"><span class="blora-spinner" data-size="sm" aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></span>
+              <span class="binding-placeholder library-inline-loading" role="status"><span aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></span>
             </div>
           </div>
           <div id="modelLibraryKeySelector" class="model-library-key-selector" style="display:none;">
             <div class="model-library-key-selector-inner">
               <div class="model-library-key-label"><span data-i18n="切换 Key">切换 Key</span></div>
-              <div class="blora-filter model-library-key-chips" id="libraryKeyChips" role="radiogroup" aria-label="切换 Key"></div>
+              <div class="model-library-key-chips" id="libraryKeyChips" role="radiogroup" aria-label="切换 Key"></div>
             </div>
           </div>
         </div>
 
         <!-- 供应商额度概览 -->
-        <div id="providerQuotaSection" class="model-quota-section" style="display:none;">
-          <div class="model-quota-section-header">
+        <div id="providerQuotaSection" class="ml-model-quota-section" style="display:none;">
+          <div class="ml-model-quota-section-header">
             <div>
               <h3><span data-i18n="供应商额度">供应商额度</span></h3>
               <p><span data-i18n="显示上次刷新（定时 / 手动）的结果">显示上次刷新（定时 / 手动）的结果</span></p>
             </div>
-            <button type="button" id="providerQuotaRefreshBtn" class="blora-button model-quota-refresh" data-variant="ghost" data-size="icon" onclick="app.refreshProviderQuota()" title="刷新额度" data-i18n-title="刷新额度" aria-label="刷新额度"><img src="https://img.bloret.net/SF/arrow.clockwise?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.clockwise"><span class="loading-spinner sm" aria-hidden="true"></span></button>
+            <button type="button" id="providerQuotaRefreshBtn" class="ml-model-quota-refresh" onclick="app.refreshProviderQuota()" title="刷新额度" data-i18n-title="刷新额度" aria-label="刷新额度"><img src="https://img.bloret.net/SF/arrow.clockwise?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.clockwise"><span class="ml-loading-spinner sm" aria-hidden="true"></span></button>
           </div>
-          <div id="providerQuotaGrid" data-blora-state="idle" class="model-quota-grid"></div>
+          <div id="providerQuotaGrid" data-blora-state="idle" class="ml-model-quota-grid"></div>
         </div>
 
         <!-- 排序模式工具条：拖拽 + 一键按测试结果排序 -->
-        <div id="libraryReorderToolbar" class="library-reorder-toolbar" style="display:none;">
-          <div class="library-reorder-toolbar-main">
-            <span class="blora-badge" data-variant="info"><span data-i18n="排序模式">排序模式</span></span>
-            <span class="library-reorder-toolbar-hint"><span data-i18n="拖拽手柄调整顺序，或一键按测试结果写入自定义排序">拖拽手柄调整顺序，或一键按测试结果写入自定义排序</span></span>
+        <div id="libraryReorderToolbar" class="ml-library-reorder-toolbar" style="display:none;">
+          <div class="ml-library-reorder-toolbar-main">
+            <span><span data-i18n="排序模式">排序模式</span></span>
+            <span class="ml-library-reorder-toolbar-hint"><span data-i18n="拖拽手柄调整顺序，或一键按测试结果写入自定义排序">拖拽手柄调整顺序，或一键按测试结果写入自定义排序</span></span>
           </div>
-          <div class="library-reorder-toolbar-actions">
-            <button type="button" class="blora-button" onclick="app.applyLibraryOrderByTest('test_latency_asc')" title="通过的模型优先，延迟从低到高" data-i18n-title="通过的模型优先，延迟从低到高" data-variant="secondary" data-size="sm"><span data-i18n="延迟快→慢">
+          <div class="ml-library-reorder-toolbar-actions">
+            <button type="button" onclick="app.applyLibraryOrderByTest('test_latency_asc')" title="通过的模型优先，延迟从低到高" data-i18n-title="通过的模型优先，延迟从低到高"><span data-i18n="延迟快→慢">
               延迟快→慢
             </span></button>
-            <button type="button" class="blora-button" onclick="app.applyLibraryOrderByTest('test_latency_desc')" title="通过的模型优先，延迟从高到低" data-i18n-title="通过的模型优先，延迟从高到低" data-variant="secondary" data-size="sm"><span data-i18n="延迟慢→快">
+            <button type="button" onclick="app.applyLibraryOrderByTest('test_latency_desc')" title="通过的模型优先，延迟从高到低" data-i18n-title="通过的模型优先，延迟从高到低"><span data-i18n="延迟慢→快">
               延迟慢→快
             </span></button>
-            <button type="button" class="blora-button" onclick="app.applyLibraryOrderByTest('test_tps_desc')" title="通过的模型优先，吞吐从高到低" data-i18n-title="通过的模型优先，吞吐从高到低" data-variant="secondary" data-size="sm"><span data-i18n="吞吐高→低">
+            <button type="button" onclick="app.applyLibraryOrderByTest('test_tps_desc')" title="通过的模型优先，吞吐从高到低" data-i18n-title="通过的模型优先，吞吐从高到低"><span data-i18n="吞吐高→低">
               吞吐高→低
             </span></button>
-            <button type="button" class="blora-button" onclick="app.resetLibraryOrder()" title="清除全部自定义排序" data-i18n-title="清除全部自定义排序" data-variant="secondary" data-size="sm"><span data-i18n="重置排序">
+            <button type="button" onclick="app.resetLibraryOrder()" title="清除全部自定义排序" data-i18n-title="清除全部自定义排序"><span data-i18n="重置排序">
               重置排序
             </span></button>
           </div>
         </div>
 
         <!-- 搜索和筛选：默认只露搜索 + 供应商，其余折叠 -->
-        <div class="model-filter-bar" id="modelLibraryFilters" style="display:none;">
-          <blora-search id="librarySearchInput" class="model-library-search" label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..."></blora-search>
-          <div class="model-filter-selects">
-            <blora-select id="libraryProviderFilter">
-              <blora-option value="all">全部供应商</blora-option>
-            </blora-select>
-            <button type="button" id="libraryMoreFiltersBtn" class="blora-button" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">
+        <div class="ml-model-filter-bar" id="modelLibraryFilters" style="display:none;">
+          <input type="search" id="librarySearchInput" class="model-library-search" aria-label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team...">
+          <div class="ml-model-filter-selects">
+            <select id="libraryProviderFilter">
+              <option value="all">全部供应商</option>
+            </select>
+            <button type="button" id="libraryMoreFiltersBtn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
           </div>
-          <div id="libraryAdvancedFilters" class="model-filter-selects model-filter-advanced" style="display:none;width:100%;">
-            <blora-select id="librarySeriesFilter">
-              <blora-option value="all">全部系列</blora-option>
-            </blora-select>
-            <blora-select id="libraryProviderTagFilter">
-              <blora-option value="all">全部标签</blora-option>
-            </blora-select>
-            <blora-select id="libraryTestFilter">
-              <blora-option value="all">全部状态</blora-option>
-              <blora-option value="pass">测试通过</blora-option>
-              <blora-option value="fail">测试失败</blora-option>
-              <blora-option value="untested">未测试</blora-option>
-            </blora-select>
-            <blora-select id="librarySort">
-              <blora-option value="default">默认 / 自定义排序</blora-option>
-              <blora-option value="price_asc">价格低→高</blora-option>
-              <blora-option value="price_desc">价格高→低</blora-option>
-              <blora-option value="name_asc">名称 A-Z</blora-option>
-              <blora-option value="name_desc">名称 Z-A</blora-option>
-              <blora-option value="test_latency_asc">测试最快</blora-option>
-              <blora-option value="test_latency_desc">测试最慢</blora-option>
-              <blora-option value="test_tps_desc">吞吐最高</blora-option>
-            </blora-select>
+          <div id="libraryAdvancedFilters" class="ml-model-filter-selects ml-model-filter-advanced" style="display:none;width:100%;">
+            <select id="librarySeriesFilter">
+              <option value="all">全部系列</option>
+            </select>
+            <select id="libraryProviderTagFilter">
+              <option value="all">全部标签</option>
+            </select>
+            <select id="libraryTestFilter">
+              <option value="all">全部状态</option>
+              <option value="pass">测试通过</option>
+              <option value="fail">测试失败</option>
+              <option value="untested">未测试</option>
+            </select>
+            <select id="librarySort">
+              <option value="default">默认 / 自定义排序</option>
+              <option value="price_asc">价格低→高</option>
+              <option value="price_desc">价格高→低</option>
+              <option value="name_asc">名称 A-Z</option>
+              <option value="name_desc">名称 Z-A</option>
+              <option value="test_latency_asc">测试最快</option>
+              <option value="test_latency_desc">测试最慢</option>
+              <option value="test_tps_desc">吞吐最高</option>
+            </select>
           </div>
         </div>
         <!-- 悬浮顶栏显隐哨兵：滚出视口后显示 sticky bar -->
@@ -361,7 +360,7 @@
 
         <!-- 模型列表 -->
         <div id="modelLibraryContent" data-blora-state="loading" class="model-library-grid">
-          <div class="model-library-loading" role="status"><span class="blora-spinner" data-size="lg" aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></div>
+          <div class="model-library-loading" role="status"><span aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></div>
         </div>
       </div>
 
@@ -2516,7 +2515,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=latency-20261021"></script>
+  <script src="/js/app.js?v=ml-bound-20261025"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
