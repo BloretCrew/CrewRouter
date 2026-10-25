@@ -8,17 +8,21 @@
 
 - 复盘列出六台受影响主机：`jinan`、`bloret-core`、`detrital-server`、`bloret-oat`、`detrital-cloud`（0.7）和 `bloret-win`。凡仍承载业务的主机都应纳入重建范围。
 - 当前工作区位于 `detrital-server`；CrewRouter 以 root 运行，现有服务进程早于代码补丁启动。
+- 2026-10-25 13:21 CST 持久化项快照：root crontab 与 `atq` 为空；当前系统 timer 为软件/固件更新、日志轮转和文件系统维护任务。root 用户级 `hermes-gateway.service` 为 enabled/active，进程来自 `/usr/local/lib/hermes-agent`，工作目录 `/root/.hermes`，其 Node sidecar 监听 loopback `127.0.0.1:8789`；unit 时间戳为 9-13，但没有可信主机基线可验证文件内容。OpenClaw gateway unit 存在但 disabled/inactive。需由系统所有者确认 Hermes 的用途和安装来源；不能据此定性恶意，也不能把该运行态视为可信。重建时不要复制这类旧用户级 unit、agent 目录或凭据，确有需要时从可信来源重新安装。
 - 2026-10-25 10:15 CST 复核时，CrewRouter 监听 `*:20003`，仍运行旧源码和依赖；Tailnet ping 可达 `bloret-core`，但 TCP `5432` 与 `pg_isready` 均无响应。当前进程的 `proxy-addr` 仍为 2.0.7，旧代码固定信任一跳代理，公网直连时可能伪造客户端 IP。
 - 2026-10-25 10:22 CST 再核验：服务仍以 root 运行 PID 1407，监听 `*:20003`；`bloret-core` 可 ping，但 PostgreSQL TCP/`pg_isready` 无响应。当前进程没有 `CR_TRUST_PROXY`，且本机 INPUT 默认策略为 ACCEPT；上游防火墙是否保护应用端口未知。当前仓库生产依赖审计为 0 项，但运行服务仍是旧进程。
 - 2026-10-25 10:41–10:46 CST 最新复核：CrewRouter PID 1407 与图床 PID 901 仍以 root 运行，分别监听 `*:20003`、`*:28888`，进程未设置代理信任或本轮两个脚本开关；数据库 `bloret-core:5432` 仍无响应。主机具有全局 IPv6 地址，iptables IPv4/IPv6 INPUT、OUTPUT 默认策略均为 ACCEPT；上游 IPv6 入站过滤未知。活动 nft guard 在更早 priority 阻断 `.2`、`.7`，但管理端口规则只约束非 Tailscale 接口；其他 Tailnet 节点可访问 5901、6080、9090、40020。CrewRouter 与图床端口未被 guard 阻断，不能据此断言互联网直连已发生，需由上游路由器/防火墙核实。
 - 当前主机 `/var/lib/pgsql/data` 是 PostgreSQL 18.3 集群（system ID `7659998119049616475`），最新检查点为 2026-09-10 18:00:26 CST，原始集群保持关闭。隔离副本的系统目录显示数据库为 `ai_guess`、`sub2api`、`translation_collector`、`postgres` 和 `template1`；业务表不符合 CrewRouter schema，因此不是 CrewRouter 恢复源。副本在禁用 TCP/预加载、只读事务条件下检查后已停止并删除，原始目录未启动或更改。
 - PostgreSQL 目标 `bloret-core`（Tailscale `100.64.0.2:5432`）也被复盘列为失陷资产。此前 09:30–11:53 的 TCP 超时检查发生在本机 09:27 源地址丢弃规则之后，回包被本机阻断，不能证明远端 PostgreSQL 停止。12:39 放行仅限本机先发起连接的 `.2:5432` 状态性回包后，`pg_isready` 显示 accepting；12:41 只读审计完成。活库仍不可信，一致性检查不能证明底层数据完整。
-- 当前主机的 `cr-incident-guard.service` 按 IPv4/IPv6 地址阻断清单中的五台其他失陷 Tailscale 节点；仅允许本机主动访问 `.2:5432` 的已建立回包，并阻断非 loopback、非 Tailscale 接口对 TCP `20003` 与 `28888` 的访问。其他 Tailnet 节点仍可访问这两个服务及部分管理端口；规则不限制本机其他出站流量，也不能替代上游隔离。
+- 截至 12:39，`cr-incident-guard` 已阻断五台失陷 Tailscale 节点，仅放行本机主动访问 `.2:5432` 的已建立回包，并阻断非 Tailnet 对 TCP `20003`、`28888` 的访问；当时其他 Tailnet 节点仍可访问多个管理端口。该状态已于 13:08 收紧。
 - 本轮已在当前主机启用 `audit/cr-incident-audit.rules` 中的执行与关键文件变更规则，并移除了原有 `-a task,never` 抑制项；审计日志仍只在本机，不能作为独立证据，也不能回补历史命令。
 - 扩展本机候选路径搜索后仍未找到 CrewRouter PostgreSQL 全库备份。`/root/crewrouter-security-backup-20261023` 仅有旧 `sandbox.js.orig` 源码文件；CrewRouter Desktop runtime 的 PostgreSQL 子目录和 `runtime/data` 为空，配置所指向的 `127.0.0.1:40523` 没有监听。另有 2026-08-29 的 API Key SQL 文件，但它不是全库恢复点。先确认外部/离线备份，再决定恢复或数据抢救路径。
 - 2026-10-25 12:27 CST 补查：`/root/backup` 仅有 2026-08-29 API Key SQL 和旧 auditd 配置；`/root/fw-backup` 是防火墙规则快照；`/root/image-hosting-backup-20261023` 是图床源码、配置及 orphan uploads；Podman 当前无容器、无卷，只有两个镜像。未发现 CrewRouter 全库恢复源。
 - 2026-10-25 12:33 CST 补查：SSH 日志记录来自 `bloret-jinan`（`100.64.0.3`）的 root 密码认证成功 462 次、`detrital-cloud`（`.7`）的 root 公钥认证成功 148 次，以及 `bloret-core`（`.2`）的 root 密码认证成功 2 次；记录日期均在复盘攻击窗口内。Tailscale 状态显示另外两台失陷主机 `.4`、`.5` 仍在线。已把五台对端的 IPv4/IPv6 地址加入 `cr-incident-guard` 入站丢弃规则，并通过 `nft -c` 后原子加载；当前规则对其他 Tailnet 节点与出站流量仍放行。root/detrital crontab 及 `at` 队列为空；这不是主机清洁证明。
 - 2026-10-25 12:39 CST 补查：发现此前 `.2` 整机入站丢弃会阻止 PostgreSQL 返回包；规则改为只放行本机主动连接 `.2:5432` 的 established/related TCP 回包，其他入站仍丢弃。`pg_isready` 返回 accepting。
+- 2026-10-25 13:08 CST 更新 Tailnet 边界：当前有 16 台 Tailnet 对端在线，含五台失陷主机。incident guard 仅允许已核验的管理设备 `100.109.60.58` / `fd7a:115c:a1e0::4329:3c3b` 访问 TCP `22/111/5901/6080/9090/20003/28888/40020` 和 UDP `111`；其他 Tailnet 对端访问这些端口会被丢弃。`.2:5432` 的本机主动连接回包例外保留。规则已通过 `nft -c`，以单批事务更新活动表和持久化配置；loopback API 返回 HTTP 200，PostgreSQL 返回 accepting。此 guard 不限制 Nginx `80`、未列端口或主机出站流量。
+- 2026-10-25 13:11 CST 数据库供应商处置：禁用指向失陷主机 `bloret-core:8765` 的 `Cursor Pro`，保留供应商和 246 条模型关系。当前活库中仍有需业务所有者核实的配置：`OpenCode Go` 有已存密钥、无模型和用量，创建日志时间与供应商行仅差 14 毫秒但缺 resource ID，且来源 IP 没有对应登录记录；另有 `Rhedar` 的成功删除日志，来源尚未核实。`OpenCode Go` 密钥按暴露处理并撤销/轮换；`Cursor Pro` 禁用只停止后续路由，不替代密钥轮换。`Test Provider` 与四个指向本机端口的供应商配置也须在可信重建时逐项确认。
+- 2026-10-25 13:19 CST 防护补充：`sshd` 监听所有地址，原规则未阻断非 Tailnet TCP `22`。当前 SSH 管理会话来源确认为白名单设备 `100.109.60.58`；已将非 Tailnet TCP `22` 加入丢弃规则，校验后原子更新持久化规则和活动表。当前 guard 仅限制列明端口；Nginx 仍监听 IPv4/IPv6 的 TCP `80`，其他未列端口、主机出站及上游网络边界仍需检查。
 - 2026-10-25 12:41 CST 补查：在受限 systemd transient unit 中执行只读数据库审计，`readOnly=true`、`complete=true`。余额/退款明细、团队关系、兑换码计数、API Key 成员关系和序列等检查未发现不一致；当前退款日志为空。数据库主机已失陷，审计结果只是该活库的当前快照，不是数据完整性证明；详细结果见事件记录。
 - 2026-10-25 12:46 CST 补查：修正审计器角色查询别名后重跑，报告完整且只读，退出码 `1` 正确标记 `crewrouter` 角色仍可在 `public` schema 创建对象。仅修改仓库审计脚本，没有更改数据库。
 - 2026-10-25 10:55 CST：Tailscale ping 到 `bloret-core` 成功，但 PostgreSQL `5432` 仍无响应；本机没有额外挂载数据盘，也未发现主机级 PostgreSQL/CrewRouter 定时备份。`/root/.cc-switch/backups/backup_20260606_060844.sql` 是 CC Switch SQLite 导出，与 CrewRouter 无关。该结论只涵盖本机已检查路径，不代表其他主机或异机存储没有备份。
@@ -30,6 +34,7 @@
 ### 1. 保存证据并确定处置窗口
 
 - 由可信管理设备记录当前时间、主机名、网卡/IP、服务进程、监听端口、登录状态、systemd 单元、定时任务和关键授权文件指纹。
+- 采集系统级及 root/其他用户的 systemd unit、drop-in、user unit、timer、cron 与 `at` 队列；尤其记录 `hermes-gateway.service`、`openclaw-gateway.service` 及其二进制/目录指纹，避免只检查系统级服务。
 - 在隔离存储中保存主机磁盘/虚拟机快照、数据库磁盘快照、现有系统日志及 PCAP；计算 SHA-256 并将哈希与采集人、时间、来源写入异机记录。不要把证据唯一副本留在受影响主机。
 - 将 `/root/attacker-residue-20261023-113349.tar.gz` 与已有 MCSM 取证归档复制到异机只读证据存储，保留原件和 SHA-256；只在隔离副本上做后续内容分析，不把其中的凭据或原始浏览器数据粘贴到报告或外部服务。
 - 若需要保全易失证据，先由取证人员采集内存和连接状态，再关停或隔离。不要在原系统上清理后门、升级软件或重装，以免覆盖证据。
@@ -38,7 +43,7 @@
 ### 2. 建立网络隔离
 
 - 在云安全组、路由器或虚拟化网络层隔离六台受影响资产，禁止其与新环境、管理平面和互联网互通；保留单独、受控的取证通道。
-- 当前应用入口仍在公网监听。先在上游防火墙限制 CrewRouter/API 与图床端口到可信管理源，或安排维护窗口切流；不要依赖运行在已失陷主机上的进程实施最终隔离。
+- 本机 guard 已阻断非 Tailnet TCP `20003`、`28888`，并将 TCP `22` 与列出的管理端口限制到 Tailnet 白名单设备；这只是主机本地临时措施。Nginx 仍监听所有地址的 TCP `80`，当前默认站点配置指向静态目录；外部网络可达性与上游 IPv6/云防火墙策略未核实。应从上游限制不需要的入口，并在可信环境切流；不要把本机规则视为最终隔离。
 - 不把 `bloret-core`（`.2`）用作新的日志接收端、备份端或可信跳板。日志和备份目标应位于独立、全新且权限单向的系统。
 
 ### 3. 从可信设备轮换凭据
