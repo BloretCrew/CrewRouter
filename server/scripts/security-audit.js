@@ -8,6 +8,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Client } = require('pg');
+const { HARNESS_SOURCES } = require('../utils/request-source');
 
 const REQUIRED_PUBLIC_TABLES = [
   'providers', 'users', 'user_teams', 'teams', 'team_models', 'models',
@@ -15,6 +16,7 @@ const REQUIRED_PUBLIC_TABLES = [
 ];
 const OPTIONAL_PUBLIC_TABLES = [
   'balance_preconsumes', 'redemption_code_uses', 'api_key_members', 'plugins',
+  'api_key_models', 'api_key_harness_models', 'inject_prompts', 'inject_prompt_key_bindings',
 ];
 
 const RISK_COUNTS = {
@@ -27,15 +29,26 @@ const RISK_COUNTS = {
   balancePreconsumes: ['stalePendingCount', 'incompleteSettlementCount', 'unknownStatusCount', 'negativeAmountCount'],
   redemptionCodes: ['usedCountMismatches', 'codesOverUseLimit', 'invalidCodeValues', 'orphanCreators', 'orphanUses', 'duplicateUses', 'balancesWithoutUse'],
   apiKeyMemberships: ['orphanMemberships', 'ownerAlsoMemberCount', 'orphanOwners', 'enabledKeysWithoutOwner'],
+  apiKeyQueues: ['orphanKeys', 'orphanModels', 'duplicateBindings'],
+  apiKeyHarness: ['orphanKeys', 'orphanModels', 'duplicateBindings', 'invalidHarnesses'],
+  promptRecords: ['orphanOwners'],
+  promptBindings: ['orphanBindings', 'crossOwnerBindings', 'duplicateBindings'],
   catalog: ['invalidIndexes', 'notReadyIndexes', 'unvalidatedConstraints'],
   sequences: ['behindCount'],
 };
-const OPTIONAL_CHECKS = ['plugins', 'balancePreconsumes', 'redemptionCodes', 'apiKeyMemberships'];
+const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'] };
+const OPTIONAL_CHECKS = ['plugins', 'balancePreconsumes', 'redemptionCodes', 'apiKeyMemberships', ...Object.keys(NEW_CHECK_TABLES)];
 const ROLE_FLAGS = ['superuser', 'createRole', 'createDatabase', 'replication', 'bypassRls', 'publicSchemaCreate'];
 
 function invalidCheckFields(checks) {
   const invalid = [];
   for (const [section, fields] of Object.entries(RISK_COUNTS)) {
+    if (Object.hasOwn(NEW_CHECK_TABLES, section)) {
+      const missing = checks?.[section]?.missingTables;
+      if (!Array.isArray(missing) || new Set(missing).size !== missing.length || missing.some(name => !NEW_CHECK_TABLES[section].includes(name))
+        || checks?.[section]?.tableMissing !== (missing?.length > 0)) invalid.push(`${section}.missingTables`);
+      if (checks?.[section]?.tableMissing !== true && (!Number.isInteger(checks?.[section]?.total) || checks[section].total < 0)) invalid.push(`${section}.total`);
+    }
     if (OPTIONAL_CHECKS.includes(section) && checks?.[section]?.tableMissing === true) continue;
     for (const field of fields) {
       const value = checks?.[section]?.[field];
@@ -355,6 +368,49 @@ async function audit({ client: suppliedClient, configPath: suppliedConfigPath } 
       LEFT JOIN users u ON u.id = m.user_id
     `)).rows[0]
       : { tableMissing: true };
+
+    // These checks emit aggregate counts only; prompt text and key material never leave SQL.
+    for (const [section, tables] of Object.entries(NEW_CHECK_TABLES)) {
+      activeCheck = section;
+      const missingTables = tables.filter(name => schemaShape.optionalMissing.includes(name));
+      if (missingTables.length) {
+        report.checks[section] = { tableMissing: true, missingTables };
+        continue;
+      }
+      let sql;
+      let params = [];
+      if (section === 'apiKeyQueues' || section === 'apiKeyHarness') {
+        const harness = section === 'apiKeyHarness';
+        const table = harness ? 'api_key_harness_models' : 'api_key_models';
+        const uniqueColumn = harness ? 'harness' : 'model_id';
+        sql = `SELECT count(*)::int AS total,
+          count(*) FILTER(WHERE k.id IS NULL)::int AS "orphanKeys",
+          count(*) FILTER(WHERE m.id IS NULL)::int AS "orphanModels",
+          (SELECT count(*)::int FROM (SELECT api_key_id, ${uniqueColumn} FROM public.${table}
+            GROUP BY api_key_id, ${uniqueColumn} HAVING count(*) > 1) d) AS "duplicateBindings"
+          ${harness ? ', count(*) FILTER(WHERE q.harness IS NULL OR NOT (q.harness = ANY($1::text[])))::int AS "invalidHarnesses"' : ''}
+          FROM public.${table} q LEFT JOIN public.api_keys k ON k.id=q.api_key_id
+          LEFT JOIN public.models m ON m.id=q.model_id`;
+        if (harness) params = [HARNESS_SOURCES];
+      } else if (section === 'promptRecords') {
+        // NULL owners remain compatible with legacy global prompts.
+        sql = `SELECT count(*)::int AS total,
+          count(*) FILTER(WHERE p.user_id IS NOT NULL AND u.id IS NULL)::int AS "orphanOwners"
+          FROM public.inject_prompts p LEFT JOIN public.users u ON u.id=p.user_id`;
+      } else {
+        sql = `SELECT count(*)::int AS total,
+          count(*) FILTER(WHERE p.id IS NULL OR k.id IS NULL)::int AS "orphanBindings",
+          count(*) FILTER(WHERE p.id IS NOT NULL AND k.id IS NOT NULL AND p.user_id IS NOT NULL
+            AND p.user_id IS DISTINCT FROM k.user_id)::int AS "crossOwnerBindings",
+          (SELECT count(*)::int FROM (SELECT prompt_id, api_key_id FROM public.inject_prompt_key_bindings
+            GROUP BY prompt_id, api_key_id HAVING count(*) > 1) d) AS "duplicateBindings"
+          FROM public.inject_prompt_key_bindings b LEFT JOIN public.inject_prompts p ON p.id=b.prompt_id
+          LEFT JOIN public.api_keys k ON k.id=b.api_key_id`;
+      }
+      const result = await client.query(sql, params);
+      if (result.rows.length !== 1) throw Object.assign(new Error('invalid aggregate result'), { code: 'AUDIT_RESULT_SHAPE' });
+      report.checks[section] = { ...result.rows[0], tableMissing: false, missingTables: [] };
+    }
 
     activeCheck = 'catalog';
     report.checks.catalog = (await client.query(`

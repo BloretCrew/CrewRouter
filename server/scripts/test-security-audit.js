@@ -13,7 +13,7 @@ if (previousConfigPath === undefined) delete process.env.CR_CONFIG_PATH;
 else process.env.CR_CONFIG_PATH = previousConfigPath;
 
 function cleanChecks() {
-  return {
+  const checks = {
     providerModelIntegrity: { modelsWithoutProvider: 0 },
     teamConsistency: { primaryMembershipMismatches: 0, multipleMemberships: 1, orphanMemberships: 0, orphanTeamModels: 0, duplicateTeamNames: 0, usersWithoutMembership: 0 },
     identities: { emptyUsernames: 0, emptyEmails: 1, administratorAccounts: 1, duplicateUsernames: 0, duplicateEmails: 0, duplicateGitHubIds: 0, duplicateFeishuOpenIds: 0, duplicatePassportUsernames: 0, blankExternalIdentities: 0 },
@@ -22,9 +22,15 @@ function cleanChecks() {
     balancePreconsumes: { pendingCount: 0, stalePendingCount: 0, incompleteSettlementCount: 0, unknownStatusCount: 0, negativeAmountCount: 0 },
     redemptionCodes: { usedCountMismatches: 0, codesOverUseLimit: 0, invalidCodeValues: 0, orphanCreators: 0, orphanUses: 0, duplicateUses: 0, balancesWithoutUse: 0 },
     apiKeyMemberships: { orphanMemberships: 0, ownerAlsoMemberCount: 0, orphanOwners: 0, enabledKeysWithoutOwner: 0 },
+    apiKeyQueues: { total: 0, orphanKeys: 0, orphanModels: 0, duplicateBindings: 0 },
+    apiKeyHarness: { total: 0, orphanKeys: 0, orphanModels: 0, duplicateBindings: 0, invalidHarnesses: 0 },
+    promptRecords: { total: 0, orphanOwners: 0 },
+    promptBindings: { total: 0, orphanBindings: 0, crossOwnerBindings: 0, duplicateBindings: 0 },
     catalog: { invalidIndexes: 0, notReadyIndexes: 0, unvalidatedConstraints: 0 },
     databaseRole: { name: 'offline-auditor', superuser: false, createRole: false, createDatabase: false, replication: false, bypassRls: false, publicSchemaCreate: false },
   };
+  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings']) Object.assign(checks[section], {tableMissing:false, missingTables:[]});
+  return checks;
 }
 
 function fixture({ shapes = {}, missing = [], tablePresence = {}, readOnly = true, checks = cleanChecks(), hooks = [], failBusinessReads = false } = {}) {
@@ -59,6 +65,10 @@ function fixture({ shapes = {}, missing = [], tablePresence = {}, readOnly = tru
       if (sql.includes('AS "stalePendingCount"')) return result([checks.balancePreconsumes]);
       if (sql.includes('AS "usedCountMismatches"')) return result([checks.redemptionCodes]);
       if (sql.includes('AS "ownerAlsoMemberCount"')) return result([checks.apiKeyMemberships]);
+      if (sql.includes('AS total') && sql.includes('FROM public.api_key_models')) return result([checks.apiKeyQueues]);
+      if (sql.includes('AS total') && sql.includes('FROM public.api_key_harness_models')) return result([checks.apiKeyHarness]);
+      if (sql.includes('AS total') && sql.includes('AS "crossOwnerBindings"')) return result([checks.promptBindings]);
+      if (sql.includes('AS total') && sql.includes('FROM public.inject_prompts')) return result([checks.promptRecords]);
       if (sql.includes('AS "invalidIndexes"')) return result([checks.catalog]);
       if (sql.includes('FROM pg_trigger t')) return result(hooks);
       if (sql.includes('FROM pg_event_trigger')) return result([]);
@@ -217,5 +227,30 @@ test('兑换码历史关联新增风险字段进入退出码并对缺字段失�
     assert.equal(auditExitCode(report), 1);
     delete checks.redemptionCodes[field];
     assert.equal(auditExitCode(report), 2);
+  }
+});
+
+
+test('new aggregate checks fail closed and missing dependency pairs remain explicit', async () => {
+  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings']) {
+    const checks = cleanChecks();
+    checks[section].total = '0';
+    const incomplete = await fixture({ checks }).run();
+    assert.equal(incomplete.complete, false);
+    assert.equal(auditExitCode(incomplete), 2);
+    for (const field of Object.keys(cleanChecks()[section]).filter(field => !['total', 'tableMissing', 'missingTables'].includes(field))) {
+      const bad = cleanChecks(); bad[section][field] = 1;
+      assert.equal(auditExitCode(await fixture({ checks: bad }).run()), 1);
+    }
+  }
+  for (const table of ['api_key_models', 'api_key_harness_models', 'inject_prompts', 'inject_prompt_key_bindings']) {
+    const report = await fixture({ missing: [table] }).run();
+    assert.equal(auditExitCode(report), 1);
+    assert(report.checks.schemaShape.optionalMissing.includes(table));
+    for (const section of Object.values(report.checks).filter(value => value?.missingTables?.includes(table))) {
+      assert.equal(section.tableMissing, true);
+    }
+    const blocked = fixture({ shapes: { [table]: { relkind: 'v' } }, failBusinessReads: true });
+    assert.equal(auditExitCode(await blocked.run()), 2);
   }
 });
