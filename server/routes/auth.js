@@ -306,7 +306,9 @@ router.post('/login/2fa', async (req, res) => {
         action: ACTIONS.AUTH_LOGIN_2FA,
         resourceType: 'auth',
         description: `用户通过 2FA 登录`,
-        details: { method: '2fa' },
+        details: pending.method === 'passkey'
+          ? { method: 'passkey+2fa', credentialIdSha256: pending.credentialIdSha256 }
+          : { method: '2fa' },
         ip: req.ip,
         userAgent: req.headers['user-agent'],
         status: 200,

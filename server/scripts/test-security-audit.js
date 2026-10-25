@@ -16,7 +16,7 @@ function cleanChecks() {
   const checks = {
     providerModelIntegrity: { modelsWithoutProvider: 0 },
     teamConsistency: { primaryMembershipMismatches: 0, multipleMemberships: 1, orphanMemberships: 0, orphanTeamModels: 0, duplicateTeamNames: 0, usersWithoutMembership: 0 },
-    identities: { emptyUsernames: 0, emptyEmails: 1, administratorAccounts: 1, duplicateUsernames: 0, duplicateEmails: 0, duplicateGitHubIds: 0, duplicateFeishuOpenIds: 0, duplicatePassportUsernames: 0, blankExternalIdentities: 0 },
+    identities: { emptyUsernames: 0, emptyEmails: 1, administratorAccounts: 1, duplicateUsernames: 0, duplicateEmails: 0, duplicateGitHubIds: 0, duplicateFeishuOpenIds: 0, duplicatePassportUsernames: 0, blankExternalIdentities: 0, duplicateCredentialIds: 0, malformedPasskeys: 0, usersWithPasskeys: 0, adminsWithPasskeys: 0, twoFactorEnabledAdmins: 1, temporaryTotpSecrets: 0 },
     sessions: { activeSessions: 0, expiredSessions: 0, enabledUserApiKeys: 0, recoverableEnabledUserApiKeys: 0 },
     balances: { negativeBalances: 0, negativeRefundBalances: 0, negativeCodeBalanceAmounts: 0, negativeCodeBalanceFeeRates: 0, refundDetailMismatches: 0, orphanCodeBalances: 0, regularBalanceTotal: '0.0000', refundBalanceTotal: '0.0000' },
     balancePreconsumes: { pendingCount: 0, stalePendingCount: 0, incompleteSettlementCount: 0, unknownStatusCount: 0, negativeAmountCount: 0 },
@@ -26,10 +26,13 @@ function cleanChecks() {
     apiKeyHarness: { total: 0, orphanKeys: 0, orphanModels: 0, duplicateBindings: 0, invalidHarnesses: 0 },
     promptRecords: { total: 0, orphanOwners: 0 },
     promptBindings: { total: 0, orphanBindings: 0, crossOwnerBindings: 0, duplicateBindings: 0 },
+    oauthTokens: { total: 0, orphanPrincipals: 0, ownerMismatches: 0, invalidKinds: 0, activeAccessTokens: 0, activeRefreshTokens: 0 },
+    oauthCodes: { total: 0, orphanPrincipals: 0, ownerMismatches: 0, activeCodes: 0 },
+    authInvites: { total: 0, orphanCreators: 0, orphanTeams: 0, activeInvites: 0 },
     catalog: { invalidIndexes: 0, notReadyIndexes: 0, unvalidatedConstraints: 0 },
     databaseRole: { name: 'offline-auditor', superuser: false, createRole: false, createDatabase: false, replication: false, bypassRls: false, publicSchemaCreate: false },
   };
-  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings']) Object.assign(checks[section], {tableMissing:false, missingTables:[]});
+  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings', 'oauthTokens', 'oauthCodes', 'authInvites']) Object.assign(checks[section], {tableMissing:false, missingTables:[]});
   return checks;
 }
 
@@ -69,6 +72,9 @@ function fixture({ shapes = {}, missing = [], tablePresence = {}, readOnly = tru
       if (sql.includes('AS total') && sql.includes('FROM public.api_key_harness_models')) return result([checks.apiKeyHarness]);
       if (sql.includes('AS total') && sql.includes('AS "crossOwnerBindings"')) return result([checks.promptBindings]);
       if (sql.includes('AS total') && sql.includes('FROM public.inject_prompts')) return result([checks.promptRecords]);
+      if (sql.includes('FROM public.oauth_tokens')) return result([checks.oauthTokens]);
+      if (sql.includes('FROM public.oauth_auth_codes')) return result([checks.oauthCodes]);
+      if (sql.includes('FROM public.auth_invites')) return result([checks.authInvites]);
       if (sql.includes('AS "invalidIndexes"')) return result([checks.catalog]);
       if (sql.includes('FROM pg_trigger t')) return result(hooks);
       if (sql.includes('FROM pg_event_trigger')) return result([]);
@@ -232,18 +238,18 @@ test('兑换码历史关联新增风险字段进入退出码并对缺字段失�
 
 
 test('new aggregate checks fail closed and missing dependency pairs remain explicit', async () => {
-  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings']) {
+  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings', 'oauthTokens', 'oauthCodes', 'authInvites']) {
     const checks = cleanChecks();
     checks[section].total = '0';
     const incomplete = await fixture({ checks }).run();
     assert.equal(incomplete.complete, false);
     assert.equal(auditExitCode(incomplete), 2);
-    for (const field of Object.keys(cleanChecks()[section]).filter(field => !['total', 'tableMissing', 'missingTables'].includes(field))) {
+    for (const field of Object.keys(cleanChecks()[section]).filter(field => !['total', 'tableMissing', 'missingTables', 'activeAccessTokens', 'activeRefreshTokens', 'activeCodes', 'activeInvites'].includes(field))) {
       const bad = cleanChecks(); bad[section][field] = 1;
       assert.equal(auditExitCode(await fixture({ checks: bad }).run()), 1);
     }
   }
-  for (const table of ['api_key_models', 'api_key_harness_models', 'inject_prompts', 'inject_prompt_key_bindings']) {
+  for (const table of ['api_key_models', 'api_key_harness_models', 'inject_prompts', 'inject_prompt_key_bindings', 'oauth_tokens', 'oauth_auth_codes', 'auth_invites']) {
     const report = await fixture({ missing: [table] }).run();
     assert.equal(auditExitCode(report), 1);
     assert(report.checks.schemaShape.optionalMissing.includes(table));
@@ -253,4 +259,20 @@ test('new aggregate checks fail closed and missing dependency pairs remain expli
     const blocked = fixture({ shapes: { [table]: { relkind: 'v' } }, failBusinessReads: true });
     assert.equal(auditExitCode(await blocked.run()), 2);
   }
+});
+
+test('PassKey corruption is a finding while credential-presence and active grants are informational', async () => {
+  for (const field of ['duplicateCredentialIds', 'malformedPasskeys']) {
+    const checks = cleanChecks(); checks.identities[field] = 1;
+    assert.equal(auditExitCode(await fixture({ checks }).run()), 1);
+  }
+  const checks = cleanChecks();
+  checks.identities.usersWithPasskeys = 2; checks.identities.adminsWithPasskeys = 1;
+  checks.oauthTokens.activeAccessTokens = 1; checks.oauthTokens.activeRefreshTokens = 1;
+  checks.oauthCodes.activeCodes = 1; checks.authInvites.activeInvites = 1;
+  assert.equal(auditExitCode(await fixture({ checks }).run()), 0);
+  delete checks.oauthTokens.activeAccessTokens;
+  const report = await fixture({ checks }).run();
+  assert.equal(report.complete, false);
+  assert.equal(auditExitCode(report), 2);
 });

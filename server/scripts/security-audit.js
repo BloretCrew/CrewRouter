@@ -17,6 +17,7 @@ const REQUIRED_PUBLIC_TABLES = [
 const OPTIONAL_PUBLIC_TABLES = [
   'balance_preconsumes', 'redemption_code_uses', 'api_key_members', 'plugins',
   'api_key_models', 'api_key_harness_models', 'inject_prompts', 'inject_prompt_key_bindings',
+  'oauth_tokens', 'oauth_auth_codes', 'auth_invites',
 ];
 
 const RISK_COUNTS = {
@@ -24,7 +25,7 @@ const RISK_COUNTS = {
   plugins: ['enabledCount'],
   providerModelIntegrity: ['modelsWithoutProvider'],
   teamConsistency: ['primaryMembershipMismatches', 'orphanMemberships', 'orphanTeamModels', 'duplicateTeamNames', 'usersWithoutMembership'],
-  identities: ['emptyUsernames', 'duplicateUsernames', 'duplicateEmails', 'duplicateGitHubIds', 'duplicateFeishuOpenIds', 'duplicatePassportUsernames', 'blankExternalIdentities'],
+  identities: ['emptyUsernames', 'duplicateUsernames', 'duplicateEmails', 'duplicateGitHubIds', 'duplicateFeishuOpenIds', 'duplicatePassportUsernames', 'blankExternalIdentities', 'duplicateCredentialIds', 'malformedPasskeys'],
   balances: ['negativeBalances', 'negativeRefundBalances', 'negativeCodeBalanceAmounts', 'negativeCodeBalanceFeeRates', 'refundDetailMismatches', 'orphanCodeBalances'],
   balancePreconsumes: ['stalePendingCount', 'incompleteSettlementCount', 'unknownStatusCount', 'negativeAmountCount'],
   redemptionCodes: ['usedCountMismatches', 'codesOverUseLimit', 'invalidCodeValues', 'orphanCreators', 'orphanUses', 'duplicateUses', 'balancesWithoutUse'],
@@ -33,12 +34,20 @@ const RISK_COUNTS = {
   apiKeyHarness: ['orphanKeys', 'orphanModels', 'duplicateBindings', 'invalidHarnesses'],
   promptRecords: ['orphanOwners'],
   promptBindings: ['orphanBindings', 'crossOwnerBindings', 'duplicateBindings'],
+  oauthTokens: ['orphanPrincipals', 'ownerMismatches', 'invalidKinds'],
+  oauthCodes: ['orphanPrincipals', 'ownerMismatches'],
+  authInvites: ['orphanCreators', 'orphanTeams'],
   catalog: ['invalidIndexes', 'notReadyIndexes', 'unvalidatedConstraints'],
   sequences: ['behindCount'],
 };
-const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'] };
+const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'], oauthTokens: ['oauth_tokens'], oauthCodes: ['oauth_auth_codes'], authInvites: ['auth_invites'] };
 const OPTIONAL_CHECKS = ['plugins', 'balancePreconsumes', 'redemptionCodes', 'apiKeyMemberships', ...Object.keys(NEW_CHECK_TABLES)];
 const ROLE_FLAGS = ['superuser', 'createRole', 'createDatabase', 'replication', 'bypassRls', 'publicSchemaCreate'];
+
+const INFORMATIONAL_COUNTS = {
+  identities: ['usersWithPasskeys', 'adminsWithPasskeys', 'twoFactorEnabledAdmins', 'temporaryTotpSecrets'],
+  oauthTokens: ['activeAccessTokens', 'activeRefreshTokens'], oauthCodes: ['activeCodes'], authInvites: ['activeInvites'],
+};
 
 function invalidCheckFields(checks) {
   const invalid = [];
@@ -50,7 +59,7 @@ function invalidCheckFields(checks) {
       if (checks?.[section]?.tableMissing !== true && (!Number.isInteger(checks?.[section]?.total) || checks[section].total < 0)) invalid.push(`${section}.total`);
     }
     if (OPTIONAL_CHECKS.includes(section) && checks?.[section]?.tableMissing === true) continue;
-    for (const field of fields) {
+    for (const field of [...fields, ...(INFORMATIONAL_COUNTS[section] || [])]) {
       const value = checks?.[section]?.[field];
       if (!Number.isInteger(value) || value < 0) invalid.push(`${section}.${field}`);
     }
@@ -284,6 +293,20 @@ async function audit({ client: suppliedClient, configPath: suppliedConfigPath } 
              count(*) FILTER(WHERE (github_id IS NOT NULL AND btrim(github_id)='')
                OR (feishu_open_id IS NOT NULL AND btrim(feishu_open_id)='')
                OR (passport_username IS NOT NULL AND btrim(passport_username)=''))::int AS "blankExternalIdentities"
+             , count(*) FILTER(WHERE jsonb_typeof(passkeys)='array' AND jsonb_array_length(
+                 CASE WHEN jsonb_typeof(passkeys)='array' THEN passkeys ELSE '[]'::jsonb END)>0)::int AS "usersWithPasskeys"
+             , count(*) FILTER(WHERE is_admin AND jsonb_typeof(passkeys)='array' AND jsonb_array_length(
+                 CASE WHEN jsonb_typeof(passkeys)='array' THEN passkeys ELSE '[]'::jsonb END)>0)::int AS "adminsWithPasskeys"
+             , count(*) FILTER(WHERE is_admin AND two_factor_enabled)::int AS "twoFactorEnabledAdmins"
+             , count(*) FILTER(WHERE temp_totp_secret IS NOT NULL)::int AS "temporaryTotpSecrets"
+             , (SELECT count(*)::int FROM (SELECT pk->>'credentialID' FROM users x,
+                 LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(x.passkeys)='array' THEN x.passkeys ELSE '[]'::jsonb END) pk
+                 WHERE pk->>'credentialID' IS NOT NULL GROUP BY pk->>'credentialID' HAVING count(*)>1) d) AS "duplicateCredentialIds"
+             , count(*) FILTER(WHERE (passkeys IS NOT NULL AND jsonb_typeof(passkeys)<>'array') OR EXISTS (
+                 SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(passkeys)='array' THEN passkeys ELSE '[]'::jsonb END) pk
+                 WHERE jsonb_typeof(pk->'credentialID') IS DISTINCT FROM 'string' OR COALESCE(pk->>'credentialID','')=''
+                    OR jsonb_typeof(pk->'credentialPublicKey') IS DISTINCT FROM 'string' OR COALESCE(pk->>'credentialPublicKey','')=''
+               ))::int AS "malformedPasskeys"
       FROM users
     `)).rows[0];
 
@@ -392,6 +415,25 @@ async function audit({ client: suppliedClient, configPath: suppliedConfigPath } 
           FROM public.${table} q LEFT JOIN public.api_keys k ON k.id=q.api_key_id
           LEFT JOIN public.models m ON m.id=q.model_id`;
         if (harness) params = [HARNESS_SOURCES];
+      } else if (section === 'oauthTokens' || section === 'oauthCodes') {
+        const tokens = section === 'oauthTokens';
+        const table = tokens ? 'oauth_tokens' : 'oauth_auth_codes';
+        sql = `SELECT count(*)::int AS total,
+          count(*) FILTER(WHERE u.id IS NULL OR k.id IS NULL)::int AS "orphanPrincipals",
+          count(*) FILTER(WHERE k.id IS NOT NULL AND k.user_id IS DISTINCT FROM a.user_id)::int AS "ownerMismatches",
+          ${tokens ? `count(*) FILTER(WHERE a.kind IS NULL OR a.kind NOT IN ('access','refresh'))::int AS "invalidKinds",
+            count(*) FILTER(WHERE a.revoked=FALSE AND a.expires_at>now() AND a.kind='access')::int AS "activeAccessTokens",
+            count(*) FILTER(WHERE a.revoked=FALSE AND a.expires_at>now() AND a.kind='refresh')::int AS "activeRefreshTokens"`
+            : `count(*) FILTER(WHERE a.used=FALSE AND a.expires_at>now())::int AS "activeCodes"`}
+          FROM public.${table} a LEFT JOIN public.users u ON u.id=a.user_id
+          LEFT JOIN public.api_keys k ON k.id=a.api_key_id`;
+      } else if (section === 'authInvites') {
+        sql = `SELECT count(*)::int AS total,
+          count(*) FILTER(WHERE a.created_by IS NOT NULL AND u.id IS NULL)::int AS "orphanCreators",
+          count(*) FILTER(WHERE a.team_id IS NOT NULL AND t.id IS NULL)::int AS "orphanTeams",
+          count(*) FILTER(WHERE a.expires_at>now() AND COALESCE(a.used_count,0)<COALESCE(a.max_uses,1))::int AS "activeInvites"
+          FROM public.auth_invites a LEFT JOIN public.users u ON u.id=a.created_by
+          LEFT JOIN public.teams t ON t.id=a.team_id`;
       } else if (section === 'promptRecords') {
         // NULL owners remain compatible with legacy global prompts.
         sql = `SELECT count(*)::int AS total,

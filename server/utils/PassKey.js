@@ -12,6 +12,16 @@ const challenges = new Map();
 
 // 挑战码 5 分钟过期
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const MAX_CHALLENGES = 10000;
+function pruneChallenges() {
+    const now = Date.now();
+    for (const [key, entry] of challenges) if (entry.expiresAt <= now) challenges.delete(key);
+}
+setInterval(pruneChallenges, 60 * 1000).unref?.();
+function challengeKey(kind, owner, userId = '') {
+    if (!owner || typeof owner !== 'string') throw new Error('缺少挑战会话');
+    return `${kind}:${owner}:${userId}`;
+}
 
 /**
  * 将 Buffer / Uint8Array 转换为 base64url 字符串
@@ -72,24 +82,22 @@ function getWebAuthnConfig(req) {
 }
 
 function setChallenge(key, challenge) {
+    pruneChallenges();
+    if (!challenges.has(String(key)) && challenges.size >= MAX_CHALLENGES) {
+        throw Object.assign(new Error('验证请求过多，请稍后重试'), { status: 429 });
+    }
     challenges.set(String(key), {
         challenge: typeof challenge === 'string' ? challenge : bufferToBase64url(challenge),
         expiresAt: Date.now() + CHALLENGE_TTL_MS,
     });
 }
 
-function getChallenge(key) {
-    const entry = challenges.get(String(key));
-    if (!entry) return null;
-    if (Date.now() > entry.expiresAt) {
-        challenges.delete(String(key));
-        return null;
-    }
+// Consume before the first async verification step, including failed attempts.
+function takeChallenge(key, provided) {
+    const entry = challenges.get(key);
+    if (!entry || entry.expiresAt <= Date.now() || (provided && entry.challenge !== provided)) return null;
+    challenges.delete(key);
     return entry.challenge;
-}
-
-function deleteChallenge(key) {
-    challenges.delete(String(key));
 }
 
 function normalizePasskeys(passkeys) {
@@ -116,7 +124,7 @@ class PassKeyManager {
     /**
      * 生成注册选项（返回 JSON-safe，可直接 res.json）
      */
-    async getRegistrationOptions(user, { rpID, excludeCredentials } = {}) {
+    async getRegistrationOptions(user, { rpID, excludeCredentials, owner } = {}) {
         try {
             const userIdStr = String(user.id);
             const userEncodedID = new TextEncoder().encode(userIdStr);
@@ -132,13 +140,13 @@ class PassKeyManager {
                 excludeCredentials: exclude,
                 authenticatorSelection: {
                     residentKey: 'preferred',
-                    userVerification: 'preferred',
+                    userVerification: 'required',
                     authenticatorAttachment: undefined,
                 },
             });
 
             // options.challenge 已是 base64url 字符串
-            setChallenge(`reg:${userIdStr}`, options.challenge);
+            setChallenge(challengeKey('reg', owner, userIdStr), options.challenge);
             return options;
         } catch (error) {
             console.error('PassKey 生成注册选项失败:', error);
@@ -150,8 +158,8 @@ class PassKeyManager {
      * 验证注册响应，返回可入库的规范化 passkey 对象
      * body 必须是 RegistrationResponseJSON（base64url 字符串，禁止转 Buffer）
      */
-    async verifyRegistration(userId, body, { origin, rpID } = {}) {
-        const expectedChallenge = getChallenge(`reg:${userId}`);
+    async verifyRegistration(userId, body, { origin, rpID, owner } = {}) {
+        const expectedChallenge = takeChallenge(challengeKey('reg', owner, userId));
         if (!expectedChallenge) {
             throw new Error('注册挑战码不存在或已过期，请重试');
         }
@@ -163,14 +171,13 @@ class PassKeyManager {
                 expectedChallenge,
                 expectedOrigin: origin,
                 expectedRPID: rpID,
-                requireUserVerification: false,
+                requireUserVerification: true,
             });
 
             if (!verification.verified || !verification.registrationInfo) {
                 throw new Error('注册验证未通过');
             }
 
-            deleteChallenge(`reg:${userId}`);
 
             const info = verification.registrationInfo;
             const credential = info.credential;
@@ -194,7 +201,7 @@ class PassKeyManager {
      * 生成认证（登录）选项
      * userPasskeys 为空时不传 allowCredentials，支持可发现凭证登录
      */
-    async getAuthenticationOptions(userPasskeys, { rpID } = {}) {
+    async getAuthenticationOptions(userPasskeys, { rpID, owner } = {}) {
         try {
             const validPasskeys = normalizePasskeys(userPasskeys);
             let allowCredentials;
@@ -211,10 +218,10 @@ class PassKeyManager {
             const options = await generateAuthenticationOptions({
                 rpID: rpID || process.env.RP_ID || 'localhost',
                 allowCredentials,
-                userVerification: 'preferred',
+                userVerification: 'required',
             });
 
-            setChallenge(`auth:${options.challenge}`, options.challenge);
+            setChallenge(challengeKey('auth', owner), options.challenge);
             return options;
         } catch (error) {
             console.error('PassKey 生成登录选项失败:', error);
@@ -226,8 +233,8 @@ class PassKeyManager {
      * 验证登录断言
      * body 必须是 AuthenticationResponseJSON（base64url 字符串）
      */
-    async verifyAuthentication(passkey, body, challengeFromClient, { origin, rpID } = {}) {
-        const expectedChallenge = getChallenge(`auth:${challengeFromClient}`) || getChallenge(challengeFromClient);
+    async verifyAuthentication(passkey, body, challengeFromClient, { origin, rpID, owner } = {}) {
+        const expectedChallenge = takeChallenge(challengeKey('auth', owner), challengeFromClient);
         if (!expectedChallenge) {
             throw new Error('服务器挑战码失效，请刷新重试');
         }
@@ -252,15 +259,13 @@ class PassKeyManager {
                 expectedOrigin: origin,
                 expectedRPID: rpID,
                 credential,
-                requireUserVerification: false,
+                requireUserVerification: true,
             });
 
             if (!verification.verified) {
                 throw new Error('身份验证未通过');
             }
 
-            deleteChallenge(`auth:${challengeFromClient}`);
-            deleteChallenge(challengeFromClient);
 
             return verification.authenticationInfo;
         } catch (error) {

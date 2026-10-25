@@ -4,6 +4,8 @@
 
 ## 当前配置与身份数据
 
+16:43:52 CST 后续检查补充了 PassKey 的 TOTP 绕过、挑战/会话与 JSONB 竞态修复，以及 OAuth 与普通 Key 策略统一。当前两名管理员均有 PassKey，一名启用本地 2FA；现存密钥归属仍未验证，旧进程未加载补丁。详见 [PassKey 与 OAuth 专项复核](security-passkey-oauth-review-2026-10-25.md)。以下配置及历史证据的时间边界不变。
+
 **提交前运行态覆盖更新（14:27:10 CST）：早前记录的 incident guard 已不再是当前有效防护。** `crewrouter.service` 仍为 root/PID 1407，启动时间为 10-24 12:36；`cr-incident-guard.service` 在 14:25:56 复核时已 `not-found`，实时 nft 中也没有 `cr_incident_guard`。两族 INPUT 策略为 ACCEPT，上游边界尚未核实，因此不能据本机状态直接断言公网可达。
 
 13:57:08 CST 重新运行修正后的 `security-audit.js`：`readOnly=true`、`complete=true`，退出码为 `1`，原因仍仅为 `crewrouter` 具有 `public` schema CREATE 权限。余额/退款、团队、兑换码、API Key 关联、41 个序列、索引与约束检查未报告异常。GitHub、飞书、PassPort 身份重复和空绑定计数均为零。未启用 RLS，两个业务触发器的表、函数、属性与函数体均符合当前仓库预期；源码匹配不是独立的可信基线。

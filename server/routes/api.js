@@ -1194,7 +1194,7 @@ function normalizeMessageRole(role) {
 }
 
 // 验证API密钥中间件（带缓存优化；按路径返回 OpenAI/Anthropic 标准错误形）
-async function validateApiKey(req, res, next) {
+async function validateApiKey(req, res, next, boundKey = null) {
   let apiKey = req.headers['x-api-key'];
   // 支持 Authorization: Bearer xxx 格式
   if (!apiKey && req.headers.authorization) {
@@ -1232,7 +1232,7 @@ async function validateApiKey(req, res, next) {
 
   try {
     // 尝试从缓存获取验证结果
-    const cached = getCachedApiKey(apiKey);
+    const cached = boundKey ? null : getCachedApiKey(apiKey);
     if (cached) {
       // 缓存命中：直接使用缓存的数据，但仍需检查额度
       Logger.debug(`[API密钥验证] 缓存命中: user=${cached.username}`);
@@ -1277,7 +1277,7 @@ async function validateApiKey(req, res, next) {
     }
 
     // 缓存未命中：查询数据库
-    Logger.debug(`[API密钥验证] 缓存未命中，查询数据库: key=${apiKey.slice(0, 8)}...`);
+    Logger.debug(`[API密钥验证] 缓存未命中，查询数据库: key=${boundKey ? 'oauth-bound' : apiKey.slice(0, 8) + '...'}`);
 
     const result = await pool.query(
       `SELECT ak.*, u.id as user_id, u.username, u.balance, u.team_id,
@@ -1285,14 +1285,15 @@ async function validateApiKey(req, res, next) {
               u.api_signature_enabled, u.api_signature_template
        FROM api_keys ak
        JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_value = $1 OR ak.key_hash = $2`,
-      [apiKey, sha256Hex(apiKey)]
+       WHERE ${boundKey ? 'ak.id = $1 AND ak.user_id = $2' : 'ak.key_value = $1 OR ak.key_hash = $2'}`,
+      boundKey ? [boundKey.keyId, boundKey.userId] : [apiKey, sha256Hex(apiKey)]
     );
 
     // 重新查询以获取 key 级别签名设置
     const keySignatureResult = await pool.query(
-      `SELECT signature_enabled, signature_template FROM api_keys WHERE key_value = $1 OR key_hash = $2`,
-      [apiKey, sha256Hex(apiKey)]
+      `SELECT signature_enabled, signature_template FROM api_keys
+       WHERE ${boundKey ? 'id = $1 AND user_id = $2' : 'key_value = $1 OR key_hash = $2'}`,
+      boundKey ? [boundKey.keyId, boundKey.userId] : [apiKey, sha256Hex(apiKey)]
     );
 
     if (result.rows.length === 0) {
@@ -1301,7 +1302,8 @@ async function validateApiKey(req, res, next) {
 
     const keyData = result.rows[0];
 
-    if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
+    if (keyData.expires_at != null && (!Number.isFinite(new Date(keyData.expires_at).getTime())
+        || new Date(keyData.expires_at).getTime() <= Date.now())) {
       return sendAuthError(401, 'authentication_error', 'API key has expired');
     }
 
@@ -1365,7 +1367,7 @@ async function validateApiKey(req, res, next) {
 
     await refreshApiUserModelAuthorization(apiUser);
     // Do not repopulate the cache until the current lifecycle check succeeds.
-    setCachedApiKey(apiKey, apiUser);
+    if (!boundKey) setCachedApiKey(apiKey, apiUser);
     pool.query(
       'UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1',
       [keyData.id]
@@ -6596,3 +6598,6 @@ module.exports.resolveModelQueueForRequest = resolveModelQueueForRequest;
 module.exports.validateApiKey = validateApiKey;
 module.exports.affinityKeyForRequest = affinityKeyForRequest;
 module.exports.addFourthCacheBreakpoint = addFourthCacheBreakpoint;
+
+// OAuth supplies this binding only after checking its access token and scope.
+module.exports.validateBoundApiKey = (req, res, next, binding) => validateApiKey(req, res, next, binding);

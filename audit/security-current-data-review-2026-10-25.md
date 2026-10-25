@@ -1,8 +1,10 @@
 # 当前数据库只读复核
 
-日期：2026-10-25。数据库实测时间：16:11:09 CST（`2026-10-25T08:11:09.602Z`）。
+日期：2026-10-25。数据库最新实测时间：16:43:52 CST（`2026-10-25T08:43:52.978Z`）；前次快照为 16:11:09 CST。
 
 ## 结论与证据边界
+
+16:43:52 CST 已再次执行完整生产只读审计，`readOnly=true`、`complete=true`，新增 PassKey、2FA、OAuth 与邀请聚合检查。两名管理员均有 PassKey，其中一名启用 2FA；重复/非规范 PassKey 指标为零，token/code/invite 表各零行。旧快照中的共同数据指标无变化，唯一退出码风险仍为 `publicSchemaCreate=true`。新证据目录为 `/root/crewrouter-audit-evidence/20261025T084352Z-passkey-oauth/`，详见 [专项复核](security-passkey-oauth-review-2026-10-25.md)。下文 16:11 证据保留为前次快照；时间、哈希和边界分别适用。
 
 本轮已在生产数据库真实运行完整只读审计脚本，报告为 `readOnly=true`、`complete=true`，事务最终 `ROLLBACK`。退出码为 `1`，唯一报告风险是应用角色 `crewrouter` 仍有 `public` schema 的 CREATE 权限（`publicSchemaCreate=true`）；其他高危角色标志均为 false。当前检查范围内没有发现关系或业务不变量异常，但这不能证明余额真实、历史记录完整或恢复过程正确。
 

@@ -339,6 +339,13 @@
         if (!verifyRes.ok || !data.success) {
           throw new Error(data.error || '通行密钥登录失败');
         }
+        if (data.require2FA) {
+          pending2FAUserId = data.userId;
+          document.getElementById('loginForm').style.display = 'none';
+          document.getElementById('twoFactorForm').style.display = 'block';
+          document.getElementById('tfaCode')?.focus();
+          return;
+        }
         window.location.href = '/console';
       } catch (err) {
         console.error('PassKey 登录失败:', err);

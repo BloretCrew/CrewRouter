@@ -6,6 +6,8 @@
 
 ## 结论
 
+**16:43:52 CST 认证专项更新：两名管理员均持有 PassKey，其中一名启用了本地 2FA；旧 PassKey 登录可跳过该 TOTP 步骤。** 仓库已修复 PassKey 的实例策略、TOTP 交接、会话重建/保存失败、挑战重放及并发丢失更新，并让 OAuth 复用普通 Key 的额度、限流和所有人检查。新只读快照中 OAuth token、授权码和邀请均为 0；新增关系检查无异常，唯一审计风险仍为 `publicSchemaCreate=true`。不能据此证明已利用、PassKey 归属可信或历史数据完整。旧 root/PID 1407 与未生效的 guard 状态未变，修复尚未部署。详见 [PassKey 与 OAuth 专项复核](security-passkey-oauth-review-2026-10-25.md)。
+
 **16:12:08 CST 最新运行态：incident guard 仍未生效，旧 root / PID 1407 仍运行。** `cr-incident-guard.service` 为 `not-found`，实时 nft 表清单没有 `cr_incident_guard`；本次未复查 INPUT 策略。14:27:10 的较早证据曾记录 IPv4/IPv6 INPUT 为 ACCEPT，上游路由器/防火墙状态未知，不能据此证明当前公网实际可达。journal 及后续审计记录显示，13:59:28–13:59:30 一个 root SSH 会话停用该服务并移动单元文件；现实操作者与授权意图仍未确认。本轮没有修改或自动恢复防火墙，不能据该差异判定二次入侵。此前 guard 生效的观测均属于历史状态；详见 [认证安全补充记录](security-auth-review-2026-10-25.md) 和 [当前数据库只读复核](security-current-data-review-2026-10-25.md)。
 
 16:11:09 CST 新版生产只读审计完成：12 条 Key 模型队列、2 条提示词记录及当前空的 Harness/提示词绑定表，所查孤儿、重复和跨属主关系均为 0；既有团队、余额明细、兑换及序列风险指标也均为 0。唯一报告风险仍为应用角色可在 `public` 创建对象。用户本轮确认没有可提供的事件前备份、物理恢复输出、逐表导入记录或具体错乱对象；当前关系一致不能证明历史完整、余额真实或恢复正确，不据此自动重建账目或历史配置。

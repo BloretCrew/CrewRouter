@@ -2,8 +2,8 @@
  * OAuth Bearer 鉴权中间件（双鉴权入口）
  *
  * Authorization: Bearer crh_... → 走自有 oauth_tokens 校验（sha256 哈希比对、
- *   kind=access、未吊销未过期），合成 req.apiUser 为绑定 API Key 的缓存对象
- *   （字段名与 api.js validateApiKey 产物对齐，另附 viaOAuth/oauthScope 标记）。
+ *   kind=access、未吊销未过期），由普通 Key 鉴权流程加载绑定的所有人及策略
+ *   （不缓存 OAuth 凭据，另附 viaOAuth/oauthScope 标记）。
  * 其他凭证（cr-sk-... 等）→ 原样回落已导出的 api.js validateApiKey，老路径零影响。
  */
 
@@ -11,8 +11,6 @@ const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { ensureOAuthTables } = require('../routes/oauth');
-const { buildInjectedPrompt } = require('../utils/inject-prompt');
-const { buildApiKeyModelBindings } = require('../utils/model-selection');
 
 function sha256Hex(s) {
   return crypto.createHash('sha256').update(s).digest('hex');
@@ -40,30 +38,6 @@ async function oauthBearer(req, res, next) {
 
 module.exports = { oauthBearer };
 
-async function loadApiKeyModelBindings(apiKeyId) {
-  const [keyResult, queueResult] = await Promise.all([
-    pool.query(
-      `SELECT current_model_id FROM api_keys WHERE id = $1`,
-      [apiKeyId]
-    ),
-    pool.query(
-      `SELECT model_id FROM api_key_models
-       WHERE api_key_id = $1 AND enabled IS DISTINCT FROM FALSE
-       ORDER BY sort_order ASC, id ASC`,
-      [apiKeyId]
-    ),
-  ]);
-  const harnessResult = await pool.query(
-    `SELECT harness, model_id FROM api_key_harness_models WHERE api_key_id = $1`,
-    [apiKeyId]
-  );
-  return buildApiKeyModelBindings({
-    currentModelId: keyResult.rows[0]?.current_model_id || null,
-    modelQueueRows: queueResult.rows,
-    harnessRows: harnessResult.rows,
-  });
-}
-
 async function authenticateOAuthAccessToken(req, res, next) {
   const token = req.headers.authorization.slice('Bearer '.length);
 
@@ -83,7 +57,7 @@ async function authenticateOAuthAccessToken(req, res, next) {
     if (row.revoked) {
       return deny(401, 'invalid_token', 'token has been revoked');
     }
-    if (new Date(row.expires_at) < new Date()) {
+    if (!Number.isFinite(new Date(row.expires_at).getTime()) || new Date(row.expires_at).getTime() <= Date.now()) {
       return deny(401, 'invalid_token', 'token expired');
     }
 
@@ -95,56 +69,17 @@ async function authenticateOAuthAccessToken(req, res, next) {
       return deny(403, 'insufficient_scope', `token missing required scope: ${required}`);
     }
 
-    // 合成绑定 API Key 的身份对象（字段对齐 api.js getCachedApiKey 的产物）
-    const keyRes = await pool.query(
-      `SELECT ak.id, ak.user_id, ak.name AS key_name, ak.enabled, ak.expires_at,
-              u.username, u.balance, u.team_id
-         FROM api_keys ak
-         JOIN users u ON ak.user_id = u.id
-        WHERE ak.id = $1`,
-      [row.api_key_id]
-    );
-    const key = keyRes.rows[0];
-    if (!key) {
-      return deny(401, 'invalid_token', 'bound api key not found');
-    }
-    if (key.enabled === false) {
-      return res.status(403).json({ ok: false, error: 'API key is disabled. Enable it in your console to resume access.', code: 'key_disabled' });
-    }
-    if (key.expires_at && new Date(key.expires_at) < new Date()) {
-      return res.status(403).json({ ok: false, error: 'API key has expired' });
-    }
-
-    const modelBindings = await loadApiKeyModelBindings(key.id);
-
-    // 注入提示词：与 api.js validateApiKey 产物字段对齐（本路径无缓存，逐请求查库）
-    let injectPrompt = null;
-    try {
-      injectPrompt = await buildInjectedPrompt(key.user_id, key.id);
-    } catch (err) {
-      Logger.warn('[OAuth鉴权] 注入提示词查询失败:', err.message);
-    }
-
-    req.apiUser = {
-      userId: key.user_id,
-      username: key.username,
-      keyId: key.id,
-      teamId: key.team_id,
-      balance: key.balance,
-      keyName: key.key_name || '',
-      enabled: key.enabled !== false,
-      injectPrompt,
-      ...modelBindings,
-      viaOAuth: true,
-      oauthClientId: row.client_id,
-      oauthScope: row.scope,
-    };
-
-    // 异步打点，不阻塞请求
-    pool.query(`UPDATE oauth_tokens SET last_used_at = now() WHERE id = $1`, [row.id])
-      .catch((err) => Logger.warn('[OAuth鉴权] 更新 last_used_at 失败:', err.message));
-
-    return next();
+    // Use the ordinary key pipeline for ownership, lifecycle, model access,
+    // quotas, limits and all per-key settings. Never cache an OAuth token as a key.
+    const { validateBoundApiKey } = require('../routes/api');
+    return await validateBoundApiKey(req, res, () => {
+      req.apiUser.viaOAuth = true;
+      req.apiUser.oauthClientId = row.client_id;
+      req.apiUser.oauthScope = row.scope;
+      pool.query(`UPDATE oauth_tokens SET last_used_at = now() WHERE id = $1`, [row.id])
+        .catch((err) => Logger.warn('[OAuth鉴权] 更新 last_used_at 失败:', err.message));
+      return next();
+    }, { keyId: row.api_key_id, userId: row.user_id });
   } catch (err) {
     Logger.error('[OAuth鉴权] 错误:', err.message);
     return res.status(500).json({ ok: false, error: 'internal error' });
