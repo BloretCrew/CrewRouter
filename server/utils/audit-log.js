@@ -27,6 +27,7 @@ const ACTIONS = {
   AUTH_LOGIN: 'auth.login',
   AUTH_LOGIN_2FA: 'auth.login_2fa',
   AUTH_LOGOUT: 'auth.logout',
+  AUTH_BIND_FEISHU: 'auth.bind_feishu',
   AUTH_SET_PASSWORD: 'auth.set_password',
   AUTH_CHANGE_PASSWORD: 'auth.change_password',
 

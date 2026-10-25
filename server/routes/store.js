@@ -14,12 +14,13 @@ const Logger = require('../logger');
 const passportLib = require('../store/passport');
 const sessionLib = require('../store/session');
 const store = require('../store/store');
+const passportStoreState = require('../utils/passport-store-state');
 
 function createStoreRoutes() {
   const router = express.Router();
 
   const getPassportCfg = () => passportLib.getPassportConfig(config);
-  const isSecureReq = (req) => req.secure || req.get('x-forwarded-proto') === 'https';
+  const isSecureReq = (req) => req.secure === true;
 
   const storeStore = () => store;
 
@@ -82,12 +83,10 @@ function createStoreRoutes() {
         return res.redirect('/store?auth=unconfigured');
       }
       const redirectUri = passportLib.resolveRedirectUri(cfg, req);
-      const returnTo = (req.query.return_to && String(req.query.return_to)) || '/store';
-      // state = base64url(JSON) —— 仅接受相对路径，防开放重定向
-      const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/store';
-      const state = Buffer.from(JSON.stringify({ return_to: safeReturnTo }), 'utf8').toString('base64url');
-      const url = passportLib.buildAuthorizeUrl(cfg, redirectUri, state);
-      Logger.info('[store-routes] 跳转 OAuth，return_to=', safeReturnTo);
+      const flow = passportStoreState.issueState(req, res, cfg, redirectUri, req.query.return_to);
+      // PassPort may append only code: keep the nonce in redirect_uri as well.
+      const url = passportLib.buildAuthorizeUrl(cfg, flow.redirectUri, flow.state);
+      Logger.info('[store-routes] 跳转 OAuth，return_to=', passportStoreState.safeReturnTo(req.query.return_to));
       res.redirect(url);
     } catch (e) {
       Logger.error('[store-routes] 登录初始化失败', e);
@@ -98,34 +97,18 @@ function createStoreRoutes() {
   router.get('/auth/callback', async (req, res) => {
     try {
       const cfg = getPassportCfg();
-      const code = req.query.code;
-      if (!code) {
-        Logger.warn('[store-routes] callback 无 code（用户拒绝？）');
-        return res.redirect('/store?auth=denied');
-      }
-
-      let returnTo = '/store';
-      if (req.query.state) {
-        try {
-          const st = JSON.parse(Buffer.from(String(req.query.state), 'base64url').toString('utf8'));
-          if (st.return_to && String(st.return_to).startsWith('/') && !String(st.return_to).startsWith('//')) {
-            returnTo = String(st.return_to);
-          }
-        } catch (e) {
-          Logger.warn('[store-routes] state 解析失败', e.message);
-        }
-      }
-
-      const profile = await passportLib.verifyCode(cfg, String(code));
-      const username = profile.username;
-      if (!username) {
-        Logger.error('[store-routes] verify 缺少 username', profile);
+      const redirectUri = passportLib.resolveRedirectUri(cfg, req);
+      const { code, returnTo } = passportStoreState.consumeState(req, res, cfg, redirectUri);
+      const profile = await passportLib.verifyCode(cfg, code);
+      const username = typeof profile?.username === 'string' ? profile.username.trim() : '';
+      if (!username || username.length > 255) {
+        Logger.error('[store-routes] verify 返回了无效的 username');
         return res.redirect('/store?auth=error');
       }
       const admin = passportLib.isAdminUser(username, profile.admin, cfg);
       sessionLib.setSessionCookie(res, { username, avatar: profile.avatar || '', admin }, cfg.sessionSecret, isSecureReq(req));
       Logger.info('[store-routes] 登录成功', username, 'admin=', admin, '->', returnTo);
-      res.redirect(returnTo.includes('?') ? `${returnTo}&auth=ok` : `${returnTo}?auth=ok`);
+      res.redirect(passportStoreState.successReturnTo(returnTo));
     } catch (e) {
       Logger.error('[store-routes] callback 失败', e.message, e.code || '');
       res.redirect('/store?auth=error');

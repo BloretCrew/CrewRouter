@@ -88,6 +88,7 @@ async function main() {
   let commitGate;
   let regenerateGate;
   let saveGate;
+  let authenticatedSaveError = false;
   function gate() {
     let enter, release;
     const entered = new Promise(resolve => { enter = resolve; });
@@ -112,6 +113,7 @@ async function main() {
   const originalFetch = global.fetch;
   global.fetch = async () => { verificationCount++; if (verifyGate) { const paused = verifyGate; verifyGate = null; await paused.pause(); } return { ok: true, text: async () => JSON.stringify({ username: verifyIdentity, apptoken: 'token' }) }; };
   Module._load = function(name, parent, ...args) {
+    if (name === '../logger') return { info() {}, warn() {}, error() {}, debug() {} };
     if (name === '../models/database') return { pool };
     if (name === '../config-loader') return testConfig;
     if (name === '../utils/audit-log') return { ACTIONS: {}, logAction() {} };
@@ -132,6 +134,10 @@ async function main() {
   const store = new session.MemoryStore();
   const originalSet = store.set.bind(store);
   store.set = (id, value, callback) => {
+    if (value.localPassportAuth && authenticatedSaveError) {
+      authenticatedSaveError = false;
+      return callback(new Error('Offline session persistence failure'));
+    }
     if (value.localPassportAuth && saveGate) {
       const paused = saveGate; saveGate = null;
       paused.pause().then(() => originalSet(id, value, callback));
@@ -224,6 +230,14 @@ async function main() {
     const pendingState = new URL(pendingStart.headers.get('location')).searchParams.get('state');
     assert.strictEqual((await call('/auth/passport/cancel')).status, 204);
     assert.strictEqual((await call(`/auth/passport/callback?code=code&state=${pendingState}`)).status, 403);
+    const failedStart = await call('/auth/passport');
+    const failedState = new URL(failedStart.headers.get('location')).searchParams.get('state');
+    authenticatedSaveError = true;
+    assert.strictEqual((await call(`/auth/passport/callback?code=code&state=${failedState}`)).status, 502);
+    const failedSession = await originalFetch(root + '/test/session', { headers: { cookie } });
+    assert.strictEqual((await failedSession.json()).authenticated, false);
+    const afterFailure = await new Promise((resolve, reject) => store.all((error, value) => error ? reject(error) : resolve(value)));
+    assert(Object.values(afterFailure).every(value => !value.user), 'failed authentication persistence must not be retried at response end');
     process.env.CR_RUNTIME = 'server';
     assert.strictEqual((await call('/auth/passport/cancel')).status, 404);
     testConfig.passport.appSecret = '';
@@ -231,12 +245,20 @@ async function main() {
     assert.strictEqual(serverMissingConfig.status, 302);
     assert.strictEqual(serverMissingConfig.headers.get('location'), '/?error=passport_not_configured');
     testConfig.passport.appSecret = 'secret';
-    const serverStart = await call('/auth/passport?redirect_origin=https://example.test', 'wrong');
+    assert.strictEqual((await call('/auth/passport?redirect_origin=https://example.test', 'wrong')).status, 500);
+    const serverStart = await call(`/auth/passport?redirect_origin=${encodeURIComponent(root)}`, 'wrong');
     assert.strictEqual(serverStart.status, 302);
-    assert.strictEqual(new URL(serverStart.headers.get('location')).searchParams.get('redirect_uri'), 'https://example.test/auth/passport/callback');
-    assert.strictEqual((await call('/auth/passport/callback?code=code', 'wrong')).status, 302);
+    const serverAuthorization = new URL(serverStart.headers.get('location'));
+    const serverState = serverAuthorization.searchParams.get('state');
+    const serverCallback = new URL(serverAuthorization.searchParams.get('redirect_uri'));
+    assert.strictEqual(serverCallback.origin, root);
+    assert.strictEqual(serverCallback.pathname, '/auth/passport/callback');
+    assert.strictEqual(serverCallback.searchParams.get('state'), serverState);
+    assert.strictEqual((await call('/auth/passport/callback?code=code', 'wrong')).status, 400);
+    assert.strictEqual((await call(`/auth/passport/callback?code=code&state=${serverState}`, 'wrong')).status, 302);
     assert(!require.cache[require.resolve('../models/database')], 'real database must not load');
     assert(!require.cache[require.resolve('../utils/login-reporter')], 'real login reporter must not load');
+    assert(!require.cache[require.resolve('../logger')], 'offline tests must not write application logs');
   } finally {
     await new Promise(resolve => server.close(resolve));
     Module._load = originalLoad;

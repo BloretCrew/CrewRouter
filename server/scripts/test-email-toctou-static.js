@@ -23,7 +23,6 @@ const paths = {
   'routes/user.js': { writes: /UPDATE users SET \$\{sets\.join\('\, '\)\}/, catches: /isUniqueViolation\(error\)/ },
   'routes/passport-auth.js': { writes: /INSERT INTO users[\s\S]*email/, catches: /isUniqueViolation\(error\)/ },
   'routes/feishu.js': { writes: /INSERT INTO users[\s\S]*email|UPDATE users SET[^\n]*email/, catches: /isUniqueViolation\(error\)/ },
-  'routes/oauth-github.js': { writes: /UPDATE users SET github_id/, catches: /isUniqueViolation\(error\)/ },
 };
 for (const [file, contract] of Object.entries(paths)) {
   const source = read(file);
@@ -56,5 +55,11 @@ assert.match(passkey, /不(?:创建或修改|写入) users\.email/, 'Passkey ema
 const auth = read('routes/auth.js');
 assert.match(auth, /不写入 users\.email/, 'password email non-write behavior must be documented');
 const github = read('routes/oauth-github.js');
-assert.match(github, /不写入 users\.email/, 'GitHub email non-write behavior must be documented');
+assert.match(github, /res\.status\(410\)\.json/, 'retired GitHub login must return Gone');
+assert.deepStrictEqual(
+  [...github.matchAll(/require\(['"]([^'"]+)['"]\)/g)].map(match => match[1]),
+  ['express'],
+  'retired GitHub login must not import database, config or network clients'
+);
+assert.ok(!/UPDATE users|INSERT INTO users|pool\.query|fetch\(/.test(github), 'retired GitHub login must not mutate identities or exchange codes');
 console.log('email TOCTOU normalization, unique-index, conflict handling, and path contracts passed');

@@ -35,6 +35,7 @@ const ACCESS_TTL_SEC = 24 * 3600;          // access 24h
 const REFRESH_TTL_SEC = 30 * 24 * 3600;    // refresh 30d
 const CODE_TTL_SEC = 10 * 60;              // 授权码 10min、一次性
 const OAUTH_TOKEN_PREFIX = 'crh_';
+const MAX_REVOKE_TOKEN_ROWS = 10_000;
 
 // loopback 回调放开端口（RFC 8252）；一期只有首方 client，不做第三方注册
 const LOOPBACK_REDIRECT_RE = /^http:\/\/127\.0\.0\.1:\d+\/.*/;
@@ -290,48 +291,105 @@ router.post('/oauth/authorize/approve', requireAuth, async (req, res) => {
 
 // ---------- 签发 token 对（库内只存哈希） ----------
 // access 行的 rotated_from 指向同批签发的 refresh 行：让吊销链遍历能覆盖每一代 access
+async function lockTokenPrincipal(conn, userId, clientId) {
+  // Every application writer of a rotation edge uses this lock before reading
+  // or modifying tokens. Revocation therefore sees children committed by any
+  // earlier rotation, and later rotations see the revoked parent.
+  await conn.query(
+    "SELECT pg_advisory_xact_lock(hashtext('crewrouter-oauth-token-principal'), hashtext($1))",
+    [JSON.stringify([String(userId), clientId])]
+  );
+}
+
 async function issueTokenPair(clientId, userId, apiKeyId, scope) {
   const accessToken = randomToken();
   const refreshToken = randomToken();
-
-  const r = await pool.query(
-    `INSERT INTO oauth_tokens (token_hash, user_id, api_key_id, client_id, scope, kind, expires_at)
-     VALUES ($1, $2, $3, $4, $5, 'refresh', now() + ($6 || ' seconds')::interval)
-     RETURNING id`,
-    [sha256Hex(refreshToken), userId, apiKeyId, clientId, scope, String(REFRESH_TTL_SEC)]
-  );
-  const refreshId = r.rows[0].id;
-
-  await pool.query(
-    `INSERT INTO oauth_tokens (token_hash, user_id, api_key_id, client_id, scope, kind, expires_at, rotated_from)
-     VALUES ($1, $2, $3, $4, $5, 'access', now() + ($6 || ' seconds')::interval, $7)`,
-    [sha256Hex(accessToken), userId, apiKeyId, clientId, scope, String(ACCESS_TTL_SEC), refreshId]
-  );
-
-  return { accessToken, refreshToken, refreshId };
+  const conn = await pool.connect();
+  try {
+    await conn.query('BEGIN');
+    await conn.query("SET LOCAL statement_timeout = '5s'");
+    await lockTokenPrincipal(conn, userId, clientId);
+    const r = await conn.query(
+      `INSERT INTO oauth_tokens (token_hash, user_id, api_key_id, client_id, scope, kind, expires_at)
+       VALUES ($1, $2, $3, $4, $5, 'refresh', now() + ($6 || ' seconds')::interval)
+       RETURNING id`,
+      [sha256Hex(refreshToken), userId, apiKeyId, clientId, scope, String(REFRESH_TTL_SEC)]
+    );
+    const refreshId = r.rows[0].id;
+    await conn.query(
+      `INSERT INTO oauth_tokens (token_hash, user_id, api_key_id, client_id, scope, kind, expires_at, rotated_from)
+       VALUES ($1, $2, $3, $4, $5, 'access', now() + ($6 || ' seconds')::interval, $7)`,
+      [sha256Hex(accessToken), userId, apiKeyId, clientId, scope, String(ACCESS_TTL_SEC), refreshId]
+    );
+    await conn.query('COMMIT');
+    return { accessToken, refreshToken, refreshId };
+  } catch (error) {
+    await conn.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally { conn.release(); }
 }
 
 // ---------- 吊销整条轮换链：向上找根，再向下递归吊销全部后代 ----------
 // （rotated_from 同时承载两种父子边：refresh→下一代 refresh、refresh→同批 access，
 //   因此自根向下的递归可覆盖链上每一代 token）
-async function revokeChain(tokenRow, reason = '检测到 refresh 重用') {
-  let rootId = tokenRow.id;
-  for (let i = 0; i < 64; i++) {
-    const up = await pool.query(`SELECT rotated_from FROM oauth_tokens WHERE id = $1`, [rootId]);
-    const parent = up.rows[0]?.rotated_from;
-    if (!parent) break;
-    rootId = parent;
+async function revokeChain(tokenRow, reason = '检测到 refresh 重用', availableConnection = null) {
+  const conn = availableConnection || await pool.connect();
+  try {
+    await conn.query('BEGIN');
+    await conn.query("SET LOCAL statement_timeout = '5s'");
+    await lockTokenPrincipal(conn, tokenRow.user_id, tokenRow.client_id);
+    const result = await conn.query(
+      `WITH RECURSIVE ancestor_walk AS (
+         SELECT id, rotated_from FROM oauth_tokens
+          WHERE id = $1 AND user_id = $2 AND client_id = $3
+         UNION
+         SELECT p.id, p.rotated_from FROM oauth_tokens p
+          JOIN ancestor_walk a ON p.id = a.rotated_from
+          WHERE p.user_id = $2 AND p.client_id = $3
+       ), ancestors AS MATERIALIZED (
+         SELECT id, rotated_from FROM ancestor_walk LIMIT ($4::int + 1)
+       ), component_walk AS (
+         SELECT id FROM ancestors WHERE (SELECT count(*) FROM ancestors) <= $4
+         UNION
+         SELECT child.id FROM oauth_tokens child
+          JOIN component_walk parent ON child.rotated_from = parent.id
+          WHERE child.user_id = $2 AND child.client_id = $3
+       ), component AS MATERIALIZED (
+         SELECT id FROM component_walk LIMIT ($4::int + 1)
+       ), budget AS (
+         SELECT (SELECT count(*) FROM ancestors) AS ancestor_count,
+                (SELECT count(*) FROM component) AS component_count
+       ), changed AS (
+         UPDATE oauth_tokens t SET revoked = TRUE
+          WHERE t.user_id = $2 AND t.client_id = $3
+            AND t.id IN (SELECT id FROM component)
+            AND (SELECT ancestor_count <= $4 AND component_count <= $4 FROM budget)
+          RETURNING t.id
+       )
+       SELECT ancestor_count, component_count,
+              ancestor_count > $4 OR component_count > $4 AS limited,
+              (SELECT count(*) FROM changed) AS revoked_count,
+              ARRAY(SELECT id FROM ancestors WHERE rotated_from IS NULL) AS root_ids
+         FROM budget`,
+      [tokenRow.id, tokenRow.user_id, tokenRow.client_id, MAX_REVOKE_TOKEN_ROWS]
+    );
+    const outcome = result.rows[0];
+    if (!outcome || outcome.limited) {
+      throw Object.assign(new Error('OAuth 授权链超过安全处理上限，撤销未完成'), { code: 'OAUTH_REVOKE_LIMIT' });
+    }
+    await conn.query('COMMIT');
+    // UNION deduplication terminates cycles. In a malformed cyclic component
+    // there is no true root; the entire connected component in this principal
+    // scope is still revoked, without following foreign user/client edges.
+    const root = outcome.root_ids.length ? outcome.root_ids.join(',') : 'none';
+    Logger.warn(`[OAuth授权] ${reason}，已吊销关联授权（roots=${root} tokens=${outcome.revoked_count} client=${tokenRow.client_id} user=${tokenRow.user_id}）`);
+    return outcome;
+  } catch (error) {
+    await conn.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    if (!availableConnection) conn.release();
   }
-  await pool.query(
-    `WITH RECURSIVE down AS (
-       SELECT id FROM oauth_tokens WHERE id = $1
-       UNION ALL
-       SELECT t.id FROM oauth_tokens t JOIN down d ON t.rotated_from = d.id
-     )
-     UPDATE oauth_tokens SET revoked = TRUE WHERE id IN (SELECT id FROM down)`,
-    [rootId]
-  );
-  Logger.warn(`[OAuth授权] ${reason}，已吊销全链（root=#${rootId} client=${tokenRow.client_id} user=${tokenRow.user_id}）`);
 }
 
 function sendTokenError(res, error, description) {
@@ -360,16 +418,20 @@ router.post('/oauth/desktop-session', async (req, res) => {
 
 // ---------- token 端点（机器调用，无 session） ----------
 router.post('/oauth/token', async (req, res) => {
-  await ensureOAuthTables();
-  const p = req.body || {};
-
-  if (p.grant_type === 'authorization_code') {
-    return handleAuthorizationCodeGrant(p, res);
+  try {
+    await ensureOAuthTables();
+    const p = req.body || {};
+    if (p.grant_type === 'authorization_code') {
+      return await handleAuthorizationCodeGrant(p, res);
+    }
+    if (p.grant_type === 'refresh_token') {
+      return await handleRefreshTokenGrant(p, res);
+    }
+    return sendTokenError(res, 'unsupported_grant_type');
+  } catch (error) {
+    Logger.error('[OAuth授权] token 处理失败:', error.message);
+    return res.status(503).json({ error: 'temporarily_unavailable' });
   }
-  if (p.grant_type === 'refresh_token') {
-    return handleRefreshTokenGrant(p, res);
-  }
-  return sendTokenError(res, 'unsupported_grant_type');
 });
 
 async function handleAuthorizationCodeGrant(p, res) {
@@ -428,6 +490,8 @@ async function handleRefreshTokenGrant(p, res) {
   const conn = await pool.connect();
   try {
     await conn.query('BEGIN');
+    await conn.query("SET LOCAL statement_timeout = '5s'");
+    await lockTokenPrincipal(conn, row.user_id, row.client_id);
     await conn.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [hash]);
 
     const cur = await conn.query(`SELECT * FROM oauth_tokens WHERE id = $1 FOR UPDATE`, [row.id]);
@@ -437,7 +501,7 @@ async function handleRefreshTokenGrant(p, res) {
       await conn.query('ROLLBACK');
       // 已吊销仍被出示 = 重放信号：吊销同链兜底
       if (fresh && fresh.revoked) {
-        await revokeChain(fresh);
+        await revokeChain(fresh, '检测到 refresh 重用', conn);
       }
       return sendTokenError(res, 'invalid_grant', 'refresh_token 已失效');
     }
@@ -447,7 +511,7 @@ async function handleRefreshTokenGrant(p, res) {
     const child = await conn.query(`SELECT id FROM oauth_tokens WHERE rotated_from = $1 AND kind = 'refresh' LIMIT 1`, [fresh.id]);
     if (child.rows.length > 0) {
       await conn.query('ROLLBACK');
-      await revokeChain(fresh); // 重用侦测：旧 refresh 第二次使用 → 全链吊销
+      await revokeChain(fresh, '检测到 refresh 重用', conn); // 重用侦测：旧 refresh 第二次使用 → 全链吊销
       return sendTokenError(res, 'invalid_grant', 'refresh_token 已被使用，相关授权已全部吊销');
     }
 
@@ -560,26 +624,28 @@ router.post('/oauth/authorizations/revoke', requireAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     Logger.error('[OAuth授权] 吊销授权失败:', err.message);
-    res.status(500).json({ ok: false, error: 'internal error' });
+    res.status(503).json({ ok: false, error: 'temporarily_unavailable' });
   }
 });
 
-// ---------- RFC 7009 风格吊销：按 token 哈希找到所属链整体吊销，永远返回 200 ----------
+// ---------- RFC 7009 风格吊销：未知 token 返回 200，撤销失败明确返回 503 ----------
 router.post('/oauth/revoke', async (req, res) => {
-  await ensureOAuthTables();
-  const token = String((req.body || {}).token || '');
-  if (token) {
-    try {
+  try {
+    await ensureOAuthTables();
+    const token = String((req.body || {}).token || '');
+    if (token) {
       const found = await pool.query(`SELECT * FROM oauth_tokens WHERE token_hash = $1`, [sha256Hex(token)]);
       if (found.rows[0]) {
         await revokeChain(found.rows[0], 'RFC7009 吊销请求');
       }
-    } catch (err) {
-      // RFC 7009 §2.1：即使处理异常也返回 200，不向客户端泄露 token 状态
-      Logger.error('[OAuth授权] revoke 处理失败:', err.message);
     }
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    // RFC 7009 §2.2.1 permits 503 for a server failure. Do not claim a known
+    // token was revoked when the bounded operation failed or timed out.
+    Logger.error('[OAuth授权] revoke 处理失败:', err.message);
+    res.status(503).json({ error: 'temporarily_unavailable' });
   }
-  res.status(200).json({ ok: true });
 });
 
 // ---------- RFC 8414 元数据 ----------

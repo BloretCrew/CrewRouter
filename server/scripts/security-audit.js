@@ -17,8 +17,90 @@ const OPTIONAL_PUBLIC_TABLES = [
   'balance_preconsumes', 'redemption_code_uses', 'api_key_members', 'plugins',
 ];
 
-const configPath = path.resolve(process.argv[2] || process.env.CR_CONFIG_PATH || path.join(__dirname, '../../config.json'));
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const RISK_COUNTS = {
+  providers: ['plaintextApiKeyCount', 'scriptKeyCount', 'customQuotaScriptCount'],
+  plugins: ['enabledCount'],
+  providerModelIntegrity: ['modelsWithoutProvider'],
+  teamConsistency: ['primaryMembershipMismatches', 'orphanMemberships', 'orphanTeamModels', 'duplicateTeamNames', 'usersWithoutMembership'],
+  identities: ['emptyUsernames', 'duplicateUsernames', 'duplicateEmails', 'duplicateGitHubIds', 'duplicateFeishuOpenIds', 'duplicatePassportUsernames', 'blankExternalIdentities'],
+  balances: ['negativeBalances', 'negativeRefundBalances', 'negativeCodeBalanceAmounts', 'negativeCodeBalanceFeeRates', 'refundDetailMismatches', 'orphanCodeBalances'],
+  balancePreconsumes: ['stalePendingCount', 'incompleteSettlementCount', 'unknownStatusCount', 'negativeAmountCount'],
+  redemptionCodes: ['usedCountMismatches', 'codesOverUseLimit', 'invalidCodeValues', 'orphanCreators'],
+  apiKeyMemberships: ['orphanMemberships', 'ownerAlsoMemberCount', 'orphanOwners', 'enabledKeysWithoutOwner'],
+  catalog: ['invalidIndexes', 'notReadyIndexes', 'unvalidatedConstraints'],
+  sequences: ['behindCount'],
+};
+const OPTIONAL_CHECKS = ['plugins', 'balancePreconsumes', 'redemptionCodes', 'apiKeyMemberships'];
+const ROLE_FLAGS = ['superuser', 'createRole', 'createDatabase', 'replication', 'bypassRls', 'publicSchemaCreate'];
+
+function invalidCheckFields(checks) {
+  const invalid = [];
+  for (const [section, fields] of Object.entries(RISK_COUNTS)) {
+    if (OPTIONAL_CHECKS.includes(section) && checks?.[section]?.tableMissing === true) continue;
+    for (const field of fields) {
+      const value = checks?.[section]?.[field];
+      if (!Number.isInteger(value) || value < 0) invalid.push(`${section}.${field}`);
+    }
+  }
+  for (const field of ROLE_FLAGS) {
+    if (typeof checks?.databaseRole?.[field] !== 'boolean') invalid.push(`databaseRole.${field}`);
+  }
+  for (const [section, field] of [
+    ...['missingRequired', 'nonTableRelations', 'rowSecurityEnabled', 'optionalMissing'].map(field => ['schemaShape', field]),
+    ['providers', 'suspiciousProviderNames'], ['providers', 'suspiciousProviderScripts'],
+  ]) {
+    if (!Array.isArray(checks?.[section]?.[field])) invalid.push(`${section}.${field}`);
+  }
+  for (const field of ['databaseHooks', 'databaseEventTriggers']) {
+    if (!Array.isArray(checks?.[field])) invalid.push(field);
+  }
+  return invalid;
+}
+
+function expectedQuotaFunctionSource() {
+  // Read the checked-out schema as data; do not load application modules or execute SQL.
+  const source = fs.readFileSync(path.join(__dirname, '../utils/quota-cycle-analysis.js'), 'utf8');
+  const match = source.match(/CREATE OR REPLACE FUNCTION quota_cycle_attempt_changed\(\) RETURNS trigger LANGUAGE plpgsql AS \$\$([\s\S]*?)\$\$/);
+  if (!match) throw new Error('quota trigger source baseline is unavailable');
+  return match[1].replace(/\r\n/g, '\n').trim();
+}
+
+function isExpectedTrigger(trigger) {
+  const tableForTrigger = {
+    quota_cycle_attempt_changed: 'request_attempts',
+    quota_cycle_sample_changed: 'request_quota_samples',
+  };
+  return trigger.schemaName === 'public'
+    && Object.hasOwn(tableForTrigger, trigger.triggerName)
+    && trigger.tableName === tableForTrigger[trigger.triggerName]
+    && trigger.functionSchema === 'public'
+    && trigger.functionName === 'quota_cycle_attempt_changed'
+    && trigger.languageName === 'plpgsql'
+    && trigger.securityDefiner === false
+    && trigger.enabled === 'O'
+    && trigger.triggerType === 21 // AFTER INSERT OR UPDATE, FOR EACH ROW
+    && trigger.argumentCount === 0
+    && trigger.hasCondition === false
+    && trigger.isConstraint === false
+    && trigger.hasFunctionSettings === false
+    && trigger.functionSourceMatchesRepository === true;
+}
+
+function auditExitCode(report) {
+  if (report?.readOnly !== true || report?.complete !== true || invalidCheckFields(report.checks).length) return 2;
+  const c = report.checks;
+  if (c.schemaShape.missingRequired.length || c.schemaShape.nonTableRelations.length || c.schemaShape.rowSecurityEnabled.length) return 2;
+  const positiveCount = Object.entries(RISK_COUNTS).some(([section, fields]) => fields.some(field => c[section]?.[field] > 0));
+  return positiveCount
+    || c.schemaShape.optionalMissing.length > 0
+    || OPTIONAL_CHECKS.some(section => c[section]?.tableMissing === true)
+    || c.providers.suspiciousProviderNames.length > 0
+    || c.providers.suspiciousProviderScripts.length > 0
+    || c.databaseHooks.some(trigger => !isExpectedTrigger(trigger))
+    || c.databaseEventTriggers.length > 0
+    || ROLE_FLAGS.some(field => c.databaseRole[field])
+    ? 1 : 0;
+}
 
 function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
@@ -30,6 +112,9 @@ function sha256(value) {
 
 async function hasPublicTable(client, name) {
   const result = await client.query('SELECT to_regclass($1) IS NOT NULL AS present', [`public.${name}`]);
+  if (typeof result.rows[0]?.present !== 'boolean') {
+    throw Object.assign(new Error('invalid table presence result'), { code: 'AUDIT_RESULT_SHAPE' });
+  }
   return result.rows[0].present;
 }
 
@@ -45,17 +130,26 @@ async function inspectPublicTableShapes(client) {
     ORDER BY requested.name
   `, [names]);
   const rows = result.rows;
+  if (rows.length !== names.length || new Set(rows.map(row => row.name)).size !== names.length
+      || rows.some(row => !names.includes(row.name) || !Object.hasOwn(row, 'relkind')
+        || (row.relkind !== null && (typeof row.relkind !== 'string' || typeof row.rowSecurityEnabled !== 'boolean')))) {
+    throw Object.assign(new Error('invalid schema preflight result'), { code: 'AUDIT_RESULT_SHAPE' });
+  }
   return {
     missingRequired: rows.filter(row => required.has(row.name) && row.relkind === null).map(row => row.name),
     nonTableRelations: rows.filter(row => row.relkind !== null && !['r', 'p'].includes(row.relkind))
       .map(row => ({ name: row.name, kind: row.relkind })),
-    rowSecurityEnabled: rows.filter(row => row.relrowsecurity === true).map(row => row.name),
+    rowSecurityEnabled: rows.filter(row => row.rowSecurityEnabled === true).map(row => row.name),
     optionalMissing: rows.filter(row => !required.has(row.name) && row.relkind === null).map(row => row.name),
   };
 }
 
-async function audit() {
-  const client = new Client({
+async function audit({ client: suppliedClient, configPath: suppliedConfigPath } = {}) {
+  const configPath = path.resolve(suppliedConfigPath || process.argv[2] || process.env.CR_CONFIG_PATH || path.join(__dirname, '../../config.json'));
+  // Importing the auditor for offline regression checks must not read credentials
+  // or create a live database connection.
+  const config = suppliedClient ? {} : JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const client = suppliedClient || new Client({
     host: process.env.CR_DB_HOST || config.database?.host,
     port: Number(process.env.CR_DB_PORT || config.database?.port || 5432),
     database: process.env.CR_DB_NAME || config.database?.name,
@@ -170,7 +264,13 @@ async function audit() {
              count(*) FILTER(WHERE email IS NULL OR btrim(email)='')::int AS "emptyEmails",
              count(*) FILTER(WHERE is_admin)::int AS "administratorAccounts",
              (SELECT count(*)::int FROM (SELECT lower(username) FROM users GROUP BY lower(username) HAVING count(*)>1) x) AS "duplicateUsernames",
-             (SELECT count(*)::int FROM (SELECT lower(email) FROM users WHERE email IS NOT NULL GROUP BY lower(email) HAVING count(*)>1) x) AS "duplicateEmails"
+             (SELECT count(*)::int FROM (SELECT lower(btrim(email)) FROM users WHERE email IS NOT NULL AND btrim(email)<>'' GROUP BY lower(btrim(email)) HAVING count(*)>1) x) AS "duplicateEmails",
+             (SELECT count(*)::int FROM (SELECT github_id FROM users WHERE github_id IS NOT NULL GROUP BY github_id HAVING count(*)>1) x) AS "duplicateGitHubIds",
+             (SELECT count(*)::int FROM (SELECT feishu_open_id FROM users WHERE feishu_open_id IS NOT NULL GROUP BY feishu_open_id HAVING count(*)>1) x) AS "duplicateFeishuOpenIds",
+             (SELECT count(*)::int FROM (SELECT passport_username FROM users WHERE passport_username IS NOT NULL GROUP BY passport_username HAVING count(*)>1) x) AS "duplicatePassportUsernames",
+             count(*) FILTER(WHERE (github_id IS NOT NULL AND btrim(github_id)='')
+               OR (feishu_open_id IS NOT NULL AND btrim(feishu_open_id)='')
+               OR (passport_username IS NOT NULL AND btrim(passport_username)=''))::int AS "blankExternalIdentities"
       FROM users
     `)).rows[0];
 
@@ -261,18 +361,29 @@ async function audit() {
     `)).rows[0];
 
     activeCheck = 'database hooks and role';
-    report.checks.databaseHooks = (await client.query(`
+    const databaseHooks = (await client.query(`
       SELECT n.nspname AS "schemaName", c.relname AS "tableName", t.tgname AS "triggerName",
-             p.proname AS "functionName", l.lanname AS "languageName",
-             p.prosecdef AS "securityDefiner", pg_get_userbyid(p.proowner) AS "functionOwner"
+             fn.nspname AS "functionSchema", p.proname AS "functionName", l.lanname AS "languageName",
+             p.prosecdef AS "securityDefiner", pg_get_userbyid(p.proowner) AS "functionOwner",
+             t.tgenabled AS enabled, t.tgtype::int AS "triggerType", t.tgnargs::int AS "argumentCount",
+             (t.tgqual IS NOT NULL) AS "hasCondition", (t.tgconstraint <> 0) AS "isConstraint",
+             (p.proconfig IS NOT NULL) AS "hasFunctionSettings", p.prosrc AS "functionSource"
       FROM pg_trigger t
       JOIN pg_class c ON c.oid=t.tgrelid
       JOIN pg_namespace n ON n.oid=c.relnamespace
       JOIN pg_proc p ON p.oid=t.tgfoid
+      JOIN pg_namespace fn ON fn.oid=p.pronamespace
       JOIN pg_language l ON l.oid=p.prolang
       WHERE NOT t.tgisinternal AND n.nspname='public'
       ORDER BY c.relname,t.tgname
     `)).rows;
+    const expectedSource = databaseHooks.length ? expectedQuotaFunctionSource() : null;
+    report.checks.databaseHooks = databaseHooks.map(({ functionSource, ...hook }) => ({
+      ...hook,
+      functionSourceSha256: sha256(functionSource),
+      functionSourceMatchesRepository: typeof functionSource === 'string'
+        && functionSource.replace(/\r\n/g, '\n').trim() === expectedSource,
+    }));
     report.checks.databaseEventTriggers = (await client.query(`
       SELECT evtname AS name, evtevent AS event, evtenabled AS enabled,
              pg_get_userbyid(evtowner) AS owner
@@ -316,18 +427,20 @@ async function audit() {
 
     activeCheck = 'incident audit';
     report.checks.incidentAudit = (await client.query(`
-      SELECT ip_address AS source,action,count(*)::int AS count,min(created_at) AS firstSeen,max(created_at) AS lastSeen,
+      SELECT ip_address AS source,action,count(*)::int AS count,min(created_at) AS "firstSeen",max(created_at) AS "lastSeen",
              array_agg(DISTINCT substring(description FROM '创建供应商「([^」]{1,100})」'))
-               FILTER(WHERE description ILIKE '%artex%' AND description ILIKE '%创建供应商%') AS artexNames
+               FILTER(WHERE description ILIKE '%artex%' AND description ILIKE '%创建供应商%') AS "artexNames"
       FROM operation_logs
       WHERE created_at >= TIMESTAMPTZ '2026-10-18 00:00:00+08'
         AND created_at < TIMESTAMPTZ '2026-10-22 00:00:00+08'
         AND action IN ('auth.login_2fa','admin.provider_create','admin.provider_delete','admin.provider_update')
-      GROUP BY ip_address,action ORDER BY firstSeen
+      GROUP BY ip_address,action ORDER BY "firstSeen"
     `)).rows;
 
     await client.query('ROLLBACK');
-    report.complete = true;
+    const invalidFields = invalidCheckFields(report.checks);
+    report.complete = invalidFields.length === 0;
+    if (invalidFields.length) report.incompleteCheckFields = invalidFields;
     return report;
   } catch (error) {
     error.activeCheck = activeCheck;
@@ -337,69 +450,15 @@ async function audit() {
   }
 }
 
-audit().then(report => {
-  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  if (!report.complete) {
+if (require.main === module) {
+  audit().then(report => {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    process.exitCode = auditExitCode(report);
+  }).catch(error => {
+    // Deliberately omit error text and connection diagnostics that could expose config values.
+    process.stderr.write(`Security audit failed (${error.activeCheck || 'database query'}): ${error.code || error.name || 'unknown error'}\n`);
     process.exitCode = 2;
-    return;
-  }
-  const c = report.checks;
-  const unexpectedTriggers = c.databaseHooks.filter(trigger => ![
-    'quota_cycle_attempt_changed',
-    'quota_cycle_sample_changed',
-  ].includes(trigger.triggerName));
-  if (c.schemaShape.optionalMissing.includes('plugins')
-      || c.providers.plaintextApiKeyCount > 0
-      || c.providers.scriptKeyCount > 0
-      || c.providers.customQuotaScriptCount > 0
-      || c.plugins.enabledCount > 0
-      || c.providerModelIntegrity.modelsWithoutProvider > 0
-      || c.teamConsistency.primaryMembershipMismatches > 0
-      || c.teamConsistency.orphanMemberships > 0
-      || c.teamConsistency.orphanTeamModels > 0
-      || c.teamConsistency.duplicateTeamNames > 0
-      || c.teamConsistency.usersWithoutMembership > 0
-      || c.identities.emptyUsernames > 0
-      || c.identities.duplicateUsernames > 0
-      || c.identities.duplicateEmails > 0
-      || c.balances.negativeBalances > 0
-      || c.balances.negativeRefundBalances > 0
-      || c.balances.negativeCodeBalanceAmounts > 0
-      || c.balances.negativeCodeBalanceFeeRates > 0
-      || c.balances.refundDetailMismatches > 0
-      || c.balances.orphanCodeBalances > 0
-      || c.balancePreconsumes.stalePendingCount > 0
-      || c.balancePreconsumes.incompleteSettlementCount > 0
-      || c.balancePreconsumes.unknownStatusCount > 0
-      || c.balancePreconsumes.negativeAmountCount > 0
-      || c.redemptionCodes.usedCountMismatches > 0
-      || c.redemptionCodes.codesOverUseLimit > 0
-      || c.redemptionCodes.invalidCodeValues > 0
-      || c.redemptionCodes.orphanCreators > 0
-      || c.apiKeyMemberships.orphanMemberships > 0
-      || c.apiKeyMemberships.ownerAlsoMemberCount > 0
-      || c.apiKeyMemberships.orphanOwners > 0
-      || c.apiKeyMemberships.enabledKeysWithoutOwner > 0
-      || c.catalog.invalidIndexes > 0
-      || c.catalog.notReadyIndexes > 0
-      || c.catalog.unvalidatedConstraints > 0
-      || unexpectedTriggers.length > 0
-      || c.databaseEventTriggers.length > 0
-      || c.databaseRole.superuser
-      || c.databaseRole.createRole
-      || c.databaseRole.createDatabase
-      || c.databaseRole.replication
-      || c.databaseRole.bypassRls
-      || c.databaseRole.publicSchemaCreate
-      || c.sequences.behindCount > 0
-      || report.checks.providers.suspiciousProviderNames.length > 0
-      || report.checks.providers.suspiciousProviderScripts.length > 0
-      || c.balancePreconsumes.tableMissing === true
-      || c.redemptionCodes.tableMissing === true
-      || c.apiKeyMemberships.tableMissing === true
-      || c.plugins.tableMissing === true) process.exitCode = 1;
-}).catch(error => {
-  // Deliberately omit error text and connection diagnostics that could expose config values.
-  process.stderr.write(`Security audit failed (${error.activeCheck || 'database query'}): ${error.code || error.name || 'unknown error'}\n`);
-  process.exitCode = 2;
-});
+  });
+}
+
+module.exports = { audit, auditExitCode };

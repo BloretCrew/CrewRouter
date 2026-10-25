@@ -6,6 +6,12 @@
 
 ## 当前状态与边界
 
+**14:27:10 CST 最新覆盖状态：早前 incident guard 已不是有效防护。** 14:25:56 复核时单元为 `not-found`，单元文件已消失；14:27:10 实时 nft 无 `cr_incident_guard`，两族 INPUT 策略为 ACCEPT。journal 显示 13:59:28 开始停止、13:59:29 成功停止。当前仅磁盘配置仍存在，其中有关 `.2` 人工复核/放行的注释不能证明可信恢复或操作身份。已向用户核实是否人工停用，尚未得到答复；本轮保全现状，没有修改或自动恢复规则。上游状态未知，不能由此断言公网可达或二次入侵。下述更早的 guard 条目均为历史观测。
+
+- 14:17:54 CST OAuth 只读补查：`oauth_auth_codes`、`oauth_tokens` 均存在、普通表无 RLS/继承、所需列类型符合预期，两表各 0 行。活动 code/access/refresh、各 kind、孤儿用户/API Key、所有人不符、跨用户/客户端及悬空/自环轮换边均为 0。`REPEATABLE READ READ ONLY` 事务完成并 `ROLLBACK`，未执行撤销或业务写入。报告以 0600 保全在 `/root/crewrouter-audit-evidence/20261025T055618Z-auth/oauth-audit.json`，SHA-256 `1e21a83184b42a83668d0d8a8989c6b53ce97d0975f198fce9306c2b2ecdfd79`；它只描述当前活库，不能证明历史凭据和其他身份来源完整。
+- 14:27:10 CST 防护差异证据保全于 `/root/crewrouter-audit-evidence/20261025T062710Z-guard-state/`（0700/0600，附 SHA256SUMS），涵盖 nft、journal、残存配置；核心哈希见 [认证安全补充记录](security-auth-review-2026-10-25.md)。证据仍在失陷主机本地，应复制到独立可信证据存储。旧 root 应用进程仍为 PID 1407、自 10-24 12:36 运行，源码修复未部署。
+- 后续审计事件补查显示：13:59:28 root SSH 会话 `946` 执行 `systemctl disable --now`，随后 guard 表注销、服务停止；13:59:30 同会话成功把 unit 移到 `/root/disabled-services-backup/cr-incident-guard.service`。这说明文件被移动，仍不能识别现实操作者或确认授权意图。相关 60 个完整事件已保全至 `/root/crewrouter-audit-evidence/guard-attribution-20261025T062938Z/targeted-events.log`（0700/0600），SHA-256 `23f5533a7aa593b9d09cdccc20e7251cd7f934c76e6ee930dda603c18124c751`；用户尚未回复，本轮未调整防火墙。
+
 - 复盘列出六台受影响主机：`jinan`、`bloret-core`、`detrital-server`、`bloret-oat`、`detrital-cloud`（0.7）和 `bloret-win`。凡仍承载业务的主机都应纳入重建范围。
 - 当前工作区位于 `detrital-server`；CrewRouter 以 root 运行，现有服务进程早于代码补丁启动。
 - 2026-10-25 13:21 CST 持久化项快照：root crontab 与 `atq` 为空；当前系统 timer 为软件/固件更新、日志轮转和文件系统维护任务。root 用户级 `hermes-gateway.service` 为 enabled/active，进程来自 `/usr/local/lib/hermes-agent`，工作目录 `/root/.hermes`，其 Node sidecar 监听 loopback `127.0.0.1:8789`；unit 时间戳为 9-13，但没有可信主机基线可验证文件内容。OpenClaw gateway unit 存在但 disabled/inactive。需由系统所有者确认 Hermes 的用途和安装来源；不能据此定性恶意，也不能把该运行态视为可信。重建时不要复制这类旧用户级 unit、agent 目录或凭据，确有需要时从可信来源重新安装。
@@ -45,7 +51,7 @@
 ### 2. 建立网络隔离
 
 - 在云安全组、路由器或虚拟化网络层隔离六台受影响资产，禁止其与新环境、管理平面和互联网互通；保留单独、受控的取证通道。
-- 本机 guard 已阻断非 Tailnet TCP `20003`、`28888`，并将 TCP `22` 与列出的管理端口限制到 Tailnet 白名单设备；这只是主机本地临时措施。Nginx 仍监听所有地址的 TCP `80`，当前默认站点配置指向静态目录；外部网络可达性与上游 IPv6/云防火墙策略未核实。应从上游限制不需要的入口，并在可信环境切流；不要把本机规则视为最终隔离。
+- 14:27:10 CST 已确认本机 incident guard 运行表不存在，不能继续依赖先前的非 Tailnet 端口阻断或 Tailnet 管理白名单。先核实此次停用是否为人工调整并保全相关记录，再从可信的上游路由器/安全组核验和落实隔离；残存配置文件与其中的放行注释不证明规则有效或目标可信。Nginx TCP `80`、应用和管理端口的外部可达性、上游 IPv6/云防火墙策略均未核实。
 - 不把 `bloret-core`（`.2`）用作新的日志接收端、备份端或可信跳板。日志和备份目标应位于独立、全新且权限单向的系统。
 
 ### 3. 从可信设备轮换凭据
@@ -89,10 +95,12 @@
 ### 6. 部署应用并切流
 
 - 从可信 Git 源检出已审查提交；将本次 ZIP 校验与后端插件默认拒绝代码一起纳入新构建。构建机和制品需记录提交号与哈希。
+- 纳入 [认证安全补充记录](security-auth-review-2026-10-25.md) 中的 state、CSRF、飞书绑定、会话保存失败清理、OAuth 撤销/签发事务及审计器修复。旧登录/绑定中间状态需要重新发起；旧 GitHub legacy 入口已停用。Desktop 的 `/oauth/desktop-session` 交换改为 JSON，服务端与 Desktop 需配套更新，CLI token 表单交换不受影响。
 - 不复制旧主机的 `config.json`、插件目录、`node_modules`、systemd 单元、cron/timer、SSH 配置或二进制。逐项重建配置并使用新凭据。
 - 初始部署关闭所有插件，保持 `CR_TRUST_IN_PROCESS_PLUGINS` 未设置；需要插件时逐个审查源码和权限。
 - 使用 Node.js 20 或更新版本安装依赖；当前锁文件的 `npm audit` 没有已知漏洞，但这不替代可信构建与制品校验。
 - 先在隔离环境完成登录/2FA、供应商访问、数据库迁移、备份恢复、日志转发和出站限制验证，再由上游防火墙分阶段切入流量。
+- 当前修复已通过 128 项 Node 回归，另有 PassPort 服务端/Local/商店、邮箱静态与权限脚本通过；OAuth 长链、环、主体边界、10,000 行阈值回滚、并发、单连接池和 5 秒 SQL 超时已在私有 socket 临时 PostgreSQL 验证并完成清理。命令明细见认证补充记录。上线验收仍需在新环境确认会话失败不会自动重存、撤销失败明确返回 503，以及初次 refresh/access 成对签发不会部分落库。
 - 旧主机和原始磁盘在完成取证前保持隔离，只能在明确的回滚/取证窗口中访问；不能将旧应用进程直接作为回滚方案。
 
 ## 上线门槛

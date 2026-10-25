@@ -80,10 +80,11 @@ test('valid callback exchanges the code, installs the session cookie and connect
   const exchange = connects.find((item) => item.url);
   assert.equal(exchange.url, 'https://router.example/oauth/desktop-session');
   assert.equal(exchange.options.method, 'POST');
-  const body = new URLSearchParams(exchange.options.body);
-  assert.equal(body.get('code'), 'code-1');
-  assert.equal(body.get('client_id'), 'crewrouter-desktop');
-  assert.match(body.get('code_verifier'), /^[A-Za-z0-9_-]{40,}$/);
+  assert.equal(exchange.options.headers['content-type'], 'application/json');
+  const body = JSON.parse(exchange.options.body);
+  assert.equal(body.code, 'code-1');
+  assert.equal(body.client_id, 'crewrouter-desktop');
+  assert.match(body.code_verifier, /^[A-Za-z0-9_-]{40,}$/);
   const cookie = await electron.session.defaultSession.cookies.get({ url: 'https://router.example/', name: 'crewrouter.sid' });
   assert.equal(cookie[0].value, 'abc123');
   assert.equal(cookie[0].secure, true);

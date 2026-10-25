@@ -31,6 +31,26 @@ function regenerateSession(req) {
   });
 }
 
+function discardFailedLoginSession(req, respond) {
+  const failedSession = req.session;
+  // Explicit save failures can otherwise be retried implicitly by express-session
+  // when the error response ends, persisting a login that was reported as failed.
+  delete req.session;
+  if (!failedSession) return respond();
+  delete failedSession.user;
+  delete failedSession.pendingTwoFactor;
+  if (typeof failedSession.destroy !== 'function') return respond();
+
+  let finished = false;
+  const done = (error) => {
+    if (finished) return;
+    finished = true;
+    if (error) Logger.warn(`[登录] 失败会话销毁失败: ${error.code || error.name || 'unknown'}`);
+    respond();
+  };
+  try { failedSession.destroy(done); } catch (error) { done(error); }
+}
+
 setInterval(() => {
   const now = Date.now();
   for (const [key, item] of loginRateLimits) {
@@ -72,6 +92,7 @@ router.post('/login', async (req, res) => {
     }
     return res.status(status).json(payload);
   };
+  let loginSessionCreated = false;
   try {
     const { metadata } = require('../utils/instance-edition');
     const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
@@ -123,13 +144,14 @@ router.post('/login', async (req, res) => {
     if (user.two_factor_enabled) {
       // 密码验证结果只能由当前浏览器会话短时使用，不能把 userId 当成凭证。
       await regenerateSession(req);
+      loginSessionCreated = true;
       req.session.pendingTwoFactor = {
         userId: user.id,
         expiresAt: Date.now() + TWO_FACTOR_TTL_MS,
         attempts: 0,
       };
       return req.session.save(err => {
-        if (err) return reply(503, { error: '验证状态保存失败，请重新登录' });
+        if (err) return discardFailedLoginSession(req, () => reply(503, { error: '验证状态保存失败，请重新登录' }));
         return reply(200, {
           require2FA: true,
           userId: user.id,
@@ -140,6 +162,7 @@ router.post('/login', async (req, res) => {
 
     // 设置会话
     await regenerateSession(req);
+    loginSessionCreated = true;
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -165,7 +188,7 @@ router.post('/login', async (req, res) => {
     req.session.save((err) => {
       if (err) {
         Logger.error('[登录] Session保存失败:', err);
-        return reply(500, { error: '登录失败，请稍后重试' });
+        return discardFailedLoginSession(req, () => reply(500, { error: '登录失败，请稍后重试' }));
       }
       logAction({
         userId: user.id,
@@ -185,6 +208,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     Logger.error('[登录] 错误:', error);
+    if (loginSessionCreated) return discardFailedLoginSession(req, () => reply(500, { error: '登录失败，请稍后重试' }));
     reply(500, { error: '登录失败，请稍后重试' });
   }
 });
@@ -192,6 +216,7 @@ router.post('/login', async (req, res) => {
 // 2FA 登录验证
 router.post('/login/2fa', async (req, res) => {
   if (process.env.CR_RUNTIME === 'desktop-local') return res.status(403).json({ error: 'Local 实例仅支持 PassPort 登录' });
+  let loginSessionCreated = false;
   try {
     const { userId, code } = req.body;
 
@@ -249,6 +274,7 @@ router.post('/login/2fa', async (req, res) => {
 
     // 设置会话
     await regenerateSession(req);
+    loginSessionCreated = true;
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -265,7 +291,7 @@ router.post('/login/2fa', async (req, res) => {
     req.session.save((err) => {
       if (err) {
         Logger.error('[登录] Session保存失败:', err);
-        return res.status(500).json({ error: '登录失败，请稍后重试' });
+        return discardFailedLoginSession(req, () => res.status(500).json({ error: '登录失败，请稍后重试' }));
       }
       logAction({
         userId: user.id,
@@ -285,6 +311,7 @@ router.post('/login/2fa', async (req, res) => {
     });
   } catch (error) {
     Logger.error('[登录 2FA] 错误:', error);
+    if (loginSessionCreated) return discardFailedLoginSession(req, () => res.status(500).json({ error: '验证失败，请稍后重试' }));
     res.status(500).json({ error: '验证失败，请稍后重试' });
   }
 });

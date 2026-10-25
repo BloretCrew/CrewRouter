@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const EXEMPT_PREFIXES = ['/auth/', '/oauth/', '/.well-known/'];
+// These exchanges authenticate with the supplied token/code, never a browser session.
+const TOKEN_ENDPOINTS = new Set(['/oauth/token', '/oauth/revoke']);
 
 function allowedOrigins(req) {
   const configured = req.app?.locals?.csrfAllowedOrigins || [];
@@ -20,7 +21,8 @@ function getOrigin(req) {
 function requestOrigin(req) {
   const host = req.get('host');
   if (!host) return '';
-  const protocol = req.get('x-forwarded-proto') || req.protocol;
+  // Express applies the configured proxy trust policy to req.protocol.
+  const protocol = req.protocol;
   return `${protocol}://${host}`.replace(/\/$/, '');
 }
 
@@ -32,12 +34,21 @@ function ensureCsrfToken(req) {
 
 function csrfProtection(req, res, next) {
   if (!req.session || SAFE_METHODS.has(req.method)) return next();
-  if (EXEMPT_PREFIXES.some(prefix => req.path.startsWith(prefix))) return next();
-  // API-key requests do not use the browser session cookie.
-  if (!req.session.user
+  const path = String(req.path || '').toLowerCase().replace(/\/+$/, '');
+  if (req.method === 'POST' && TOKEN_ENDPOINTS.has(path)) return next();
+  const suppliedOrigin = getOrigin(req);
+  // Electron's main process exchanges a one-time code using JSON without browser
+  // headers. A browser form or cross-origin fetch must still pass the normal guard.
+  const hasBrowserHeaders = Object.keys(req.headers).some(name =>
+    name === 'origin' || name === 'referer' || name.startsWith('sec-fetch-'));
+  if (req.method === 'POST' && path === '/oauth/desktop-session'
+      && !hasBrowserHeaders
+      && /^application\/json(?:\s*;|$)/i.test(String(req.headers['content-type'] || ''))) return next();
+  // Auth endpoints and the store's independent bl_store_session cookie never
+  // become API-key requests merely because Core has no logged-in session user.
+  if (!/^\/(?:auth|oauth|store)(?:\/|$)/.test(path) && !req.session.user
       && (req.headers.authorization?.startsWith('Bearer ') || req.headers['x-api-key'])) return next();
 
-  const suppliedOrigin = getOrigin(req);
   const suppliedToken = req.get('x-csrf-token') || req.body?._csrf;
   const suppliedBuffer = Buffer.from(String(suppliedToken || ''));
   const expectedBuffer = Buffer.from(String(req.session.csrfToken || ''));

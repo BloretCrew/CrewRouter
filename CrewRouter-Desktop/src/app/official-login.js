@@ -35,8 +35,8 @@ function createOfficialLogin({ electron, demoUrl, fetchImpl, state, connect, val
     state.step(1, 3, '正在交换登录会话');
     const exchange = await fetchImpl(new URL('/oauth/desktop-session', target.url), {
       method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ code, client_id: CLIENT_ID, code_verifier: verifier }).toString(),
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code, client_id: CLIENT_ID, code_verifier: verifier }),
     });
     if (!exchange.ok) throw new Error(`Web Session 交换失败（HTTP ${exchange.status}）`);
     const cookie = parseSetCookie(exchange.headers);

@@ -14,6 +14,95 @@ const { reportLoginEvent } = require('../utils/login-reporter');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const { loadPersistedEdition } = require('../utils/instance-edition');
 const { pinnedAxiosRequest } = require('../utils/pinned-axios');
+const { ACTIONS, logAction } = require('../utils/audit-log');
+
+const FEISHU_STATE_TTL_MS = 10 * 60 * 1000;
+const BIND_TTL_MS = 5 * 60 * 1000;
+const BIND_ATTEMPT_LIMIT = 5;
+const BIND_WINDOW_MS = 15 * 60 * 1000;
+const bindingAttempts = new Map();
+setInterval(() => {
+  for (const [key, value] of bindingAttempts) {
+    if (value.expiresAt <= Date.now()) bindingAttempts.delete(key);
+  }
+}, BIND_WINDOW_MS).unref?.();
+
+const saveSession = (req) => new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+const regenerateSession = (req) => new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
+
+async function discardFailedLogin(req) {
+  const failedSession = req.session;
+  delete req.session;
+  if (!failedSession) return;
+  delete failedSession.user;
+  await new Promise(resolve => {
+    const done = error => {
+      if (error) Logger.warn('[飞书登录] 失败会话清理失败:', error.code || error.name || 'unknown');
+      resolve();
+    };
+    try { failedSession.destroy(done); } catch (error) { done(error); }
+  });
+}
+
+function configurationHash(cfg) {
+  return crypto.createHash('sha256').update(JSON.stringify([cfg.appId, cfg.appSecret, cfg.tenantKey || ''])).digest('hex');
+}
+
+async function feishuMethodEnabled() {
+  const { metadata } = require('../utils/instance-edition');
+  const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
+  return metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await require('../utils/auth-mode').getAuthMode() }).auth.methods.includes('feishu');
+}
+
+function pendingBinding(req) {
+  const pending = req.session?.feishuPending;
+  if (!pending || typeof pending.feishuOpenId !== 'string' || !pending.feishuOpenId
+      || !Number.isFinite(pending.expiresAt) || pending.expiresAt <= Date.now()
+      || !Number.isInteger(pending.attempts) || pending.attempts >= BIND_ATTEMPT_LIMIT) {
+    if (req.session) delete req.session.feishuPending;
+    return null;
+  }
+  return pending;
+}
+
+function consumeBindingAttempt(req, userId) {
+  const key = `${req.ip || 'unknown'}:${userId}`;
+  let entry = bindingAttempts.get(key);
+  if (!entry || entry.expiresAt <= Date.now()) {
+    if (!entry && bindingAttempts.size >= 10000) return false;
+    entry = { count: 0, expiresAt: Date.now() + BIND_WINDOW_MS };
+    bindingAttempts.set(key, entry);
+  }
+  if (entry.count >= BIND_ATTEMPT_LIMIT) return false;
+  entry.count += 1;
+  return true;
+}
+
+function bindingTotpValid(user, code) {
+  if (!user.two_factor_enabled) return true;
+  if (typeof code !== 'string' || !/^\d{6}$/.test(code)) return false;
+  let secret = user.totp_secret;
+  for (let i = 0; i < 2 && typeof secret === 'string'; i++) {
+    try { secret = JSON.parse(secret); } catch { secret = { base32: secret }; }
+  }
+  if (!secret || typeof secret.base32 !== 'string' || !secret.base32) return false;
+  return require('speakeasy').totp.verify({ secret: secret.base32, encoding: 'base32', token: code, window: 1 });
+}
+
+async function requestBinding(req, res, user, identity, cfg) {
+  if (user.feishu_open_id && user.feishu_open_id !== identity.feishuOpenId) {
+    return res.redirect('/?error=feishu_conflict');
+  }
+  await regenerateSession(req);
+  req.session.feishuPending = {
+    ...identity, existingUserId: user.id, existingUsername: user.username,
+    requiresTwoFactor: user.two_factor_enabled === true,
+    configurationHash: configurationHash(cfg),
+    expiresAt: Date.now() + BIND_TTL_MS, attempts: 0,
+  };
+  await saveSession(req);
+  return res.redirect('/feishu-bind');
+}
 
 async function getAppAccessToken() {
   const cached = getCachedAppAccessToken();
@@ -77,11 +166,13 @@ router.get('/feishu', async (req, res) => {
     const state = crypto.randomBytes(16).toString('hex');
 
     req.session.feishuState = state;
+    req.session.feishuStateExpiresAt = Date.now() + FEISHU_STATE_TTL_MS;
+    req.session.feishuStateConfiguration = configurationHash(cfg);
 
     const authUrl = `https://open.feishu.cn/open-apis/authen/v1/authorize?` +
       `app_id=${cfg.appId}&redirect_uri=${redirectUri}&state=${state}`;
 
-    Logger.info(`[飞书登录] 重定向到授权页, state=${state}, redirectUri=${redirectUriValue}`);
+    Logger.info(`[飞书登录] 重定向到授权页, redirectUri=${redirectUriValue}`);
     req.session.save((err) => {
       if (err) {
         Logger.error('[飞书登录] Session 保存失败:', err);
@@ -99,25 +190,30 @@ router.get('/feishu', async (req, res) => {
 router.get('/feishu/callback', async (req, res) => {
   const { code, state } = req.query;
 
-  Logger.info(`[飞书回调] 收到回调: code=${code ? '有' : '无'}, state=${state}, session_state=${req.session.feishuState}`);
-
   // 校验 state
-  if (!state || state !== req.session.feishuState) {
-    Logger.warn(`[飞书回调] State 校验失败: 期望=${req.session.feishuState}, 收到=${state}`);
+  if (typeof state !== 'string' || !state || state !== req.session.feishuState
+      || !Number.isFinite(req.session.feishuStateExpiresAt) || req.session.feishuStateExpiresAt <= Date.now()) {
+    Logger.warn('[飞书回调] State 校验失败');
     return res.redirect('/?error=feishu_state_invalid');
   }
+  const stateConfiguration = req.session.feishuStateConfiguration;
   delete req.session.feishuState;
+  delete req.session.feishuStateExpiresAt;
+  delete req.session.feishuStateConfiguration;
 
-  if (!code) {
+  if (typeof code !== 'string' || !code || code.length > 4096) {
     return res.redirect('/?error=feishu_no_code');
   }
 
   try {
+    await saveSession(req);
+    if (!await feishuMethodEnabled()) return res.redirect('/?error=feishu_disabled');
     const cfg = await getFeishuConfig();
     if (!cfg.enabled || !cfg.appId || !cfg.appSecret) {
       Logger.warn('[飞书回调] 配置已失效或不完整');
       return res.redirect('/?error=feishu_error');
     }
+    if (stateConfiguration !== configurationHash(cfg)) return res.redirect('/?error=feishu_state_invalid');
 
     // 1. 用 code 换取 user access_token
     const appToken = await getAppAccessToken();
@@ -153,6 +249,10 @@ router.get('/feishu/callback', async (req, res) => {
     }
 
     const userInfo = userRes.data.data;
+    const feishuOpenId = userInfo?.open_id;
+    if (typeof feishuOpenId !== 'string' || !feishuOpenId.trim() || feishuOpenId.length > 255) {
+      return res.redirect('/?error=feishu_userinfo_failed');
+    }
     Logger.info(`[飞书回调] 用户信息: name=${userInfo.name}, open_id=${userInfo.open_id}, tenant=${userInfo.tenant_key}, email=${userInfo.email}`);
 
     // 如果没有邮箱，尝试通过 contact API 获取
@@ -160,7 +260,7 @@ router.get('/feishu/callback', async (req, res) => {
       try {
         Logger.info(`[飞书回调] 尝试通过 contact API 获取邮箱, open_id=${userInfo.open_id}`);
         const contactRes = await pinnedAxiosRequest(
-          `https://open.feishu.cn/open-apis/contact/v3/users/${userInfo.open_id}?user_id_type=open_id`,
+          `https://open.feishu.cn/open-apis/contact/v3/users/${encodeURIComponent(feishuOpenId)}?user_id_type=open_id`,
           { method: 'GET', headers: { 'Authorization': `Bearer ${await getAppAccessToken()}` } }
         );
         Logger.info(`[飞书回调] contact API 响应: code=${contactRes.data.code}`);
@@ -187,7 +287,6 @@ router.get('/feishu/callback', async (req, res) => {
     }
 
     // 4. 查找或创建用户
-    const feishuOpenId = userInfo.open_id;
     const email = userInfo.email || `${feishuOpenId}@feishu.local`;
     let normalizedEmail;
     try { normalizedEmail = normalizeEmail(email); } catch (error) { return res.redirect('/?error=invalid_email'); }
@@ -218,17 +317,9 @@ router.get('/feishu/callback', async (req, res) => {
       const byEmail = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
       Logger.info(`[飞书回调] 按邮箱查询: ${byEmail.rows.length} 条记录`);
       if (byEmail.rows.length > 0) {
-        user = byEmail.rows[0];
-        try {
-          await pool.query(
-            'UPDATE users SET feishu_open_id = $1, avatar = COALESCE($2, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-            [feishuOpenId, avatar, user.id]
-          );
-        } catch (error) {
-          if (!isUniqueViolation(error)) throw error;
-          return res.redirect('/?error=feishu_conflict');
-        }
-        Logger.info(`[飞书登录] 已有用户绑定飞书: ${user.username} (id=${user.id})`);
+        return await requestBinding(req, res, byEmail.rows[0], {
+          feishuOpenId, feishuName: userInfo.name || normalizedEmail.split('@')[0], email: normalizedEmail, avatar,
+        }, cfg);
       } else {
         // 按飞书用户名查找
         const feishuName = userInfo.name || normalizedEmail.split('@')[0];
@@ -237,16 +328,9 @@ router.get('/feishu/callback', async (req, res) => {
 
         if (byUsername.rows.length > 0) {
           // 用户名已存在，需要验证密码后绑定
-          req.session.feishuPending = {
-            feishuOpenId,
-            feishuName,
-            email: normalizedEmail,
-            avatar,
-            existingUserId: byUsername.rows[0].id,
-            existingUsername: byUsername.rows[0].username
-          };
-          Logger.info(`[飞书回调] 用户名 ${feishuName} 已存在，跳转绑定验证页`);
-          return res.redirect('/feishu-bind');
+          return await requestBinding(req, res, byUsername.rows[0], {
+            feishuOpenId, feishuName, email: normalizedEmail, avatar,
+          }, cfg);
         }
 
         // 用户名不存在，创建新用户
@@ -321,13 +405,13 @@ router.get('/feishu/callback', async (req, res) => {
 
     // 重新读取最新用户（含 password_hash）
     const fresh = await pool.query('SELECT * FROM users WHERE id = $1', [user.id]);
-    if (fresh.rows.length > 0) {
-      user = fresh.rows[0];
-    }
+    if (fresh.rows.length !== 1 || fresh.rows[0].feishu_open_id !== feishuOpenId) return res.redirect('/?error=feishu_conflict');
+    user = fresh.rows[0];
 
     const needsPasswordSetup = user.password_hash == null || user.password_hash === '';
 
     // 设置 session
+    await regenerateSession(req);
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -341,51 +425,61 @@ router.get('/feishu/callback', async (req, res) => {
       needsPasswordSetup,
     };
 
-    req.session.save((err) => {
-      if (err) {
-        Logger.error('[飞书登录] Session 保存失败:', err);
-        return res.redirect('/?error=session_failed');
-      }
-      // 登录状态上报（fire-and-forget）
-      reportLoginEvent(req);
-      // 飞书注册/登录且未设置密码 → 强制设密
-      if (needsPasswordSetup) {
-        Logger.info(`[飞书登录] 用户 ${user.username} 未设置密码，跳转设密页`);
-        return res.redirect('/set-password');
-      }
-      res.redirect('/console');
-    });
+    try {
+      await saveSession(req);
+    } catch (error) {
+      await discardFailedLogin(req);
+      Logger.error('[飞书登录] Session 保存失败:', error.message);
+      return res.redirect('/?error=session_failed');
+    }
+    reportLoginEvent(req);
+    if (needsPasswordSetup) {
+      Logger.info(`[飞书登录] 用户 ${user.username} 未设置密码，跳转设密页`);
+      return res.redirect('/set-password');
+    }
+    res.redirect('/console');
   } catch (error) {
-    Logger.error('[飞书回调] 错误:', error.response?.data || error.message);
+    Logger.error('[飞书回调] 错误:', error.message);
     res.redirect('/?error=feishu_error');
   }
 });
 
 // 获取待绑定信息（供绑定页面使用）
 router.get('/feishu/pending', (req, res) => {
-  const pending = req.session.feishuPending;
+  const pending = pendingBinding(req);
   if (!pending) {
     return res.status(404).json({ error: '无待绑定信息' });
   }
   res.json({
     feishuName: pending.feishuName,
-    existingUsername: pending.existingUsername
+    existingUsername: pending.existingUsername,
+    requiresTwoFactor: pending.requiresTwoFactor,
   });
 });
 
 // 验证密码并绑定飞书
 router.post('/feishu/bind', async (req, res) => {
-  const pending = req.session.feishuPending;
+  const pending = pendingBinding(req);
   if (!pending) {
     return res.status(400).json({ error: '会话已过期，请重新通过飞书登录' });
   }
 
-  const { password } = req.body;
-  if (!password) {
+  const { password, code } = req.body || {};
+  if (typeof password !== 'string' || !password || password.length > 1024) {
     return res.status(400).json({ error: '请输入密码' });
   }
 
   try {
+    if (!await feishuMethodEnabled()) return res.status(403).json({ error: '当前实例不支持飞书登录' });
+    const cfg = await getFeishuConfig();
+    if (!cfg.enabled || !cfg.appId || !cfg.appSecret) return res.status(403).json({ error: '飞书登录已停用' });
+    if (pending.configurationHash !== configurationHash(cfg)) {
+      delete req.session.feishuPending;
+      return res.status(400).json({ error: '飞书配置已变化，请重新通过飞书登录' });
+    }
+    if (!consumeBindingAttempt(req, pending.existingUserId)) return res.status(429).json({ error: '验证尝试过于频繁，请稍后再试' });
+    pending.attempts += 1;
+    await saveSession(req);
     const bcrypt = require('bcryptjs');
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [pending.existingUserId]);
 
@@ -393,7 +487,10 @@ router.post('/feishu/bind', async (req, res) => {
       return res.status(404).json({ error: '用户不存在' });
     }
 
-    const user = userResult.rows[0];
+    let user = userResult.rows[0];
+    if (user.feishu_open_id && user.feishu_open_id !== pending.feishuOpenId) {
+      return res.status(409).json({ error: '该账号已绑定其他飞书身份，请先通过原登录方式管理绑定' });
+    }
 
     if (!user.password_hash) {
       return res.status(400).json({ error: '该账号未设置密码，请联系管理员' });
@@ -405,12 +502,27 @@ router.post('/feishu/bind', async (req, res) => {
       return res.status(401).json({ error: '密码错误' });
     }
 
-    // 密码正确，绑定飞书
+    if (!bindingTotpValid(user, code)) {
+      pending.requiresTwoFactor = true;
+      return res.status(401).json({ error: '请输入该账号的有效 2FA 验证码', requiresTwoFactor: true });
+    }
+    if (pending.expiresAt <= Date.now()) {
+      delete req.session.feishuPending;
+      return res.status(400).json({ error: '会话已过期，请重新通过飞书登录' });
+    }
+
+    // 只绑定已验证的账号快照；凭据、2FA 或已有绑定并发改变时必须重新验证。
     try {
-      await pool.query(
-        'UPDATE users SET feishu_open_id = $1, avatar = COALESCE($2, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-        [pending.feishuOpenId, pending.avatar, user.id]
+      const bound = await pool.query(
+        `UPDATE users SET feishu_open_id = $1, avatar = COALESCE($2, avatar), updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND (feishu_open_id IS NULL OR feishu_open_id = $1)
+           AND password_hash = $4 AND two_factor_enabled IS NOT DISTINCT FROM $5
+           AND totp_secret IS NOT DISTINCT FROM $6::jsonb RETURNING *`,
+        [pending.feishuOpenId, pending.avatar, user.id, user.password_hash, user.two_factor_enabled,
+          user.totp_secret == null ? null : JSON.stringify(user.totp_secret)]
       );
+      if (bound.rowCount !== 1) return res.status(409).json({ error: '账号验证信息已变化，请重新发起绑定' });
+      user = bound.rows[0];
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
       return res.status(409).json({ error: '飞书账号或邮箱已被其他用户绑定' });
@@ -418,8 +530,13 @@ router.post('/feishu/bind', async (req, res) => {
 
     Logger.info(`[飞书绑定] 绑定成功: ${user.username} (id=${user.id})`);
 
-    // 清除 pending
+    await logAction({ userId: user.id, username: user.username, isAdmin: !!user.is_admin,
+      action: ACTIONS.AUTH_BIND_FEISHU, resourceType: 'user', resourceId: String(user.id),
+      description: '验证本地账号后绑定飞书', details: { twoFactorVerified: user.two_factor_enabled === true },
+      ip: req.ip, userAgent: req.headers['user-agent'], status: 200 });
+    // 记录数据库变更后再轮换会话，轮换失败也不会遗漏已完成的绑定。
     delete req.session.feishuPending;
+    await regenerateSession(req);
 
     const needsPasswordSetup = user.password_hash == null || user.password_hash === '';
 
@@ -437,18 +554,18 @@ router.post('/feishu/bind', async (req, res) => {
       needsPasswordSetup,
     };
 
-    req.session.save((err) => {
-      if (err) {
-        Logger.error('[飞书绑定] Session 保存失败:', err);
-        return res.status(500).json({ error: '会话保存失败' });
-      }
-      // 登录状态上报（fire-and-forget）
-      reportLoginEvent(req);
-      res.json({
-        success: true,
-        needsPasswordSetup,
-        redirect: needsPasswordSetup ? '/set-password' : '/console',
-      });
+    try {
+      await saveSession(req);
+    } catch (error) {
+      await discardFailedLogin(req);
+      Logger.error('[飞书绑定] Session 保存失败:', error.message);
+      return res.status(500).json({ error: '会话保存失败' });
+    }
+    reportLoginEvent(req);
+    res.json({
+      success: true,
+      needsPasswordSetup,
+      redirect: needsPasswordSetup ? '/set-password' : '/console',
     });
   } catch (error) {
     Logger.error('[飞书绑定] 错误:', error);

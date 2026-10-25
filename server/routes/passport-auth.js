@@ -1,11 +1,10 @@
 const express = require('express');
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const { pool } = require('../models/database');
 const config = require('../config-loader');
 const Logger = require('../logger');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
-const { getAuthMode } = require('../utils/auth-mode');
+const { getAuthMode, AUTH_MODE_LOCK } = require('../utils/auth-mode');
 const { loadPersistedEdition } = require('../utils/instance-edition');
 const { validateUrl } = require('../utils/url-validator');
 const proxyPool = require('../proxy-pool');
@@ -13,26 +12,37 @@ const proxyPool = require('../proxy-pool');
 const router = express.Router();
 const passport = config.passport || {};
 const localPassport = require('../utils/local-passport');
+const passportLoginState = require('../utils/passport-login-state');
 const isLocal = () => process.env.CR_RUNTIME === 'desktop-local';
 
 const baseUrl = String(passport.baseUrl || 'https://passport.bloret.net').replace(/\/$/, '');
+const loginContext = JSON.stringify([baseUrl, passport.appId || '']);
+
+function normalizeOrigin(value) {
+  let parsed;
+  try { parsed = new URL(value); } catch { throw new Error('PassPort 回调来源地址无效'); }
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password
+      || parsed.pathname !== '/' || parsed.search || parsed.hash) throw new Error('PassPort 回调来源地址无效');
+  return parsed.origin;
+}
 
 function getRedirectUri(req) {
   if (isLocal()) {
     localPassport.validateLocalToken(req);
     return `${localPassport.localOrigin(req, config.app.port)}/auth/passport/callback`;
   }
-  const requestedOrigin = String(req.query.redirect_origin || '').trim().replace(/\/$/, '');
-  if (requestedOrigin) {
-    const parsed = new URL(requestedOrigin);
-    return `${parsed.origin}/auth/passport/callback`;
-  }
-
-  const protocol = String(req.protocol || '').toLowerCase() || 'http:';
-  const forwardedHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
-  const host = forwardedHost || String(req.get('host') || '').trim();
+  const protocol = String(req.protocol || '').toLowerCase();
+  const host = String(req.get('host') || '').trim();
   if (!host) throw new Error('无法确定当前访问地址');
-  return `${protocol}//${host}/auth/passport/callback`;
+  // req.protocol follows Express's configured proxy trust policy. An arbitrary
+  // forwarded host or query parameter must not select the code's recipient.
+  const origin = normalizeOrigin(String(config.app?.publicOrigin || '').trim() || `${protocol}://${host}`);
+  const requestedOrigin = req.query.redirect_origin;
+  if (requestedOrigin !== undefined
+      && (typeof requestedOrigin !== 'string' || normalizeOrigin(requestedOrigin.trim()) !== origin)) {
+    throw new Error('PassPort 回调必须使用当前实例的来源地址');
+  }
+  return `${origin}/auth/passport/callback`;
 }
 router.get('/passport/redirect-uri', (req, res) => {
   try {
@@ -47,6 +57,35 @@ function sessionUser(user) {
   return { id: user.id, username: user.username, email: user.email, avatar: user.avatar, isAdmin: user.is_admin, balance: parseFloat(user.balance || 0), refund_balance: parseFloat(user.refund_balance || 0), api_signature_enabled: user.api_signature_enabled === true, api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}' };
 }
 function saveSession(req, res, next) { req.session.save((err) => err ? next(err) : next()); }
+
+function persistSession(req) {
+  return new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+}
+
+async function discardFailedSession(req) {
+  const failedSession = req.session;
+  delete req.session;
+  if (!failedSession) return;
+  delete failedSession.user;
+  await new Promise(resolve => {
+    const done = error => {
+      if (error) Logger.warn('[PassPort] 失败会话清理失败:', error.code || error.name || 'unknown');
+      resolve();
+    };
+    try { failedSession.destroy(done); } catch (error) { done(error); }
+  });
+}
+
+async function requirePassportLogin(db = pool) {
+  const { metadata } = require('../utils/instance-edition');
+  const edition = await loadPersistedEdition(db) || config.edition || 'personal';
+  if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await getAuthMode(db) }).auth.methods.includes('passport')) {
+    throw Object.assign(new Error('当前实例不支持 PassPort 登录'), { code: 'PASSPORT_DISABLED' });
+  }
+  if (!passport.appId || !passport.appSecret) {
+    throw Object.assign(new Error('PassPort 未配置'), { code: 'PASSPORT_NOT_CONFIGURED' });
+  }
+}
 
 async function verifyPassport(code) {
   const controller = new AbortController();
@@ -68,7 +107,7 @@ async function verifyPassport(code) {
     try { data = JSON.parse(text); } catch (_) { throw new Error('PassPort 返回了非 JSON 响应'); }
     if (!response.ok || data.error || (data.code !== undefined && data.code !== 0)) throw new Error(data.error || data.message || data.msg || 'PassPort 验证失败');
     const payload = data.data && typeof data.data === 'object' ? data.data : data;
-    if (!String(payload.username || '').trim() || !String(payload.apptoken || '').trim()) throw new Error('PassPort 响应缺少 username 或 apptoken');
+    localPassport.passportIdentity(payload);
     return payload;
   } finally { clearTimeout(timer); }
 }
@@ -110,20 +149,22 @@ router.get('/passport', async (req, res) => {
       localPassport.cancelSession(req, config.app.sessionSecret);
       await localPassport.regenerateSession(req);
     }
+    const invite = typeof req.query.invite === 'string' && /^[A-Za-z0-9_-]{20,200}$/.test(req.query.invite) ? req.query.invite : '';
     const state = isLocal()
       ? localPassport.issueState(req, new URL(redirectUri).origin)
-      : crypto.randomBytes(24).toString('hex');
-    const invite = typeof req.query.invite === 'string' && /^[A-Za-z0-9_-]{20,200}$/.test(req.query.invite) ? req.query.invite : '';
-    req.session.passportState = state;
-    req.session.passportInvite = invite;
+      : passportLoginState.issueState(req, new URL(redirectUri).origin, loginContext, invite);
+    if (isLocal()) {
+      req.session.passportState = state;
+      req.session.passportInvite = invite;
+    }
     saveSession(req, res, (err) => {
       if (err) return res.status(500).send('登录状态保存失败，请重试。');
       const callbackUri = new URL(redirectUri);
       // PassPort 的 /app/oauth 通过 redirect_uri 保留参数，回调只追加 code。
-      if (isLocal()) callbackUri.searchParams.set('state', state);
+      callbackUri.searchParams.set('state', state);
       const params = new URLSearchParams({
         app_id: passport.appId,
-        redirect_uri: isLocal() ? callbackUri.toString() : redirectUri,
+        redirect_uri: callbackUri.toString(),
         state,
       });
       res.redirect(`${baseUrl}/app/oauth?${params.toString()}`);
@@ -145,6 +186,7 @@ router.get('/passport/cancel', async (req, res) => {
 
 async function localCallback(req, res) {
   let pending;
+  let authenticatedSession = false;
   try {
     localPassport.validateLocalToken(req);
     const origin = localPassport.localOrigin(req, config.app.port);
@@ -183,6 +225,7 @@ async function localCallback(req, res) {
     } finally { client.release(); }
     localPassport.assertActive(pending);
     await localPassport.regenerateSession(req);
+    authenticatedSession = true;
     pending.sessionIds.add(req.sessionID);
     localPassport.assertActive(pending);
     req.session.user = { ...sessionUser(user), passportUsername: identity, needsPasswordSetup: false };
@@ -191,8 +234,8 @@ async function localCallback(req, res) {
     localPassport.assertActive(pending);
     res.redirect('/console');
   } catch (error) {
-    if (pending && (pending.revoked || pending.expiresAt <= Date.now())) {
-      if (req.session) await new Promise(resolve => req.session.destroy(() => resolve()));
+    if (authenticatedSession || (pending && (pending.revoked || pending.expiresAt <= Date.now()))) {
+      await discardFailedSession(req);
     }
     Logger.error('[Local PassPort] 回调失败:', error.message);
     if (error.code === 'LOCAL_PASSPORT_DENIED') return res.status(403).send(error.message);
@@ -204,34 +247,33 @@ async function localCallback(req, res) {
 
 router.get('/passport/callback', async (req, res) => {
   if (isLocal()) return localCallback(req, res);
-  const { code, state } = req.query;
-  const sessionState = req.session.passportState;
-  const setupState = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
-  const isInitialSetup = setupState.rows.length === 0;
-  // PassPort 完成授权后可能只回传 code。首次初始化允许无 state；已完成初始化后，有 state 则必须匹配。
-  if (state && sessionState && state !== sessionState) {
-    return res.status(400).send('PassPort 登录状态无效，请返回重试。');
-  }
-  if (!isInitialSetup && !code) {
-    return res.status(400).send('PassPort 登录状态无效，请返回重试。');
-  }
-  const invite = req.session.passportInvite;
-  delete req.session.passportState;
-  delete req.session.passportInvite;
-  if (!code) return res.status(400).send('PassPort 未返回授权码。');
+  let authenticatedSession = false;
   try {
+    const origin = new URL(getRedirectUri(req)).origin;
+    const { code, invite } = passportLoginState.consumeState(req, origin, loginContext);
+    // Persist consumption before any external exchange. The shared session is
+    // usable across instances; the helper also rejects same-process concurrent
+    // stale copies. Cross-process atomicity still relies on the IdP's one-use code.
+    await persistSession(req);
+    await requirePassportLogin();
     const data = await verifyPassport(code);
-    const passportUsername = String(data.username).trim().slice(0, 255);
+    const passportUsername = localPassport.passportIdentity(data);
     const inviteForUser = String(invite || '');
     const client = await pool.connect();
+    let user;
     try {
       await client.query('BEGIN');
+      // Serialize with setup/auth-mode changes before deciding whether a new
+      // identity may become the initial administrator.
+      await client.query('SELECT pg_advisory_xact_lock($1)', [AUTH_MODE_LOCK]);
       await client.query('SELECT pg_advisory_xact_lock($1)', [731947]);
+      await requirePassportLogin(client);
       let result = await client.query('SELECT * FROM users WHERE passport_username = $1 FOR UPDATE', [passportUsername]);
-      let user = result.rows[0];
+      user = result.rows[0];
       if (!user) {
-        const adminCount = await client.query('SELECT COUNT(*)::int AS count FROM users WHERE is_admin = TRUE');
-        const isFirstAdmin = adminCount.rows[0].count === 0;
+        const setupState = await client.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
+        const userCount = await client.query('SELECT COUNT(*)::int AS count FROM users');
+        const isFirstAdmin = setupState.rows.length === 0 && userCount.rows[0].count === 0;
         let inviteRow = null;
         if (!isFirstAdmin) {
           const { validateInvite } = require('./auth-invites');
@@ -272,16 +314,24 @@ router.get('/passport/callback', async (req, res) => {
         }
       }
       await client.query('COMMIT');
-      req.session.user = sessionUser(user);
-      req.session.user.passportUsername = passportUsername;
-      saveSession(req, res, (err) => {
-        if (err) return res.status(500).send('登录会话保存失败，请重试。');
-        try { require('../utils/login-reporter').reportLoginEvent(req); } catch (_) {}
-        res.redirect('/console');
-      });
     } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
+    await localPassport.regenerateSession(req);
+    authenticatedSession = true;
+    req.session.user = sessionUser(user);
+    req.session.user.passportUsername = passportUsername;
+    await persistSession(req);
+    try { require('../utils/login-reporter').reportLoginEvent(req); } catch (_) {}
+    res.redirect('/console');
   } catch (err) {
+    if (authenticatedSession && req.session) {
+      // A failed explicit save must not be retried with an authenticated user by
+      // express-session while sending the error response.
+      await discardFailedSession(req);
+    }
     Logger.error('[PassPort] 回调失败:', err.message);
+    if (err.code === 'PASSPORT_STATE_INVALID') return res.status(400).send('PassPort 登录状态无效或已过期，请重新发起登录。');
+    if (err.code === 'PASSPORT_DISABLED') return res.status(403).send('当前实例不支持 PassPort 登录。');
+    if (err.code === 'PASSPORT_NOT_CONFIGURED') return res.status(503).send('PassPort 登录未配置。');
     if (err.code === 'invalid_email') return res.status(400).send('PassPort 返回的邮箱格式无效。');
     if (err.code === 'EMAIL_OR_ID_CONFLICT') return res.status(409).send('邮箱或账号标识已被其他用户使用，请重试。');
     res.status(502).send('PassPort 登录失败，请稍后重试。');

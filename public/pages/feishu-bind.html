@@ -72,14 +72,18 @@
           <p style="font-size:14px;color:var(--text-secondary,#6b7280);margin:0;"><span data-i18n="飞书账号">
             飞书账号 </span><strong id="feishuName">-</strong>
           </p>
-          <p style="font-size:14px;color:var(--text-secondary,#6b7280);margin:8px 0 0;"><span data-i18n="系统中已存在同名账号">
-            系统中已存在同名账号 </span><strong id="existingName">-</strong><span data-i18n="，请输入密码验证后绑定">，请输入密码验证后绑定
+          <p style="font-size:14px;color:var(--text-secondary,#6b7280);margin:8px 0 0;"><span data-i18n="请验证已有账号">
+            请验证已有账号 </span><strong id="existingName">-</strong><span data-i18n="，请输入密码验证后绑定">，请输入密码验证后绑定
           </span></p>
         </div>
 
         <form id="bindForm" onsubmit="handleBind(event)">
           <div class="form-group">
             <input type="password" id="password" placeholder="请输入该账号的密码" data-i18n-placeholder="请输入该账号的密码" class="input blora-input" minlength="6" required>
+          </div>
+          <div class="form-group" id="twoFactorGroup" hidden>
+            <label for="twoFactorCode">2FA 验证码</label>
+            <input type="text" id="twoFactorCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="请输入6位验证码" class="input blora-input">
           </div>
           <button type="submit" class="login-btn blora-button" data-variant="primary" id="submitBtn">
             <span id="submitText"><span data-i18n="验证并绑定">验证并绑定</span></span>
@@ -107,9 +111,15 @@
         const data = await res.json();
         document.getElementById('feishuName').textContent = data.feishuName;
         document.getElementById('existingName').textContent = data.existingUsername;
+        setTwoFactorRequired(data.requiresTwoFactor === true);
       } catch (e) {
         window.location.replace('/');
       }
+    }
+
+    function setTwoFactorRequired(required) {
+      document.getElementById('twoFactorGroup').hidden = !required;
+      document.getElementById('twoFactorCode').required = required;
     }
 
     async function handleBind(e) {
@@ -128,7 +138,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ password })
+          body: JSON.stringify({ password, code: document.getElementById('twoFactorCode').value.trim() })
         });
 
         const data = await res.json();
@@ -136,6 +146,7 @@
         if (res.ok && data.success) {
           window.location.href = data.redirect || (data.needsPasswordSetup ? '/set-password' : '/console');
         } else {
+          if (data.requiresTwoFactor) setTwoFactorRequired(true);
           errorEl.textContent = data.error || '绑定失败';
           errorEl.classList.add('show');
           btn.disabled = false;
