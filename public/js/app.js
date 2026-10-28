@@ -2104,13 +2104,13 @@ class ConsoleApp {
           <blora-select id="keyModelPickerProvider"><blora-option value="all">全部供应商</blora-option></blora-select>
           <blora-select id="keyModelPickerSeries"><blora-option value="all">全部系列</blora-option></blora-select>
           <blora-select id="keyModelPickerProviderTag"><blora-option value="all">全部标签</blora-option></blora-select>
-          <blora-select id="keyModelPickerTest">
+          <blora-select id="keyModelPickerTest" value="all">
             <blora-option value="all">全部状态</blora-option>
             <blora-option value="pass">测试通过</blora-option>
             <blora-option value="fail">测试失败</blora-option>
             <blora-option value="untested">未测试</blora-option>
           </blora-select>
-          <blora-select id="keyModelPickerSort">
+          <blora-select id="keyModelPickerSort" value="default">
             <blora-option value="default">默认排序</blora-option>
             <blora-option value="price_asc">价格低→高</blora-option>
             <blora-option value="price_desc">价格高→低</blora-option>
