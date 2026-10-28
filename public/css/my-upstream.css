@@ -2,6 +2,17 @@
 #myUpstreamPage.unified-provider-page > .content-section { display: none; }
 #myUpstreamPage #unifiedProviderManager { display: block; width: 100%; height: calc(100dvh - 5rem); min-height: 480px; border: 0; }
 
+/* page2-step3：标签页和工具栏 */
+#myUpstreamPage {
+  & .up-hint { margin: 0 0 var(--blora-space-3); color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+  & .up-toolbar-slot { display: grid; align-items: start; margin-block-end: var(--blora-space-3); }
+  & .up-toolbar-slot > * { grid-area: 1 / 1; margin-block-end: 0; }
+  & .up-toolbar-slot > [data-up-off] { visibility: hidden; }
+  & .up-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); }
+  & .up-search { display: block; inline-size: 280px; }
+  & .up-count { margin-inline-start: auto; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+}
+
 /* page2-step2：「我的上游」的 5 个弹窗。弹窗会移到 body 下，所以按弹窗 id 限定作用范围 */
 :is(#addProviderModal, #editProviderModal, #batchEditMyModelsModal, #manageModelsModal, #addEditModelModal, #batchPriceModal) {
   & .up-dialog-stack { display: flex; flex-direction: column; gap: var(--blora-space-4); }
