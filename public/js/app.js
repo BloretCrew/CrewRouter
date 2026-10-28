@@ -9601,6 +9601,8 @@ ${extractorBody}
     // 从 _myTeamModels 数据填充表单
     document.getElementById('editModelId').value = modelId;
     setHTML(document.getElementById('modelFormProvider'), `<blora-option value="${escapeHtml(model.provider)}" selected>${escapeHtml(model.provider_name || model.provider)}</blora-option>`);
+    // page2-step2d：blora-select 不读动态插入选项的 selected，要显式设值
+    document.getElementById('modelFormProvider').value = model.provider || '';
     document.getElementById('modelFormProvider').disabled = true;
     document.getElementById('modelFormId').value = modelId;
     document.getElementById('modelFormUpstreamId').value = model.upstream_model_id || '';
@@ -13669,6 +13671,9 @@ ${extractorBody}
     const select = document.getElementById('modelFormProvider');
     setHTML(select, '<blora-option value="">' + t('请选择供应商') + '</blora-option>' +
       providers.map(p => `<blora-option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</blora-option>`).join(''));
+    // page2-step2d：编辑「我的模型」会禁用这个下拉，这里恢复
+    select.disabled = false;
+    select.value = '';
 
     // 加载模型选项（用于思考模式路由）
     await this.loadModelOptions();
@@ -13687,6 +13692,8 @@ ${extractorBody}
     const select = document.getElementById('modelFormProvider');
     setHTML(select, '<blora-option value="">' + t('请选择供应商') + '</blora-option>' +
       providers.map(p => `<blora-option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</blora-option>`).join(''));
+    // page2-step2d：编辑「我的模型」会禁用这个下拉，这里恢复
+    select.disabled = false;
 
     // 加载模型选项（用于思考模式路由）
     await this.loadModelOptions();
