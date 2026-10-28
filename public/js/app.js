@@ -692,12 +692,15 @@ class ConsoleApp {
 
       const overview = document.getElementById('usageOverview');
       if (apiKeys.length > 0) {
-        overview.style.display = 'flex';
-        document.getElementById('totalRequests').textContent = totalReqs.toLocaleString();
-        document.getElementById('totalTokens').textContent = this._formatBigNumber(totalTokens);
-        document.getElementById('totalCost').textContent = `${totalCost.toFixed(4)}${t('积分')}`;
+        overview.hidden = false;
+        [['totalRequests', '我的 Key 调用次数'], ['totalTokens', '我的 Key Token 消耗'], ['totalCost', '我的 Key 积分消耗']]
+          .forEach(([id, label]) => document.getElementById(id).setAttribute('label', t(label)));
+        document.getElementById('totalCost').setAttribute('suffix', t('积分'));
+        document.getElementById('totalRequests').value = totalReqs.toLocaleString();
+        document.getElementById('totalTokens').value = this._formatBigNumber(totalTokens);
+        document.getElementById('totalCost').value = totalCost.toFixed(4);
       } else {
-        overview.style.display = 'none';
+        overview.hidden = true;
       }
 
       if (apiKeys.length === 0) {

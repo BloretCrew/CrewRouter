@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
-  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step4a">
+  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step4b">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
@@ -451,25 +451,16 @@
         </div>
 
         <div class="content-section">
-          <div class="section-header">
+          <div class="section-header ak-header">
             <h2><span data-i18n="API 密钥">API 密钥</span></h2>
             <button type="button" id="createApiKeyBtn" class="blora-button" data-variant="primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>
           </div>
 
-          <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->
-          <div class="usage-overview" id="usageOverview" style="display:none;" title="仅统计由您发起的 API Key 用量" data-i18n-title="仅统计由您发起的 API Key 用量">
-            <div class="usage-overview-item">
-              <span class="usage-overview-label"><span data-i18n="我的 Key 调用次数">我的 Key 调用次数</span></span>
-              <span class="usage-overview-value" id="totalRequests">0</span>
-            </div>
-            <div class="usage-overview-item">
-              <span class="usage-overview-label"><span data-i18n="我的 Key Token 消耗">我的 Key Token 消耗</span></span>
-              <span class="usage-overview-value" id="totalTokens">0</span>
-            </div>
-            <div class="usage-overview-item">
-              <span class="usage-overview-label"><span data-i18n="我的 Key 积分消耗">我的 Key 积分消耗</span></span>
-              <span class="usage-overview-value" id="totalCost"><span data-i18n="0 积分">0 积分</span></span>
-            </div>
+          <!-- 我的 Key 用量概览（不含他人发起的 Co-Key）；label/suffix 由 JS 按语言写入 -->
+          <div class="ak-overview" id="usageOverview" hidden title="仅统计由您发起的 API Key 用量" data-i18n-title="仅统计由您发起的 API Key 用量">
+            <blora-statistic id="totalRequests" label="我的 Key 调用次数" value="—"></blora-statistic>
+            <blora-statistic id="totalTokens" label="我的 Key Token 消耗" value="—"></blora-statistic>
+            <blora-statistic id="totalCost" label="我的 Key 积分消耗" value="—" suffix="积分"></blora-statistic>
           </div>
 
           <!-- 标签筛选栏 -->
@@ -2222,7 +2213,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page3-step4a"></script>
+  <script src="/js/app.js?v=page3-step4b"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
