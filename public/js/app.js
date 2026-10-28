@@ -2066,13 +2066,12 @@ class ConsoleApp {
   }
 
   _configureKeyModelsModal({ title, picker = false, saveVisible = true, saveText = t('保存'), cancelText = t('取消') }) {
-    const modalContent = document.getElementById('keyModelsModalContent');
+    const dialog = document.getElementById('keyModelsModal');
     const titleEl = document.getElementById('keyModelsTitle');
     const saveBtn = document.getElementById('keyModelsSaveBtn');
-    if (modalContent) {
-      modalContent.classList.toggle('key-model-picker-modal', picker);
-      modalContent.classList.toggle('model-picker-modal', picker);
-    }
+    const cancelBtn = document.getElementById('keyModelsCancelBtn');
+    if (dialog) dialog.toggleAttribute('data-picker', picker);
+    if (cancelBtn) cancelBtn.textContent = cancelText;
     if (titleEl) titleEl.textContent = title || t('管理可用模型');
     if (saveBtn) {
       saveBtn.style.display = saveVisible ? '' : 'none';
@@ -2099,43 +2098,38 @@ class ConsoleApp {
     const container = document.getElementById('keyModelsContent');
     if (!container) return;
     setHTML(container, `
-      <div class="model-picker key-model-picker">
-        <div class="key-model-queue-panel">
-          <div class="key-model-queue-header">
-            <strong>请求队列</strong>
-            <span class="key-model-queue-hint">拖拽排序 · 从上到下依次尝试，失败自动回退（最多 10 个）</span>
-          </div>
-          <div id="keyModelQueueList" class="key-model-queue-list"></div>
+      <div class="model-picker key-model-picker kp-stack">
+        <div class="kp-filters">
+          <blora-search id="keyModelPickerSearch" class="kp-filters__search" label="${escapeHtml(t('搜索模型'))}" placeholder="${escapeHtml(t('搜索模型、供应商、Team...'))}"></blora-search>
+          <blora-select id="keyModelPickerProvider"><blora-option value="all">全部供应商</blora-option></blora-select>
+          <blora-select id="keyModelPickerSeries"><blora-option value="all">全部系列</blora-option></blora-select>
+          <blora-select id="keyModelPickerProviderTag"><blora-option value="all">全部标签</blora-option></blora-select>
+          <blora-select id="keyModelPickerTest">
+            <blora-option value="all">全部状态</blora-option>
+            <blora-option value="pass">测试通过</blora-option>
+            <blora-option value="fail">测试失败</blora-option>
+            <blora-option value="untested">未测试</blora-option>
+          </blora-select>
+          <blora-select id="keyModelPickerSort">
+            <blora-option value="default">默认排序</blora-option>
+            <blora-option value="price_asc">价格低→高</blora-option>
+            <blora-option value="price_desc">价格高→低</blora-option>
+            <blora-option value="name_asc">名称 A-Z</blora-option>
+            <blora-option value="name_desc">名称 Z-A</blora-option>
+            <blora-option value="test_latency_asc">测试最快</blora-option>
+            <blora-option value="test_latency_desc">测试最慢</blora-option>
+            <blora-option value="test_tps_desc">吞吐最高</blora-option>
+          </blora-select>
         </div>
-        <div class="model-filter-bar">
-          <div class="model-search-box">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="keyModelPickerSearch" placeholder="${escapeHtml(t('搜索模型、供应商、Team...'))}" class="blora-input model-search-input">
+        <section class="kp-queue" aria-labelledby="kpQueueTitle">
+          <div class="kp-queue__head">
+            <span id="kpQueueTitle" class="kp-queue__title">${t('请求队列')}</span>
+            <span class="kp-queue__hint">${t('拖拽排序 · 从左到右依次尝试，失败自动回退（最多 10 个）')}</span>
           </div>
-          <div class="model-filter-selects">
-            <blora-select id="keyModelPickerProvider" class="blora-select select"><blora-option value="all">全部供应商</blora-option></blora-select>
-            <blora-select id="keyModelPickerSeries" class="blora-select select"><blora-option value="all">全部系列</blora-option></blora-select>
-            <blora-select id="keyModelPickerProviderTag" class="blora-select select"><blora-option value="all">全部标签</blora-option></blora-select>
-            <blora-select id="keyModelPickerTest" class="blora-select select">
-              <blora-option value="all">全部状态</blora-option>
-              <blora-option value="pass">测试通过</blora-option>
-              <blora-option value="fail">测试失败</blora-option>
-              <blora-option value="untested">未测试</blora-option>
-            </blora-select>
-            <blora-select id="keyModelPickerSort" class="blora-select select">
-              <blora-option value="default">默认排序</blora-option>
-              <blora-option value="price_asc">价格低→高</blora-option>
-              <blora-option value="price_desc">价格高→低</blora-option>
-              <blora-option value="name_asc">名称 A-Z</blora-option>
-              <blora-option value="name_desc">名称 Z-A</blora-option>
-              <blora-option value="test_latency_asc">测试最快</blora-option>
-              <blora-option value="test_latency_desc">测试最慢</blora-option>
-              <blora-option value="test_tps_desc">吞吐最高</blora-option>
-            </blora-select>
-          </div>
-        </div>
-        <div id="keyModelPickerCount" class="model-picker-count key-model-picker-count" style="display:none;"></div>
-        <div id="keyModelPickerContent" class="model-library-grid model-picker-scroll key-model-picker-grid"></div>
+          <div id="keyModelQueueList" class="kp-queue__list"></div>
+        </section>
+        <div id="keyModelPickerCount" class="kp-count" hidden></div>
+        <div id="keyModelPickerContent" class="model-library-grid model-picker-scroll key-model-picker-grid kp-list"></div>
       </div>
     `);
     this._renderKeyModelQueueList();
@@ -2278,7 +2272,7 @@ class ConsoleApp {
     const countEl = document.getElementById('keyModelPickerCount');
     if (countEl) {
       const hasFilter = providerFilter !== 'all' || tagFilter !== 'all';
-      countEl.style.display = hasFilter ? 'block' : 'none';
+      countEl.hidden = !hasFilter;
       if (hasFilter) {
         let totalModels = 0;
         filtered.teams.forEach(team => team.providers.forEach(provider => {
@@ -2324,13 +2318,13 @@ class ConsoleApp {
       // 缓存搜索结果，供加入队列时解析展示名
       ctx._globalSearchModels = models;
       if (countEl) {
-        countEl.style.display = 'block';
+        countEl.hidden = false;
         countEl.textContent = `${t('找到')}${data.pagination?.total ?? models.length}${t('个模型')}`;
       }
       if (!models.length) {
         setBloraState('keyModelsContent', 'empty');
         if (container) {
-          setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('没有符合条件的模型') + '</p></div>');
+          setHTML(container, `<blora-empty title="${escapeHtml(t('没有符合条件的模型'))}"></blora-empty>`);
         }
         return;
       }
@@ -2785,7 +2779,7 @@ class ConsoleApp {
     if (!listEl || !ctx) return;
     const queue = ctx.queue || [];
     if (!queue.length) {
-      setHTML(listEl, '<div class="key-model-queue-empty">' + t('点击下方模型加入队列；拖拽调整顺序，第一项为首选') + '</div>');
+      setHTML(listEl, '<span class="kp-queue__empty">' + t('点击下方模型加入队列；拖拽调整顺序，第一项为首选') + '</span>');
       return;
     }
     // 渲染前尽量把「只显示了 id」的项解析成可读名称
@@ -2798,15 +2792,7 @@ class ConsoleApp {
     }
     setHTML(listEl, queue.map((item, index) => {
       const displayName = item.name || item.id;
-      return `
-      <div class="key-model-queue-item" draggable="true" data-model-id="${escapeHtml(item.id)}">
-        <span class="key-model-queue-handle" title="${t('拖拽排序')}" aria-hidden="true">⠿</span>
-        <span class="key-model-queue-order">${index + 1}</span>
-        <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">' + t('首选') + '</em>' : ''}</span>
-        <div class="key-model-queue-actions">
-          <button type="button" class="blora-button" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}" data-variant="ghost" data-size="sm">×</button>
-        </div>
-      </div>`;
+      return `<span class="blora-tag blora-tag--removable kp-queue__tag" draggable="true" data-model-id="${escapeHtml(item.id)}"${index === 0 ? ' data-variant="primary"' : ''} title="${escapeHtml(displayName)}">${index + 1}. ${escapeHtml(displayName)}${index === 0 ? ' · ' + t('首选') : ''}<button type="button" class="blora-tag__close" aria-label="${escapeHtml(t('移除') + ' ' + displayName)}" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')"></button></span>`;
     }).join(''));
   }
 
@@ -2817,7 +2803,7 @@ class ConsoleApp {
     listEl.dataset.dragBound = '1';
 
     listEl.addEventListener('dragstart', (e) => {
-      const item = e.target.closest('.key-model-queue-item');
+      const item = e.target.closest('.kp-queue__tag');
       if (!item || !listEl.contains(item)) return;
       // 点在移除按钮上不启动拖拽
       if (e.target.closest('button, a, input')) {
@@ -2829,7 +2815,7 @@ class ConsoleApp {
       this._keyQueueDragId = modelId;
       this._keyQueueDropTargetId = null;
       this._keyQueueDropBefore = true;
-      item.classList.add('key-model-queue-dragging');
+      item.classList.add('kp-queue__tag--dragging');
       try {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', modelId);
@@ -2844,13 +2830,13 @@ class ConsoleApp {
       if (!this._keyQueueDragId) return;
       e.preventDefault();
       try { e.dataTransfer.dropEffect = 'move'; } catch (_) { /* ignore */ }
-      const target = e.target.closest('.key-model-queue-item');
-      listEl.querySelectorAll('.key-model-queue-drag-over, .key-model-queue-drag-before, .key-model-queue-drag-after')
-        .forEach(el => el.classList.remove('key-model-queue-drag-over', 'key-model-queue-drag-before', 'key-model-queue-drag-after'));
-      if (!target || target.classList.contains('key-model-queue-dragging')) return;
+      const target = e.target.closest('.kp-queue__tag');
+      listEl.querySelectorAll('.kp-queue__tag--over, .kp-queue__tag--before, .kp-queue__tag--after')
+        .forEach(el => el.classList.remove('kp-queue__tag--over', 'kp-queue__tag--before', 'kp-queue__tag--after'));
+      if (!target || target.classList.contains('kp-queue__tag--dragging')) return;
       const rect = target.getBoundingClientRect();
-      const before = e.clientY < rect.top + rect.height / 2;
-      target.classList.add('key-model-queue-drag-over', before ? 'key-model-queue-drag-before' : 'key-model-queue-drag-after');
+      const before = e.clientX < rect.left + rect.width / 2;
+      target.classList.add('kp-queue__tag--over', before ? 'kp-queue__tag--before' : 'kp-queue__tag--after');
       this._keyQueueDropTargetId = target.getAttribute('data-model-id');
       this._keyQueueDropBefore = before;
     });
@@ -2858,8 +2844,8 @@ class ConsoleApp {
     listEl.addEventListener('dragleave', (e) => {
       // 仅在真正离开列表时清理高亮
       if (!listEl.contains(e.relatedTarget)) {
-        listEl.querySelectorAll('.key-model-queue-drag-over, .key-model-queue-drag-before, .key-model-queue-drag-after')
-          .forEach(el => el.classList.remove('key-model-queue-drag-over', 'key-model-queue-drag-before', 'key-model-queue-drag-after'));
+        listEl.querySelectorAll('.kp-queue__tag--over, .kp-queue__tag--before, .kp-queue__tag--after')
+          .forEach(el => el.classList.remove('kp-queue__tag--over', 'kp-queue__tag--before', 'kp-queue__tag--after'));
       }
     });
 
@@ -2887,8 +2873,8 @@ class ConsoleApp {
     this._keyQueueDropBefore = true;
     const listEl = document.getElementById('keyModelQueueList');
     if (!listEl) return;
-    listEl.querySelectorAll('.key-model-queue-dragging, .key-model-queue-drag-over, .key-model-queue-drag-before, .key-model-queue-drag-after')
-      .forEach(el => el.classList.remove('key-model-queue-dragging', 'key-model-queue-drag-over', 'key-model-queue-drag-before', 'key-model-queue-drag-after'));
+    listEl.querySelectorAll('.kp-queue__tag--dragging, .kp-queue__tag--over, .kp-queue__tag--before, .kp-queue__tag--after')
+      .forEach(el => el.classList.remove('kp-queue__tag--dragging', 'kp-queue__tag--over', 'kp-queue__tag--before', 'kp-queue__tag--after'));
   }
 
   /**
@@ -3090,7 +3076,7 @@ class ConsoleApp {
             <input type="text" id="fusionPanelSearch" class="blora-input input" placeholder="${escapeHtml(t('搜索模型...'))}" style="flex:1;font-size:13px;" oninput="app._filterFusionPanelModels()">
             <button type="button" class="blora-button" onclick="app._toggleAllFusionPanels()" data-variant="secondary" data-size="sm">全选/取消</button>
           </div>
-          <div id="fusionPanelList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;">
+          <div id="fusionPanelList" class="kp-fusion-list" style="border:1px solid var(--border);border-radius:8px;padding:8px;">
             ${providerEntries.map(([provider, pModels]) => `
               <div class="fusion-provider-group" style="margin-bottom:8px;">
                 <div style="font-size:11px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;margin-bottom:4px;">${escapeHtml(provider)}</div>
@@ -9861,7 +9847,7 @@ ${extractorBody}
       this._libraryGlobalSearchResults = data;
       this._renderLibraryGlobalSearchResults(data);
       if (countEl) {
-        countEl.style.display = 'block';
+        countEl.hidden = false;
         countEl.textContent = `${t('找到')}${data.pagination?.total ?? (data.models || []).length}${t('个模型')}`;
       }
     } catch (e) {
@@ -10039,10 +10025,10 @@ ${extractorBody}
         filtered.teams.forEach(t => t.providers.forEach(p => {
           totalModels += p.model_count ?? p.visible_model_count ?? (p.models?.length || 0);
         }));
-        countEl.style.display = 'block';
+        countEl.hidden = false;
         countEl.textContent = `${t('共')}${totalModels}${t('个模型（骨架统计）')}`;
       } else {
-        countEl.style.display = 'none';
+        countEl.hidden = true;
       }
     }
 
@@ -11369,8 +11355,8 @@ ${extractorBody}
           ? '<button type="button" class="blora-button model-action-disabled" data-variant="secondary" data-size="sm" disabled>' + t('供应商已禁用') + '</button>'
           : isKeyPicker
             ? (queueIndex >= 0
-              ? `<button type="button" class="blora-button model-action-bound" data-variant="secondary" data-size="sm" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
-              : '<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm">' + t('加入队列') + '</button>')
+              ? `<span class="blora-tag model-action-bound" data-variant="primary" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</span>`
+              : '<button type="button" class="blora-button model-action-primary" data-variant="secondary" data-size="sm">' + t('加入队列') + '</button>')
           : `
             ${isOwner
               ? ''
