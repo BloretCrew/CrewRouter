@@ -8801,6 +8801,8 @@ ${extractorBody}
           </tbody>
         </table>
       `);
+      this.filterMyProviders(document.getElementById('myProvidersSearch')?.value || '');
+      this.updateBatchButtons();
     } catch (error) {
       setBloraState('myProvidersTable', 'error');
       console.error(t('加载供应商页面失败:'), error);
@@ -8816,10 +8818,56 @@ ${extractorBody}
 
   updateBatchButtons() {
     const checked = document.querySelectorAll('.provider-checkbox:checked');
-    const batchBtn = document.getElementById('batchDeleteBtn');
-    if (batchBtn) {
-      batchBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
-    }
+    this._syncMyUpstreamBulk('Providers', checked.length);
+  }
+
+  // page2-step3：有选中行时，整行工具栏换成 blora-table-bulk
+  _syncMyUpstreamBulk(which, count) {
+    const toolbar = document.getElementById(`myUpstream${which}Toolbar`);
+    const bulk = document.getElementById(`myUpstream${which}Bulk`);
+    const countEl = document.getElementById(which === 'Providers' ? 'myProvidersBulkCount' : 'myTeamModelsBulkCount');
+    if (countEl) countEl.textContent = `${t('已选')} ${count} ${t('项')}`;
+    // 两者叠在同一个 grid 格子里，用 visibility 切换，行高取较高者，表格不跳
+    if (bulk) { bulk.toggleAttribute('data-up-off', count === 0); bulk.inert = count === 0; }
+    if (toolbar) { toolbar.toggleAttribute('data-up-off', count > 0); toolbar.inert = count > 0; }
+  }
+
+  clearMyUpstreamSelection() {
+    document.querySelectorAll('#myUpstreamPage .provider-checkbox, #myUpstreamPage .my-team-model-checkbox, #myUpstreamPage .models-table thead input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+    this._syncMyUpstreamBulk('Providers', 0);
+    this._syncMyUpstreamBulk('Models', 0);
+  }
+
+  filterMyProviders(keyword) {
+    const kw = String(keyword || '').trim().toLowerCase();
+    document.querySelectorAll('#myProvidersTable tbody tr').forEach(row => {
+      row.hidden = kw !== '' && !row.textContent.toLowerCase().includes(kw);
+    });
+  }
+
+  _bindMyUpstreamControls() {
+    if (this._myUpstreamControlsBound) return;
+    const tabs = document.getElementById('myUpstreamTabs');
+    const providerSearch = document.getElementById('myProvidersSearch');
+    const modelSearch = document.getElementById('myTeamModelsSearch');
+    if (!tabs) return;
+    this._myUpstreamControlsBound = true;
+    tabs.addEventListener('blora-change', (e) => {
+      const value = e.detail?.value || tabs.getAttribute('value');
+      if (value && value !== this._myUpstreamTab) this.switchMyUpstreamTab(value);
+    });
+    // blora-search 的清除按钮只清空输入框、不发 input 事件，所以另外监听它的点击
+    const bindSearch = (el, run) => {
+      if (!el) return;
+      el.addEventListener('input', () => run(el.value));
+      el.addEventListener('change', () => run(el.value));
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.blora-search__clear')) setTimeout(() => run(el.value), 0);
+      });
+    };
+    bindSearch(providerSearch, (v) => this.filterMyProviders(v));
+    bindSearch(modelSearch, (v) => this.filterMyTeamModels(v));
+    if (window.bloraHydrateIcons) window.bloraHydrateIcons(document.getElementById('myUpstreamPage'));
   }
 
   async batchDeleteProviders() {
@@ -8876,25 +8924,18 @@ ${extractorBody}
     const next = tab === 'models' ? 'models' : 'providers';
     this._myUpstreamTab = next;
 
-    document.querySelectorAll('.my-upstream-tab').forEach(el => {
-      el.classList.toggle('active', el.getAttribute('data-upstream-tab') === next);
+    this._bindMyUpstreamControls();
+    const tabs = document.getElementById('myUpstreamTabs');
+    if (tabs && tabs.getAttribute('value') !== next) tabs.setAttribute('value', next);
+
+    // 切换页签时清空搜索和选择
+    ['myProvidersSearch', 'myTeamModelsSearch'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.value) el.value = '';
     });
-
-    const providersPane = document.getElementById('myUpstreamProvidersPane');
-    const modelsPane = document.getElementById('myUpstreamModelsPane');
-    const providerActions = document.getElementById('myUpstreamProviderActions');
-    const modelActions = document.getElementById('myUpstreamModelActions');
-    const hint = document.getElementById('myUpstreamHint');
-
-    if (providersPane) providersPane.style.display = next === 'providers' ? 'block' : 'none';
-    if (modelsPane) modelsPane.style.display = next === 'models' ? 'block' : 'none';
-    if (providerActions) providerActions.style.display = next === 'providers' ? 'flex' : 'none';
-    if (modelActions) modelActions.style.display = next === 'models' ? 'flex' : 'none';
-    if (hint) {
-      hint.textContent = next === 'models'
-        ? t('管理个人 Team 下的模型（启用、价格、别名等）。也可从「供应商」页签刷新导入。')
-        : t('管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。');
-    }
+    this.filterMyProviders('');
+    if (Array.isArray(this._myTeamModels)) this._myTeamModelsFiltered = this._myTeamModels;
+    this.clearMyUpstreamSelection();
 
     // 页签切换同步到 URL hash，便于刷新/分享
     if (!options.skipHash && this.currentPage === 'myUpstream') {
@@ -9440,11 +9481,7 @@ ${extractorBody}
   updateMyModelsBatchButtons() {
     const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
     const count = checked.length;
-    const ids = ['batchEnableMyModelsBtn', 'batchDisableMyModelsBtn', 'batchEditMyModelsBtn', 'batchDeleteMyModelsBtn'];
-    ids.forEach(id => {
-      const btn = document.getElementById(id);
-      if (btn) btn.style.display = count > 0 ? 'inline-flex' : 'none';
-    });
+    this._syncMyUpstreamBulk('Models', count);
   }
 
   async batchDeleteMyTeamModels() {
