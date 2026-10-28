@@ -13,6 +13,16 @@
   visibility: visible;
   pointer-events: auto;
 }
+/* apiKeys step4d：吸顶栏单行——标题 | 标签（横向滚动）| 创建密钥 */
+#apiKeysPage #apiKeysStickyBar {
+  padding: var(--blora-space-2) var(--blora-space-6);
+  border-block-end: var(--blora-border-subtle);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-2);
+}
+#apiKeysPage #apiKeysStickyBar .model-library-sticky-inner { display: flex; align-items: center; gap: var(--blora-space-3); min-inline-size: 0; }
+#apiKeysPage #apiKeysStickyBar .page-sticky-tag-chips { flex: 1; flex-wrap: nowrap; overflow-x: auto; min-inline-size: 0; }
+#apiKeysPage #apiKeysStickyBar .model-library-sticky-inner > .blora-button { margin-inline-start: auto; flex: none; }
 #apiKeysPage .model-library-sticky-sentinel {
   block-size: 1px;
   pointer-events: none;
