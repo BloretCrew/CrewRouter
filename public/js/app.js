@@ -720,6 +720,7 @@ class ConsoleApp {
         ${renderGroup(t('普通 API Key'), t('仅自己管理的密钥'), normalKeys, 'api-key-group-normal')}
         ${renderGroup('Co-Key', t('已共享给成员，或由其他用户共享给您'), coKeys, 'api-key-group-cokey')}
       </div>`);
+      this._applyKeyTagFilter();
       // 等布局完成后再计算标签溢出
       requestAnimationFrame(() => this._fitAllApiKeyTags());
       this._bindApiKeyTagsResizeObserver();
@@ -1118,6 +1119,10 @@ class ConsoleApp {
            style="border-color:${safeColor(tag.color)};"
            draggable="true"
            data-tag-id="${tag.id}"
+           role="button" tabindex="0" aria-pressed="${String(this._keyTagFilter === tag.id)}"
+           ${this._keyTagFilter === tag.id ? 'data-active' : ''}
+           onclick="app.toggleKeyTagFilter(${tag.id})"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();app.toggleKeyTagFilter(${tag.id})}"
            ondragstart="app.handleKeyTagDragStart(event, ${tag.id})"
            ondragend="app.handleKeyTagDragEnd(event)"
            title="${t('拖拽到 Key 卡片来分配 · 点击铅笔编辑')}">
@@ -1140,6 +1145,33 @@ class ConsoleApp {
     const html = this._renderKeyTagChipsHtml();
     if (chips) setHTML(chips, html);
     if (stickyChips) setHTML(stickyChips, html);
+  }
+
+  // apiKeys step0b：点击标签按标签筛选 Key 卡片，再点一次取消（main 上标签只能拖拽，不能筛选）
+  toggleKeyTagFilter(tagId) {
+    if (this._keyTagDragActive) return;
+    this._keyTagFilter = this._keyTagFilter === tagId ? null : tagId;
+    if (this._keyTagFilter != null && !(this._keyTags || []).some(tag => tag.id === this._keyTagFilter)) this._keyTagFilter = null;
+    this.renderKeyTagBar();
+    this._applyKeyTagFilter();
+  }
+
+  _applyKeyTagFilter() {
+    const list = document.getElementById('apiKeysList');
+    if (!list) return;
+    const tagId = this._keyTagFilter;
+    list.querySelectorAll('.api-key-group').forEach(group => {
+      let visible = 0;
+      group.querySelectorAll('.api-key-card[data-key-id]').forEach(card => {
+        const ids = [...card.querySelectorAll('.key-tag-chip-sm[data-tag-id]')].map(el => Number(el.dataset.tagId));
+        const show = tagId == null || ids.includes(tagId);
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      group.style.display = visible === 0 ? 'none' : '';
+      const count = group.querySelector('.api-key-group-count');
+      if (count) count.textContent = String(visible);
+    });
   }
 
   handleKeyTagDragStart(event, tagId) {
