@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
-  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step2b-r4">
+  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step3d">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
@@ -353,7 +353,7 @@
         <div id="modelLibraryStickySentinel" class="model-library-sticky-sentinel" aria-hidden="true"></div>
 
         <!-- 模型数量提示 -->
-        <div id="modelLibraryCount" class="model-library-count" style="display:none;"></div>
+        <div id="modelLibraryCount" class="model-library-count" hidden></div>
 
         <!-- 模型列表 -->
         <div id="modelLibraryContent" data-blora-state="loading" class="model-library-grid">
@@ -1756,18 +1756,12 @@
   </blora-dialog>
 
   <!-- API密钥模型管理模态框（支持有序模型队列） -->
-  <blora-dialog id="keyModelsModal" size="lg" role="dialog" aria-modal="true" aria-labelledby="keyModelsTitle">
-    <div id="keyModelsModalContent" class="blora-dialog__panel modal-content">
-      <div class="modal-header">
-        <h3 id="keyModelsTitle"><span data-i18n="管理可用模型">管理可用模型</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="keyModelsContent" data-blora-state="loading"></div>
-      </div>
-      <div id="keyModelsFooter" class="modal-footer">
-        <button type="button" id="keyModelsSaveBtn" class="blora-button" onclick="app.saveKeyModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-      </div>
+  <blora-dialog id="keyModelsModal" size="lg">
+    <span slot="title" id="keyModelsTitle" data-i18n="管理可用模型">管理可用模型</span>
+    <div id="keyModelsContent" data-blora-state="loading"></div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" id="keyModelsCancelBtn" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()" data-i18n="取消">取消</button>
+      <button type="button" id="keyModelsSaveBtn" class="blora-button" onclick="app.saveKeyModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>
     </div>
   </blora-dialog>
 
@@ -2228,7 +2222,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page3-step2a2"></script>
+  <script src="/js/app.js?v=page3-step3d"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

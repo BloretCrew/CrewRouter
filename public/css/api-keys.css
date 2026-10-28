@@ -109,3 +109,22 @@
 #usageScriptModal .ccs-script { inline-size: 100%; font-family: var(--blora-font-mono); font-size: var(--blora-text-xs); line-height: var(--blora-leading-normal); white-space: pre; resize: vertical; }
 #usageScriptModal .ak-dialog-actions { display: flex; justify-content: flex-end; gap: var(--blora-space-2); }
 #usageScriptModal .ccs-style-fieldset { grid-column: 1 / -1; }
+
+/* step3 · Key picker（keyModelsModal 选择模式） */
+#keyModelsModal .ak-dialog-actions { display: flex; justify-content: flex-end; gap: var(--blora-space-2); }
+#keyModelsModal .kp-stack { display: grid; gap: var(--blora-space-4); }
+#keyModelsModal .kp-queue { display: grid; gap: var(--blora-space-2); }
+#keyModelsModal .kp-queue__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--blora-space-2); }
+#keyModelsModal .kp-queue__title { font-size: var(--blora-text-sm); color: var(--blora-color-text-primary); }
+#keyModelsModal .kp-queue__hint,
+#keyModelsModal .kp-queue__empty,
+#keyModelsModal .kp-count { font-size: var(--blora-text-xs); color: var(--blora-color-text-secondary); }
+#keyModelsModal .kp-queue__list { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
+#keyModelsModal .kp-queue__tag { cursor: grab; }
+#keyModelsModal .kp-queue__tag--dragging { opacity: 0.5; }
+#keyModelsModal .kp-queue__tag--before { box-shadow: calc(-1 * var(--blora-focus-ring-width)) 0 0 var(--blora-color-action-primary-default); }
+#keyModelsModal .kp-queue__tag--after { box-shadow: var(--blora-focus-ring-width) 0 0 var(--blora-color-action-primary-default); }
+#keyModelsModal .kp-filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--blora-space-2); }
+#keyModelsModal .kp-filters__search { grid-column: 1 / -1; }
+#keyModelsModal .kp-list { max-block-size: 50dvh; overflow-y: auto; }
+#keyModelsModal .kp-fusion-list { max-block-size: 20dvh; overflow-y: auto; }
