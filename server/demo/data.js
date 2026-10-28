@@ -69,7 +69,7 @@ const DEMO_TEAMS = [
 
 const DEMO_API_KEYS = [
   {
-    id: 1, name: '生产环境 Key', key_prefix: 'sk-demo-prod', key_value: 'sk-demo-prod-xxxxxxxxxxxx', custom_model_name: '', current_model_id: 'gpt-4.1', current_model_name: 'GPT-4.1',
+    id: 1, name: '生产环境 Key', key_type: 'normal', key_prefix: 'sk-demo-prod', key_value: 'sk-demo-prod-xxxxxxxxxxxx', custom_model_name: '', current_model_id: 'gpt-4.1', current_model_name: 'GPT-4.1',
     model_queue: [
       { model_id: 'gpt-4.1', name: 'GPT-4.1', sort_order: 0 },
       { model_id: 'deepseek-chat', name: 'DeepSeek V3', sort_order: 1 }
@@ -82,7 +82,7 @@ const DEMO_API_KEYS = [
     tags: [{ id: 1, name: '生产', color: '#22c55e' }]
   },
   {
-    id: 2, name: '测试环境 Key', key_prefix: 'sk-demo-test', key_value: 'sk-demo-test-xxxxxxxxxxxx', custom_model_name: '', current_model_id: 'deepseek-chat', current_model_name: 'DeepSeek V3',
+    id: 2, name: '测试环境 Key', key_type: 'normal', key_prefix: 'sk-demo-test', key_value: 'sk-demo-test-xxxxxxxxxxxx', custom_model_name: '', current_model_id: 'deepseek-chat', current_model_name: 'DeepSeek V3',
     current_model_provider_name: 'DeepSeek',
     current_model_test_ok: true, current_model_test_latency_ms: 210, current_model_test_tokens_per_second: 78.5, current_model_test_tested_at: '2025-06-27T16:00:00Z',
     is_system: false, enabled: true, created_at: '2025-02-01T08:00:00Z', last_used_at: '2025-06-27T18:00:00Z', expires_at: null,
