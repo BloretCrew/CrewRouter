@@ -41,3 +41,22 @@
 - `node server/scripts/repair-usage-timestamps.js --apply --backup-dir /绝对路径/尚不存在的私有目录`：有可靠新候选时恢复，否则不写入；不自动修改无法证明的字段。
 - `npm run test:usage-repair`：6 项通过，覆盖只读、唯一来源筛选、备份失败拒写、失败批次全量回滚、静默跳过检测、精度保留、非时间字段不变和幂等性。
 - `npm run test:usage-write`：6 项通过。两组数据库测试都使用全新独立 Unix socket PostgreSQL，未访问生产测试数据。
+
+## 继续追查恢复来源（12:33）
+
+2026-10-28 12:33:49 上海时间再次只读核验：用量缺失时间 3 条、负 Token 16,505 条、分析缺少关联 56,109 条、请求尝试缺少创建时间 12,035 条，均未变化。本轮没有新增生产写入，也没有清零、删除或配对无法证明的历史记录。
+
+本机历史取证包 `/root/Downloads/bloret-incident-evidence-20261024.tar.gz` 内的 `06-reports/CREWROUTER-RECOVERY.md` 提供了此前尚未实读的远端恢复材料路径：
+
+- `bloret-core:/root/crewrouter-recover/sql/`：报告记载的 12 张表 CSV 导出；尚不能确认是否包含本轮待修复的目标表。
+- `bloret-core:/root/crewrouter-recover/keytables/`：旧表物理文件及 `before-drop_*.bin`。
+- `bloret-core:/root/crewrouter-recover/pg_attribute.before-insert` 和 `bloret-core:/root/crewrouter-relmap.tsv`：原始列目录材料及表与物理文件映射。
+- `bloret-core:/mnt/ssd1/pgdata/base/16384.corrupt`：报告记载的旧数据库目录。
+
+这些只是历史报告中的位置记载，**没有确认文件当前仍存在，也没有将报告等同于可信恢复源**。只读取了归档条目，没有执行归档内命令、脚本或恢复 SQL。现有 SSH 身份采用批处理、严格已知主机核验、禁用密码交互和代理转发访问 `bloret-core`，返回认证拒绝；没有尝试其他账号、搜索登录凭据、调整防火墙或提升数据库权限。当前数据库角色没有 `pg_read_server_files` 成员权限，不能直接读取这些服务端文件。
+
+额外检查了其他用户 schema 及可能保存重复事实的业务表：只有 `public`；`trace_events`、`trace_sessions`、`agent_messages`、`client_events`、`balance_preconsumes`、`quota_cycle_reports` 均为空；10 条会话消息的 `meta` 全空，唯一插件数据的 `value` 为空，请求配额样本未找到可用的快照对象字段。未发现新的、能够唯一核对到待修记录的 Token、精确时间或关联副本。
+
+因此，下一步必需的是上述恢复材料的**本机可读私有副本或现有授权只读访问方式**，而不是继续改写现库。取得材料后还须核准来源、目标表和列布局，再按稳定记录身份逐字段对照；不能承诺文件一到就能完整恢复全部历史。
+
+本轮私有证据：`/root/crewrouter-audit-evidence/20261028-source-inventory-9jnFiQ`，包含历史恢复报告副本、实时数据库指标、访问受阻事实及校验清单。取证包 SHA-256 为 `28b9fc8bfc4f5c935b2864d14876ed59a9c6d5e745e7790f6dc1926ce3fc7fda`，报告条目 SHA-256 为 `c920099f20b8ce08618fc8c8438465447d6b82df2d86ca33d80c9033923dcc76`；自算哈希只用于固定本轮读取内容，不证明历史材料可信。
