@@ -1,0 +1,62 @@
+/* API Key 页：只保留功能必需的规则（apiKeys step1 清空旧样式后）。视觉样式在 step2–4 用 Blora 组件重做。 */
+
+/* 吸顶栏：滚动出视口后由 JS 加 .is-visible */
+#apiKeysPage .model-library-sticky-bar {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 260px 0;
+  z-index: 45;
+  visibility: hidden;
+  pointer-events: none;
+}
+#apiKeysPage .model-library-sticky-bar.is-visible {
+  visibility: visible;
+  pointer-events: auto;
+}
+#apiKeysPage .model-library-sticky-sentinel {
+  block-size: 1px;
+  pointer-events: none;
+  visibility: hidden;
+}
+@media (max-width: 834px) {
+  #apiKeysPage .model-library-sticky-bar { inset-inline-start: 70px; }
+}
+@media (max-width: 640px) {
+  #apiKeysPage .model-library-sticky-bar { inset-block-start: 56px; inset-inline-start: 0; }
+}
+
+/* 卡片内标签单行，溢出由 JS 计算后收进「+N」 */
+#apiKeysPage .api-key-inline-tags,
+#apiKeysPage .api-key-inline-tags-track {
+  display: flex;
+  min-inline-size: 0;
+}
+#apiKeysPage .api-key-inline-tags-track {
+  overflow: hidden;
+  flex-wrap: nowrap;
+}
+
+/* 更多菜单：相对按钮定位，显示由 JS 控制 */
+#apiKeysPage .api-key-more {
+  position: relative;
+  display: inline-block;
+}
+#apiKeysPage .api-key-more-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-end: calc(100% + var(--blora-space-1));
+  inline-size: max-content;
+  z-index: 40;
+  background: var(--blora-color-surface-default);
+}
+#apiKeysPage .api-key-more-item { display: block; }
+
+/* 挂在 body 上的浮层：用 fixed 定位，坐标由 JS 写入 */
+.api-key-tags-overflow-popover,
+.api-key-tag-assign-dropdown,
+.api-key-route-queue-tip {
+  position: fixed;
+  z-index: 320;
+  overflow: auto;
+  background: var(--blora-color-surface-default);
+}
