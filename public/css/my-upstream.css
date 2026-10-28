@@ -1,5 +1,5 @@
 /* 我的上游：page2-step1 已清空，只保留个人版内嵌供应商管理的功能性规则 */
-#myUpstreamPage.unified-provider-page > .content-section { display: none; }
+#myUpstreamPage.unified-provider-page > .up-body { display: none; }
 #myUpstreamPage #unifiedProviderManager { display: block; width: 100%; height: calc(100dvh - 5rem); min-height: 480px; border: 0; }
 
 /* page2-step3：标签页和工具栏 */
@@ -10,6 +10,13 @@
   & .up-toolbar-slot > [data-up-off] { visibility: hidden; }
   & .up-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); }
   & .up-search { display: block; inline-size: 280px; }
+  & .up-cell-title { font-weight: 500; color: var(--blora-color-text-primary); }
+  & .up-cell-sub { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+  & .up-mono { font-family: var(--blora-font-mono); }
+  & .up-cell-url { max-inline-size: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  & .up-cell-id { max-inline-size: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+  & .up-cell-desc { inline-size: 100%; contain: inline-size; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  & .up-row-actions { display: flex; gap: var(--blora-space-1); }
   & .up-count { margin-inline-start: auto; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
 }
 

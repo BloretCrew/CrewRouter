@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/my-upstream.css?v=page2-step3c">
+  <link rel="stylesheet" href="/css/my-upstream.css?v=page2-step4c">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=desktop-compact-20261010-sticky1">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
@@ -61,6 +61,7 @@
     })();
   </script>
   <link rel="stylesheet" href="/vendor/blora-2.1.0/blora.css?v=blora-2.1.0">
+  <link rel="stylesheet" href="/vendor/blora-2.1.0/components/spinner/spinner.css?v=blora-2.1.0">
   <link rel="stylesheet" href="/vendor/blora-2.1.0/tokens.dark.css?v=blora-2.1.0">
   <link rel="stylesheet" href="/css/provider-quota-stats.css?v=request-cycles-20261012">
   <link rel="stylesheet" href="/css/quota-cycle-report.css?v=request-cycles-20261012">
@@ -362,11 +363,7 @@
 
       <!-- 我的上游（供应商 + 模型 合并页） -->
       <div id="myUpstreamPage" class="page">
-        <div class="content-section">
-          <div class="section-header">
-            <h2><span data-i18n="我的上游">我的上游</span></h2>
-          </div>
-
+        <div class="up-body">
           <blora-tabs id="myUpstreamTabs" value="providers">
             <blora-tab label="供应商" value="providers" selected>
               <div id="myUpstreamProvidersPane" class="up-pane">
@@ -382,8 +379,8 @@
                     <button type="button" class="blora-button" data-variant="ghost" onclick="app.clearMyUpstreamSelection()">取消选择</button>
                   </div>
                 </div>
-                <div id="myProvidersTable" data-blora-state="loading" class="models-table">
-                  <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
+                <div id="myProvidersTable" data-blora-state="loading">
+                  <div class="blora-table-wrap" data-loading><div class="blora-table-loading"><span class="blora-spinner" role="status" aria-label="加载中"></span></div></div>
                 </div>
               </div>
             </blora-tab>
@@ -405,8 +402,8 @@
                     <button type="button" class="blora-button" data-variant="ghost" onclick="app.clearMyUpstreamSelection()">取消选择</button>
                   </div>
                 </div>
-                <div id="myTeamModelsTable" data-blora-state="loading" class="models-table">
-                  <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
+                <div id="myTeamModelsTable" data-blora-state="loading">
+                  <div class="blora-table-wrap" data-loading><div class="blora-table-loading"><span class="blora-spinner" role="status" aria-label="加载中"></span></div></div>
                 </div>
               </div>
             </blora-tab>
@@ -2313,7 +2310,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page2-step3c"></script>
+  <script src="/js/app.js?v=page2-step4c"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
