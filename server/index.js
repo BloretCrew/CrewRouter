@@ -3040,7 +3040,19 @@ async function runPendingMigrations() {
 
   await require('./utils/model-trace-migration').ensureModelTraceTables(pool);
   await require('./utils/provider-quota-history').importLegacyQuotaHistory(pool);
-  await require('./utils/usage-write-guards').ensureUsageWriteGuards(pool);
+  const writeGuardClient = await pool.connect();
+  try {
+    await writeGuardClient.query('BEGIN');
+    const repairs = await require('./utils/usage-write-guards').ensureUsageWriteGuards(writeGuardClient);
+    await writeGuardClient.query('COMMIT');
+    const restored = repairs.reduce((total, repair) => total + repair.restored.length, 0);
+    if (restored) Logger.info(`[数据库] 已恢复 ${restored} 个非空约束`);
+  } catch (error) {
+    await writeGuardClient.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    writeGuardClient.release();
+  }
   Logger.info('[启动] 数据库迁移完成');
 }
 
