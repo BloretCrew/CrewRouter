@@ -718,7 +718,7 @@ class ConsoleApp {
               <h3 class="api-key-group-title">${title}</h3>
               <p class="api-key-group-hint">${hint}</p>
             </div>
-            <span class="api-key-group-count">${keys.length}</span>
+            <span class="blora-tag api-key-group-count" data-variant="neutral">${keys.length}</span>
           </div>
           <div class="api-keys-list">${keys.map(key => this._renderApiKeyCard(key)).join('')}</div>
         </section>`;
@@ -832,7 +832,8 @@ class ConsoleApp {
   }
 
   _renderApiKeyChip(text, kind = 'muted') {
-    return `<span class="api-key-chip api-key-chip-${kind}">${escapeHtml(text)}</span>`;
+    const variant = { ok: 'success', warn: 'warning', danger: 'danger', info: 'info' }[kind] || 'neutral';
+    return `<span class="blora-tag api-key-chip" data-variant="${variant}">${escapeHtml(text)}</span>`;
   }
 
   _renderApiKeyCard(key) {
@@ -913,7 +914,7 @@ class ConsoleApp {
             <div class="api-key-title-text">
               <div class="api-key-name-row">
                 <span class="api-key-name" data-key-id="${key.id}">${escapeHtml(displayName)}</span>
-                ${/^crewrouter$/i.test(String(key.name || '')) ? '<span class="key-system-badge" title="' + t('系统依赖密钥，不可删除/改名/启停') + '">' + t('系统') + '</span>' : ''}
+                ${/^crewrouter$/i.test(String(key.name || '')) ? '<span class="blora-tag key-system-badge" data-variant="primary" title="' + t('系统依赖密钥，不可删除/改名/启停') + '">' + t('系统') + '</span>' : ''}
                 <div class="api-key-chips">${chips}</div>
                 <span class="api-key-meta-divider" aria-hidden="true"></span>
                 ${this.renderApiKeyTags(key)}
@@ -941,11 +942,11 @@ class ConsoleApp {
           <code class="api-key-value" data-visible="false" data-fullkey="${escapeHtml(fullKey)}"
                 onclick="app.toggleKeyVisibility(this)" title="${t('点击显示/隐藏完整密钥')}">${escapeHtml(maskedKey)}</code>
           ${fullKey ? `<div class="api-key-secret-actions">
-            <button type="button" class="copy-btn" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="${t('显示/隐藏')}">
-              ${this.getSFIcon('eye', 14)}
+            <button type="button" class="blora-button copy-btn" data-variant="ghost" data-size="icon" aria-label="${t('显示/隐藏')}" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="${t('显示/隐藏')}">
+              <span data-icon="eye" aria-hidden="true"></span>
             </button>
-            <button type="button" class="copy-btn" onclick="app.copyFullKey(this.closest('.api-key-prefix').querySelector('.api-key-value').dataset.fullkey, this)" title="${t('复制密钥')}">
-              ${this.getSFIcon('document.on.document', 14)}
+            <button type="button" class="blora-button copy-btn" data-variant="ghost" data-size="sm" onclick="app.copyFullKey(this.closest('.api-key-prefix').querySelector('.api-key-value').dataset.fullkey, this)" title="${t('复制密钥')}">
+              <span data-icon="copy" aria-hidden="true"></span>
               <span>复制</span>
             </button>
           </div>` : ''}
@@ -979,13 +980,13 @@ class ConsoleApp {
     return `
       <div class="api-key-route-pill-wrap">
         <button type="button"
-          class="api-key-route-pill${!hasModel ? ' is-empty' : ''}${hasQueue ? ' has-queue' : ''}"
+          class="blora-button api-key-route-pill${!hasModel ? ' is-empty' : ''}${hasQueue ? ' has-queue' : ''}" data-variant="outline" data-size="sm"
           title="${escapeHtml(title)}"
           onclick="app.showKeyModels(${key.id})"
           ${hoverAttrs}>
           <span class="api-key-route-pill-label">路由</span>
           <span class="api-key-route-pill-model">${escapeHtml(label)}</span>
-          ${hasQueue ? `<span class="api-key-route-pill-count">${queueLen}</span>` : ''}
+          ${hasQueue ? `<span class="blora-tag api-key-route-pill-count" data-variant="neutral">${queueLen}</span>` : ''}
         </button>
       </div>`;
   }
@@ -1842,8 +1843,8 @@ class ConsoleApp {
     if (prefix) {
       const eyeBtn = prefix.querySelector('.copy-btn[title="显示/隐藏"], .copy-btn[data-i18n-title="显示/隐藏"]');
       if (eyeBtn) {
-        const iconName = el.dataset.visible === 'true' ? 'eye.slash' : 'eye';
-        setHTML(eyeBtn, this.getSFIcon(iconName, 14));
+        const iconName = el.dataset.visible === 'true' ? 'eye-off' : 'eye';
+        setHTML(eyeBtn, `<span data-icon="${iconName}" aria-hidden="true"></span>`);
       }
     }
   }
@@ -1869,7 +1870,7 @@ class ConsoleApp {
         const btn = btnEl || event?.target?.closest('.copy-btn');
         if (btn) {
           const origChildren = [...btn.childNodes].map(node => node.cloneNode(true));
-          setHTML(btn, raw(`${this.getSFIcon('checkmark', 14)}${t('已复制')}`));
+          setHTML(btn, raw(`<span data-icon="check" aria-hidden="true"></span><span>${t('已复制')}</span>`));
           setTimeout(() => {
             clearChildren(btn);
             origChildren.forEach(node => btn.appendChild(node.cloneNode(true)));
