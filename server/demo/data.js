@@ -89,12 +89,62 @@ const DEMO_API_KEYS = [
     signature_enabled: false, signature_template: '', swallow_images: false, crewrouter_commands: true, schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: null, schedule_timezone: null,
     total_tokens: 450000, total_cost: 0.92, total_requests: 1500,
     tags: [{ id: 2, name: '测试', color: '#3b82f6' }]
+  },
+  // 以下为 apiKeys 页验收用的演示数据：系统 Key、多标签（+N）、禁用、定时、即将过期、Co-Key，以及足够多的卡片让吸顶栏能滚出
+  {
+    id: 3, name: 'CrewRouter', key_type: 'normal', key_prefix: 'sk-demo-sys', key_value: 'sk-demo-sys-xxxxxxxxxxxx', custom_model_name: '', current_model_id: 'gpt-4.1', current_model_name: 'GPT-4.1',
+    current_model_provider_name: 'OpenAI', is_system: true, enabled: true, signature_enabled: false, signature_template: '', swallow_images: false, crewrouter_commands: true, schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: null, schedule_timezone: null, expires_at: null,
+    created_at: '2025-01-01T00:00:00Z', last_used_at: '2025-06-28T09:00:00Z',
+    total_tokens: 82000, total_cost: 0.31, total_requests: 240, tags: []
+  },
+  {
+    id: 4, name: '多项目共用 Key', key_type: 'normal', key_prefix: 'sk-demo-multi', key_value: 'sk-demo-multi-xxxxxxxxxxx', custom_model_name: '', current_model_id: 'claude-3-5-haiku-20241022', current_model_name: 'Claude 3.5 Haiku',
+    model_queue: [
+      { model_id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', sort_order: 0 },
+      { model_id: 'deepseek-chat', name: 'DeepSeek V3', sort_order: 1 },
+      { model_id: 'gpt-4.1', name: 'GPT-4.1', sort_order: 2 }
+    ],
+    current_model_provider_name: 'Anthropic', is_system: false, enabled: true, signature_enabled: false, signature_template: '', swallow_images: false, crewrouter_commands: true, schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: null, schedule_timezone: null, expires_at: null,
+    created_at: '2025-03-10T08:00:00Z', last_used_at: '2025-06-26T11:00:00Z',
+    total_tokens: 320000, total_cost: 1.12, total_requests: 860,
+    tags: [{ id: 1, name: '生产', color: '#22c55e' }, { id: 2, name: '测试', color: '#3b82f6' }, { id: 3, name: '前端', color: '#a855f7' }, { id: 4, name: '后端', color: '#f59e0b' }, { id: 5, name: '数据分析', color: '#06b6d4' }, { id: 6, name: '实验', color: '#ec4899' }]
+  },
+  {
+    id: 5, name: '已停用的旧 Key', key_type: 'normal', key_prefix: 'sk-demo-old', key_value: 'sk-demo-old-xxxxxxxxxxxx', custom_model_name: '', current_model_id: '', current_model_name: '',
+    current_model_provider_name: '', is_system: false, enabled: false, signature_enabled: false, signature_template: '', swallow_images: false, crewrouter_commands: true, schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: null, schedule_timezone: null, expires_at: null,
+    created_at: '2024-11-02T08:00:00Z', last_used_at: null,
+    total_tokens: 0, total_cost: 0, total_requests: 0, tags: []
+  },
+  {
+    id: 6, name: '工作日定时 Key', key_type: 'normal', key_prefix: 'sk-demo-sched', key_value: 'sk-demo-sched-xxxxxxxxxxx', custom_model_name: '', current_model_id: 'deepseek-reasoner', current_model_name: 'DeepSeek R1',
+    current_model_provider_name: 'DeepSeek', is_system: false, enabled: true, signature_template: '', crewrouter_commands: true,
+    schedule_enabled: true, schedule_on_time: '09:00:00', schedule_off_time: '18:00:00', schedule_days: [1, 2, 3, 4, 5], schedule_timezone: 'Asia/Shanghai',
+    signature_enabled: true, swallow_images: true,
+    expires_at: new Date(Date.now() + 3 * 86400000).toISOString(),
+    created_at: '2025-04-01T08:00:00Z', last_used_at: '2025-06-25T10:00:00Z',
+    total_tokens: 98000, total_cost: 0.4, total_requests: 310, tags: [{ id: 4, name: '后端', color: '#f59e0b' }]
+  },
+  {
+    id: 7, name: '团队共享 Key', key_type: 'co_key', is_co_key: true, is_owner: true, owner: { username: 'Demo User' }, members: [{ id: 11, username: 'alice' }, { id: 12, username: 'bob' }, { id: 13, username: 'carol' }], key_prefix: 'sk-demo-team', key_value: 'sk-demo-team-xxxxxxxxxxxx', custom_model_name: '', current_model_id: 'gpt-4.1', current_model_name: 'GPT-4.1',
+    current_model_provider_name: 'OpenAI', is_system: false, enabled: true, signature_enabled: false, signature_template: '', swallow_images: false, crewrouter_commands: true, schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: null, schedule_timezone: null, expires_at: null,
+    created_at: '2025-05-01T08:00:00Z', last_used_at: '2025-06-28T08:00:00Z',
+    total_tokens: 210000, total_cost: 0.88, total_requests: 540, tags: [{ id: 3, name: '前端', color: '#a855f7' }]
+  },
+  {
+    id: 8, name: '合作方共享给我的 Key', key_type: 'co_key', is_co_key: true, is_owner: false, owner: { username: 'partner_dev' }, key_prefix: 'sk-demo-shared', key_value: '', custom_model_name: '', current_model_id: 'deepseek-chat', current_model_name: 'DeepSeek V3',
+    current_model_provider_name: 'DeepSeek', is_system: false, enabled: true, signature_enabled: false, signature_template: '', swallow_images: false, crewrouter_commands: true, schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: null, schedule_timezone: null, expires_at: null,
+    created_at: '2025-05-20T08:00:00Z', last_used_at: '2025-06-24T08:00:00Z',
+    total_tokens: 56000, total_cost: 0.12, total_requests: 130, tags: []
   }
 ];
 
 const DEMO_KEY_TAGS = [
   { id: 1, name: '生产', color: '#22c55e', sort_order: 0 },
-  { id: 2, name: '测试', color: '#3b82f6', sort_order: 1 }
+  { id: 2, name: '测试', color: '#3b82f6', sort_order: 1 },
+  { id: 3, name: '前端', color: '#a855f7', sort_order: 2 },
+  { id: 4, name: '后端', color: '#f59e0b', sort_order: 3 },
+  { id: 5, name: '数据分析', color: '#06b6d4', sort_order: 4 },
+  { id: 6, name: '实验', color: '#ec4899', sort_order: 5 }
 ];
 
 const DEMO_PROVIDER_TAGS = [
@@ -476,7 +526,7 @@ module.exports = {
     return {
       users: 4,
       models: DEMO_MODELS.length,
-      apiKeys: 2,
+      apiKeys: DEMO_API_KEYS.length,
       daily,
       byModel: [
         { model_id: 'gpt-4.1', model_name: 'GPT-4.1', requests: 3800, tokens: 1900000, cached_tokens: 380000, cost: 6.65 },
