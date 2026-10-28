@@ -44,6 +44,34 @@
   #apiKeysPage .ak-overview { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* apiKeys step4c：分组与 Key 卡片排版（组件内部不覆盖） */
+#apiKeysPage {
+  & .api-key-groups { display: flex; flex-direction: column; gap: var(--blora-space-6); }
+  & .api-key-group { display: flex; flex-direction: column; gap: var(--blora-space-3); }
+  & .api-key-group-header { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); }
+  & .api-key-group-title { margin: 0; font-size: var(--blora-text-base); color: var(--blora-color-text-primary); }
+  & .api-key-group-hint { margin: 0; font-size: var(--blora-text-sm); color: var(--blora-color-text-muted); }
+  & .api-keys-list { display: flex; flex-direction: column; gap: var(--blora-space-3); }
+  & .api-key-card { display: flex; flex-direction: column; gap: var(--blora-space-3); }
+  & .api-key-title { display: flex; align-items: flex-start; gap: var(--blora-space-2); }
+  & .api-key-drag-handle { cursor: grab; color: var(--blora-color-text-muted); }
+  & .api-key-title-text { display: flex; flex-direction: column; gap: var(--blora-space-1); min-inline-size: 0; flex: 1; }
+  & .api-key-name-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); min-inline-size: 0; }
+  & .api-key-name { font-size: var(--blora-text-base); color: var(--blora-color-text-primary); }
+  & .api-key-chips { display: flex; flex-wrap: wrap; gap: var(--blora-space-1); }
+  & .api-key-meta-divider { align-self: stretch; inline-size: 1px; background: var(--blora-color-border-subtle); }
+  & .api-key-subline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-1); font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+  & .api-key-metrics { display: inline-flex; gap: var(--blora-space-2); }
+  & .api-key-metric b { color: var(--blora-color-text-primary); }
+  & .api-key-prefix { display: flex; align-items: center; gap: var(--blora-space-2); padding: var(--blora-space-2) var(--blora-space-3); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-sunken); }
+  & .api-key-value { flex: 1; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--blora-font-mono); font-size: var(--blora-text-sm); cursor: pointer; }
+  & .api-key-secret-actions { display: flex; gap: var(--blora-space-1); }
+  & .api-key-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--blora-space-2); }
+  & .api-key-actions { display: flex; align-items: center; gap: var(--blora-space-2); }
+  & .api-key-route-pill-label { color: var(--blora-color-text-muted); }
+  & .api-key-route-pill-model { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-inline-size: 24ch; }
+}
+
 /* 挂在 body 上的浮层：用 fixed 定位，坐标由 JS 写入 */
 .api-key-tags-overflow-popover,
 .api-key-tag-assign-dropdown,
