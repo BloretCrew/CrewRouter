@@ -165,6 +165,38 @@ router.get('/stats/filters', (req, res) => {
   res.json(data.statsFilters());
 });
 
+// demo 接口缺路由：多维分析（返回结构与 server/utils/multi-dimension-stats.js 一致，示例数据）
+router.get('/stats/multi-dimension', (req, res) => {
+  const ALLOWED = ['project', 'source', 'model', 'provider', 'key', 'user', 'team'];
+  const raw = req.query.dimensions === undefined ? 'model' : String(req.query.dimensions);
+  const dimensions = raw.split(',').map(d => d.trim());
+  if (!dimensions.length || new Set(dimensions).size !== dimensions.length || dimensions.some(d => !ALLOWED.includes(d))) return res.status(400).json({ error: '无效的分析维度' });
+  const metric = req.query.metric === undefined ? 'requests' : req.query.metric;
+  if (!['requests', 'tokens', 'cost'].includes(metric)) return res.status(400).json({ error: '无效的统计指标' });
+  const stats = data.stats(req.query);
+  const total = stats.summary || {};
+  const share = (list, key) => { const sum = list.reduce((a, r) => a + (Number(r[key]) || 0), 0) || 1; return list.map(r => (Number(r[key]) || 0) / sum); };
+  const fromRows = (list, value, name) => { const w = share(list, 'requests'); return list.map((r, i) => ({ value: r[value], name: r[name], w: w[i] })).filter(o => o.w > 0); };
+  const options = {
+    model: fromRows(stats.byModel || [], 'model_id', 'model_name'),
+    source: fromRows((stats.bySource || []).filter(r => r.requests > 0), 'request_source', 'request_source'),
+    key: fromRows(stats.byApiKey || [], 'key_id', 'key_name'),
+    provider: [{ value: 'openai', name: 'OpenAI', w: 0.5 }, { value: 'anthropic', name: 'Anthropic', w: 0.35 }, { value: 'deepseek', name: 'DeepSeek', w: 0.15 }],
+    project: [{ value: '/workspace/crewrouter', name: '/workspace/crewrouter', w: 0.52 }, { value: '/workspace/plugin-lab', name: '/workspace/plugin-lab', w: 0.31 }, { value: '__unknown__', name: '未识别项目', w: 0.17 }],
+    user: [{ value: 1, name: 'Demo User', w: 1 }],
+    team: [{ value: 1, name: 'Demo Team', w: 1 }],
+  };
+  let combos = [{ labels: [], values: [], w: 1 }];
+  dimensions.forEach(d => { combos = combos.flatMap(c => options[d].map(o => ({ labels: [...c.labels, o.name], values: [...c.values, o.value], w: c.w * o.w }))); });
+  const rows = combos.map(c => ({
+    labels: c.labels, values: c.values,
+    requests: Math.round((total.total_requests || 0) * c.w),
+    tokens: Math.round((total.total_tokens || 0) * c.w),
+    cost: parseFloat(((total.total_cost || 0) * c.w).toFixed(6)),
+  })).filter(r => r.requests > 0).sort((a, b) => b[metric] - a[metric]).slice(0, 30);
+  res.json({ dimensions, metric, rows });
+});
+
 router.get('/stats/multi/filters', (req, res) => {
   const filters = data.statsFilters();
   res.json({ users: data.adminUsers().map(u => ({ id: u.id, name: u.username })), teams: data.adminTeams().map(t => ({ id: t.id, name: t.name })), groups: data.adminGroups().map(g => ({ id: g.id, name: g.name })), models: filters.models.map(m => ({ id: m.model_id, name: m.name })), providers: filters.providers.map(p => ({ id: p.provider_id, name: p.name })), sources: ['codex', 'claude_code', 'opencode', 'qwen_code'].map(id => ({ id, name: id })), projects: [{ id: '/workspace/crewrouter', name: '/workspace/crewrouter' }, { id: '/workspace/plugin-lab', name: '/workspace/plugin-lab' }] });
@@ -550,6 +582,22 @@ router.get('/models/:id/uptime', (req, res) => {
 
 // 全局使用记录
 router.get('/usage-logs', (req, res) => res.json(data.usageLogs(parseInt(req.query.page, 10) || 1, parseInt(req.query.limit, 10) || 50)));
+// demo 接口缺路由：导出调用记录 CSV（列与真实 /api/user/usage-logs/export 一致，内容为示例数据）
+router.get('/usage-logs/export', (req, res) => {
+  const { sourceLabel } = require('../utils/request-source');
+  const { formatShanghaiDateTime } = require('../utils/timezone');
+  // 和真实接口的 csvEscapeUser 一致：以 = + @ - 开头的字符串前加 ' 防公式注入
+  const esc = (v) => { if (v == null) return ''; let str = String(v); if (typeof v === 'string' && /^[\s]*[=+@-]/.test(str)) str = `'${str}`; return /[",\n\r]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str; };
+  const header = ['时间', '模型', '上游模型ID', '系列', '供应商', 'Key前缀', 'Key名称', '请求类型', '客户端', '总Token', '输入Token', '输出Token', '缓存Token', '积分', '延迟ms', '流式', 'TTFTms', 'TPOTms', '输出TPS', 'E2Ems', '上游处理ms', '服务层级', 'IP', '客户端请求模型', '路由模型', '上游响应模型'];
+  const logs = data.usageLogs(1, 50).logs;
+  const lines = [header.join(',')].concat(logs.map(l => [
+    formatShanghaiDateTime(l.created_at), l.model_name, l.model_id, l.series, l.provider_name, l.key_prefix, l.key_name, l.request_type, sourceLabel(l.request_source),
+    l.tokens_used, l.prompt_tokens, l.completion_tokens, l.cached_tokens, l.cost, l.latency_ms, l.is_stream ? '是' : '否', l.ttft_ms, l.tpot_ms, l.output_tps, l.e2e_ms, l.upstream_processing_ms, l.service_tier, l.ip_address, '', '', ''
+  ].map(esc).join(',')));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="my-usage-logs-${formatShanghaiDateTime(new Date()).replace(/[: ]/g, '-')}.csv"`);
+  res.send('\ufeff' + lines.join('\n'));
+});
 router.get('/usage-logs/:id', (req, res) => {
   const log = data.usageLogDetail(parseInt(req.params.id, 10));
   if (!log) return res.status(404).json({ error: '记录不存在' });
