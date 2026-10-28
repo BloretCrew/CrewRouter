@@ -1,9 +1,14 @@
 /* Blora dialog migration for API Key client configuration flows. */
 #configToolSelectModal .modal-content,
 #ccSwitchSubmenuModal .modal-content,
+#ccSwitchResultModal .modal-content {
+  width: min(92vw, 700px);
+}
+
+#configToolSelectModal .modal-content,
+#ccSwitchSubmenuModal .modal-content,
 #ccSwitchResultModal .modal-content,
 #configOutputModal .modal-content {
-  width: min(92vw, 700px);
   max-height: min(88dvh, 760px);
   overflow: hidden;
   border: 0;
@@ -142,8 +147,7 @@
 
 #configToolSelectModal::part(panel),
 #ccSwitchSubmenuModal::part(panel),
-#ccSwitchResultModal::part(panel),
-#configOutputModal::part(panel) {
+#ccSwitchResultModal::part(panel) {
   max-width: min(44rem, calc(100vw - 2 * var(--blora-space-4))) !important;
 }
 

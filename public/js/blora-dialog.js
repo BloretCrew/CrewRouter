@@ -53,7 +53,8 @@ const Dialog = (() => {
       if (panel) {
         panel.style.setProperty('display', 'flex', 'important');
         panel.style.setProperty('flex-direction', 'column', 'important');
-        panel.style.maxWidth = 'none';
+        // 带 size 的旧版弹窗交给组件尺寸（sm 400 / lg 800）
+        if (!dialog.hasAttribute('size')) panel.style.maxWidth = 'none';
         panel.style.width = '100%';
         panel.style.background = 'transparent';
         panel.style.boxShadow = 'none';
@@ -102,10 +103,11 @@ const Dialog = (() => {
     scope.querySelectorAll('blora-dialog').forEach(prepareLegacyDialog);
   }
 
-  function createDialog({ title, content, footer, width, closeOnOutsideClick = true }) {
+  function createDialog({ title, content, footer, width, size, closeOnOutsideClick = true }) {
     const dialog = document.createElement('blora-dialog');
     dialog.id = `blora-dialog-${Date.now()}-${++sequence}`;
     dialog.setAttribute('close-on-outside-click', closeOnOutsideClick ? 'true' : 'false');
+    if (size) dialog.setAttribute('size', size);
     if (width) dialog.style.setProperty('--blora-dialog-max-width', typeof width === 'number' ? `${width}px` : width);
 
     const titleNode = document.createElement('span');
@@ -139,14 +141,14 @@ const Dialog = (() => {
     return remove;
   }
 
-  function render({ title, message, confirmText = t('确认'), cancelText = t('取消'), showCancel = true, danger = false }) {
+  function render({ title, message, confirmText = t('确认'), cancelText = t('取消'), showCancel = true, danger = false, size }) {
     return new Promise((resolve) => {
       const footer = `${showCancel ? `<button type="button" class="blora-button" data-variant="outline" data-dialog-cancel>${cancelText}</button>` : ''}<button type="button" class="blora-button" data-variant="${danger ? 'danger' : 'primary'}" data-dialog-confirm>${confirmText}</button>`;
       const dialog = createDialog({
         title: t('提示'),
         content: title && message ? `<strong>${title}</strong><br>${message}` : title,
         footer,
-        width: 400,
+        ...(size ? { size } : { width: 400 }),
       });
       let settled = false;
       const finish = (value) => {
@@ -170,7 +172,7 @@ const Dialog = (() => {
   }
 
   function confirm(title, message, options = {}) {
-    return render({ title, message, confirmText: options.confirmText || t('确认'), cancelText: options.cancelText || t('取消'), showCancel: true, danger: options.danger || false });
+    return render({ title, message, confirmText: options.confirmText || t('确认'), cancelText: options.cancelText || t('取消'), showCancel: true, danger: options.danger || false, size: options.size });
   }
 
   function showModal({ title, content, footer, width }) {

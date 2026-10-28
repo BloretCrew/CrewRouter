@@ -439,6 +439,10 @@ class ConsoleApp {
       if (!testedAt || badge.getAttribute('title')) return;
       badge.setAttribute('title', this._formatTestTooltip(testedAt));
     });
+    document.getElementById('ccsStyleSegment')?.addEventListener('blora-change', (e) => {
+      const value = e.detail?.value;
+      if (value && value !== this._ccsStyle) this._setCcsStyle(value);
+    });
     document.getElementById('keyModelsContent')?.addEventListener('mouseover', (e) => {
       const badge = e.target.closest('.model-test-badge');
       if (!badge) return;
@@ -1237,70 +1241,66 @@ class ConsoleApp {
     // 拖拽模式下无需点击选中，保留为 noop
   }
 
-  _openKeyTagPopover(btnEl, { title, name, color, submitLabel, onSubmit }) {
-    const pop = document.getElementById('createKeyTagPopover');
-    if (!pop) return;
+  _openKeyTagPopover(btnEl, { title, name, color, editing = false }) {
+    const dialog = document.getElementById('createKeyTagPopover');
+    if (!dialog) return;
     const titleEl = document.getElementById('keyTagPopoverTitle');
-    const submitBtn = document.getElementById('keyTagPopoverSubmit');
-    if (titleEl) titleEl.textContent = title || t('创建标签');
-    if (submitBtn) {
-      submitBtn.textContent = submitLabel || t('创建');
-      submitBtn.onclick = onSubmit;
-    }
+    if (titleEl) titleEl.textContent = title || t('新建标签');
+    const deleteBtn = document.getElementById('keyTagDeleteBtn');
+    if (deleteBtn) deleteBtn.style.display = editing ? '' : 'none';
     document.getElementById('createKeyTagName').value = name || '';
-    document.querySelectorAll('#createKeyTagColors .color-dot').forEach(d => {
-      d.classList.toggle('selected', d.dataset.color === (color || 'var(--info)'));
-    });
-    if (!document.querySelector('#createKeyTagColors .color-dot.selected')) {
-      document.querySelector('#createKeyTagColors .color-dot')?.classList.add('selected');
-    }
-    const rect = btnEl.getBoundingClientRect();
-    pop.style.top = (rect.bottom + 8) + 'px';
-    pop.style.left = Math.max(8, rect.left - 80) + 'px';
-    pop.style.display = 'block';
+    const radios = Array.from(document.querySelectorAll('#createKeyTagColors input[type="radio"]'));
+    const match = radios.find(r => r.value === (color || 'var(--info)')) || radios[0];
+    if (match) match.checked = true;
+    this.updateKeyTagPreview();
+    this.showModal('createKeyTagPopover');
     setTimeout(() => document.getElementById('createKeyTagName').focus(), 100);
   }
 
   showCreateKeyTagPopover(btnEl) {
     this._editingKeyTagId = null;
-    this._openKeyTagPopover(btnEl, {
-      title: t('创建标签'),
-      name: '',
-      color: 'var(--info)',
-      submitLabel: t('创建'),
-      onSubmit: () => app.saveKeyTag()
-    });
+    this._openKeyTagPopover(btnEl, { title: t('新建标签'), name: '', color: 'var(--info)' });
   }
 
   showEditKeyTagPopover(tagId, btnEl) {
     const tag = (this._keyTags || []).find(t => Number(t.id) === Number(tagId));
     if (!tag) return;
     this._editingKeyTagId = Number(tagId);
-    this._openKeyTagPopover(btnEl, {
-      title: t('编辑标签'),
-      name: tag.name || '',
-      color: tag.color || 'var(--info)',
-      submitLabel: t('保存'),
-      onSubmit: () => app.saveKeyTag()
-    });
+    this._openKeyTagPopover(btnEl, { title: t('编辑标签'), name: tag.name || '', color: tag.color || 'var(--info)', editing: true });
   }
 
   hideCreateKeyTagPopover() {
     this._editingKeyTagId = null;
-    const pop = document.getElementById('createKeyTagPopover');
-    if (pop) pop.style.display = 'none';
+    document.getElementById('createKeyTagPopover')?.close?.();
+  }
+
+  async deleteEditingKeyTag() {
+    const id = this._editingKeyTagId;
+    if (!id) return;
+    this.hideCreateKeyTagPopover();
+    await this.deleteKeyTag(id);
+  }
+
+  updateKeyTagPreview() {
+    const name = document.getElementById('createKeyTagName')?.value.trim() || t('标签名称');
+    const color = document.querySelector('#createKeyTagColors input[type="radio"]:checked')?.value || 'var(--info)';
+    const chip = document.getElementById('keyTagPreview');
+    if (!chip) return;
+    chip.style.borderColor = safeColor(color);
+    document.getElementById('keyTagPreviewDot').style.color = safeColor(color);
+    document.getElementById('keyTagPreviewName').textContent = name;
   }
 
   selectTagColor(el) {
-    document.querySelectorAll('#createKeyTagColors .color-dot').forEach(d => d.classList.remove('selected'));
-    el.classList.add('selected');
+    const input = el?.querySelector?.('input[type="radio"]') || el;
+    if (input) input.checked = true;
   }
 
   async saveKeyTag() {
     const name = document.getElementById('createKeyTagName').value.trim();
     if (!name) { this.showToast(t('请输入标签名称'), 'error'); return; }
-    const colorEl = document.querySelector('#createKeyTagColors .color-dot.selected');
-    const color = colorEl ? colorEl.dataset.color : 'var(--info)';
+    const colorEl = document.querySelector('#createKeyTagColors input[type="radio"]:checked');
+    const color = colorEl ? colorEl.value : 'var(--info)';
     const editingId = this._editingKeyTagId;
     try {
       const res = editingId
@@ -1341,7 +1341,7 @@ class ConsoleApp {
   }
 
   async deleteKeyTag(tagId) {
-    if (!await confirm(t('确定删除此标签？将从所有 API Key 上移除。'))) return;
+    if (!await Dialog.confirm(t('删除标签'), t('确定删除此标签？将从所有 API Key 上移除。'), { danger: true, size: 'sm', confirmText: t('删除') })) return;
     try {
       const res = await fetch('/api/user/key-tags/' + tagId, { method: 'DELETE' });
       if (!res.ok) { this.showToast(t('删除失败'), 'error'); return; }
@@ -1789,7 +1789,7 @@ class ConsoleApp {
   }
 
   async removeTagFromKey(keyId, tagId) {
-    if (!await confirm(t('确定移除此标签？'))) return;
+    if (!await Dialog.confirm(t('移除标签'), t('确定移除此标签？'), { danger: true, size: 'sm', confirmText: t('移除') })) return;
     try {
       const tid = Number(tagId);
       const newTagIds = this._getKeyTagIds(keyId).filter(id => id !== tid);
@@ -7548,7 +7548,7 @@ class ConsoleApp {
   }
 
   async removeKeyMember(userId) {
-    if (!await confirm(t('确定移除此共同成员？'))) return;
+    if (!await Dialog.confirm(t('移除成员'), t('确定移除此共同成员？'), { danger: true, size: 'sm', confirmText: t('移除') })) return;
     try {
       const res = await fetch(`/api/user/api-keys/${this._currentMembersKeyId}/members/${userId}`, { method: 'DELETE' });
       const data = await res.json();
@@ -7613,7 +7613,7 @@ class ConsoleApp {
   }
 
   async leaveCoKey(keyId) {
-    const confirmed = await confirm(t('退出后将立即失去此 Co-Key 的查看、复制和配置权限。若要重新加入，必须由发起者再次邀请。确定退出吗？'));
+    const confirmed = await Dialog.confirm(t('退出 Co-Key'), t('退出后将立即失去此 Co-Key 的查看、复制和配置权限。若要重新加入，必须由发起者再次邀请。确定退出吗？'), { danger: true, size: 'sm', confirmText: t('退出') });
     if (!confirmed) return;
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/members/me`, { method: 'DELETE' });
@@ -7636,7 +7636,7 @@ class ConsoleApp {
   }
 
   async deleteApiKey(id) {
-    if (!await confirm(t('确定要删除此 API 密钥吗？此操作不可撤销。'))) return;
+    if (!await Dialog.confirm(t('删除 API Key'), t('确定要删除此 API 密钥吗？此操作不可撤销。'), { danger: true, size: 'sm', confirmText: t('删除') })) return;
     try {
       const res = await fetch(`/api/user/api-keys/${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
@@ -7966,6 +7966,8 @@ class ConsoleApp {
 
       this.rebuildUsageScript();
       this.showModal('usageScriptModal');
+      // 分段控件在隐藏弹窗里量不到宽度，打开后触发一次重算指示条位置
+      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     } catch (e) {
       alert(t('生成脚本失败: ') + e.message);
     }
@@ -7973,10 +7975,10 @@ class ConsoleApp {
 
   _setCcsStyle(style) {
     this._ccsStyle = style;
-    document.querySelectorAll('#ccsStyleSegment .ccs-segment-item').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.value === style);
-    });
-    document.getElementById('ccsBarOptions').style.display = style === 'bar' ? 'block' : 'none';
+    const seg = document.getElementById('ccsStyleSegment');
+    if (seg && seg.value !== style) seg.querySelector(`.blora-segmented__item[data-value="${style}"]`)?.click();
+    const barOptions = document.getElementById('ccsBarOptions');
+    if (barOptions) barOptions.hidden = style !== 'bar';
     this.rebuildUsageScript();
   }
 

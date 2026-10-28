@@ -1633,29 +1633,6 @@ pre {
   background: rgba(239, 68, 68, 0.25);
 }
 
-.key-tag-popover {
-  position: fixed;
-  z-index: 200;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  padding: 14px;
-  min-width: 240px;
-}
-
-.key-tag-popover-arrow {
-  position: absolute;
-  top: -6px;
-  left: 40px;
-  width: 12px;
-  height: 12px;
-  background: var(--card);
-  border-left: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-  transform: rotate(45deg);
-}
-
 .color-picker {
   display: flex;
   gap: 6px;

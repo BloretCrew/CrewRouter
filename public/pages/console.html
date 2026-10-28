@@ -21,8 +21,8 @@
   <script type="module" src="/vendor/blora-2.1.0/auto.js?v=blora-2.1.0"></script>
   <script type="module">import { hydrateIcons } from "/vendor/blora-2.1.0/index.js?v=blora-2.1.0"; import "/vendor/blora-2.1.0/icons-full.js?v=blora-2.1.0"; window.bloraHydrateIcons = hydrateIcons; const mlPage = document.getElementById("modelLibraryPage"); if (mlPage) { hydrateIcons(mlPage); new MutationObserver(() => hydrateIcons(mlPage)).observe(mlPage, { childList: true, subtree: true }); }</script>
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
-  <script src="/js/blora-dialog.js?v=restore-0930-20261003"></script>
-  <link rel="stylesheet" href="/css/themes.css?v=page3-step2a">
+  <script src="/js/blora-dialog.js?v=page3-step2b"></script>
+  <link rel="stylesheet" href="/css/themes.css?v=page3-step2b-r2">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
@@ -31,12 +31,12 @@
   <link rel="stylesheet" href="/css/console-blora.css?v=usage-table-widths-20261008">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/sliders-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step2a">
+  <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
-  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step2a">
-  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
+  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step2b-r4">
+  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
@@ -480,31 +480,6 @@
           <div id="apiKeysStickySentinel" class="model-library-sticky-sentinel" aria-hidden="true"></div>
 
           <!-- 创建/编辑标签浮层 -->
-          <div id="createKeyTagPopover" class="key-tag-popover" style="display:none;">
-            <div class="key-tag-popover-arrow"></div>
-            <div class="key-tag-popover-content">
-              <div id="keyTagPopoverTitle" style="font-weight:600;font-size:13px;margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>
-              <input type="text" id="createKeyTagName" class="blora-input input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="width:100%;margin-bottom:10px;" maxlength="20">
-              <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:6px;"><span data-i18n="选择颜色">选择颜色</span></div>
-              <div class="color-picker color-picker-row" id="createKeyTagColors">
-                <div class="color-dot selected" data-color="var(--info)" style="background:var(--info);" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--success)" style="background:var(--success);" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--warning)" style="background:var(--warning);" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--danger)" style="background:var(--danger);" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--purple)" style="background:var(--purple);" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--pink)" style="background:var(--pink);" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--cyan)" style="background:var(--cyan);" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#f97316" style="background:#f97316;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#84cc16" style="background:#84cc16;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#6366f1" style="background:#6366f1;" onclick="app.selectTagColor(this)"></div>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:12px;">
-                <button type="button" class="blora-button" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;" data-variant="primary" data-size="sm"><span data-i18n="创建">创建</span></button>
-                <button type="button" class="blora-button" onclick="app.hideCreateKeyTagPopover()" data-variant="secondary" data-size="sm"><span data-i18n="取消">取消</span></button>
-              </div>
-            </div>
-          </div>
-
           <div id="apiKeysList" data-blora-state="loading" class="api-keys-list"></div>
     </div>
 
@@ -1781,8 +1756,8 @@
   </blora-dialog>
 
   <!-- API密钥模型管理模态框（支持有序模型队列） -->
-  <blora-dialog id="keyModelsModal" role="dialog" aria-modal="true" aria-labelledby="keyModelsTitle">
-    <div id="keyModelsModalContent" class="blora-dialog__panel modal-content" style="max-width:720px;">
+  <blora-dialog id="keyModelsModal" size="lg" role="dialog" aria-modal="true" aria-labelledby="keyModelsTitle">
+    <div id="keyModelsModalContent" class="blora-dialog__panel modal-content">
       <div class="modal-header">
         <h3 id="keyModelsTitle"><span data-i18n="管理可用模型">管理可用模型</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
@@ -2100,8 +2075,8 @@
       </div>
     </div>
   </blora-dialog>
-  <blora-dialog id="configOutputModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:700px;">
+  <blora-dialog id="configOutputModal" size="lg" role="dialog" aria-modal="true">
+    <div class="modal-content">
       <div class="modal-header">
         <h3 id="configOutputTitle"><span data-i18n="配置">配置</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
@@ -2128,92 +2103,99 @@
     </div>
   </blora-dialog>
 
-  <!-- cc-switch 额度查询脚本模态框 -->
-  <blora-dialog id="usageScriptModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:760px;">
-      <div class="modal-header">
-        <h3><span data-i18n="cc-switch 额度查询脚本">cc-switch 额度查询脚本</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
+  <!-- 新建/编辑标签弹窗 -->
+  <blora-dialog id="createKeyTagPopover" size="sm">
+    <span slot="title" id="keyTagPopoverTitle"><span data-i18n="新建标签">新建标签</span></span>
+    <div class="ak-dialog-stack">
+      <div class="blora-field">
+        <label class="blora-field__label" for="createKeyTagName"><span data-i18n="标签名称">标签名称</span></label>
+        <input type="text" id="createKeyTagName" class="blora-input" placeholder="标签名称" data-i18n-placeholder="标签名称" maxlength="20" oninput="app.updateKeyTagPreview()">
       </div>
-      <div class="modal-body">
-        <p style="color:var(--muted-foreground);margin-bottom:20px;font-size:13px;"><span data-i18n="自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。">
-          自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。
-        </span></p>
-        <div class="ccs-options-grid">
-          <div class="ccs-option-group">
-            <div class="ccs-option-title"><span data-i18n="Extra 行字段">Extra 行字段</span></div>
-            <div class="ccs-toggle-row" onclick="this.querySelector('input').click()">
-              <span class="ccs-toggle-label"><span data-i18n="余额">余额</span></span>
-              <label class="toggle-switch" onclick="event.stopPropagation()">
-                <input type="checkbox" id="ccsShowBalance" checked onchange="app.rebuildUsageScript()">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="ccs-toggle-row" onclick="this.querySelector('input').click()">
-              <span class="ccs-toggle-label"><span data-i18n="额外额度规则">额外额度规则</span></span>
-              <label class="toggle-switch" onclick="event.stopPropagation()">
-                <input type="checkbox" id="ccsShowGroupRules" checked onchange="app.rebuildUsageScript()">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="ccs-toggle-row" onclick="this.querySelector('input').click()">
-              <span class="ccs-toggle-label"><span data-i18n="总用量统计">总用量统计</span></span>
-              <label class="toggle-switch" onclick="event.stopPropagation()">
-                <input type="checkbox" id="ccsShowTotalUsage" checked onchange="app.rebuildUsageScript()">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-          <div class="ccs-option-group">
-            <div class="ccs-option-title"><span data-i18n="显示样式">显示样式</span></div>
-            <div class="ccs-segment" id="ccsStyleSegment">
-              <button type="button" class="ccs-segment-item active" data-value="compact" onclick="app._setCcsStyle('compact')"><span data-i18n="紧凑">紧凑</span></button>
-              <button type="button" class="ccs-segment-item" data-value="bar" onclick="app._setCcsStyle('bar')"><span data-i18n="进度条">进度条</span></button>
-            </div>
-            <div id="ccsBarOptions" style="display:none;margin-top:12px;">
-              <div class="ccs-option-title"><span data-i18n="进度条长度">进度条长度</span></div>
-              <div class="ccs-slider-wrap">
-                <input type="range" class="ccs-slider" id="ccsBarLength" min="6" max="20" value="12" oninput="document.getElementById('ccsBarLenVal').textContent=this.value;app.rebuildUsageScript();">
-                <span class="ccs-slider-value" id="ccsBarLenVal">12</span>
-              </div>
-            </div>
-            <div style="margin-top:16px;">
-              <div class="ccs-option-title"><span data-i18n="Plan 名称">Plan 名称</span></div>
-              <div class="ccs-toggle-row" onclick="this.querySelector('input').click()" style="padding:8px 0;">
-                <span class="ccs-toggle-label"><span data-i18n="显示用户名">显示用户名</span></span>
-                <label class="toggle-switch" onclick="event.stopPropagation()">
-                  <input type="checkbox" id="ccsShowUsername" checked onchange="app.rebuildUsageScript()">
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-            <div style="margin-top:12px;">
-              <div class="ccs-option-title"><span data-i18n="说明">说明</span></div>
-              <p style="font-size:12px;color:var(--muted-foreground);line-height:1.6;margin:0;"><span data-i18n="主进度条由 cc-switch 根据">
-                主进度条由 cc-switch 根据 </span><code style="background:var(--muted);padding:1px 5px;border-radius:4px;font-size:11px;">total</code> / <code style="background:var(--muted);padding:1px 5px;border-radius:4px;font-size:11px;">used</code> / <code style="background:var(--muted);padding:1px 5px;border-radius:4px;font-size:11px;">remaining</code><span data-i18n="自动渲染。"> 自动渲染。</span><br><span data-i18n="以下配置控制">
-                以下配置控制 </span><code style="background:var(--muted);padding:1px 5px;border-radius:4px;font-size:11px;">extra</code><span data-i18n="行显示内容（单行，超出截断）。"> 行显示内容（单行，超出截断）。
-              </span></p>
-            </div>
+      <fieldset class="blora-fieldset">
+        <legend class="blora-fieldset__legend"><span data-i18n="选择颜色">选择颜色</span></legend>
+        <div class="ak-tag-radios" id="createKeyTagColors" role="radiogroup" onchange="app.updateKeyTagPreview()">
+          <blora-radio name="createKeyTagColor" value="var(--info)" label="蓝" data-i18n-label="蓝" checked></blora-radio>
+          <blora-radio name="createKeyTagColor" value="var(--success)" label="绿" data-i18n-label="绿"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="var(--warning)" label="黄" data-i18n-label="黄"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="var(--danger)" label="红" data-i18n-label="红"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="var(--purple)" label="紫" data-i18n-label="紫"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="var(--pink)" label="粉" data-i18n-label="粉"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="var(--cyan)" label="青" data-i18n-label="青"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="#f97316" label="橙" data-i18n-label="橙"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="#84cc16" label="青柠" data-i18n-label="青柠"></blora-radio>
+          <blora-radio name="createKeyTagColor" value="#6366f1" label="靛" data-i18n-label="靛"></blora-radio>
+        </div>
+        <div class="ak-tag-preview">
+          <span class="ak-tag-preview__label"><span data-i18n="预览">预览</span></span>
+          <div class="key-tag-chip" id="keyTagPreview"><span id="keyTagPreviewDot">●</span> <span id="keyTagPreviewName"></span></div>
+        </div>
+      </fieldset>
     </div>
-        </div>
-        <!-- 实时预览 -->
-        <div style="margin-bottom:20px;">
-          <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:12px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:0.5px;"><span data-i18n="效果预览">效果预览</span></span>
-            <span style="font-size:11px;color:var(--muted-foreground);"><span data-i18n="模拟 cc-switch 显示效果">模拟 cc-switch 显示效果</span></span>
+    <div slot="footer" class="ak-tag-dialog-footer">
+      <button type="button" id="keyTagDeleteBtn" class="blora-button" data-variant="danger" style="display:none" onclick="app.deleteEditingKeyTag()"><span data-i18n="删除">删除</span></button>
+      <div class="ak-tag-dialog-footer__end">
+        <button type="button" class="blora-button" data-variant="secondary" onclick="app.hideCreateKeyTagPopover()"><span data-i18n="取消">取消</span></button>
+        <button type="button" class="blora-button" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" data-variant="primary"><span data-i18n="保存">保存</span></button>
+      </div>
+    </div>
+  </blora-dialog>
+
+  <!-- cc-switch 额度查询脚本模态框 -->
+  <blora-dialog id="usageScriptModal" size="lg" role="dialog" aria-modal="true">
+    <span slot="title"><span data-i18n="cc-switch 额度查询脚本">cc-switch 额度查询脚本</span></span>
+    <div class="ccs-stack">
+      <p class="ccs-note"><span data-i18n="自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。">自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。</span></p>
+      <div class="ccs-options-grid">
+        <fieldset class="blora-fieldset">
+          <legend class="blora-fieldset__legend"><span data-i18n="Extra 行字段">Extra 行字段</span></legend>
+          <div class="ccs-switch-list">
+            <blora-switch id="ccsShowBalance" checked label="余额" data-i18n-label="余额" onchange="app.rebuildUsageScript()"></blora-switch>
+            <blora-switch id="ccsShowGroupRules" checked label="额外额度规则" data-i18n-label="额外额度规则" onchange="app.rebuildUsageScript()"></blora-switch>
+            <blora-switch id="ccsShowTotalUsage" checked label="总用量统计" data-i18n-label="总用量统计" onchange="app.rebuildUsageScript()"></blora-switch>
           </div>
-          <div id="ccsPreview" style="background:var(--foreground);color:var(--background);border-radius:14px;padding:20px 24px;font-family:'SF Mono','Fira Code',monospace;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-all;min-height:80px;"></div>
-        </div>
-        <!-- 脚本输出 -->
-        <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:0.5px;"><span data-i18n="生成的脚本（可直接编辑）">生成的脚本（可直接编辑）</span></span>
-          <span id="ccsLineCount" style="font-size:12px;color:var(--muted-foreground);"></span>
-        </div>
-        <textarea id="usageScriptOutput" class="blora-input input" rows="20" style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;line-height:1.5;"></textarea>
+        </fieldset>
+        <fieldset class="blora-fieldset ccs-style-fieldset">
+          <legend class="blora-fieldset__legend"><span data-i18n="显示样式">显示样式</span></legend>
+          <div class="ccs-switch-list">
+            <blora-segmented id="ccsStyleSegment" value="compact">
+              <blora-segment value="compact" label="紧凑"></blora-segment>
+              <blora-segment value="bar" label="进度条"></blora-segment>
+            </blora-segmented>
+            <div id="ccsBarOptions" class="blora-field" hidden>
+              <label class="blora-field__label" for="ccsBarLength"><span data-i18n="进度条长度">进度条长度</span></label>
+              <blora-slider id="ccsBarLength" class="ccs-slider-row" min="6" max="20" value="12" oninput="app.rebuildUsageScript()"></blora-slider>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="blora-fieldset">
+          <legend class="blora-fieldset__legend"><span data-i18n="Plan 名称">Plan 名称</span></legend>
+          <div class="ccs-switch-list">
+            <blora-switch id="ccsShowUsername" checked label="显示用户名" data-i18n-label="显示用户名" onchange="app.rebuildUsageScript()"></blora-switch>
+          </div>
+        </fieldset>
+        <fieldset class="blora-fieldset">
+          <legend class="blora-fieldset__legend"><span data-i18n="说明">说明</span></legend>
+          <p class="ccs-note"><span data-i18n="主进度条由 cc-switch 根据">主进度条由 cc-switch 根据 </span><code class="ccs-code">total</code> / <code class="ccs-code">used</code> / <code class="ccs-code">remaining</code><span data-i18n="自动渲染。"> 自动渲染。</span><br><span data-i18n="以下配置控制">以下配置控制 </span><code class="ccs-code">extra</code><span data-i18n="行显示内容（单行，超出截断）。"> 行显示内容（单行，超出截断）。</span></p>
+        </fieldset>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.copyUsageScript()" data-variant="primary"><span data-i18n="复制脚本">复制脚本</span></button>
-      </div>
+      <section class="ccs-section">
+        <div class="ccs-section-head">
+          <span class="ccs-section-title"><span data-i18n="效果预览">效果预览</span></span>
+          <span class="ccs-section-meta"><span data-i18n="模拟 cc-switch 显示效果">模拟 cc-switch 显示效果</span></span>
+        </div>
+        <div id="ccsPreview" class="ccs-preview"></div>
+      </section>
+      <section class="ccs-section">
+        <div class="ccs-section-head">
+          <label class="ccs-section-title" for="usageScriptOutput"><span data-i18n="生成的脚本（可直接编辑）">生成的脚本（可直接编辑）</span></label>
+          <span id="ccsLineCount" class="ccs-section-meta"></span>
+        </div>
+        <textarea id="usageScriptOutput" class="blora-textarea ccs-script" rows="20" spellcheck="false"></textarea>
+      </section>
+    </div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="关闭">关闭</span></button>
+      <button type="button" class="blora-button" onclick="app.copyUsageScript()" data-variant="primary"><span data-i18n="复制脚本">复制脚本</span></button>
     </div>
   </blora-dialog>
 
@@ -2246,7 +2228,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page3-step2a"></script>
+  <script src="/js/app.js?v=page3-step2b-r4"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
