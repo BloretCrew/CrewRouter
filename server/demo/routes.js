@@ -117,8 +117,24 @@ router.put('/api-keys/:id/schedule', (req, res) => {
 });
 
 // Key 配置
+// 演示：返回和真实接口同样结构的 Claude 配置（main 上演示接口缺 env，额度脚本 / 客户端配置会报错）
 router.get('/api-keys/:id/config', (req, res) => {
-  res.json({ custom_model_name: '', current_model_id: null });
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const modelName = 'claude-fable-5';
+  res.json({
+    env: {
+      ANTHROPIC_BASE_URL: baseUrl,
+      ANTHROPIC_AUTH_TOKEN: key.key_value,
+      ANTHROPIC_MODEL: modelName,
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: modelName,
+      ANTHROPIC_DEFAULT_SONNET_MODEL: modelName,
+      ANTHROPIC_DEFAULT_OPUS_MODEL: modelName
+    },
+    model: modelName,
+    effortLevel: 'high'
+  });
 });
 
 // 使用统计
@@ -206,9 +222,43 @@ router.get('/model-library', (req, res) => {
 
 // 模型库全局搜索（demo）
 router.get('/model-library/search', (req, res) => {
+  // 演示：和真实接口一样支持 q / provider / series / test / tag / sort（main 上演示接口只认 q，选模型面板的测试筛选和排序看起来没用）
   const q = String(req.query.q || req.query.search || '').trim().toLowerCase();
-  const all = data.myTeamModels();
-  const models = q ? all.filter(m => [m.id, m.name, m.alias, m.series, m.description].some(v => String(v || '').toLowerCase().includes(q))) : all;
+  const providerFilter = String(req.query.provider || 'all');
+  const series = String(req.query.series || 'all');
+  const testFilter = String(req.query.test || 'all');
+  const tagFilter = String(req.query.tag || 'all');
+  const sort = String(req.query.sort || 'default');
+  const seen = new Set();
+  let models = [];
+  for (const team of data.modelLibrary().teams || []) {
+    for (const provider of team.providers || []) {
+      for (const m of provider.models || []) {
+        const key = `${provider.provider_id}:${m.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        models.push({ ...m, provider_id: provider.provider_id, provider_name: provider.provider_name, provider_tags: provider.tags || [], team_id: team.team_id, team_name: team.team_name });
+      }
+    }
+  }
+  if (q) models = models.filter(m => [m.id, m.name, m.alias, m.series, m.description].some(v => String(v || '').toLowerCase().includes(q)));
+  if (providerFilter !== 'all') models = models.filter(m => m.provider_name === providerFilter || String(m.provider_id) === providerFilter);
+  if (series !== 'all') models = models.filter(m => m.series === series);
+  if (testFilter === 'pass') models = models.filter(m => m.test_ok === true);
+  if (testFilter === 'fail') models = models.filter(m => m.test_ok === false);
+  if (testFilter === 'untested') models = models.filter(m => m.test_ok !== true && m.test_ok !== false);
+  if (tagFilter.startsWith('tag:')) { const id = tagFilter.slice(4); models = models.filter(m => m.provider_tags.some(tg => String(tg.id) === id)); }
+  const okFirst = (a, b) => (a.test_ok === true ? 0 : 1) - (b.test_ok === true ? 0 : 1);
+  const cmp = {
+    name_asc: (a, b) => String(a.name || '').localeCompare(String(b.name || '')),
+    name_desc: (a, b) => String(b.name || '').localeCompare(String(a.name || '')),
+    price_asc: (a, b) => (a.input_price_per_1k_tokens || 0) - (b.input_price_per_1k_tokens || 0),
+    price_desc: (a, b) => (b.input_price_per_1k_tokens || 0) - (a.input_price_per_1k_tokens || 0),
+    test_latency_asc: (a, b) => okFirst(a, b) || (a.test_latency_ms ?? Infinity) - (b.test_latency_ms ?? Infinity),
+    test_latency_desc: (a, b) => okFirst(a, b) || (b.test_latency_ms ?? -1) - (a.test_latency_ms ?? -1),
+    test_tps_desc: (a, b) => okFirst(a, b) || (b.test_tokens_per_second ?? -1) - (a.test_tokens_per_second ?? -1)
+  }[sort];
+  if (cmp) models = [...models].sort(cmp);
   const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
   const limit = Math.min(Math.max(parseInt(req.query.limit || '30', 10) || 30, 1), 100);
   const start = (page - 1) * limit;
