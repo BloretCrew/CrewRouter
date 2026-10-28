@@ -8739,68 +8739,54 @@ ${extractorBody}
       }
       if (!providers.length) {
         setBloraState('myProvidersTable', 'empty');
-        setHTML(container, `
-          <div class="empty-state" style="padding:60px 20px;text-align:center;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-            </svg>
-            <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无供应商</p>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方${t('添加供应商')}按钮开始</p>
-          </div>
-        `);
+        setHTML(container, this._upTableEmpty(t('暂无供应商'), t('点击上方「添加供应商」开始')));
+        if (window.bloraHydrateIcons) window.bloraHydrateIcons(container);
         return;
       }
 
       setBloraState('myProvidersTable', 'success');
       setHTML(container, `
-        <table>
+        <div class="blora-table-wrap">
+        <table class="blora-table">
           <thead>
             <tr>
-              <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllProviders(this.checked)"></th>
+              <th class="blora-table-select-col"><label class="blora-table-check"><input type="checkbox" aria-label="${t('全选')}" onchange="app.toggleSelectAllProviders(this.checked)"></label></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
               <th>延迟</th>
               <th>模型数</th>
-              <th>操作</th>
+              <th data-blora-fixed="right">操作</th>
             </tr>
           </thead>
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><input type="checkbox" class="blora-input provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
+                <td class="blora-table-select-col"><label class="blora-table-check"><input type="checkbox" class="provider-checkbox" value="${escapeHtml(p.id)}" aria-label="${escapeHtml(p.name)}" onchange="app.updateBatchButtons()"></label></td>
                 <td>
-                  <div style="font-weight:500;">${escapeHtml(p.name)}</div>
-                  <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
+                  <div class="up-cell-title">${escapeHtml(p.name)}</div>
+                  <div class="up-cell-sub up-mono">${escapeHtml(p.id)}</div>
                 </td>
+                <td><div class="up-cell-url" title="${escapeHtml(p.base_url)}">${escapeHtml(p.base_url)}</div></td>
+                <td>${escapeHtml(formatDisplayName(p.format))}</td>
+                <td><div id="user-ping-page-${escapeHtml(String(p.id))}" class="up-cell-sub">—</div></td>
                 <td>
-                  <div style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.base_url)}">${escapeHtml(p.base_url)}</div>
+                  <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')"><span data-icon="list" aria-hidden="true"></span>模型</button>
                 </td>
-                <td><span style="font-size:12px;">${escapeHtml(formatDisplayName(p.format))}</span></td>
-                <td>
-                  <div id="user-ping-page-${escapeHtml(String(p.id))}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
-                </td>
-                <td>
-                  <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                    模型
-                  </button>
-                </td>
-                <td>
-                  <div style="display:flex;gap:6px;">
-                    <button type="button" class="blora-button upstream-icon-action" data-variant="ghost" data-size="icon" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}" aria-label="${t('检测连通性')}">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    </button>
-                    <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
-                    <button type="button" class="blora-button upstream-action" data-variant="danger" data-size="sm" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
+                <td data-blora-fixed="right">
+                  <div class="up-row-actions">
+                    ${this._upIconAction('heart-pulse', t('检测连通性'), `app.pingUserProvider('${this._jsString(p.id)}')`)}
+                    ${this._upIconAction('square-pen', t('编辑'), `app.editMyProvider('${this._jsString(p.id)}')`)}
+                    ${this._upIconAction('trash-2', t('删除'), `app.deleteMyProvider('${this._jsString(p.id)}')`)}
                   </div>
                 </td>
               </tr>
             `).join('')}
           </tbody>
         </table>
+        </div>
       `);
+      if (window.bloraHydrateIcons) window.bloraHydrateIcons(container);
       this.filterMyProviders(document.getElementById('myProvidersSearch')?.value || '');
       this.updateBatchButtons();
     } catch (error) {
@@ -9402,60 +9388,66 @@ ${extractorBody}
     this.updateMyModelsBatchButtons();
 
     if (models.length === 0) {
-      setHTML(container, `
-        <div class="empty-state" style="padding:60px 20px;text-align:center;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
-            <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
-            <path d="M7 7h10M7 12h10M7 17h6"/>
-          </svg>
-          <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无模型</p>
-          <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">通过供应商刷新导入模型后会自动出现在这里</p>
-        </div>
-      `);
+      const filtered = Array.isArray(this._myTeamModels) && this._myTeamModels.length > 0;
+      setHTML(container, filtered
+        ? this._upTableEmpty(t('没有符合条件的模型'), '')
+        : this._upTableEmpty(t('暂无模型'), t('通过供应商刷新导入模型后会自动出现在这里')));
+      if (window.bloraHydrateIcons) window.bloraHydrateIcons(container);
       return;
     }
 
     setHTML(container, `
-      <table>
+      <div class="blora-table-wrap">
+      <table class="blora-table">
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
+            <th class="blora-table-select-col"><label class="blora-table-check"><input type="checkbox" aria-label="${t('全选')}" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></label></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
             <th>系列</th>
             <th>倍率</th>
             <th>状态</th>
-            <th>操作</th>
+            <th data-blora-fixed="right">操作</th>
           </tr>
         </thead>
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><input type="checkbox" class="blora-input my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
+              <td class="blora-table-select-col"><label class="blora-table-check"><input type="checkbox" class="my-team-model-checkbox" value="${escapeHtml(m.id)}" aria-label="${escapeHtml(m.alias || m.name || m.id)}" onchange="app.updateMyModelsBatchButtons()"></label></td>
               <td>
-                <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
-                ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
+                <div class="up-cell-title">${escapeHtml(m.alias || m.name || m.id)}</div>
+                ${m.description ? `<div class="up-cell-sub up-cell-desc" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
               </td>
-              <td><code style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(m.upstream_model_id || m.name || m.id)}</code></td>
-              <td>${renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
-              <td>${m.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;">${escapeHtml(m.series)}</span>` : '<span style="color:var(--muted-foreground);font-size:12px;">-</span>'}</td>
-              <td style="font-size:13px;">×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
+              <td><div class="up-cell-id up-mono" title="${escapeHtml(m.upstream_model_id || m.name || m.id)}">${escapeHtml(m.upstream_model_id || m.name || m.id)}</div></td>
+              <td>${renderProviderNameTag(m.provider_name || m.provider) || '—'}</td>
+              <td>${m.series ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(m.series)}</span>` : '—'}</td>
+              <td>×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
               <td>${m.enabled !== false
-                ? '<span style="font-size:11px;color:var(--success,var(--brand-green,var(--success)));">' + t('● 启用') + '</span>'
-                : '<span style="font-size:11px;color:var(--destructive);">' + t('● 禁用') + '</span>'
-              }</td>
-              <td>
-                <div style="display:flex;gap:4px;">
-                  <button class="blora-button" onclick="app.editMyTeamModel('${this._jsString(m.id)}')" data-variant="secondary" data-size="sm">编辑</button>
-                  <button class="blora-button" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${this._jsString(m.id)}')" data-variant="secondary" data-size="sm">删除</button>
+                ? `<span class="blora-tag" data-variant="success">${t('启用')}</span>`
+                : `<span class="blora-tag" data-variant="neutral">${t('禁用')}</span>`}</td>
+              <td data-blora-fixed="right">
+                <div class="up-row-actions">
+                  ${this._upIconAction('square-pen', t('编辑'), `app.editMyTeamModel('${this._jsString(m.id)}')`)}
+                  ${this._upIconAction('trash-2', t('删除'), `app.deleteMyTeamModel('${this._jsString(m.id)}')`)}
                 </div>
               </td>
             </tr>
           `).join('')}
         </tbody>
       </table>
+      </div>
     `);
+    if (window.bloraHydrateIcons) window.bloraHydrateIcons(container);
+  }
+
+  // page2-step4：「我的上游」表格的行操作和空状态
+  _upIconAction(icon, label, onclick) {
+    return `<span class="blora-tooltip"><button type="button" class="blora-button" data-variant="ghost" data-size="icon" aria-label="${escapeHtml(label)}" onclick="${onclick}"><span data-icon="${icon}" aria-hidden="true"></span></button><span class="blora-tooltip__bubble" role="tooltip">${escapeHtml(label)}</span></span>`;
+  }
+
+  _upTableEmpty(title, desc) {
+    return `<div class="blora-table-wrap" data-empty><table class="blora-table"></table><div class="blora-table-empty blora-empty" role="status"><div class="blora-empty__icon"><span data-icon="inbox" aria-hidden="true"></span></div><div class="blora-empty__title">${escapeHtml(title)}</div>${desc ? `<div class="blora-empty__desc">${escapeHtml(desc)}</div>` : ''}</div></div>`;
   }
 
   filterMyTeamModels(keyword) {
