@@ -36,6 +36,14 @@
   flex-wrap: nowrap;
 }
 
+/* apiKeys step4b：页头 + 用量概览 */
+#apiKeysPage .ak-header { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); }
+#apiKeysPage .ak-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--blora-space-4); margin-block-end: var(--blora-space-4); }
+#apiKeysPage .ak-overview[hidden] { display: none; }
+@media (max-width: 640px) {
+  #apiKeysPage .ak-overview { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* 挂在 body 上的浮层：用 fixed 定位，坐标由 JS 写入 */
 .api-key-tags-overflow-popover,
 .api-key-tag-assign-dropdown,
