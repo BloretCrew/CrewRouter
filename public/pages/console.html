@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
-  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step2a3">
+  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step2a4">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
@@ -1676,8 +1676,8 @@
     <div class="ak-dialog-stack">
       <blora-field label="密钥名称（可选）"><input type="text" id="apiKeyName" class="blora-input" placeholder="例如：生产环境、开发测试" data-i18n-placeholder="例如：生产环境、开发测试"></blora-field>
       <div class="blora-field"><label class="blora-field__label" for="apiKeyExpiry">有效期</label>
-        <blora-select id="apiKeyExpiry" placeholder="永不过期" data-i18n-placeholder="永不过期">
-          <blora-option value=""><span data-i18n="永不过期">永不过期</span></blora-option>
+        <blora-select id="apiKeyExpiry" value="never">
+          <blora-option value="never"><span data-i18n="永不过期">永不过期</span></blora-option>
           <blora-option value="24"><span data-i18n="24 小时">24 小时</span></blora-option>
           <blora-option value="168"><span data-i18n="7 天">7 天</span></blora-option>
           <blora-option value="720"><span data-i18n="30 天">30 天</span></blora-option>
@@ -2222,7 +2222,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page3-step2a3"></script>
+  <script src="/js/app.js?v=page3-step2a4"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
