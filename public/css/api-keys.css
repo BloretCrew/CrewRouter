@@ -60,3 +60,27 @@
   overflow: auto;
   background: var(--blora-color-surface-default);
 }
+
+/* apiKeys step2：弹窗内部排版（弹窗会挂到 body，所以按弹窗 id 限定） */
+:is(#createApiKeyModal, #hookNotifySelectModal, #keyMembersModal, #keyOptionsModal, #keySignatureModal, #keyScheduleModal, #selectKeyModal) {
+  & .ak-dialog-stack { display: flex; flex-direction: column; gap: var(--blora-space-4); }
+  & .ak-dialog-note { margin: 0; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+  & .ak-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--blora-space-2); }
+  & .ak-dialog-error { padding: var(--blora-space-2) var(--blora-space-3); border: 1px solid var(--blora-color-status-danger); border-radius: var(--blora-radius-sm); color: var(--blora-color-status-danger); font-size: var(--blora-text-sm); }
+  & .ak-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-3); }
+  & .ak-switch-list { display: flex; flex-direction: column; gap: var(--blora-space-3); }
+  & .ak-check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-2); }
+  & .ak-check-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  & .ak-days { display: flex; flex-wrap: wrap; gap: var(--blora-space-3); }
+  & .ak-mono { font-family: var(--blora-font-mono); }
+  & .ak-vars { font-size: var(--blora-text-xs); line-height: 1.6; }
+  & .ak-vars code { font-family: var(--blora-font-mono); }
+  & .ak-preview { min-block-size: 2.25rem; padding: var(--blora-space-3); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-sunken); color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); white-space: pre-wrap; }
+  & .ak-preview:empty { display: none; }
+  & .ak-inline-form { display: flex; inline-size: 100%; }
+  & .ak-member-list { display: flex; flex-direction: column; gap: var(--blora-space-2); }
+  & .ak-member-row { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-md); }
+  & .ak-member-id { display: flex; flex-direction: column; min-inline-size: 0; }
+  & .ak-member-name { font-weight: 600; }
+  & .ak-member-email { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+}

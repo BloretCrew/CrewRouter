@@ -22,7 +22,7 @@
   <script type="module">import { hydrateIcons } from "/vendor/blora-2.1.0/index.js?v=blora-2.1.0"; import "/vendor/blora-2.1.0/icons-full.js?v=blora-2.1.0"; window.bloraHydrateIcons = hydrateIcons; const mlPage = document.getElementById("modelLibraryPage"); if (mlPage) { hydrateIcons(mlPage); new MutationObserver(() => hydrateIcons(mlPage)).observe(mlPage, { childList: true, subtree: true }); }</script>
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
   <script src="/js/blora-dialog.js?v=restore-0930-20261003"></script>
-  <link rel="stylesheet" href="/css/themes.css?v=page3-step1">
+  <link rel="stylesheet" href="/css/themes.css?v=page3-step2a">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
@@ -33,9 +33,9 @@
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step1">
+  <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step2a">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
-  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step1b">
+  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step2a">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
@@ -1696,55 +1696,36 @@
   </div>
 
   <!-- 创建API密钥模态框 -->
-  <blora-dialog id="createApiKeyModal" role="dialog" aria-modal="true" aria-labelledby="createApiKeyModalTitle">
-    <div class="blora-dialog__panel modal-content">
-      <div class="modal-header">
-        <h3 id="createApiKeyModalTitle"><span data-i18n="创建 API 密钥">创建 API 密钥</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
+  <blora-dialog id="createApiKeyModal">
+    <span slot="title" id="createApiKeyModalTitle" data-i18n="创建 API 密钥">创建 API 密钥</span>
+    <div class="ak-dialog-stack">
+      <blora-field label="密钥名称（可选）"><input type="text" id="apiKeyName" class="blora-input" placeholder="例如：生产环境、开发测试" data-i18n-placeholder="例如：生产环境、开发测试"></blora-field>
+      <div class="blora-field"><label class="blora-field__label" for="apiKeyExpiry">有效期</label>
+        <blora-select id="apiKeyExpiry">
+          <blora-option value=""><span data-i18n="永不过期">永不过期</span></blora-option>
+          <blora-option value="24"><span data-i18n="24 小时">24 小时</span></blora-option>
+          <blora-option value="168"><span data-i18n="7 天">7 天</span></blora-option>
+          <blora-option value="720"><span data-i18n="30 天">30 天</span></blora-option>
+        </blora-select>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="apiKeyName"><span data-i18n="密钥名称（可选）">密钥名称（可选）</span></label>
-          <input type="text" id="apiKeyName" class="blora-input input" placeholder="例如：生产环境、开发测试" data-i18n-placeholder="例如：生产环境、开发测试">
-        </div>
-        <div class="form-group">
-          <label for="apiKeyExpiry"><span data-i18n="有效期">有效期</span></label>
-          <blora-select id="apiKeyExpiry" class="blora-select select">
-            <blora-option value=""><span data-i18n="永不过期">永不过期</span></blora-option>
-            <blora-option value="24"><span data-i18n="24 小时">24 小时</span></blora-option>
-            <blora-option value="168"><span data-i18n="7 天">7 天</span></blora-option>
-            <blora-option value="720"><span data-i18n="30 天">30 天</span></blora-option>
-          </blora-select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="confirmCreateApiKey" class="blora-button" data-variant="primary"><span data-i18n="创建">创建</span></button>
-      </div>
+    </div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
+      <button type="button" id="confirmCreateApiKey" class="blora-button" data-variant="primary"><span data-i18n="创建">创建</span></button>
     </div>
   </blora-dialog>
 
   <!-- 统计上报授权模态框（仅管理员首次进入时展示） -->
-        <blora-dialog id="hookNotifySelectModal" role="dialog" aria-modal="true" aria-labelledby="hookNotifySelectTitle">
-          <div class="blora-dialog__panel modal-content" style="max-width:480px;">
-            <div class="modal-header">
-              <h3 id="hookNotifySelectTitle"><span data-i18n="选择要推送的事件">选择要推送的事件</span></h3>
-              <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-            </div>
-            <div class="modal-body">
-              <div style="margin-bottom:14px;">
-                <strong style="font-size:13px;"><span data-i18n="客户端（harness）">客户端（harness）</span></strong>
-                <div id="hookNotifyHarnessChecks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"></div>
-              </div>
-              <div style="margin-bottom:14px;">
-                <strong style="font-size:13px;"><span data-i18n="事件类型">事件类型</span></strong>
-                <div id="hookNotifyEventChecks" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;"></div>
-              </div>
-              <small style="color:var(--muted-foreground);"><span data-i18n="不勾选任何项表示推送全部。">不勾选任何项表示推送全部。</span></small>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="blora-button" onclick="app.closeModals()" data-variant="secondary"><span data-i18n="取消">取消</span></button>
-              <button type="button" class="blora-button" onclick="app.saveHookNotifySelection()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-            </div>
+        <blora-dialog id="hookNotifySelectModal">
+          <span slot="title" id="hookNotifySelectTitle" data-i18n="选择要推送的事件">选择要推送的事件</span>
+          <div class="ak-dialog-stack">
+            <fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">客户端（harness）</legend><div id="hookNotifyHarnessChecks" class="ak-check-grid ak-check-grid--3"></div></fieldset>
+            <fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">事件类型</legend><div id="hookNotifyEventChecks" class="ak-check-grid"></div></fieldset>
+            <p class="ak-dialog-note" data-i18n="不勾选任何项表示推送全部。">不勾选任何项表示推送全部。</p>
+          </div>
+          <div slot="footer" class="ak-dialog-actions">
+            <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
+            <button type="button" class="blora-button" onclick="app.saveHookNotifySelection()" data-variant="primary"><span data-i18n="保存">保存</span></button>
           </div>
         </blora-dialog>
   <blora-dialog id="sessionSummaryModal" role="dialog" aria-modal="true">
@@ -1784,20 +1765,18 @@
   </blora-dialog>
 
   <!-- Co-Key 成员管理模态框 -->
-  <blora-dialog id="keyMembersModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:520px;">
-      <div class="modal-header">
-        <h3><span data-i18n="Co-Key 成员管理">Co-Key 成员管理</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
+  <blora-dialog id="keyMembersModal">
+    <span slot="title" data-i18n="Co-Key 成员管理">Co-Key 成员管理</span>
+    <div class="ak-dialog-stack">
+      <p class="ak-dialog-note" data-i18n="共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。">共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。</p>
+      <div class="blora-join ak-inline-form">
+        <input id="keyMemberIdentity" class="blora-input" type="text" aria-label="用户名或邮箱" placeholder="输入完整用户名或邮箱" data-i18n-placeholder="输入完整用户名或邮箱">
+        <button type="button" class="blora-button" onclick="app.addKeyMember()" data-variant="secondary"><span data-icon="plus"></span><span data-i18n="添加">添加</span></button>
       </div>
-      <div class="modal-body">
-        <p style="margin:0 0 14px;color:var(--muted-foreground);font-size:13px;line-height:1.6;"><span data-i18n="共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。">共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。</span></p>
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-          <input id="keyMemberIdentity" class="blora-input input" type="text" placeholder="输入完整用户名或邮箱" data-i18n-placeholder="输入完整用户名或邮箱" style="flex:1;">
-          <button type="button" class="blora-button" onclick="app.addKeyMember()" data-variant="primary"><span data-i18n="添加">添加</span></button>
-        </div>
-        <div id="keyMembersList" style="display:flex;flex-direction:column;gap:8px;"></div>
-      </div>
+      <div id="keyMembersList" class="ak-member-list"></div>
+    </div>
+      <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="关闭">关闭</span></button>
     </div>
   </blora-dialog>
 
@@ -1818,123 +1797,86 @@
   </blora-dialog>
 
   <!-- API Key 选项设置模态框 -->
-  <blora-dialog id="keyOptionsModal" role="dialog" aria-modal="true" aria-labelledby="keyOptionsTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
-        <h3 id="keyOptionsTitle"><span data-i18n="API Key 选项">API Key 选项</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
+  <blora-dialog id="keyOptionsModal">
+    <span slot="title" id="keyOptionsTitle" data-i18n="API Key 选项">API Key 选项</span>
+    <div class="ak-dialog-stack">
+      <p class="ak-dialog-note" data-i18n="集中管理当前 API Key 的附加开关。">集中管理当前 API Key 的附加开关。</p>
+      <div class="ak-switch-list">
+        <blora-switch id="keyOptionQuotaWarning" label="额度预警"></blora-switch>
+        <blora-switch id="keyOptionSwallowImages" label="吞图"></blora-switch>
+        <blora-switch id="keyOptionCrewRouterCommands" label="允许 @CrewRouter 指令"></blora-switch>
       </div>
-      <div class="modal-body">
-        <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="集中管理当前 API Key 的附加开关。">集中管理当前 API Key 的附加开关。</span></div>
-        <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
-          <label style="margin:0;"><span data-i18n="额度预警">额度预警</span></label>
-          <label class="pg-toggle"><input type="checkbox" id="keyOptionQuotaWarning"><span class="pg-toggle-slider"></span></label>
-        </div>
-        <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
-          <label style="margin:0;"><span data-i18n="吞图">吞图</span></label>
-          <label class="pg-toggle"><input type="checkbox" id="keyOptionSwallowImages"><span class="pg-toggle-slider"></span></label>
-        </div>
-        <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
-          <label style="margin:0;"><span data-i18n="允许 @CrewRouter 指令">允许 @CrewRouter 指令</span></label>
-          <label class="pg-toggle"><input type="checkbox" id="keyOptionCrewRouterCommands"><span class="pg-toggle-slider"></span></label>
-        </div>
-      </div>
-      <div class="modal-footer"><button type="button" class="blora-button" onclick="app.saveKeyOptions()" data-variant="primary"><span data-i18n="保存">保存</span></button></div>
+    </div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
+      <button type="button" class="blora-button" onclick="app.saveKeyOptions()" data-variant="primary"><span data-i18n="保存">保存</span></button>
     </div>
   </blora-dialog>
 
   <!-- API Key 签名设置模态框 -->
-  <blora-dialog id="keySignatureModal" role="dialog" aria-modal="true" aria-labelledby="keySignatureTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
-        <h3 id="keySignatureTitle"><span data-i18n="API Key 签名设置">API Key 签名设置</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
+  <blora-dialog id="keySignatureModal">
+    <span slot="title" id="keySignatureTitle" data-i18n="API Key 签名设置">API Key 签名设置</span>
+    <div class="ak-dialog-stack">
+      <p class="ak-dialog-note" data-i18n="为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择&quot;继承&quot;，则使用用户默认签名配置。">为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择"继承"，则使用用户默认签名配置。</p>
+      <div class="blora-field"><label class="blora-field__label" for="keySignatureMode">签名启用策略</label>
+        <blora-select id="keySignatureMode" onchange="app.toggleKeySignatureMode()">
+          <blora-option value="inherit"><span data-i18n="继承用户默认设置">继承用户默认设置</span></blora-option>
+          <blora-option value="enable"><span data-i18n="强制启用">强制启用</span></blora-option>
+          <blora-option value="disable"><span data-i18n="强制禁用">强制禁用</span></blora-option>
+        </blora-select>
       </div>
-      <div class="modal-body">
-        <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择&quot;继承&quot;，则使用用户默认签名配置。">
-          为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择"继承"，则使用用户默认签名配置。
-        </span></div>
-        <div class="form-group">
-          <label><span data-i18n="签名启用策略">签名启用策略</span></label>
-          <blora-select id="keySignatureMode" class="blora-select select" onchange="app.toggleKeySignatureMode()">
-            <blora-option value="inherit"><span data-i18n="继承用户默认设置">继承用户默认设置</span></blora-option>
-            <blora-option value="enable"><span data-i18n="强制启用">强制启用</span></blora-option>
-            <blora-option value="disable"><span data-i18n="强制禁用">强制禁用</span></blora-option>
-          </blora-select>
+      <div id="keySignatureTemplateGroup" class="ak-dialog-stack">
+        <div class="blora-field"><label class="blora-field__label" for="keySignatureTemplate">自定义签名模板（可选）</label>
+          <textarea id="keySignatureTemplate" class="blora-textarea ak-mono" rows="3" placeholder="留空则使用用户默认模板" data-i18n-placeholder="留空则使用用户默认模板"></textarea>
         </div>
-        <div id="keySignatureTemplateGroup">
-          <div class="form-group">
-            <label for="keySignatureTemplate"><span data-i18n="自定义签名模板（可选）">自定义签名模板（可选）</span></label>
-            <textarea id="keySignatureTemplate" class="blora-input input" style="width:100%;min-height:60px;font-family:monospace;font-size:13px;resize:vertical;" placeholder="留空则使用用户默认模板" data-i18n-placeholder="留空则使用用户默认模板"></textarea>
-            <p style="font-size:12px;color:var(--muted-foreground);margin:6px 0 0;line-height:1.6;"><span data-i18n="可用变量：">
+        <p class="ak-dialog-note ak-vars"><span data-i18n="可用变量：">
               可用变量：</span><code>{model}</code><span data-i18n="模型 ·"> 模型 · </span><code>{tokens}</code><span data-i18n="Token 数 ·"> Token 数 · </span><code>{cache_hit}</code><span data-i18n="缓存命中率 ·"> 缓存命中率 · </span><code>{cached_tokens}</code><span data-i18n="缓存命中 Token 数 ·"> 缓存命中 Token 数 · </span><code>{provider}</code><span data-i18n="供应商 ·"> 供应商 · </span><code>{cost}</code><span data-i18n="费用 ·"> 费用 · </span><code>{username}</code><span data-i18n="用户名 ·"> 用户名 · </span><code>{key_name}</code><span data-i18n="API Key 名称 ·"> API Key 名称 · </span><code>{balance}</code><span data-i18n="积分 ·"> 积分 · </span><code>{team_name}</code> Team · <code>{quota_info}</code><span data-i18n="限额 ·"> 限额 · </span><code>{today_requests}</code><span data-i18n="今日调用次数 ·"> 今日调用次数 · </span><code>{today_tokens}</code><span data-i18n="今日 Token 数"> 今日 Token 数
             </span></p>
-          </div>
-        </div>
-        <div id="keySignaturePreview" style="margin-top:12px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);font-family:monospace;white-space:pre-wrap;min-height:36px;"></div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.saveKeySignature()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-      </div>
+      <div id="keySignaturePreview" class="ak-preview ak-mono" aria-live="polite"></div>
+    </div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
+      <button type="button" class="blora-button" onclick="app.saveKeySignature()" data-variant="primary"><span data-i18n="保存">保存</span></button>
     </div>
   </blora-dialog>
 
   <!-- 定时开关设置弹窗 -->
-  <blora-dialog id="keyScheduleModal" role="dialog" aria-modal="true" aria-labelledby="keyScheduleTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
-        <h3 id="keyScheduleTitle"><span data-i18n="定时开关设置">定时开关设置</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。">
-          设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。
-        </span></div>
-        <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
-          <label style="margin:0;"><span data-i18n="启用定时开关">启用定时开关</span></label>
-          <label class="pg-toggle">
-            <input type="checkbox" id="scheduleEnabled">
-            <span class="pg-toggle-slider"></span>
-          </label>
+  <blora-dialog id="keyScheduleModal">
+    <span slot="title" id="keyScheduleTitle" data-i18n="定时开关设置">定时开关设置</span>
+    <div class="ak-dialog-stack">
+      <p class="ak-dialog-note" data-i18n="设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。">设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。</p>
+      <blora-switch id="scheduleEnabled" label="启用定时开关"></blora-switch>
+      <div id="scheduleFields" class="ak-dialog-stack">
+        <div class="ak-grid-2">
+          <div class="blora-field"><label class="blora-field__label" for="scheduleOnTime">开启时间</label><blora-timepicker id="scheduleOnTime" value="09:00"></blora-timepicker></div>
+          <div class="blora-field"><label class="blora-field__label" for="scheduleOffTime">关闭时间</label><blora-timepicker id="scheduleOffTime" value="18:00"></blora-timepicker></div>
         </div>
-        <div id="scheduleFields">
-          <div class="form-group">
-            <label><span data-i18n="开启时间">开启时间</span></label>
-            <input type="time" id="scheduleOnTime" class="blora-input input" value="09:00" style="width:100%;">
-          </div>
-          <div class="form-group">
-            <label><span data-i18n="关闭时间">关闭时间</span></label>
-            <input type="time" id="scheduleOffTime" class="blora-input input" value="18:00" style="width:100%;">
-          </div>
-          <div class="form-group">
-            <label><span data-i18n="生效日期">生效日期</span></label>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="1" checked><span data-i18n="周一"> 周一</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="2" checked><span data-i18n="周二"> 周二</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="3" checked><span data-i18n="周三"> 周三</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="4" checked><span data-i18n="周四"> 周四</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="5" checked><span data-i18n="周五"> 周五</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="6" checked><span data-i18n="周六"> 周六</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="0" checked><span data-i18n="周日"> 周日</span></label>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><span data-i18n="时区">时区</span></label>
-            <blora-select id="scheduleTimezone" class="blora-select select" style="width:100%;">
-              <blora-option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</blora-option>
-              <blora-option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</blora-option>
-              <blora-option value="America/New_York">America/New_York (ET)</blora-option>
-              <blora-option value="America/Los_Angeles">America/Los_Angeles (PT)</blora-option>
-              <blora-option value="Europe/London">Europe/London (GMT/BST)</blora-option>
-              <blora-option value="Europe/Berlin">Europe/Berlin (CET)</blora-option>
-              <blora-option value="UTC">UTC</blora-option>
-            </blora-select>
-          </div>
+        <fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">生效日期</legend><div class="ak-days">
+          <blora-checkbox class="schedule-day" value="1" label="周一" checked></blora-checkbox>
+          <blora-checkbox class="schedule-day" value="2" label="周二" checked></blora-checkbox>
+          <blora-checkbox class="schedule-day" value="3" label="周三" checked></blora-checkbox>
+          <blora-checkbox class="schedule-day" value="4" label="周四" checked></blora-checkbox>
+          <blora-checkbox class="schedule-day" value="5" label="周五" checked></blora-checkbox>
+          <blora-checkbox class="schedule-day" value="6" label="周六" checked></blora-checkbox>
+          <blora-checkbox class="schedule-day" value="0" label="周日" checked></blora-checkbox>
+        </div></fieldset>
+        <div class="blora-field"><label class="blora-field__label" for="scheduleTimezone">时区</label>
+          <blora-select id="scheduleTimezone">
+            <blora-option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</blora-option>
+            <blora-option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</blora-option>
+            <blora-option value="America/New_York">America/New_York (ET)</blora-option>
+            <blora-option value="America/Los_Angeles">America/Los_Angeles (PT)</blora-option>
+            <blora-option value="Europe/London">Europe/London (GMT/BST)</blora-option>
+            <blora-option value="Europe/Berlin">Europe/Berlin (CET)</blora-option>
+            <blora-option value="UTC">UTC</blora-option>
+          </blora-select>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.saveKeySchedule()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-      </div>
+    </div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
+      <button type="button" class="blora-button" onclick="app.saveKeySchedule()" data-variant="primary"><span data-i18n="保存">保存</span></button>
     </div>
   </blora-dialog>
 
@@ -2043,18 +1985,12 @@
   </blora-dialog>
 
   <!-- 选择 API Key 模态框 -->
-  <blora-dialog id="selectKeyModal" role="dialog" aria-modal="true" aria-labelledby="selectKeyTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:400px;">
-      <div class="modal-header">
-        <h3 id="selectKeyTitle"><span data-i18n="选择 API Key">选择 API Key</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="selectKeyContent" data-blora-state="idle"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.confirmSelectKey()" data-variant="primary"><span data-i18n="确认">确认</span></button>
-      </div>
+  <blora-dialog id="selectKeyModal" size="sm">
+    <span slot="title" id="selectKeyTitle" data-i18n="选择 API Key">选择 API Key</span>
+    <div id="selectKeyContent" data-blora-state="idle"></div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
+      <button type="button" class="blora-button" onclick="app.confirmSelectKey()" data-variant="primary"><span data-i18n="确认">确认</span></button>
     </div>
   </blora-dialog>
 
@@ -2310,7 +2246,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page3-step1"></script>
+  <script src="/js/app.js?v=page3-step2a"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

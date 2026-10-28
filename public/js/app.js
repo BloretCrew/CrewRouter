@@ -3483,7 +3483,7 @@ class ConsoleApp {
 
       const days = data.schedule_days || [0, 1, 2, 3, 4, 5, 6];
       document.querySelectorAll('.schedule-day').forEach(cb => {
-        cb.checked = days.includes(parseInt(cb.value));
+        cb.checked = days.includes(parseInt(cb.getAttribute('value'), 10));
       });
 
       this._toggleScheduleFields();
@@ -3505,7 +3505,7 @@ class ConsoleApp {
     const schedule_on_time = document.getElementById('scheduleOnTime').value;
     const schedule_off_time = document.getElementById('scheduleOffTime').value;
     const schedule_timezone = document.getElementById('scheduleTimezone').value;
-    const schedule_days = Array.from(document.querySelectorAll('.schedule-day:checked')).map(cb => parseInt(cb.value));
+    const schedule_days = Array.from(document.querySelectorAll('.schedule-day')).filter(cb => cb.checked).map(cb => parseInt(cb.getAttribute('value'), 10));
 
     if (schedule_enabled && (!schedule_on_time || !schedule_off_time)) {
       alert(t('请设置开启和关闭时间'));
@@ -6877,19 +6877,19 @@ class ConsoleApp {
     if (!hWrap || !eWrap) return;
     hWrap.innerHTML = harnesses.map(h => {
       const on = sel.harnesses.includes(h) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-harness" value="${h}"${on}> ${h}</label>`;
+      return `<blora-checkbox class="hn-harness" value="${escapeHtml(h)}" label="${escapeHtml(h)}"${on}></blora-checkbox>`;
     }).join('');
     eWrap.innerHTML = events.map(([v, label]) => {
       const on = sel.eventTypes.includes(v) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-event" value="${v}"${on}> ${t(label)}</label>`;
+      return `<blora-checkbox class="hn-event" value="${escapeHtml(v)}" label="${escapeHtml(t(label))}"${on}></blora-checkbox>`;
     }).join('');
     this.showModal('hookNotifySelectModal');
   }
 
   async saveHookNotifySelection() {
     try {
-      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks .hn-harness:checked')].map(c => c.value);
-      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks .hn-event:checked')].map(c => c.value);
+      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks .hn-harness')].filter(c => c.checked).map(c => c.getAttribute('value'));
+      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks .hn-event')].filter(c => c.checked).map(c => c.getAttribute('value'));
       const res = await fetch('/api/user/hook-notify-rules/selection', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -7521,12 +7521,13 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('加载失败'));
       const members = Array.isArray(data.members) ? data.members : [];
       setHTML(list, members.length ? members.map(member => `
-        <div class="co-key-member-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
-          <div><strong>${escapeHtml(member.username || '')}</strong><div class="api-key-sub-muted">${escapeHtml(member.email || '')}</div></div>
-          <button type="button" class="blora-button" onclick="app.removeKeyMember(${member.id})" data-variant="secondary" data-size="sm">移除</button>
-        </div>`).join('') : '<p class="api-key-sub-muted" style="text-align:center;padding:18px;">' + t('暂无共同成员') + '</p>');
+        <div class="ak-member-row">
+          <div class="ak-member-id"><span class="ak-member-name">${escapeHtml(member.username || '—')}</span><span class="ak-member-email">${escapeHtml(member.email || '—')}</span></div>
+          <button type="button" class="blora-button" onclick="app.removeKeyMember(${member.id})" data-variant="secondary" data-size="sm">${t('移除')}</button>
+        </div>`).join('') : `<div class="blora-empty" role="status"><div class="blora-empty__icon"><span data-icon="inbox"></span></div><div class="blora-empty__title">${t('暂无共同成员')}</div></div>`);
+      window.bloraHydrateIcons?.(list);
     } catch (error) {
-      setHTML(list, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
+      setHTML(list, `<div class="ak-dialog-error" role="alert">${escapeHtml(error.message)}</div>`);
     }
   }
 
