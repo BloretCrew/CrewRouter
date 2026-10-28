@@ -7477,7 +7477,7 @@ class ConsoleApp {
       const res = await fetch('/api/user/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, expiresIn: expiresIn ? parseInt(expiresIn) : null })
+        body: JSON.stringify({ name, expiresIn: expiresIn && expiresIn !== 'never' ? parseInt(expiresIn) : null })
       });
       const data = await res.json();
       if (res.ok) {
@@ -7495,7 +7495,7 @@ class ConsoleApp {
     const name = document.getElementById('apiKeyName');
     if (name) name.value = '';
     const expiry = document.getElementById('apiKeyExpiry');
-    if (expiry) expiry.value = '';
+    if (expiry) expiry.value = 'never';
     this.showModal('createApiKeyModal');
   }
 
