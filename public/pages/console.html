@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
-  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step4c">
+  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step4d">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
@@ -441,12 +441,8 @@
         <div id="apiKeysStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
             <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>
-            <span class="page-sticky-hint"><span data-i18n="拖拽标签到下方密钥卡片">拖拽标签到下方密钥卡片</span></span>
-            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.openCreateApiKeyModal()" style="margin-left:auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>
-          </div>
-          <div class="page-sticky-tag-row" aria-label="密钥标签" data-i18n-title="密钥标签">
-            <span class="page-sticky-tag-label" title="拖拽标签到密钥卡片进行分配" data-i18n-title="拖拽标签到密钥卡片进行分配"><span data-i18n="标签">标签</span></span>
-            <div id="apiKeysStickyTags" class="key-tag-chips page-sticky-tag-chips"></div>
+            <div id="apiKeysStickyTags" class="key-tag-chips page-sticky-tag-chips" title="拖拽标签到下方密钥卡片" aria-label="拖拽标签到下方密钥卡片" data-i18n-title="拖拽标签到下方密钥卡片"></div>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.openCreateApiKeyModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>
           </div>
         </div>
 
@@ -2213,7 +2209,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page3-step4c"></script>
+  <script src="/js/app.js?v=page3-step4d"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
