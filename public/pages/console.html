@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/my-upstream.css?v=page2-step2d">
+  <link rel="stylesheet" href="/css/my-upstream.css?v=page2-step2e">
   <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=desktop-compact-20261010-sticky1">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
@@ -2035,30 +2035,21 @@
   </blora-dialog>
 
   <!-- 批量设置价格对话框 -->
-  <blora-dialog id="batchPriceModal" role="dialog" aria-modal="true" aria-labelledby="batchPriceTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:400px;">
-      <div class="modal-header">
-        <h3 id="batchPriceTitle"><span data-i18n="批量设置价格">批量设置价格</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:16px;"><span data-i18n="为选中的模型设置统一价格（人民币/百万Token）">为选中的模型设置统一价格（人民币/百万Token）</span></p>
-        <div class="form-group">
-          <label for="batchInputPrice"><span data-i18n="输入价格">输入价格</span></label>
-          <input type="number" id="batchInputPrice" class="blora-input input" step="0.000001" min="0" placeholder="留空则不修改" data-i18n-placeholder="留空则不修改">
+  <blora-dialog id="batchPriceModal">
+    <span slot="title" id="batchPriceTitle">批量设置价格</span>
+    <div class="up-dialog-stack">
+      <p class="up-dialog-note">为选中的模型设置统一价格（人民币/百万Token），留空则不修改。</p>
+      <blora-fieldset legend="价格">
+        <div class="up-grid-3">
+          <blora-field label="输入"><input type="number" id="batchInputPrice" class="blora-input" step="0.000001" min="0" placeholder="留空则不修改"></blora-field>
+          <blora-field label="输出"><input type="number" id="batchOutputPrice" class="blora-input" step="0.000001" min="0" placeholder="留空则不修改"></blora-field>
+          <blora-field label="缓存"><input type="number" id="batchCachedPrice" class="blora-input" step="0.000001" min="0" placeholder="留空则不修改"></blora-field>
         </div>
-        <div class="form-group">
-          <label for="batchOutputPrice"><span data-i18n="输出价格">输出价格</span></label>
-          <input type="number" id="batchOutputPrice" class="blora-input input" step="0.000001" min="0" placeholder="留空则不修改" data-i18n-placeholder="留空则不修改">
-        </div>
-        <div class="form-group">
-          <label for="batchCachedPrice"><span data-i18n="缓存输出价格">缓存输出价格</span></label>
-          <input type="number" id="batchCachedPrice" class="blora-input input" step="0.000001" min="0" placeholder="留空则不修改" data-i18n-placeholder="留空则不修改">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.executeBatchSetPrices()" data-variant="primary"><span data-i18n="应用">应用</span></button>
-      </div>
+      </blora-fieldset>
+    </div>
+    <div slot="footer" class="up-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()">取消</button>
+      <button type="button" class="blora-button" data-variant="primary" onclick="app.executeBatchSetPrices()">应用</button>
     </div>
   </blora-dialog>
 
@@ -2330,7 +2321,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page2-step2d"></script>
+  <script src="/js/app.js?v=page2-step2e"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
