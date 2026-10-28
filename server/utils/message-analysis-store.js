@@ -65,6 +65,10 @@ async function scanPendingMessageAnalysis(options = {}) {
        FROM usage_records ur
        LEFT JOIN usage_message_analysis uma ON uma.usage_id = ur.id
        WHERE ur.messages IS NOT NULL AND uma.usage_id IS NULL
+         AND ur.created_at >= TIMESTAMP '2000-01-01'
+         AND ur.created_at <= (statement_timestamp() AT TIME ZONE 'Asia/Shanghai') + INTERVAL '5 minutes'
+         AND COALESCE(ur.tokens_used, 0) >= 0
+         AND (ur.cost IS NULL OR (ur.cost >= 0 AND ur.cost::text NOT IN ('NaN', 'Infinity', '-Infinity')))
        ORDER BY ur.id ASC
        LIMIT $1`,
       [batchSize]

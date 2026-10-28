@@ -3040,6 +3040,7 @@ async function runPendingMigrations() {
 
   await require('./utils/model-trace-migration').ensureModelTraceTables(pool);
   await require('./utils/provider-quota-history').importLegacyQuotaHistory(pool);
+  await require('./utils/usage-write-guards').ensureUsageWriteGuards(pool);
   Logger.info('[启动] 数据库迁移完成');
 }
 
