@@ -242,6 +242,12 @@ router.get('/my-providers', (req, res) => {
   res.json(data.myProviders());
 });
 
+// 管理模型弹窗：只读返回演示供应商下的模型
+router.get('/providers/:id/models', (req, res) => {
+  const provider = (data.myProviders() || []).find(p => String(p.id) === String(req.params.id));
+  res.json(provider ? (provider.models || []) : []);
+});
+
 // 用户 Team 模型
 router.get('/my-team-models', (req, res) => {
   res.json(data.myTeamModels());
