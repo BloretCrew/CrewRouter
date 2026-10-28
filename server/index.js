@@ -2662,6 +2662,7 @@ if (isDemo) {
   app.use('/api/playground', require('./demo/playground'));
   app.use('/api/conversations', require('./demo/conversations'));
   app.use('/auth', require('./demo/auth'));
+  app.use('/oauth', require('./demo/oauth'));
   app.use('/api/setup', (req, res, next) => {
     if (req.path === '/status' || req.originalUrl === '/api/setup/status') {
       return res.json({ needsSetup: false });
