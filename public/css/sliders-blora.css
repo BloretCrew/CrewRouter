@@ -1,5 +1,5 @@
 /* Shared Blora range slider and toggle normalization. */
-.blora-page input[type="range"],
+.blora-page input[type="range"]:not(.blora-slider__input),
 .blora-page .range-input,
 .blora-page .ccs-slider {
   appearance: none;
@@ -12,7 +12,7 @@
   cursor: pointer;
 }
 
-.blora-page input[type="range"]::-webkit-slider-thumb,
+.blora-page input[type="range"]:not(.blora-slider__input)::-webkit-slider-thumb,
 .blora-page .range-input::-webkit-slider-thumb,
 .blora-page .ccs-slider::-webkit-slider-thumb {
   appearance: none;
@@ -24,7 +24,7 @@
   box-shadow: var(--blora-shadow-2);
 }
 
-.blora-page input[type="range"]::-moz-range-thumb,
+.blora-page input[type="range"]:not(.blora-slider__input)::-moz-range-thumb,
 .blora-page .range-input::-moz-range-thumb,
 .blora-page .ccs-slider::-moz-range-thumb {
   width: 1.125rem;

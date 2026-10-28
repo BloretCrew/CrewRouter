@@ -84,3 +84,28 @@
   & .ak-member-name { font-weight: 600; }
   & .ak-member-email { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
 }
+
+/* page3-step2b：新建/编辑标签弹窗 */
+#createKeyTagPopover .ak-dialog-stack { display: grid; gap: var(--blora-space-4); }
+#createKeyTagPopover .ak-tag-radios { display: flex; flex-wrap: wrap; gap: var(--blora-space-3) var(--blora-space-4); }
+#createKeyTagPopover .ak-tag-preview { display: flex; align-items: center; gap: var(--blora-space-3); }
+#createKeyTagPopover .ak-tag-preview__label { font-size: var(--blora-text-sm); color: var(--blora-color-text-secondary); }
+#createKeyTagPopover .ak-tag-dialog-footer { display: flex; align-items: center; gap: var(--blora-space-2); inline-size: 100%; }
+#createKeyTagPopover .ak-tag-dialog-footer__end { display: flex; gap: var(--blora-space-2); margin-inline-start: auto; }
+
+/* page3-step2b：额度脚本弹窗 */
+#usageScriptModal .ccs-stack { display: grid; gap: var(--blora-space-4); }
+#usageScriptModal .ccs-note { margin: 0; color: var(--blora-color-text-secondary); font-size: var(--blora-text-sm); }
+#usageScriptModal .ccs-options-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-4); }
+#usageScriptModal .ccs-switch-list { display: grid; gap: var(--blora-space-3); justify-items: start; align-content: start; }
+#usageScriptModal #ccsBarOptions { justify-self: stretch; }
+#usageScriptModal .ccs-slider-row { display: block; inline-size: 100%; }
+#usageScriptModal .ccs-code { font-family: var(--blora-font-mono); font-size: var(--blora-text-xs); background: var(--blora-color-surface-sunken); padding: 0 var(--blora-space-1); border-radius: var(--blora-radius-sm); }
+#usageScriptModal .ccs-section { display: grid; gap: var(--blora-space-2); }
+#usageScriptModal .ccs-section-head { display: flex; justify-content: space-between; align-items: center; gap: var(--blora-space-2); }
+#usageScriptModal .ccs-section-title { font-size: var(--blora-text-sm); color: var(--blora-color-text-primary); }
+#usageScriptModal .ccs-section-meta { font-size: var(--blora-text-xs); color: var(--blora-color-text-secondary); }
+#usageScriptModal .ccs-preview { min-block-size: var(--blora-space-10); padding: var(--blora-space-4); border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg); background: var(--blora-color-surface-sunken); color: var(--blora-color-text-primary); font-family: var(--blora-font-mono); font-size: var(--blora-text-sm); line-height: var(--blora-leading-normal); white-space: pre-wrap; word-break: break-all; }
+#usageScriptModal .ccs-script { inline-size: 100%; font-family: var(--blora-font-mono); font-size: var(--blora-text-xs); line-height: var(--blora-leading-normal); white-space: pre; resize: vertical; }
+#usageScriptModal .ak-dialog-actions { display: flex; justify-content: flex-end; gap: var(--blora-space-2); }
+#usageScriptModal .ccs-style-fieldset { grid-column: 1 / -1; }
