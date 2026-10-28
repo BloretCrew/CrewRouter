@@ -38,6 +38,8 @@
 
 `npm run test:usage-write` 验证 Token 归一化及写入保护，数据库回归自动创建仅监听临时 Unix socket 的独立 PostgreSQL 集群，需要本机提供 `initdb`、`pg_ctl`，以 root 运行时还需 `postgres` 用户和 `runuser`。新版本启动时为用量、消息分析和请求尝试安装写入保护：拒绝负数、异常时间及必填关联缺失，修正新用量记录的时间默认值；不回填历史记录，也不阻止历史坏字段未发生改变的其他更新。Token 数字字符串先转整数再求和，非法值及超出数据库整数范围的值直接拒绝，不静默清零。
 
+历史用量时间恢复：先备份全库，再运行 `node server/scripts/repair-usage-timestamps.js` 只读预览；确认后使用 `--apply --backup-dir /绝对路径/尚不存在的私有目录` 实际修复。只恢复消息分析表中唯一 `usage_id`、相同用户且时间有效的原始时间副本，保留已有同毫秒时间的微秒精度，不推算 Token、金额或缺失关联。全部更新在同一事务中分批执行并核对行数，提交前将原值、来源及 SHA-256 同步写入权限受限的目录；失败整体回滚，提交结果不明时保留证据并需重新核查。`npm run test:usage-repair` 在独立 PostgreSQL 中验证恢复、回滚和幂等性。备份含业务数据，不应提交到 Git；原值可能包含坏时间，回退时须先处理写入保护，不能直接覆盖在线数据库。
+
 ## 它是什么
 
 CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic 兼容端点**。团队成员只拿网关下发的 Key，用 Claude Code、Codex、Cursor、OpenCode、Cherry Studio 等工具时，只需改 `base_url`。供应商密钥留在网关里，成员有使用权、没有所有权。
