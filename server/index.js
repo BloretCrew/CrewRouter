@@ -2735,6 +2735,7 @@ if (isDemo) {
 // 路由
 if (isDemo) {
   // 演示模式：挂载演示路由，拦截所有 API 和认证请求
+  app.use('/api/client-events', require('./demo/client-events'));
   app.use('/api/user', require('./demo/extra'));
   app.use('/api/user', require('./demo/routes'));
   app.use('/api/admin', require('./demo/routes'));

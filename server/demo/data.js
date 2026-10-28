@@ -194,6 +194,57 @@ function generateDemoStats(days, startDate, endDate) {
   };
 }
 
+// demo 接口缺字段：按真实 /api/user/stats 的结构补上客户端维度和插件维度（示例数据）
+const DEMO_SOURCE_SHARES = [
+  { id: 'codex', req: 0.34, tok: 0.36, cost: 0.35, lat: 240 },
+  { id: 'claude_code', req: 0.27, tok: 0.31, cost: 0.33, lat: 290 },
+  { id: 'opencode', req: 0.14, tok: 0.12, cost: 0.11, lat: 230 },
+  { id: 'qwen_code', req: 0.09, tok: 0.08, cost: 0.07, lat: 210 },
+  { id: 'hermes', req: 0.06, tok: 0.05, cost: 0.05, lat: 260 },
+  { id: 'openclaw', req: 0.04, tok: 0.03, cost: 0.04, lat: 280 },
+  { id: 'unknown', req: 0.06, tok: 0.05, cost: 0.05, lat: 300 },
+];
+function withDemoSourceStats(stats) {
+  const { buildSourceStats } = require('../utils/source-stats');
+  const s = stats.summary || {};
+  const rows = DEMO_SOURCE_SHARES.map(src => ({
+    request_source: src.id,
+    requests: Math.floor((s.total_requests || 0) * src.req),
+    tokens: Math.floor((s.total_tokens || 0) * src.tok),
+    prompt_tokens: Math.floor((s.total_prompt_tokens || 0) * src.tok),
+    completion_tokens: Math.floor((s.total_completion_tokens || 0) * src.tok),
+    cached_tokens: Math.floor((s.total_cached_tokens || 0) * src.tok),
+    cost: parseFloat(((s.total_cost || 0) * src.cost).toFixed(6)),
+    avg_latency: src.lat,
+  }));
+  const { bySource, sourceSummary } = buildSourceStats(rows);
+  const dailyBySource = [];
+  (stats.daily || []).forEach(day => {
+    DEMO_SOURCE_SHARES.forEach(src => {
+      const requests = Math.floor((Number(day.requests) || 0) * src.req);
+      if (requests > 0) dailyBySource.push({ date: day.date, request_source: src.id, requests, tokens: Math.floor((Number(day.tokens) || 0) * src.tok), cost: parseFloat(((Number(day.cost) || 0) * src.cost).toFixed(6)) });
+    });
+  });
+  const bySourceModel = [];
+  DEMO_SOURCE_SHARES.filter(src => src.id !== 'unknown').forEach(src => {
+    (stats.byModel || []).slice(0, 3).forEach(m => {
+      bySourceModel.push({ request_source: src.id, model_id: m.model_id, model_name: m.model_name, requests: Math.floor(m.requests * src.req), tokens: Math.floor(m.tokens * src.tok), cost: parseFloat((m.cost * src.cost).toFixed(6)) });
+    });
+  });
+  bySourceModel.sort((a, b) => b.requests - a.requests);
+  const total = s.total_requests || 0;
+  const byPlugin = [
+    { plugin_dim: 'plugin:git-helper', share: 0.12 },
+    { plugin_dim: 'plugin:web-search', share: 0.08 },
+    { plugin_dim: 'dim:workspace', share: 0.05 },
+  ].map(p => ({ plugin_dim: p.plugin_dim, requests: Math.floor(total * p.share), tokens: Math.floor((s.total_tokens || 0) * p.share), cost: parseFloat(((s.total_cost || 0) * p.share).toFixed(6)) }));
+  return {
+    ...stats,
+    summary: { ...s, known_requests: sourceSummary.known_requests, unknown_requests: sourceSummary.unknown_requests, identified_rate: sourceSummary.identified_rate, active_sources: sourceSummary.active_sources },
+    bySource, dailyBySource, bySourceModel: bySourceModel.slice(0, 80), byPlugin, sourceSummary,
+  };
+}
+
 const DEMO_LEADERBOARD = {
   leaderboard: [
     { rank: 1, username: 'Alice Zhang', avatar: null, totalRequests: 58200, totalTokens: 28500000, totalPoints: 85.5, cacheHitRate: 42.3, balance: 1200, isCurrentUser: false },
@@ -314,7 +365,7 @@ module.exports = {
 
   stats(params) {
     const days = parseInt(params?.days) || 30;
-    return generateDemoStats(days, params?.start, params?.end);
+    return withDemoSourceStats(generateDemoStats(days, params?.start, params?.end));
   },
 
   projectStats() {
@@ -680,6 +731,7 @@ module.exports = {
           request_id: `req_demo_${i + 1}`
         },
         ip_address: '192.168.1.' + (10 + (i % 50)),
+        request_source: ['codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'unknown'][i % 7],
         cost: parseFloat((tokens * 0.0000035).toFixed(6)),
         created_at: ts.toISOString(),
         username: u.username,
