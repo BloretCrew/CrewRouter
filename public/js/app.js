@@ -382,7 +382,7 @@ class ConsoleApp {
     document.getElementById('settingsBackButton')?.addEventListener('click', () => this.showSettingsOverview());
 
     document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
-    document.getElementById('createApiKeyBtn')?.addEventListener('click', () => this.showModal('createApiKeyModal'));
+    document.getElementById('createApiKeyBtn')?.addEventListener('click', () => this.openCreateApiKeyModal());
     document.getElementById('confirmCreateApiKey')?.addEventListener('click', () => this.createApiKey());
     document.getElementById('confirmAddEditModel')?.addEventListener('click', () => this.submitAddEditModel());
 
@@ -7505,8 +7505,18 @@ class ConsoleApp {
     }
   }
 
+  openCreateApiKeyModal() {
+    const name = document.getElementById('apiKeyName');
+    if (name) name.value = '';
+    const expiry = document.getElementById('apiKeyExpiry');
+    if (expiry) expiry.value = '';
+    this.showModal('createApiKeyModal');
+  }
+
   async showKeyMembers(keyId) {
     this._currentMembersKeyId = keyId;
+    const identity = document.getElementById('keyMemberIdentity');
+    if (identity) identity.value = '';
     this.showModal('keyMembersModal');
     await this.loadKeyMembers();
   }
