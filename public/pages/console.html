@@ -33,8 +33,8 @@
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/my-upstream.css?v=page2-step1">
-  <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step1">
+  <link rel="stylesheet" href="/css/my-upstream.css?v=page2-step2b">
+  <link rel="stylesheet" href="/css/model-library-console.css?v=page2-step2b">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=desktop-compact-20261010-sticky1">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
@@ -276,7 +276,7 @@
             </div>
           </div>
           <div id="modelLibraryKeySelector" class="model-library-key-selector" style="display:none;" hidden aria-hidden="true">
-            <!-- page2-step1: 切换 Key 已并入绑定卡 Key 列，此侧栏仅占位兼容旧引用 -->
+            <!-- page2-step2b: 切换 Key 已并入绑定卡 Key 列，此侧栏仅占位兼容旧引用 -->
           </div>
         </div>
 
@@ -427,62 +427,23 @@
       <div id="myTeamModelsPage" class="page" style="display:none !important;" aria-hidden="true"></div>
 
       <!-- 批量编辑模型模态框 -->
-      <blora-dialog id="batchEditMyModelsModal" role="dialog" aria-modal="true" aria-labelledby="batchEditMyModelsTitle">
-        <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-          <div class="modal-header">
-            <h3 id="batchEditMyModelsTitle"><span data-i18n="批量编辑模型">批量编辑模型</span></h3>
-            <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭">&times;</button>
+      <blora-dialog id="batchEditMyModelsModal">
+        <span slot="title" id="batchEditMyModelsTitle">批量编辑模型</span>
+        <div class="up-dialog-stack">
+          <p id="batchEditMyModelsInfo" class="up-dialog-note"></p>
+          <div class="blora-field"><label class="blora-field__label up-check-label"><input type="checkbox" id="batchEditMyModelsEnabledCheck">启用状态</label><blora-select id="batchEditMyModelsEnabled" disabled><blora-option value="true">启用</blora-option><blora-option value="false">禁用</blora-option></blora-select></div>
+          <div class="blora-field"><label class="blora-field__label up-check-label"><input type="checkbox" id="batchEditMyModelsSeriesCheck">系列</label><input type="text" id="batchEditMyModelsSeries" class="blora-input" placeholder="系列名称" disabled></div>
+          <div class="blora-field"><label class="blora-field__label up-check-label"><input type="checkbox" id="batchEditMyModelsDescCheck">描述</label><textarea id="batchEditMyModelsDesc" class="blora-textarea" rows="2" placeholder="模型描述" disabled></textarea></div>
+          <div class="blora-field"><label class="blora-field__label up-check-label"><input type="checkbox" id="batchEditMyModelsAliasCheck">别名</label><input type="text" id="batchEditMyModelsAlias" class="blora-input" placeholder="模型别名" disabled></div>
+          <div class="up-grid-2">
+            <div class="blora-field"><label class="blora-field__label up-check-label"><input type="checkbox" id="batchEditMyModelsInputPriceCheck">输入价格</label><input type="number" id="batchEditMyModelsInputPrice" class="blora-input" step="0.001" min="0" placeholder="每 1K tokens" disabled></div>
+            <div class="blora-field"><label class="blora-field__label up-check-label"><input type="checkbox" id="batchEditMyModelsOutputPriceCheck">输出价格</label><input type="number" id="batchEditMyModelsOutputPrice" class="blora-input" step="0.001" min="0" placeholder="每 1K tokens" disabled></div>
           </div>
-          <div class="modal-body">
-            <p id="batchEditMyModelsInfo" style="font-size:13px;color:var(--muted-foreground);margin-bottom:16px;"></p>
-            <div style="display:flex;flex-direction:column;gap:14px;">
-              <div>
-                <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsEnabledCheck"><span data-i18n="启用状态"> 启用状态
-                </span></label>
-                <blora-select id="batchEditMyModelsEnabled" class="blora-select select" style="margin-top:4px;" disabled>
-                  <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
-                  <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
-                </blora-select>
-              </div>
-              <div>
-                <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsSeriesCheck"><span data-i18n="系列"> 系列
-                </span></label>
-                <input type="text" id="batchEditMyModelsSeries" class="blora-input input" placeholder="系列名称" data-i18n-placeholder="系列名称" style="margin-top:4px;" disabled>
-              </div>
-              <div>
-                <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsDescCheck"><span data-i18n="描述"> 描述
-                </span></label>
-                <textarea id="batchEditMyModelsDesc" class="blora-input input" rows="2" placeholder="模型描述" data-i18n-placeholder="模型描述" style="margin-top:4px;resize:vertical;" disabled></textarea>
-              </div>
-              <div>
-                <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsAliasCheck"><span data-i18n="别名"> 别名
-                </span></label>
-                <input type="text" id="batchEditMyModelsAlias" class="blora-input input" placeholder="模型别名" data-i18n-placeholder="模型别名" style="margin-top:4px;" disabled>
-              </div>
-              <div style="display:flex;gap:12px;">
-                <div style="flex:1;">
-                  <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                    <input type="checkbox" id="batchEditMyModelsInputPriceCheck"><span data-i18n="输入价格"> 输入价格
-                  </span></label>
-                  <input type="number" id="batchEditMyModelsInputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
-                </div>
-                <div style="flex:1;">
-                  <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                    <input type="checkbox" id="batchEditMyModelsOutputPriceCheck"><span data-i18n="输出价格"> 输出价格
-                  </span></label>
-                  <input type="number" id="batchEditMyModelsOutputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.saveBatchEditMyModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-          </div>
-    </div>
+        </div>
+        <div slot="footer" class="up-dialog-actions">
+          <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()">取消</button>
+          <button type="button" class="blora-button" data-variant="primary" onclick="app.saveBatchEditMyModels()">保存</button>
+        </div>
       </blora-dialog>
 
       <!-- API密钥页面 -->
@@ -1989,148 +1950,87 @@
   </blora-dialog>
 
   <!-- 添加供应商向导模态框 -->
-  <blora-dialog id="addProviderModal" role="dialog" aria-modal="true" aria-labelledby="addProviderModalTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:550px;">
-      <div class="modal-header">
-        <h3 id="addProviderModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="addProviderError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
-
-        <!-- 步骤 1: 选择供应商 -->
-        <div id="providerStep1" class="provider-step">
-          <div style="margin-bottom:16px;">
-            <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:4px;"><span data-i18n="步骤 1/2">步骤 1/2</span></div>
-            <div style="font-weight:600;font-size:16px;"><span data-i18n="选择供应商">选择供应商</span></div>
-          </div>
-          <div style="margin-bottom:12px;">
-            <input type="text" id="providerSearchInput" class="blora-input input" placeholder="搜索供应商..." data-i18n-placeholder="搜索供应商..." style="width:100%;" oninput="app.filterProviderList(this.value)">
-          </div>
-          <div id="providerListContainer" class="provider-list-container" style="max-height:300px;overflow-y:auto;">
-            <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
+  <blora-dialog id="addProviderModal">
+    <span slot="title" id="addProviderModalTitle">添加供应商</span>
+    <blora-steps id="addProviderSteps" current="0" clickable="false"><blora-step title="选择供应商"></blora-step><blora-step title="配置 API Key"></blora-step></blora-steps>
+    <div id="addProviderError" class="up-dialog-error" data-blora-state="error" style="display:none;"></div>
+    <div id="providerStep1" class="provider-step up-dialog-stack">
+      <blora-search id="providerSearchInput" placeholder="搜索供应商..." data-i18n-placeholder="搜索供应商..." oninput="app.filterProviderList(this.value)"></blora-search>
+      <div id="providerListContainer" class="provider-list-container up-scroll-list"><div class="blora-spinner" role="status" aria-label="加载中"></div></div>
     </div>
-        </div>
-
-        <!-- 步骤 2: 输入配置 -->
-        <form id="providerForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
-        <div id="providerStep2" class="provider-step" style="display:none;">
-          <div style="margin-bottom:16px;">
-            <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:4px;"><span data-i18n="步骤 2/2">步骤 2/2</span></div>
-            <div style="font-weight:600;font-size:16px;"><span data-i18n="配置 API Key">配置 API Key</span></div>
-          </div>
-          <div class="form-group">
-            <label><span data-i18n="供应商">供应商</span></label>
-            <div id="selectedProviderDisplay" style="padding:10px 12px;background:var(--muted);border-radius:8px;font-weight:500;"></div>
-          </div>
-          <div id="customProviderFields" style="display:none;">
-            <div class="form-group">
-              <label for="providerBaseUrl">Base URL <span style="color:var(--destructive);">*</span></label>
-              <input type="text" id="providerBaseUrl" class="blora-input input" placeholder="https://api.example.com/v1">
-            </div>
-            <div class="form-group">
-              <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-              <blora-select id="providerFormat" value="openai">
-                <blora-option value="openai">Chat Completions</blora-option>
-                <blora-option value="responses">Responses</blora-option>
-                <blora-option value="anthropic">Anthropic Messages</blora-option>
-              </blora-select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="providerApiKey">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
-            <input type="password" id="providerApiKey" class="blora-input input" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）" autocomplete="new-password" form="providerForm">
-          </div>
-          <div style="display:flex;gap:8px;margin-top:16px;">
-            <button type="button" class="blora-button" onclick="app.showProviderStep(1)" data-variant="secondary"><span data-i18n="← 返回">← 返回</span></button>
-            <button type="button" class="blora-button" style="flex:1;" onclick="app.saveProvider()" data-variant="primary"><span data-i18n="添加">添加</span></button>
-          </div>
-        </div>
+    <form id="providerForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" hidden></form>
+    <div id="providerStep2" class="provider-step up-dialog-stack" style="display:none;">
+      <div class="blora-field"><span class="blora-field__label">供应商</span><div id="selectedProviderDisplay" class="up-readonly"></div></div>
+      <div id="customProviderFields" class="up-dialog-stack" style="display:none;">
+        <blora-field label="Base URL"><input type="text" id="providerBaseUrl" required></blora-field>
+        <div class="blora-field"><label class="blora-field__label" for="providerFormat">API 格式</label><blora-select id="providerFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select></div>
       </div>
+      <blora-field label="API Key" hint="可留空，保存后稍后补全"><input type="password" id="providerApiKey" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）" autocomplete="new-password" form="providerForm"></blora-field>
+    </div>
+    <div slot="footer" id="providerFooterStep1" class="up-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()">取消</button>
+      <button type="button" id="providerNextBtn" class="blora-button" data-variant="primary" disabled onclick="app._selectedProvider &amp;&amp; app.showProviderStep(2)">下一步</button>
+    </div>
+    <div slot="footer" id="providerFooterStep2" class="up-dialog-actions" hidden>
+      <button type="button" class="blora-button" data-variant="secondary" onclick="app.showProviderStep(1)">上一步</button>
+      <button type="button" class="blora-button" data-variant="primary" onclick="app.saveProvider()">保存</button>
     </div>
   </blora-dialog>
 
   <!-- 编辑供应商模态框 -->
   <form id="editProviderForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
-  <blora-dialog id="editProviderModal" role="dialog" aria-modal="true" aria-labelledby="editProviderModalTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
-        <h3 id="editProviderModalTitle"><span data-i18n="编辑供应商">编辑供应商</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="editProviderError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
-        <input type="hidden" id="editProviderId">
-        <div class="form-group">
-          <label><span data-i18n="供应商名称">供应商名称</span></label>
-          <div id="editProviderName" style="padding:10px 12px;background:var(--muted);border-radius:8px;font-weight:500;"></div>
-        </div>
-        <div class="form-group">
-          <label for="editProviderBaseUrl">Base URL</label>
-          <input type="text" id="editProviderBaseUrl" class="blora-input input" placeholder="https://api.example.com/v1">
-        </div>
-        <div class="form-group">
-          <label for="editProviderApiKey">API Key <span style="font-size:12px;color:var(--muted-foreground);"><span data-i18n="（留空则不更新）">（留空则不更新）</span></span></label>
-          <input type="password" id="editProviderApiKey" class="blora-input input" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm">
-        </div>
-        <div class="form-group">
-          <label for="editProviderFormat"><span data-i18n="API 格式">API 格式</span></label>
-          <blora-select id="editProviderFormat" class="blora-select select">
-            <blora-option value="openai">Chat Completions</blora-option>
-            <blora-option value="responses">Responses</blora-option>
-            <blora-option value="anthropic">Anthropic Messages</blora-option>
-          </blora-select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.updateProvider()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-      </div>
+  <blora-dialog id="editProviderModal">
+    <span slot="title" id="editProviderModalTitle">编辑供应商</span>
+    <div class="up-dialog-stack">
+      <div id="editProviderError" class="up-dialog-error" data-blora-state="error" style="display:none;"></div>
+      <input type="hidden" id="editProviderId">
+      <div class="blora-field"><span class="blora-field__label">供应商名称</span><div id="editProviderName" class="up-readonly"></div></div>
+      <blora-field label="Base URL"><input type="text" id="editProviderBaseUrl"></blora-field>
+      <blora-field label="API Key" hint="留空则不更新"><input type="password" id="editProviderApiKey" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm"></blora-field>
+      <div class="blora-field"><label class="blora-field__label" for="editProviderFormat">API 格式</label><blora-select id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select></div>
+    </div>
+    <div slot="footer" class="up-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()">取消</button>
+      <button type="button" class="blora-button" data-variant="primary" onclick="app.updateProvider()">保存</button>
     </div>
   </blora-dialog>
 
   <!-- 管理模型模态框 -->
-  <blora-dialog id="manageModelsModal" role="dialog" aria-modal="true" aria-labelledby="manageModelsTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:700px;max-height:80vh;">
-      <div class="modal-header">
-        <h3 id="manageModelsTitle"><span data-i18n="管理模型">管理模型</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body" style="overflow-y:auto;">
-        <div id="manageModelsLoading" data-blora-state="loading" style="text-align:center;padding:40px;">
+  <blora-dialog id="manageModelsModal" size="lg">
+    <span slot="title" id="manageModelsTitle">管理模型</span>
+    <div id="manageModelsLoading" data-blora-state="loading" style="display:block;">
           <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
         </div>
-        <div id="manageModelsError" data-blora-state="error" style="display:none;color:var(--destructive);padding:16px;text-align:center;"></div>
+        <div id="manageModelsError" class="up-dialog-error" data-blora-state="error" style="display:none;"></div>
         <div id="manageModelsContent" style="display:none;">
           <!-- 搜索和刷新 -->
-          <div style="display:flex;gap:12px;margin-bottom:12px;">
-            <input type="text" id="manageModelsSearch" class="blora-input input" placeholder="搜索模型..." data-i18n-placeholder="搜索模型..." style="flex:1;" oninput="app.filterManageModels(this.value)">
+          <div class="up-toolbar">
+            <input type="text" id="manageModelsSearch" class="blora-input input" placeholder="搜索模型..." data-i18n-placeholder="搜索模型..." oninput="app.filterManageModels(this.value)">
             <button type="button" class="blora-button" onclick="app.refreshProviderModelsForManage()" data-variant="secondary"><span data-i18n="刷新列表">刷新列表</span></button>
           </div>
           <!-- 批量操作栏 -->
-          <div id="manageModelsBatchBar" style="display:none;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--muted);border-radius:8px;flex-wrap:wrap;align-items:center;">
-            <span style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="已选">已选 </span><strong id="manageModelsSelectedCount">0</strong><span data-i18n="个模型"> 个模型</span></span>
-            <div style="margin-left:auto;display:flex;gap:6px;">
+          <div id="manageModelsBatchBar" class="up-bulk-bar" style="display:none;">
+            <span><span data-i18n="已选">已选 </span><strong id="manageModelsSelectedCount">0</strong><span data-i18n="个模型"> 个模型</span></span>
+            <div class="up-dialog-actions">
               <button type="button" class="blora-button" onclick="app.batchEnableModels(true)" data-variant="secondary" data-size="sm"><span data-i18n="启用">启用</span></button>
               <button type="button" class="blora-button" onclick="app.batchEnableModels(false)" data-variant="secondary" data-size="sm"><span data-i18n="禁用">禁用</span></button>
               <button type="button" class="blora-button" onclick="app.showBatchPriceDialog()" data-variant="secondary" data-size="sm"><span data-i18n="设置价格">设置价格</span></button>
-              <button type="button" class="blora-button" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.batchDeleteManagedModels()" data-variant="secondary" data-size="sm"><span data-i18n="删除">删除</span></button>
+              <button type="button" class="blora-button" onclick="app.batchDeleteManagedModels()" data-variant="secondary" data-size="sm"><span data-i18n="删除">删除</span></button>
             </div>
           </div>
           <!-- 全选 -->
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <div class="up-toolbar">
+            <label class="up-check-label">
               <input type="checkbox" id="selectAllManageModels" onchange="app.toggleSelectAllManageModels(this.checked)">
-              <span style="font-size:13px;"><span data-i18n="全选">全选</span></span>
+              <span><span data-i18n="全选">全选</span></span>
             </label>
-            <span id="manageModelsCount" style="font-size:13px;color:var(--muted-foreground);margin-left:auto;"></span>
+            <span id="manageModelsCount"></span>
           </div>
           <!-- 模型列表 -->
-          <div id="manageModelsList" style="max-height:400px;overflow-y:auto;"></div>
+          <div id="manageModelsList"></div>
         </div>
-      </div>
-      <div id="manageModelsFooter" class="modal-footer" style="display:none;">
-        <button type="button" class="blora-button modal-close" data-variant="secondary"><span data-i18n="关闭">关闭</span></button>
-      </div>
+    <div slot="footer" id="manageModelsFooter" class="up-dialog-actions" style="display:none;">
+      <button type="button" class="blora-button" data-variant="ghost" onclick="this.closest('blora-dialog').close()">关闭</button>
     </div>
   </blora-dialog>
 
@@ -2402,101 +2302,17 @@
   </blora-dialog>
 
   <!-- 添加/编辑模型模态框 -->
-  <blora-dialog id="addEditModelModal" role="dialog" aria-modal="true" aria-labelledby="addEditModelTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:600px;">
-      <div class="modal-header">
-        <h3 id="addEditModelTitle"><span data-i18n="添加模型">添加模型</span></h3>
-        <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="addEditModelError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
-        <input type="hidden" id="editModelId">
-        <input type="hidden" id="modelFormId">
-        <div class="form-group">
-          <label for="modelFormUpstreamId"><span data-i18n="上游模型ID">上游模型ID</span></label>
-          <input type="text" id="modelFormUpstreamId" class="blora-input input" placeholder="例如：gpt-4" data-i18n-placeholder="例如：gpt-4">
-          <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="供应商识别的模型名称，同一供应商下不可重复，不同供应商可使用相同模型名">供应商识别的模型名称，同一供应商下不可重复，不同供应商可使用相同模型名</span></small>
-        </div>
-        <div class="form-group">
-          <label for="modelFormAlias"><span data-i18n="别名（可选）">别名（可选）</span></label>
-          <input type="text" id="modelFormAlias" class="blora-input input" placeholder="例如：my-gpt4" data-i18n-placeholder="例如：my-gpt4">
-          <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="设置别名后，用户将通过别名请求模型，供应商仍使用原始上游模型名">设置别名后，用户将通过别名请求模型，供应商仍使用原始上游模型名</span></small>
-        </div>
-        <div class="form-group">
-          <label for="modelFormProvider"><span data-i18n="提供商">提供商</span></label>
-          <blora-select id="modelFormProvider" class="blora-select select">
-            <!-- 供应商列表将通过JS动态加载 -->
-          </blora-select>
-        </div>
-        <div class="form-group">
-          <label for="modelFormSeries"><span data-i18n="系列">系列</span></label>
-          <input type="text" id="modelFormSeries" class="blora-input input" placeholder="例如：GPT-4系列（可选）" data-i18n-placeholder="例如：GPT-4系列（可选）">
-          <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="系列名称将显示在用户控制台，用于分类筛选模型">系列名称将显示在用户控制台，用于分类筛选模型</span></small>
-        </div>
-        <div class="form-group">
-          <label for="modelFormDescription"><span data-i18n="描述">描述</span></label>
-          <textarea id="modelFormDescription" class="blora-textarea textarea" rows="3"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="modelFormInputPrice"><span data-i18n="输入价格（人民币/百万Token）">输入价格（人民币/百万Token）</span></label>
-          <input type="number" id="modelFormInputPrice" class="blora-input input" step="0.000001" value="0.01">
-        </div>
-        <div class="form-group">
-          <label for="modelFormOutputPrice"><span data-i18n="输出价格（人民币/百万Token）">输出价格（人民币/百万Token）</span></label>
-          <input type="number" id="modelFormOutputPrice" class="blora-input input" step="0.000001" value="0.01">
-        </div>
-        <div class="form-group">
-          <label for="modelFormCachedPrice"><span data-i18n="缓存输出价格（人民币/百万Token）">缓存输出价格（人民币/百万Token）</span></label>
-          <input type="number" id="modelFormCachedPrice" class="blora-input input" step="0.000001" value="0">
-        </div>
-
-        <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
-          <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);"><span data-i18n="参考价（官方参考价，用于用户端展示对比）">参考价（官方参考价，用于用户端展示对比）</span></div>
-          <div class="form-group">
-            <label for="modelFormRefInputPrice"><span data-i18n="参考输入价格（人民币/百万Token）">参考输入价格（人民币/百万Token）</span></label>
-            <input type="number" id="modelFormRefInputPrice" class="blora-input input" step="0.000001" value="0">
-          </div>
-          <div class="form-group">
-            <label for="modelFormRefOutputPrice"><span data-i18n="参考输出价格（人民币/百万Token）">参考输出价格（人民币/百万Token）</span></label>
-            <input type="number" id="modelFormRefOutputPrice" class="blora-input input" step="0.000001" value="0">
-          </div>
-        </div>
-        <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
-          <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);"><span data-i18n="模型路由（可选，用于根据思考模式自动切换模型）">模型路由（可选，用于根据思考模式自动切换模型）</span></div>
-          <div class="form-group">
-            <label for="modelFormThinkingModel"><span data-i18n="思考模式模型">思考模式模型</span></label>
-            <blora-select id="modelFormThinkingModel" class="blora-select select">
-              <blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
-            </blora-select>
-            <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="开启思考模式时实际使用的模型">开启思考模式时实际使用的模型</span></small>
-          </div>
-          <div class="form-group">
-            <label for="modelFormNonThinkingModel"><span data-i18n="非思考模式模型">非思考模式模型</span></label>
-            <blora-select id="modelFormNonThinkingModel" class="blora-select select">
-              <blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
-            </blora-select>
-            <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="关闭思考模式时实际使用的模型">关闭思考模式时实际使用的模型</span></small>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="modelFormRateLimitRpm"><span data-i18n="速率限制 - 每分钟请求数（0=不限制）">速率限制 - 每分钟请求数（0=不限制）</span></label>
-          <input type="number" id="modelFormRateLimitRpm" class="blora-input input" min="0" value="0">
-        </div>
-        <div class="form-group">
-          <label for="modelFormRateLimitTpm"><span data-i18n="速率限制 - 每分钟Token数（0=不限制）">速率限制 - 每分钟Token数（0=不限制）</span></label>
-          <input type="number" id="modelFormRateLimitTpm" class="blora-input input" min="0" value="0">
-        </div>
-        <div class="form-group">
-          <label for="modelFormEnabled"><span data-i18n="启用状态">启用状态</span></label>
-          <blora-select id="modelFormEnabled" class="blora-select select">
-            <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
-            <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
-          </blora-select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="confirmAddEditModel" class="blora-button" data-variant="primary"><span data-i18n="添加">添加</span></button>
-      </div>
+  <blora-dialog id="addEditModelModal" size="lg">
+    <span slot="title" id="addEditModelTitle">添加模型</span>
+    <div class="up-dialog-stack">
+      <div id="addEditModelError" class="up-dialog-error" data-blora-state="error" style="display:none;"></div>
+      <input type="hidden" id="editModelId">
+      <input type="hidden" id="modelFormId">
+      <fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">基本信息</legend><div class="up-dialog-stack"><div class="up-grid-2"><blora-field label="上游模型 ID" hint="同一供应商下不可重复，不同供应商可用相同模型名"><input type="text" id="modelFormUpstreamId" placeholder="例如：gpt-4" data-i18n-placeholder="例如：gpt-4"></blora-field><blora-field label="别名（可选）"><input type="text" id="modelFormAlias" placeholder="例如：my-gpt4" data-i18n-placeholder="例如：my-gpt4"></blora-field></div><div class="up-grid-3"><div class="blora-field"><label class="blora-field__label" for="modelFormProvider">提供商</label><blora-select id="modelFormProvider"></blora-select></div><blora-field label="系列（可选）"><input type="text" id="modelFormSeries" placeholder="例如：GPT-4系列（可选）" data-i18n-placeholder="例如：GPT-4系列（可选）"></blora-field><div class="blora-field"><label class="blora-field__label" for="modelFormEnabled">启用状态</label><blora-select id="modelFormEnabled"><blora-option value="true">启用</blora-option><blora-option value="false">禁用</blora-option></blora-select></div></div></div></fieldset><fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">价格（人民币/百万 Token）</legend><div class="up-dialog-stack"><div class="up-grid-3"><blora-field label="输入价格"><input type="number" id="modelFormInputPrice" step="0.000001" value="0.01"></blora-field><blora-field label="输出价格"><input type="number" id="modelFormOutputPrice" step="0.000001" value="0.01"></blora-field><blora-field label="缓存输出价格"><input type="number" id="modelFormCachedPrice" step="0.000001" value="0"></blora-field></div></div></fieldset><fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">参考价与描述</legend><p class="blora-fieldset__description">参考价是官方参考价，用于用户端展示对比。</p><div class="up-dialog-stack"><div class="up-grid-2"><blora-field label="参考输入价格"><input type="number" id="modelFormRefInputPrice" step="0.000001" value="0"></blora-field><blora-field label="参考输出价格"><input type="number" id="modelFormRefOutputPrice" step="0.000001" value="0"></blora-field></div><blora-field label="描述" textarea><textarea id="modelFormDescription" rows="2"></textarea></blora-field></div></fieldset><fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">模型路由与限流</legend><p class="blora-fieldset__description">可选，根据思考模式自动切换模型；限流填 0 表示不限制。</p><div class="up-dialog-stack"><div class="up-grid-2"><div class="blora-field"><label class="blora-field__label" for="modelFormThinkingModel">思考模式模型</label><blora-select id="modelFormThinkingModel"><blora-option value="">不设置（使用自身）</blora-option></blora-select><span class="blora-field__help">开启思考模式时实际使用的模型</span></div><div class="blora-field"><label class="blora-field__label" for="modelFormNonThinkingModel">非思考模式模型</label><blora-select id="modelFormNonThinkingModel"><blora-option value="">不设置（使用自身）</blora-option></blora-select><span class="blora-field__help">关闭思考模式时实际使用的模型</span></div></div><div class="up-grid-2"><blora-field label="每分钟请求数上限"><input type="number" id="modelFormRateLimitRpm" min="0" value="0"></blora-field><blora-field label="每分钟 Token 数上限"><input type="number" id="modelFormRateLimitTpm" min="0" value="0"></blora-field></div></div></fieldset>
+    </div>
+    <div slot="footer" class="up-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()">取消</button>
+      <button type="button" id="confirmAddEditModel" class="blora-button" data-variant="primary">添加</button>
     </div>
   </blora-dialog>
 
@@ -2514,7 +2330,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=page2-step1"></script>
+  <script src="/js/app.js?v=page2-step2b"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

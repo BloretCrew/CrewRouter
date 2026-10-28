@@ -1,3 +1,33 @@
 /* 我的上游：page2-step1 已清空，只保留个人版内嵌供应商管理的功能性规则 */
 #myUpstreamPage.unified-provider-page > .content-section { display: none; }
 #myUpstreamPage #unifiedProviderManager { display: block; width: 100%; height: calc(100dvh - 5rem); min-height: 480px; border: 0; }
+
+/* page2-step2：「我的上游」的 5 个弹窗。弹窗会移到 body 下，所以按弹窗 id 限定作用范围 */
+:is(#addProviderModal, #editProviderModal, #batchEditMyModelsModal, #manageModelsModal, #addEditModelModal) {
+  & .up-dialog-stack { display: flex; flex-direction: column; gap: var(--blora-space-4); }
+  & .up-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-4); }
+  & .up-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--blora-space-4); }
+  & .blora-field, & blora-field, & blora-select, & blora-search { display: block; inline-size: 100%; min-inline-size: 0; }
+  & .blora-field > blora-select { margin-block-start: var(--blora-space-1); }
+  & .up-readonly { padding: var(--blora-space-2) var(--blora-space-3); border-radius: var(--blora-radius-sm); background: var(--blora-color-surface-raised); color: var(--blora-color-text-primary); overflow-wrap: anywhere; }
+  & .up-dialog-error { padding: var(--blora-space-2) var(--blora-space-3); border-radius: var(--blora-radius-sm); border: 1px solid var(--blora-color-status-danger); color: var(--blora-color-status-danger); font-size: var(--blora-text-sm); }
+  & .up-dialog-note { margin: 0; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+  & .up-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--blora-space-2); }
+  & [slot="footer"][hidden] { display: none; }
+  & .up-check-label { display: inline-flex; align-items: center; gap: var(--blora-space-2); cursor: pointer; }
+  & .up-toolbar { display: flex; align-items: center; gap: var(--blora-space-3); margin-block-end: var(--blora-space-3); }
+  & .up-toolbar > .blora-input { flex: 1 1 auto; min-inline-size: 0; }
+  & .up-toolbar > #manageModelsCount { margin-inline-start: auto; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+  & .up-bulk-bar { display: flex; align-items: center; gap: var(--blora-space-2); margin-block-end: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); border-radius: var(--blora-radius-sm); background: var(--blora-color-surface-raised); }
+  & .up-bulk-bar > .up-dialog-actions { margin-inline-start: auto; }
+  & .up-scroll-list { max-block-size: 300px; overflow-y: auto; border: var(--blora-border-subtle); border-radius: var(--blora-radius-sm); }
+  & blora-steps { display: block; margin-block-end: var(--blora-space-4); }
+}
+#addProviderModal .provider-list-item { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); cursor: pointer; border-block-end: var(--blora-border-subtle); }
+#addProviderModal .provider-list-item:last-child { border-block-end: 0; }
+#addProviderModal .provider-list-item:hover { background: var(--blora-color-surface-raised); }
+#addProviderModal .provider-list-name { min-inline-size: 0; overflow-wrap: anywhere; color: var(--blora-color-text-primary); }
+#addProviderModal .provider-list-url { max-inline-size: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+@media (max-width: 560px) {
+  :is(#batchEditMyModelsModal, #addEditModelModal) :is(.up-grid-2, .up-grid-3) { grid-template-columns: minmax(0, 1fr); }
+}
