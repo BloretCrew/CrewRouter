@@ -1065,41 +1065,19 @@ class ConsoleApp {
   }
 
   _renderApiKeyMoreMenu(keyId, items) {
-    const menuId = `keyMoreMenu-${keyId}`;
     const itemsHtml = (items || []).map(item => {
-      if (item.type === 'divider') return '<div class="api-key-more-divider"></div>';
-      const cls = item.className === 'danger' ? 'api-key-more-item danger' : 'api-key-more-item';
-      return `<button type="button" class="${cls}" onclick="event.stopPropagation();app.closeApiKeyMoreMenus();${item.onClick}">${escapeHtml(item.label)}</button>`;
+      if (item.type === 'divider') return '<div class="blora-dropdown__sep" role="separator"></div>';
+      return `<button type="button" class="blora-dropdown__item" onclick="${item.onClick}">${escapeHtml(item.label)}</button>`;
     }).join('');
     return `
-      <div class="api-key-more">
-        <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.toggleApiKeyMoreMenu(${keyId})">更多</button>
-        <div id="${menuId}" class="api-key-more-menu" style="display:none;" onclick="event.stopPropagation()">
-          ${itemsHtml}
-        </div>
-      </div>`;
-  }
-
-  toggleApiKeyMoreMenu(keyId) {
-    const menu = document.getElementById(`keyMoreMenu-${keyId}`);
-    if (!menu) return;
-    const open = menu.style.display !== 'none';
-    this.closeApiKeyMoreMenus();
-    if (!open) {
-      menu.style.display = 'block';
-      // 点击外部关闭
-      const closer = (e) => {
-        if (!menu.contains(e.target) && !e.target.closest?.('.api-key-more')) {
-          menu.style.display = 'none';
-          document.removeEventListener('click', closer, true);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', closer, true), 0);
-    }
+      <blora-dropdown id="keyMoreMenu-${keyId}" class="api-key-more" align="end" placement="top">
+        <button slot="trigger" type="button" class="blora-button" data-variant="outline" data-size="sm">${t('更多')}</button>
+        ${itemsHtml}
+      </blora-dropdown>`;
   }
 
   closeApiKeyMoreMenus() {
-    document.querySelectorAll('.api-key-more-menu').forEach(el => { el.style.display = 'none'; });
+    document.querySelectorAll('#apiKeysList blora-dropdown.api-key-more').forEach(el => el.close?.());
   }
 
   // ===== API Key 标签系统 =====
