@@ -36,21 +36,6 @@
   flex-wrap: nowrap;
 }
 
-/* 更多菜单：相对按钮定位，显示由 JS 控制 */
-#apiKeysPage .api-key-more {
-  position: relative;
-  display: inline-block;
-}
-#apiKeysPage .api-key-more-menu {
-  position: absolute;
-  inset-inline-end: 0;
-  inset-block-end: calc(100% + var(--blora-space-1));
-  inline-size: max-content;
-  z-index: 40;
-  background: var(--blora-color-surface-default);
-}
-#apiKeysPage .api-key-more-item { display: block; }
-
 /* 挂在 body 上的浮层：用 fixed 定位，坐标由 JS 写入 */
 .api-key-tags-overflow-popover,
 .api-key-tag-assign-dropdown,
