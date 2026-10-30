@@ -9,13 +9,15 @@ const history = require('../utils/provider-quota-history');
 const capture = require('../utils/request-quota-capture');
 const cycle = require('../utils/quota-cycle-analysis');
 const { DEFAULTS } = require('../utils/request-quota-config');
+const { createIsolatedPostgresFixture } = require('./test-support/isolated-postgres');
 
-test('真实attempt schema：增量1000样本预算、无变化不scan、质量与两phase、完整导出、late usage', { skip: !process.env.QUOTA_TEST_DATABASE_URL }, async () => {
-  const url = process.env.QUOTA_TEST_DATABASE_URL;
-  const admin = new Pool({ connectionString: url });
+test('真实attempt schema：增量1000样本预算、无变化不scan、质量与两phase、完整导出、late usage', async context => {
+  const cluster = createIsolatedPostgresFixture(context, 'quota-incremental');
+  const admin = cluster.track(new Pool(cluster.connection));
+  await cluster.assertIsolation(admin);
   const schema = `quota_incremental_${process.pid}`;
   await admin.query(`CREATE SCHEMA ${schema}`);
-  const pool = new Pool({ connectionString: url, options: `-c search_path=${schema}` });
+  const pool = cluster.track(new Pool({ ...cluster.connection, options: `-c search_path=${schema}` }));
   let samplesRead = 0, historyReads = 0, queryCount = 0;
   const db = { query: async (sql, params) => {
     queryCount++;
@@ -110,8 +112,6 @@ test('真实attempt schema：增量1000样本预算、无变化不scan、质量�
     assert.notEqual(cycle.classify({used_percent:10,resets_at:t(3600)},{kind:'window',used_percent:11,resets_at:null}), 'reset');
     console.log(`quota incremental perf: 1000 samples ${elapsed.toFixed(0)}ms, ${queryCount} SQL total, ${samplesRead} full-series reads`);
   } finally {
-    await pool.end();
     await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-    await admin.end();
   }
 });

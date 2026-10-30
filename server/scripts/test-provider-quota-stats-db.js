@@ -7,11 +7,13 @@ const { ensureQuotaHistorySchema } = require('../utils/provider-quota-history');
 const { ensureProviderUsageHistory, archiveProviderUsage } = require('../utils/provider-usage-history');
 const { queryProviderQuotaOverview, queryProviderQuotaHistory } = require('../utils/provider-quota-stats');
 const { queryMultiDimensionStats } = require('../utils/multi-dimension-stats');
+const { createIsolatedPostgresFixture } = require('./test-support/isolated-postgres');
 
-// Only an explicitly supplied disposable database may run this integration test.
-test('隔离 PostgreSQL：权限撤回、多 Team、分页、归档互斥和明细清理回退', { skip: !process.env.QUOTA_STATS_TEST_DATABASE_URL }, async () => {
-  const db = new Client({ connectionString: process.env.QUOTA_STATS_TEST_DATABASE_URL });
+test('隔离 PostgreSQL：权限撤回、多 Team、分页、归档互斥和明细清理回退', async context => {
+  const cluster = createIsolatedPostgresFixture(context, 'quota-stats');
+  const db = cluster.track(new Client(cluster.connection));
   await db.connect();
+  await cluster.assertIsolation(db);
   const schema = `quota_stats_${process.pid}`;
   await db.query(`CREATE SCHEMA ${schema}`);
   await db.query(`SET search_path TO ${schema}; SET timezone TO 'Asia/Shanghai'`);
@@ -134,6 +136,7 @@ test('隔离 PostgreSQL：权限撤回、多 Team、分页、归档互斥和明�
     let mockQuotaResult;
     const fakeRequire = name => {
       if (name === 'express') return express;
+      if (name === './admin-model-library') return express.Router();
       if (name === 'crypto') return require('node:crypto');
       if (name === '../models/database') return { pool: db };
       if (name === '../middleware/auth') return { requireAuth: next, requireAdmin: next, requireProviderManager: next };
@@ -185,6 +188,5 @@ test('隔离 PostgreSQL：权限撤回、多 Team、分页、归档互斥和明�
   } finally {
     await db.query('ROLLBACK');
     await db.query(`DROP SCHEMA ${schema} CASCADE`);
-    await db.end();
   }
 });

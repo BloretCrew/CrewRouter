@@ -79,4 +79,31 @@ function createIsolatedPostgres(label = 'data') {
   };
 }
 
-module.exports = { createIsolatedPostgres };
+function createIsolatedPostgresFixture(context, label) {
+  const cluster = createIsolatedPostgres(label);
+  const connections = new Set();
+  try {
+    context.after(async () => {
+      let outcomes;
+      try {
+        outcomes = await Promise.allSettled([...connections].map(connection => Promise.resolve().then(() => connection.end())));
+      } finally {
+        cluster.stop();
+      }
+      const failures = outcomes.filter(outcome => outcome.status === 'rejected').map(outcome => outcome.reason);
+      if (failures.length) throw new AggregateError(failures, 'Isolated PostgreSQL fixture connection cleanup failed');
+    });
+  } catch (error) {
+    cluster.stop();
+    throw error;
+  }
+  return {
+    ...cluster,
+    track(connection) {
+      connections.add(connection);
+      return connection;
+    },
+  };
+}
+
+module.exports = { createIsolatedPostgres, createIsolatedPostgresFixture };

@@ -416,10 +416,13 @@ router.post('/set-password', async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-    await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [passwordHash, user.id]
+    const updateResult = await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND password_hash IS NOT DISTINCT FROM $3',
+      [passwordHash, user.id, user.password_hash]
     );
+    if (updateResult.rowCount !== 1) {
+      return res.status(409).json({ error: '凭证已更改，请重新验证后重试', code: 'credential_changed' });
+    }
 
     req.session.user.needsPasswordSetup = false;
     Logger.info(`[设置密码] 用户 ${user.username || user.email} 完成首次密码设置`);
@@ -478,10 +481,13 @@ router.post('/change-password', async (req, res) => {
     if (!user.password_hash) {
       const salt = await bcrypt.genSalt(10);
       const newPasswordHash = await bcrypt.hash(newPassword, salt);
-      await pool.query(
-        'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [newPasswordHash, req.session.user.id]
+      const updateResult = await pool.query(
+        'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND password_hash IS NOT DISTINCT FROM $3',
+        [newPasswordHash, user.id, user.password_hash]
       );
+      if (updateResult.rowCount !== 1) {
+        return res.status(409).json({ error: '凭证已更改，请重新验证后重试', code: 'credential_changed' });
+      }
       req.session.user.needsPasswordSetup = false;
       Logger.info(`[修改密码] 用户 ${req.session.user.email} 首次设置密码`);
       return res.json({ message: '密码设置成功', success: true });
@@ -499,7 +505,13 @@ router.post('/change-password', async (req, res) => {
     // 更新密码
     const salt = await bcrypt.genSalt(10);
     const newPasswordHash = await bcrypt.hash(newPassword, salt);
-    await pool.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newPasswordHash, req.session.user.id]);
+    const updateResult = await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND password_hash IS NOT DISTINCT FROM $3',
+      [newPasswordHash, user.id, user.password_hash]
+    );
+    if (updateResult.rowCount !== 1) {
+      return res.status(409).json({ error: '凭证已更改，请重新验证后重试', code: 'credential_changed' });
+    }
 
     Logger.info(`[修改密码] 用户 ${req.session.user.email} 修改了密码`);
     logAction({

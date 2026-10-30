@@ -4,11 +4,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { Client } = require('pg');
 const { clearLatencyStatsCache, queryLatencyStats } = require('../utils/latency-stats');
+const { createIsolatedPostgresFixture } = require('./test-support/isolated-postgres');
 
-// 仅允许显式提供的隔离数据库执行；生产库不要设置该变量。
-test('隔离 PostgreSQL：延迟百分位、限流快照与用户范围', { skip: !process.env.LATENCY_STATS_TEST_DATABASE_URL }, async () => {
-  const db = new Client({ connectionString: process.env.LATENCY_STATS_TEST_DATABASE_URL });
+test('隔离 PostgreSQL：延迟百分位、限流快照与用户范围', async context => {
+  const cluster = createIsolatedPostgresFixture(context, 'latency-stats');
+  const db = cluster.track(new Client(cluster.connection));
   await db.connect();
+  await cluster.assertIsolation(db);
   const schema = `latency_stats_${process.pid}`;
   await db.query(`CREATE SCHEMA ${schema}`);
   await db.query(`SET search_path TO ${schema}`);
@@ -66,6 +68,5 @@ test('隔离 PostgreSQL：延迟百分位、限流快照与用户范围', { skip
   } finally {
     clearLatencyStatsCache();
     await db.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
-    await db.end();
   }
 });

@@ -7,13 +7,15 @@ const { Pool } = require('pg');
 const history = require('../utils/provider-quota-history');
 const capture = require('../utils/request-quota-capture');
 const cycle = require('../utils/quota-cycle-analysis');
+const { createIsolatedPostgresFixture } = require('./test-support/isolated-postgres');
 
-test('最终复审：缺series不污染事务、推断终止长期快照、导出版本一致性', { skip: !process.env.QUOTA_TEST_DATABASE_URL }, async () => {
-  const url = process.env.QUOTA_TEST_DATABASE_URL;
-  const admin = new Pool({ connectionString: url });
+test('最终复审：缺series不污染事务、推断终止长期快照、导出版本一致性', async context => {
+  const cluster = createIsolatedPostgresFixture(context, 'quota-review');
+  const admin = cluster.track(new Pool(cluster.connection));
+  await cluster.assertIsolation(admin);
   const schema = `quota_review_${process.pid}`;
   await admin.query(`CREATE SCHEMA ${schema}`);
-  const db = new Pool({ connectionString: url, options: `-c search_path=${schema}` });
+  const db = cluster.track(new Pool({ ...cluster.connection, options: `-c search_path=${schema}` }));
   const account = crypto.randomUUID(), attempt = crypto.randomUUID();
   const t = second => new Date(Date.UTC(2026, 0, 2, 0, 0, second)).toISOString();
   const range = { start: '2026-01-01', end: '2026-01-03' };
@@ -69,8 +71,6 @@ test('最终复审：缺series不污染事务、推断终止长期快照、导�
     assert.equal(summary.inferred_terminal, 1);
     assert.equal(summary.latency_ms.p99, null);
   } finally {
-    await db.end();
     await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-    await admin.end();
   }
 });

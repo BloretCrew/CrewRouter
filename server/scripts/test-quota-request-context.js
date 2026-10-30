@@ -6,6 +6,7 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const http = require('node:http');
 const { EventEmitter } = require('node:events');
+const { createIsolatedPostgresFixture } = require('./test-support/isolated-postgres');
 
 function harness({ realIdentity = false } = {}) {
   const begins = [];
@@ -276,14 +277,14 @@ test('real identity project/cwd snapshot and no-upstream persistence read final 
   assert.equal(identity.sessionId, 'session');
 });
 
-test('logical request schema is idempotent in isolated PostgreSQL', { skip: !process.env.QUOTA_TEST_DATABASE_URL }, async () => {
+test('logical request schema is idempotent in isolated PostgreSQL', async context => {
   const { Pool } = require('pg');
-  const url = new URL(process.env.QUOTA_TEST_DATABASE_URL);
-  assert.ok(['localhost', '127.0.0.1'].includes(url.hostname) && url.pathname.startsWith('/crewrouter_quota_test'));
-  const admin = new Pool({ connectionString: url.toString() });
+  const cluster = createIsolatedPostgresFixture(context, 'quota-logical');
+  const admin = cluster.track(new Pool(cluster.connection));
+  await cluster.assertIsolation(admin);
   const schema = `network_logical_${process.pid}`;
   await admin.query(`CREATE SCHEMA ${schema}`);
-  const db = new Pool({ connectionString: url.toString(), options: `-c search_path=${schema}` });
+  const db = cluster.track(new Pool({ ...cluster.connection, options: `-c search_path=${schema}` }));
   try {
     const h = harness();
     await h.ensureLogicalRequestSchema(db);
@@ -298,7 +299,7 @@ test('logical request schema is idempotent in isolated PostgreSQL', { skip: !pro
     assert.equal(result.rows[0].skip_reason, 'rejected_before_upstream');
     assert.equal(result.rows[0].status, 'rejected');
   } finally {
-    await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end();
+    await admin.query(`DROP SCHEMA ${schema} CASCADE`);
   }
 });
 
@@ -403,14 +404,14 @@ test('billing releases max1 connection before capture and capture failure never 
   assert.equal(held, false);
 });
 
-test('PostgreSQL max1 concurrent billing and attempt correction complete with exact debit and isolated failures', { skip: !process.env.QUOTA_TEST_DATABASE_URL }, async () => {
+test('PostgreSQL max1 concurrent billing and attempt correction complete with exact debit and isolated failures', async context => {
   const { Pool } = require('pg');
-  const url = new URL(process.env.QUOTA_TEST_DATABASE_URL);
-  assert.ok(['localhost', '127.0.0.1'].includes(url.hostname) && url.pathname.startsWith('/crewrouter_quota_test'));
-  const admin = new Pool({ connectionString: url.toString() });
+  const cluster = createIsolatedPostgresFixture(context, 'quota-billing');
+  const admin = cluster.track(new Pool(cluster.connection));
+  await cluster.assertIsolation(admin);
   const schema = `network_billing_${process.pid}`;
   await admin.query(`CREATE SCHEMA ${schema}`);
-  const db = new Pool({ connectionString: url.toString(), max: 1, connectionTimeoutMillis: 1000, options: `-c search_path=${schema}` });
+  const db = cluster.track(new Pool({ ...cluster.connection, max: 1, connectionTimeoutMillis: 1000, options: `-c search_path=${schema}` }));
   let links = 0;
   const statements = [];
   db.on('connect', client => {
@@ -450,7 +451,7 @@ test('PostgreSQL max1 concurrent billing and attempt correction complete with ex
     assert.equal(links, 2);
     assert.equal(statements.filter(sql => sql === 'ROLLBACK').length, rollbackBefore + 2);
   } finally {
-    await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end();
+    await admin.query(`DROP SCHEMA ${schema} CASCADE`);
   }
 });
 
@@ -530,14 +531,14 @@ test('committed billing returns within deadline even if linkUsage never resolves
   assert.equal(held, false);
 });
 
-test('real rejected logical request never persists credential text in project/session', { skip: !process.env.QUOTA_TEST_DATABASE_URL }, async () => {
+test('real rejected logical request never persists credential text in project/session', async context => {
   const { Pool } = require('pg');
-  const url = new URL(process.env.QUOTA_TEST_DATABASE_URL);
-  assert.ok(['localhost', '127.0.0.1'].includes(url.hostname) && url.pathname.startsWith('/crewrouter_quota_test'));
-  const admin = new Pool({ connectionString: url.toString() });
+  const cluster = createIsolatedPostgresFixture(context, 'quota-redaction');
+  const admin = cluster.track(new Pool(cluster.connection));
+  await cluster.assertIsolation(admin);
   const schema = `network_redaction_${process.pid}`;
   await admin.query(`CREATE SCHEMA ${schema}`);
-  const db = new Pool({ connectionString: url.toString(), options: `-c search_path=${schema}` });
+  const db = cluster.track(new Pool({ ...cluster.connection, options: `-c search_path=${schema}` }));
   try {
     const h = harness({ realIdentity: true });
     await h.ensureLogicalRequestSchema(db);
@@ -549,5 +550,5 @@ test('real rejected logical request never persists credential text in project/se
     assert.match(row.session_id, /^redacted:[a-f0-9]{64}$/);
     assert.equal(row.status, 'rejected');
     assert.equal(h.safeText('a'.repeat(1000), 128).length, 128);
-  } finally { await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); }
+  } finally { await admin.query(`DROP SCHEMA ${schema} CASCADE`); }
 });

@@ -6,6 +6,7 @@ const { Client } = require('pg');
 const crypto = require('node:crypto');
 const cycle = require('../utils/quota-cycle-analysis');
 const { ensureQuotaHistorySchema } = require('../utils/provider-quota-history');
+const { createIsolatedPostgresFixture } = require('./test-support/isolated-postgres');
 
 test('周期数值、变更分类、百分位与未知用量', () => {
   assert.equal(cycle.percent({ kind: 'window', used_percent: 0 }), 0);
@@ -21,9 +22,11 @@ test('周期数值、变更分类、百分位与未知用量', () => {
   assert.equal(summary.latency_ms.p95, 1000);
 });
 
-test('隔离PG：多窗口、完整/partial、重置充值、修正回补、重叠、保留、权限和导出', { skip: !process.env.QUOTA_TEST_DATABASE_URL }, async () => {
-  const db = new Client({ connectionString: process.env.QUOTA_TEST_DATABASE_URL });
+test('隔离PG：多窗口、完整/partial、重置充值、修正回补、重叠、保留、权限和导出', async context => {
+  const cluster = createIsolatedPostgresFixture(context, 'quota-cycle');
+  const db = cluster.track(new Client(cluster.connection));
   await db.connect();
+  await cluster.assertIsolation(db);
   const schema = `quota_cycle_${process.pid}`;
   await db.query(`CREATE SCHEMA ${schema}; SET search_path TO ${schema}`);
   const account = crypto.randomUUID(), account2 = crypto.randomUUID();
@@ -135,6 +138,5 @@ test('隔离PG：多窗口、完整/partial、重置充值、修正回补、重�
     await assert.rejects(cycle.queryQuotaCycle(db, id, range, 'user', 1), error => error.status === 404);
   } finally {
     await db.query(`DROP SCHEMA ${schema} CASCADE`);
-    await db.end();
   }
 });
