@@ -72,7 +72,7 @@ function buildLibraryQuery(options) {
            m.created_at, m.enabled AS system_enabled, p.provider_enabled,
            CASE WHEN ${team}::int IS NULL THEN NULL ELSE COALESCE(tm.enabled, FALSE) END AS team_enabled,
            mtr.ok AS test_ok, mtr.latency_ms AS test_latency_ms,
-           mtr.tokens_per_second AS test_tokens_per_second, mtr.tested_at AS test_tested_at
+           mtr.tokens_per_second AS test_tokens_per_second, mtr.error AS test_error, mtr.tested_at AS test_tested_at
     FROM models m JOIN visible_providers p ON p.id = m.provider
     LEFT JOIN team_models tm ON tm.model_id = m.id AND tm.team_id = ${team}::int
     LEFT JOIN model_test_results mtr ON mtr.model_id = m.id
@@ -113,7 +113,7 @@ router.get('/model-library', requireAuth, requireProviderManager, async (req, re
       COUNT(*) FILTER (WHERE system_enabled)::int AS system_enabled_count,
       CASE WHEN $1::int IS NULL THEN NULL ELSE COUNT(*) FILTER (WHERE team_enabled)::int END AS team_enabled_count,
       COUNT(*) FILTER (WHERE system_enabled AND provider_enabled AND ($1::int IS NULL OR team_enabled))::int AS available_count FROM filtered_models`, params);
-    const modelSort = { name: 'provider_name, name, model_id', name_desc: 'provider_name DESC, name DESC, model_id', newest: 'created_at DESC NULLS LAST, model_id', test_latency: 'test_latency_ms ASC NULLS LAST, model_id', test_speed: 'test_tokens_per_second DESC NULLS LAST, model_id', price_asc: 'input_price_per_1k_tokens ASC NULLS LAST, output_price_per_1k_tokens ASC NULLS LAST, model_id', price_desc: 'input_price_per_1k_tokens DESC NULLS LAST, output_price_per_1k_tokens DESC NULLS LAST, model_id' };
+    const modelSort = { name: 'provider_name, name, model_id', name_desc: 'provider_name DESC, name DESC, model_id', newest: 'created_at DESC NULLS LAST, model_id', test_latency: 'CASE WHEN test_ok IS TRUE THEN 0 ELSE 1 END ASC, test_latency_ms ASC NULLS LAST, model_id', test_speed: 'CASE WHEN test_ok IS TRUE THEN 0 ELSE 1 END ASC, test_tokens_per_second DESC NULLS LAST, model_id', price_asc: 'input_price_per_1k_tokens ASC NULLS LAST, output_price_per_1k_tokens ASC NULLS LAST, model_id', price_desc: 'input_price_per_1k_tokens DESC NULLS LAST, output_price_per_1k_tokens DESC NULLS LAST, model_id' };
     const providerSort = { name: 'name, id', name_desc: 'name DESC, id', newest: 'created_at DESC NULLS LAST, id', test_latency: 'name, id', test_speed: 'name, id', price_asc: 'name, id', price_desc: 'name, id' };
     const source = options.view === 'models' ? 'filtered_models' : 'provider_stats';
     const order = options.view === 'models' ? modelSort[options.sort] : providerSort[options.sort];

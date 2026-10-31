@@ -472,6 +472,8 @@ router.get('/models', requireAuth, requireProviderManager, async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
     const offset = (page - 1) * limit;
     const q = (req.query.q || '').trim();
+    // 精确 ID 查询用于从模型库打开编辑器，避免模糊搜索分页截断目标。
+    const exactId = typeof req.query.id === 'string' ? req.query.id : '';
     const provider = (req.query.provider || '').trim();
     const enabled = req.query.enabled; // 'true' | 'false' | undefined
     const series = (req.query.series || '').trim();
@@ -480,6 +482,10 @@ router.get('/models', requireAuth, requireProviderManager, async (req, res) => {
     const whereParts = [];
     const params = [];
     let idx = 1;
+    if (exactId) {
+      whereParts.push(`m.id = $${idx++}`);
+      params.push(exactId);
+    }
     if (q) {
       whereParts.push(`(m.id ILIKE $${idx} OR m.name ILIKE $${idx} OR COALESCE(m.upstream_model_id,'') ILIKE $${idx} OR COALESCE(m.alias,'') ILIKE $${idx} OR COALESCE(m.series,'') ILIKE $${idx} OR COALESCE(m.description,'') ILIKE $${idx})`);
       params.push(`%${q}%`);
@@ -524,6 +530,10 @@ router.get('/models', requireAuth, requireProviderManager, async (req, res) => {
     const providerFilterParts = [];
     const providerFilterParams = [];
     let pIdx = 1;
+    if (exactId) {
+      providerFilterParts.push(`m.id = $${pIdx++}`);
+      providerFilterParams.push(exactId);
+    }
     if (q) {
       providerFilterParts.push(`(m.id ILIKE $${pIdx} OR m.name ILIKE $${pIdx} OR COALESCE(m.upstream_model_id,'') ILIKE $${pIdx} OR COALESCE(m.alias,'') ILIKE $${pIdx} OR COALESCE(m.series,'') ILIKE $${pIdx} OR COALESCE(m.description,'') ILIKE $${pIdx})`);
       providerFilterParams.push(`%${q}%`);
@@ -558,6 +568,10 @@ router.get('/models', requireAuth, requireProviderManager, async (req, res) => {
     const seriesFilterParts = [];
     const seriesFilterParams = [];
     let sIdx = 1;
+    if (exactId) {
+      seriesFilterParts.push(`m.id = $${sIdx++}`);
+      seriesFilterParams.push(exactId);
+    }
     if (q) {
       seriesFilterParts.push(`(m.id ILIKE $${sIdx} OR m.name ILIKE $${sIdx} OR COALESCE(m.upstream_model_id,'') ILIKE $${sIdx} OR COALESCE(m.alias,'') ILIKE $${sIdx} OR COALESCE(m.series,'') ILIKE $${sIdx} OR COALESCE(m.description,'') ILIKE $${sIdx})`);
       seriesFilterParams.push(`%${q}%`);
@@ -631,8 +645,13 @@ router.post('/models', requireAuth, requireProviderManager, auditMiddleware(ACTI
   const modelId = id || crypto.randomUUID();
   const upstreamModelId = req.body.upstream_model_id || modelId;
   const name = alias || upstreamModelId;
+  let client;
   try {
-    await pool.query(`
+    if (enabled === false) {
+      client = await pool.connect();
+      await client.query('BEGIN');
+    }
+    await (client || pool).query(`
       INSERT INTO models (id, name, provider, series, description, enabled, input_price_per_1k_tokens, output_price_per_1k_tokens, cached_output_price_per_1k_tokens, reference_input_price_per_1k_tokens, reference_output_price_per_1k_tokens, reference_cached_output_price_per_1k_tokens, rate_limit_rpm, rate_limit_tpm, icon_url, alias,
         completion_ratio, image_ratio, audio_ratio, model_price, billing_mode, thinking_model_id, non_thinking_model_id,
         model_multiplier, completion_multiplier, upstream_model_id, forward_reasoning_effort)
@@ -669,7 +688,10 @@ router.post('/models', requireAuth, requireProviderManager, auditMiddleware(ACTI
       model_multiplier || 1.0, completion_multiplier || 1.0, upstreamModelId, forward_reasoning_effort === true]);
 
     if (enabled === false) {
-      const keyIds = await clearDisabledModelBindings(pool, [modelId], invalidateModelKeyCaches);
+      const keyIds = await clearDisabledModelBindings(client, [modelId]);
+      await client.query('COMMIT');
+      client.release();
+      client = null;
       invalidateModelKeyCaches(keyIds);
     }
 
@@ -698,8 +720,11 @@ router.post('/models', requireAuth, requireProviderManager, auditMiddleware(ACTI
 
     res.json({ success: true });
   } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
     Logger.error('[创建/更新模型] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
+  } finally {
+    if (client) client.release();
   }
 });
 

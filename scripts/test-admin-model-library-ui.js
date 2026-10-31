@@ -73,6 +73,10 @@ test('cards escape content, lock system-disabled TEAM switches and expose shortc
   assert.match(html, /trace-model/);
   assert.match(html, /uptime-model/);
   assert.match(html, /测试成功/);
+  const priced = lib.card({ model_id: 'm', input_price_per_1k_tokens: 0, output_price_per_1k_tokens: 1.5 });
+  assert.match(priced, /输入价\/百万Token ¥0/);
+  assert.match(priced, /输出价\/百万Token ¥1\.5/);
+  assert.match(lib.card({ model_id: 'm' }), /价格未设置/);
   assert.match(lib.card({ model_id: 'm', system_enabled: true, team_enabled: false }), /TEAM 未授权/);
   for (const className of ['blora-card model-library-item', 'model-library-item-info', 'model-library-item-name', 'model-item-badges', 'model-library-item-price', 'model-library-item-actions']) assert.ok(html.includes(className));
   assert.doesNotMatch(html, /app\.selectModel|toggleLibraryStar|hideLibraryModel/);
@@ -213,10 +217,11 @@ test('AdminLibraryText translates buttons, parameterized cards and preserves cal
   f.lib.mount(f.container);
   assert.match(f.container.innerHTML, /Create TEAM/);
   assert.match(f.container.innerHTML, /Search TEAM names/);
-  const card = f.lib.card({ model_id: 'm', name: '测试成功', system_enabled: true, test_ok: true, model_multiplier: 2 });
+  const card = f.lib.card({ model_id: 'm', name: '测试成功', system_enabled: true, test_ok: true, model_multiplier: 2, input_price_per_1k_tokens: 0 });
   assert.match(card, /<strong>测试成功<\/strong>/);
   assert.match(card, /Test passed/);
   assert.match(card, /Multiplier 2/);
+  assert.match(card, /Input \/1M tokens ¥0/);
   assert.match(f.lib.pagination(2, 10, 30, 'model-page'), /Page 2 \/ 3, 30 total/);
   assert.equal(f.listeners.get('i18n:ready'), f.lib._language);
   f.lib.destroy();

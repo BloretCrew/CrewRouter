@@ -440,7 +440,7 @@
       if (teamId && enabled && single && !bool(this.findModel(ids[0])?.system_enabled ?? this.findModel(ids[0])?.enabled)) { this.notice(tr('系统模型已关闭，请先前往系统启用。'), true); return; }
       const team = this.teams.find(item => String(item.id ?? item.team_id) === teamId);
       const scope = teamId ? tr('TEAM「{name}」模型授权', { name: team?.name ?? team?.team_name ?? teamId }) : tr('系统模型状态（影响所有 TEAM）');
-      if ((!enabled || !single) && !await window.confirm(tr('{action}{scope}？\n范围：{range}；数量：{count} 个模型。{warning}', { action: tr(enabled ? '启用' : '关闭'), scope, range, count: ids.length, warning: !enabled && teamId ? tr('\n关闭后相关 API Key 模型绑定将被清理。') : '' }))) return;
+      if ((!enabled || !single) && !await window.confirm(tr('{action}{scope}？\n范围：{range}；数量：{count} 个模型。{warning}', { action: tr(enabled ? '启用' : '关闭'), scope, range, count: ids.length, warning: !enabled ? tr('\n关闭后相关 API Key 模型绑定将被清理。') : '' }))) return;
       if (generation !== this.generation || teamId !== (this.canManageTeams() ? this.teamId : '')) { this.notice(tr('范围已变更，请重新执行操作。'), true); return; }
       this.busy = true;
       this.mutating = true;
@@ -643,7 +643,7 @@
         else if (action === 'test-provider') { await this.app.pingProvider(id); }
         else if (action === 'edit-model') {
           const summary = this.findModel(id);
-          const params = new URLSearchParams({ page: '1', limit: '200', q: id });
+          const params = new URLSearchParams({ page: '1', limit: '1', id });
           if (summary?.provider_id) params.set('provider', summary.provider_id);
           const data = await this.request(`/api/admin/models?${params}`);
           const model = (Array.isArray(data) ? data : data.items || []).find(item => String(item.id) === id);

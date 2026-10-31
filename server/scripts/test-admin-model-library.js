@@ -67,6 +67,61 @@ function writeHandler(file, method, route, pool, extra = {}) {
   return handler;
 }
 
+test('模型编辑按完整 ID 查询，特殊字符不作模糊匹配', async () => {
+  const calls = [];
+  const target = 'provider/model_%';
+  const pool = { async query(sql, params) {
+    calls.push({ sql, params: [...params] });
+    if (sql.includes('COUNT(*)::int AS count')) return { rows: [{ count: 1 }] };
+    if (sql.includes('AVG(m.input_price')) return { rows: [{}] };
+    if (sql.includes('SELECT DISTINCT m.series')) return { rows: [] };
+    if (sql.includes('GROUP BY m.provider')) return { rows: [] };
+    return { rows: [{ id: target }] };
+  } };
+  const handler = writeHandler('routes/admin.js', 'get', '/models', pool);
+  const res = response();
+  await handler({ query: { page: '1', limit: '1', id: target, provider: 'provider' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.data.items[0].id, target);
+  for (const call of calls) {
+    assert.match(call.sql, /m\.id = \$1/);
+    assert.equal(call.params[0], target);
+  }
+  assert.deepEqual(calls.at(-1).params, [target, 'provider', 1, 0]);
+});
+
+test('模型库编辑请求使用数据库 ID 精确定位', async () => {
+  const window = {};
+  vm.runInNewContext(read('../public/js/admin-model-library.js'), { window, URLSearchParams });
+  let edited;
+  const app = { editModel(model) { edited = model; } };
+  const instance = new window.AdminModelLibrary(app);
+  const id = 'provider/model_%';
+  instance.container = { contains: () => true };
+  instance.findModel = () => ({ provider_id: 'provider' });
+  instance.request = async url => {
+    const params = new URLSearchParams(url.split('?')[1]);
+    assert.equal(params.get('id'), id);
+    assert.equal(params.get('q'), null);
+    assert.equal(params.get('limit'), '1');
+    return { items: [{ id }] };
+  };
+  await instance.onClick({ target: { closest: () => ({ dataset: { action: 'edit-model', id } }) } });
+  assert.equal(edited.id, id);
+});
+
+test('关闭系统或 TEAM 模型时均提示清理 Key 绑定', async () => {
+  let prompt;
+  const window = { confirm: message => { prompt = message; return false; } };
+  vm.runInNewContext(read('../public/js/admin-model-library.js'), { window, URLSearchParams });
+  const instance = new window.AdminModelLibrary({});
+  for (const teamId of ['', '1']) {
+    instance.teamId = teamId;
+    await instance.setEnabled(['model'], false, true);
+    assert.match(prompt, /API Key 模型绑定将被清理/);
+  }
+});
+
 test('默认供应商分页保留零模型供应商且不暴露密钥', async () => {
   const fixture = library();
   const res = await fixture.request({ limit: '1' });
@@ -221,6 +276,17 @@ test('新增读取字段和系列列表，价格排序按输入价、输出价�
   }
 });
 
+test('测试排序优先展示成功结果，返回错误供管理界面诊断', async () => {
+  for (const [sort, metric] of [['test_latency', 'test_latency_ms ASC'], ['test_speed', 'test_tokens_per_second DESC']]) {
+    const fixture = library();
+    const res = await fixture.request({ view: 'models', sort });
+    assert.equal(res.statusCode, 200);
+    const sql = fixture.calls.find(call => call.sql.includes('SELECT * FROM filtered_models')).sql;
+    assert.match(sql, /mtr\.error AS test_error/);
+    assert(sql.includes(`ORDER BY CASE WHEN test_ok IS TRUE THEN 0 ELSE 1 END ASC, ${metric} NULLS LAST, model_id`));
+  }
+});
+
 test('指定 Team 仅系统供应商，无 Team 管理员保留全部供应商', () => {
   const fixture = library();
   assert(!fixture.buildLibraryQuery(fixture.parseQuery({})).cte.includes('created_by IS NULL'));
@@ -254,6 +320,47 @@ test('单保存缺省 enabled 新增默认启用，编辑保留旧开关，管�
     assert.equal(call.params[5], null);
     assert.match(call.sql, /COALESCE\(\$6::boolean, TRUE\)/);
     assert.match(call.sql, /enabled = COALESCE\(\$6::boolean, models.enabled\)/);
+  }
+});
+
+test('单模型禁用与 Key 清理原子提交，失败回滚且提交后才失效缓存', async () => {
+  for (const failure of [null, 'cleanup', 'commit']) {
+    const events = [];
+    const client = { async query(sql) {
+      if (sql.includes('INSERT INTO models')) events.push('save');
+      else events.push(sql);
+      if (failure === 'commit' && sql === 'COMMIT') throw new Error('commit failed');
+      return { rows: [] };
+    }, release() { events.push('release'); } };
+    const handler = writeHandler('routes/admin.js', 'post', '/models', {
+      async connect() { return client; },
+      async query() { throw new Error('disabled save must use transaction'); },
+    }, {
+      crypto: { randomUUID: () => 'new' },
+      clearDisabledModelBindings: async (db, ids) => {
+        assert.equal(db, client);
+        assert.deepEqual(Array.from(ids), ['m']);
+        events.push('cleanup');
+        if (failure === 'cleanup') throw new Error('cleanup failed');
+        return [42];
+      },
+      invalidateModelKeyCaches: ids => events.push(`invalidate:${ids.join(',')}`),
+      addModelsToFrontierTeams: async () => { throw new Error('disabled model must not be added'); },
+    });
+    const res = response();
+    await handler({ body: { id: 'm', provider: 'p', enabled: false } }, res);
+    assert.equal(res.statusCode, failure ? 500 : 200);
+    assert(events.indexOf('BEGIN') < events.indexOf('save'));
+    assert(events.indexOf('save') < events.indexOf('cleanup'));
+    assert.equal(events.filter(event => event === 'release').length, 1);
+    if (failure) {
+      assert(events.includes('ROLLBACK'));
+      assert(!events.includes('invalidate:42'));
+    } else {
+      assert(events.indexOf('cleanup') < events.indexOf('COMMIT'));
+      assert(events.indexOf('COMMIT') < events.indexOf('invalidate:42'));
+      assert(!events.includes('ROLLBACK'));
+    }
   }
 });
 
