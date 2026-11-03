@@ -1,596 +1,838 @@
-/* 控制台模型库（Blora Design 2.1）：仅作用于 #modelLibraryPage，只用 --blora-* 令牌 */
+/* =========================================================================
+   控制台模型库 · Liquid Glass（第一个迁移页）
+   组件皮肤与令牌见 liquid-glass.css；本文件只负责本页布局与材质层级：
+   背景光斑 → 玻璃面板（绑定卡 / 工具栏 / Team）→ 分组底 → 玻璃卡片。
+   浮在内容上的工具栏、菜单用真实背景模糊；内容卡片沿用 HTML-Clock
+   .font-card 的做法（半透明 + 高光 + 描边，不做模糊），保证大量卡片时的流畅。
+   ========================================================================= */
 
-/* 第 1 步：滚动后吸顶筛选栏 */
-#modelLibraryPage .model-library-sticky-bar {
-  /* 窗口滚动、祖先有 overflow，position: sticky 不生效；用 fixed 悬浮卡片，位置由 JS 按内容区写入 */
-  position: fixed;
-  top: var(--blora-space-3);
-  left: var(--ml-sticky-left);
-  width: var(--ml-sticky-width);
-  z-index: 45;
-  box-sizing: border-box;
-  padding: var(--blora-space-3) var(--blora-space-4);
-  background: var(--blora-color-surface-default);
-  border-radius: var(--blora-radius-lg);
-  box-shadow: var(--blora-shadow-1);
+#modelLibraryPage {
+  --ml-section-gap: 20px;
+  --ml-card-min: 264px;
 }
-#modelLibraryPage .model-library-sticky-bar[hidden] { display: none; }
-#modelLibraryPage .model-library-sticky-inner {
-  display: flex;
-  align-items: center;
-  gap: var(--blora-space-2);
-}
-#modelLibraryPage .model-library-sticky-select,
-#modelLibraryPage #libraryProviderFilter { inline-size: 120px; flex: none; }
-#modelLibraryPage .model-library-sticky-search,
-#modelLibraryPage #librarySearchInput { flex: 0 1 260px; }
-#modelLibraryPage .model-library-sticky-more-btn { margin-left: auto; }
-#modelLibraryPage .model-library-sticky-more-btn,
-#modelLibraryPage .model-library-sticky-key,
-#modelLibraryPage #libraryMoreFiltersBtn { min-height: var(--blora-control-height); }
-#modelLibraryPage .model-library-sticky-advanced {
+#modelLibraryPage .ml-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#modelLibraryPage .library-quick-add-system-provider { display: none; }
+
+/* ---------- 1. 顶部说明与操作 ---------- */
+#modelLibraryPage .model-library-header {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--blora-space-2);
-  margin-top: var(--blora-space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-block-end: var(--ml-section-gap);
 }
-#modelLibraryPage .model-library-sticky-more-btn,
-#modelLibraryPage .model-library-sticky-key-wrap { flex: none; }
-#modelLibraryPage .model-library-sticky-key {
+#modelLibraryPage .model-library-header-left { flex: 1 1 320px; min-width: 0; }
+#modelLibraryPage .model-library-header-hint { color: var(--lg-fg-secondary); font-size: 13.5px; line-height: 1.5; }
+#modelLibraryPage .model-library-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+#modelLibraryPage .model-library-header-actions [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
+#modelLibraryPage .model-library-header-actions .blora-button {
+  --blora-button-height: 34px;
+  min-height: 34px;
+  padding-inline: 14px;
+  font-size: 13.5px;
+}
+/* 次要操作：玻璃胶囊（HTML-Clock .meta-inner） */
+#modelLibraryPage .model-library-header-actions .blora-button[data-variant="secondary"],
+#modelLibraryPage .model-library-header-more .ml-library-more-trigger {
+  --blora-button-bg: var(--lg-glass-bg-strong);
+  --blora-button-bd: var(--lg-glass-border);
+  -webkit-backdrop-filter: blur(20px) saturate(var(--lg-saturate));
+  backdrop-filter: blur(20px) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+}
+#modelLibraryPage .model-library-header-actions .blora-button[data-variant="secondary"]:hover,
+#modelLibraryPage .model-library-header-more .ml-library-more-trigger:hover {
+  --blora-button-bg: var(--lg-card-bg-hover);
+  --blora-button-bd: var(--lg-glass-border-strong);
+}
+#modelLibraryPage .model-library-header-more .ml-library-more-trigger {
+  --blora-button-fg: var(--lg-fg);
+  inline-size: 34px;
+  padding: 0;
+}
+
+/* ---------- 2. 绑定卡：本页主焦点，真实玻璃 ---------- */
+#modelLibraryPage .model-library-binding-bar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  margin-block-end: var(--ml-section-gap);
+  padding: 20px 24px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+}
+#modelLibraryPage .model-library-binding-main { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; inline-size: 100%; max-inline-size: 100%; min-width: 0; }
+#modelLibraryPage .model-library-key-selector { display: none !important; }
+#modelLibraryPage .binding-active { display: flex; flex-direction: column; gap: 8px; }
+#modelLibraryPage .binding-key-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 16px; }
+#modelLibraryPage .ml-binding-item { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
+/* 小节标签：HTML-Clock .section-title（11px 大写、字距 0.1em、次级色） */
+#modelLibraryPage .ml-binding-item-label,
+#modelLibraryPage .model-library-key-label {
+  min-block-size: 14px;
+  color: var(--lg-fg-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#modelLibraryPage .ml-binding-item-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-block-size: var(--lg-control-h);
+  color: var(--lg-fg);
+  font-size: 15px;
+}
+#modelLibraryPage .ml-binding-key-value { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 12px; min-block-size: var(--lg-control-h); }
+#modelLibraryPage .ml-binding-model-line { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+#modelLibraryPage .binding-model-name { font-family: var(--lg-font-display); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+#modelLibraryPage .ml-binding-speed-meta { color: var(--lg-fg-secondary); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#modelLibraryPage .ml-binding-speed-meta.is-fail { color: var(--lg-red-ink); }
+#modelLibraryPage .ml-binding-unset,
+#modelLibraryPage .binding-model-unset { color: var(--lg-fg-tertiary); }
+#modelLibraryPage .binding-arrow {
+  display: inline-flex;
+  align-self: flex-start;
+  padding-block-start: calc(14px + 6px + (var(--lg-control-h) - 1em) / 2);
+  color: var(--lg-fg-tertiary);
+}
+/* 当前 Key：强调色着色胶囊，再次点击打开工具菜单 */
+#modelLibraryPage .binding-key-button {
+  --blora-button-height: 32px;
+  --blora-button-bg: var(--lg-accent-tint);
+  --blora-button-fg: var(--lg-accent-ink);
+  min-height: 32px;
+  padding-inline: 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+#modelLibraryPage .binding-key-button:hover { --blora-button-bg: color-mix(in srgb, var(--lg-accent) 20%, transparent); color: var(--lg-accent-ink); }
+#modelLibraryPage .binding-key-name { font-weight: 600; }
+#modelLibraryPage .binding-active > .binding-uptime {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  inline-size: 100%;
+  margin-block-start: 8px;
+  padding-block-start: 16px;
+  border-top: 1px solid var(--lg-divider);
+}
+#modelLibraryPage .binding-active > .binding-uptime > .ml-model-uptime { flex: 1 1 auto; inline-size: 100%; margin: 0; padding: 0; border: 0; }
+#modelLibraryPage .binding-active > .binding-uptime .ml-uptime-track { gap: 2px; block-size: 22px; }
+#modelLibraryPage .binding-active > .binding-uptime .ml-uptime-seg { border-radius: 3px; }
+#modelLibraryPage .ml-binding-key-switch-row { display: flex; align-items: center; margin-block-start: 4px; }
+#modelLibraryPage .ml-binding-key-switch-row:has(.ml-key-switch:empty) { display: none; }
+#modelLibraryPage .ml-key-switch { display: inline-flex; align-items: center; min-block-size: var(--lg-control-h); }
+#modelLibraryPage .ml-key-select { min-inline-size: 180px; }
+#modelLibraryPage .binding-hint { color: var(--lg-fg-secondary); font-size: 12.5px; }
+#modelLibraryPage .binding-harness-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+#modelLibraryPage .binding-harness-chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--blora-space-2);
-  white-space: nowrap;
+  gap: 6px;
+  max-inline-size: 100%;
+  min-block-size: 30px;
+  padding: 4px 12px 4px 10px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg);
+  font: 500 12.5px/1.2 var(--lg-font);
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
 }
-#modelLibraryPage .ml-sticky-key-chevron { inline-size: 1em; block-size: 1em; }
-
-/* 不吸顶时：同一套控件、同样排法，无背景无阴影 */
-#modelLibraryPage .ml-model-filter-bar {
+#modelLibraryPage .binding-harness-chip::before { content: ""; inline-size: 6px; block-size: 6px; flex: none; border-radius: 50%; background: var(--h-color, var(--lg-accent)); }
+#modelLibraryPage .binding-harness-chip:hover { background: var(--lg-chip-hover); }
+#modelLibraryPage .binding-harness-chip:active { transform: scale(0.96); }
+#modelLibraryPage .binding-harness-chip-label { color: var(--lg-fg-secondary); }
+#modelLibraryPage .binding-harness-chip-model { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+#modelLibraryPage .binding-mode-banner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--blora-space-2);
-  margin-block-end: var(--blora-space-4);
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-accent-tint);
+  color: var(--lg-fg);
+  font-size: 13.5px;
 }
-#modelLibraryPage #libraryMoreFiltersBtn { margin-inline-start: auto; }
-#modelLibraryPage .ml-model-filter-advanced {
+#modelLibraryPage .binding-mode-banner strong { color: var(--lg-accent-ink); }
+#modelLibraryPage .binding-mode-exit { margin-inline-start: auto; }
+#modelLibraryPage .binding-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; text-align: center; }
+#modelLibraryPage .binding-empty-icon {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 50%;
+  background: var(--lg-accent-tint);
+  color: var(--lg-accent);
+  font-size: 22px;
+}
+#modelLibraryPage .binding-empty-title { color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#modelLibraryPage .binding-empty-desc { color: var(--lg-fg-secondary); font-size: 13px; }
+
+/* 玻璃面板的渐变边缘高光（令牌见 liquid-glass.css --lg-rim-gradient） */
+#modelLibraryPage :is(.model-library-binding-bar, .ml-model-filter-bar, .model-library-sticky-bar, .model-library-team, .ml-model-quota-section, .ml-library-reorder-toolbar, .model-library-empty)::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: var(--lg-rim-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+#modelLibraryPage .model-library-empty { position: relative; }
+
+/* ---------- 3. 筛选工具栏：玻璃胶囊；滚出后变为顶部悬浮工具栏 ---------- */
+#modelLibraryPage .ml-model-filter-bar,
+#modelLibraryPage .model-library-sticky-bar {
+  box-sizing: border-box;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+}
+#modelLibraryPage .ml-model-filter-bar {
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--blora-space-2);
-  flex-basis: 100%;
+  align-items: center;
+  gap: 6px;
+  margin-block-end: var(--ml-section-gap);
+  padding: 6px;
 }
+#modelLibraryPage .ml-model-filter-bar:has(#libraryMoreFiltersBtn[aria-expanded="true"]) { border-radius: 24px; }
+#modelLibraryPage .ml-model-filter-advanced { display: flex; flex-basis: 100%; flex-wrap: wrap; gap: 6px; }
+#modelLibraryPage .model-library-sticky-bar {
+  /* 窗口滚动，祖先有 overflow，position: sticky 不生效；fixed 悬浮，位置由 JS 按内容区写入 */
+  position: fixed;
+  top: 12px;
+  left: var(--ml-sticky-left);
+  z-index: 45;
+  width: var(--ml-sticky-width);
+  padding: 6px;
+  background-color: var(--lg-glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  animation: ml-glass-in 0.32s var(--lg-ease-out) backwards;
+}
+#modelLibraryPage .model-library-sticky-bar[hidden] { display: none; }
+#modelLibraryPage .model-library-sticky-bar:has(#libraryStickyAdvancedFilters.is-open) { border-radius: 24px; }
+#modelLibraryPage .model-library-sticky-inner { display: flex; align-items: center; gap: 6px; }
+#modelLibraryPage .model-library-sticky-advanced { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 6px; }
+#modelLibraryPage .model-library-sticky-more-btn,
+#modelLibraryPage .model-library-sticky-key-wrap { flex: none; }
 
-/* 第 2 步：Team 组（外层区域）、供应商分组（内层）、已收藏区 */
+/* 工具栏内所有控件同高（选择、搜索、按钮） */
+#modelLibraryPage #libraryProviderFilter,
+#modelLibraryPage .model-library-sticky-select { flex: none; inline-size: 160px; }
+#modelLibraryPage #librarySearchInput,
+#modelLibraryPage .model-library-sticky-search { flex: 1 1 auto; min-width: 0; }
+#modelLibraryPage .ml-model-filter-advanced blora-select,
+#modelLibraryPage .model-library-sticky-advanced blora-select { inline-size: 168px; }
+#modelLibraryPage #libraryMoreFiltersBtn,
+#modelLibraryPage .model-library-sticky-more-btn,
+#modelLibraryPage .model-library-sticky-key {
+  --blora-button-height: var(--lg-control-h);
+  height: var(--lg-control-h);
+  min-height: var(--lg-control-h);
+  max-height: var(--lg-control-h);
+  padding-inline: 14px;
+  font-size: 13.5px;
+}
+#modelLibraryPage #libraryMoreFiltersBtn [data-icon],
+#modelLibraryPage .model-library-sticky-more-btn [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
+#modelLibraryPage #libraryMoreFiltersBtn[aria-pressed="true"],
+#modelLibraryPage .model-library-sticky-more-btn[aria-pressed="true"] {
+  --blora-button-bg: var(--lg-accent-tint);
+  --blora-button-fg: var(--lg-accent-ink);
+  color: var(--lg-accent-ink);
+}
+#modelLibraryPage .model-library-sticky-key {
+  --blora-button-bg: var(--lg-chip-bg);
+  --blora-button-bd: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+#modelLibraryPage .model-library-sticky-key:hover { --blora-button-bg: var(--lg-chip-hover); --blora-button-bd: transparent; box-shadow: none; }
+#modelLibraryPage .model-library-sticky-key .blora-tag { background: var(--lg-accent-tint); color: var(--lg-accent-ink); }
+#modelLibraryPage .ml-sticky-key-name { font-weight: 600; }
+#modelLibraryPage .ml-sticky-key-chevron { inline-size: 1em; block-size: 1em; color: var(--lg-fg-secondary); }
+
+/* ---------- 4. 分组层级：Team / 已收藏 = 玻璃面板，供应商 = 分组底 ---------- */
+#modelLibraryPage .model-library-grid { display: flow-root; }
 #modelLibraryPage .model-library-team {
-  margin-block-end: var(--blora-space-4);
-  padding: var(--blora-space-4);
-  background: var(--blora-color-surface-sunken);
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-xl);
+  position: relative;
+  margin-block-end: var(--ml-section-gap);
+  padding: 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+  animation: ml-glass-in 0.36s var(--lg-ease-out) backwards;
 }
 #modelLibraryPage .model-library-team-header {
   display: flex;
   align-items: center;
-  gap: var(--blora-space-2);
+  gap: 8px;
+  min-block-size: 34px;
+  padding-inline: 4px;
   cursor: pointer;
 }
 #modelLibraryPage .model-library-team-header h3 {
+  flex: 0 1 auto;
+  min-width: 0;
   margin: 0;
-  font-size: var(--blora-text-lg);
-  color: var(--blora-color-text-primary);
+  overflow: hidden;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 #modelLibraryPage .ml-header-spacer { flex: 1; }
-#modelLibraryPage .model-library-team-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--blora-space-3);
-  margin-block-start: var(--blora-space-4);
-}
-#modelLibraryPage .model-library-team.collapsed .model-library-team-content { display: none; }
+#modelLibraryPage .model-library-team-content { display: flex; flex-direction: column; gap: 12px; margin-block-start: 14px; }
+#modelLibraryPage .model-library-team.collapsed .model-library-team-content,
+#modelLibraryPage .model-library-starred.collapsed > .model-library-list { display: none; }
+#modelLibraryPage .ml-model-star-heading-icon { display: inline-flex; inline-size: 18px; block-size: 18px; color: var(--lg-orange); }
+#modelLibraryPage .ml-model-star-heading-icon svg { inline-size: 100%; block-size: 100%; fill: currentColor; }
+#modelLibraryPage .model-library-starred .model-library-list { padding: 14px 0 0; }
 
-/* 供应商分组；已收藏区用完全相同的样式 */
-#modelLibraryPage .model-library-provider,
-#modelLibraryPage .model-library-starred {
-  background: var(--blora-color-surface-default);
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-lg);
-  overflow: hidden;
+#modelLibraryPage .model-library-provider {
+  position: relative;
+  border-radius: var(--lg-radius-group);
+  background: var(--lg-group-bg);
 }
-#modelLibraryPage .model-library-starred {
-  padding: 0;
-  margin-block-end: var(--blora-space-4);
-}
-#modelLibraryPage .model-library-provider-header,
-#modelLibraryPage .model-library-starred > .model-library-team-header {
+#modelLibraryPage .model-library-provider-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-3) var(--blora-space-4);
-  background: var(--blora-color-surface-sunken);
+  gap: 12px;
+  min-block-size: 52px;
+  padding: 10px 12px 10px 16px;
+  border-radius: var(--lg-radius-group) var(--lg-radius-group) 0 0;
   cursor: pointer;
 }
-#modelLibraryPage .model-library-starred > .model-library-team-header { justify-content: flex-start; gap: var(--blora-space-2); cursor: default; }
-#modelLibraryPage .model-library-starred > .model-library-team-header h3 { font-size: var(--blora-text-base); }
+#modelLibraryPage .model-library-provider.collapsed .model-library-provider-header { border-radius: var(--lg-radius-group); }
 #modelLibraryPage .model-library-provider-title,
-#modelLibraryPage .model-library-provider-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--blora-space-2);
-  min-width: 0;
-}
-#modelLibraryPage .model-library-provider-actions { flex: none; }
-#modelLibraryPage .ml-provider-fail-text {
-  font-size: var(--blora-text-sm);
-  color: var(--blora-color-status-danger);
-}
-#modelLibraryPage .ml-provider-model-count {
-  font-size: var(--blora-text-xs);
-  color: var(--blora-color-text-muted);
-}
+#modelLibraryPage .model-library-provider-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+#modelLibraryPage .model-library-provider-title { color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#modelLibraryPage .model-library-provider-actions { flex: none; gap: 6px; }
+#modelLibraryPage .ml-provider-fail-text { color: var(--lg-red-ink); font-size: 12.5px; font-weight: 500; }
+#modelLibraryPage .ml-provider-model-count { color: var(--lg-fg-secondary); font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#modelLibraryPage .lib-ping:not(:empty) { color: var(--lg-fg-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+#modelLibraryPage .model-library-provider .model-action-icon { --blora-button-height: 30px; inline-size: 30px; padding: 0; }
 #modelLibraryPage .model-library-provider.collapsed .model-library-list { display: none; }
-#modelLibraryPage .model-library-starred.collapsed > .model-library-list { display: none; }
-#modelLibraryPage .provider-disabled { color: var(--blora-color-text-disabled); }
+#modelLibraryPage .provider-disabled { color: var(--lg-fg-tertiary); }
+#modelLibraryPage .provider-disabled-overlay { border-radius: var(--lg-radius-group); background: color-mix(in srgb, var(--lg-bg) 35%, transparent); }
 
-/* 卡片网格（卡片本身在第 3 步） */
+/* 折叠箭头：小圆底，展开/收起旋转（HTML-Clock 关闭按钮的圆形底） */
+#modelLibraryPage .ml-collapse-icon {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--lg-fg-secondary);
+  transition: transform var(--lg-dur) var(--lg-ease), background-color var(--lg-dur-fast) var(--lg-ease);
+}
+#modelLibraryPage .ml-collapse-icon svg { inline-size: 14px; block-size: 14px; }
+#modelLibraryPage .model-library-team-header:hover > .ml-collapse-icon,
+#modelLibraryPage .model-library-provider-header:hover .ml-collapse-icon { background: var(--lg-chip-bg); color: var(--lg-fg); }
+#modelLibraryPage .collapsed > .model-library-team-header .ml-collapse-icon,
+#modelLibraryPage .collapsed > .model-library-provider-header .ml-collapse-icon { transform: rotate(-90deg); }
+
+/* 卡片网格 */
 #modelLibraryPage .model-library-provider .model-library-list,
 #modelLibraryPage .model-library-starred .model-library-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-3);
+  grid-template-columns: repeat(auto-fill, minmax(var(--ml-card-min), 1fr));
+  gap: 12px;
+}
+#modelLibraryPage .model-library-provider .model-library-list { padding: 2px 12px 12px; }
+
+/* 「更多操作」等次要菜单按钮：小号灰色胶囊 */
+#modelLibraryPage .ml-library-more-trigger { display: inline-flex; align-items: center; gap: 4px; }
+#modelLibraryPage .model-library-team-header .ml-library-more-trigger,
+#modelLibraryPage .model-library-provider-actions .ml-library-more-trigger,
+#modelLibraryPage .model-library-item-actions .ml-library-more-trigger {
+  --blora-button-height: 30px;
+  min-height: 30px;
+  padding-inline: 12px 10px;
+  font-size: 12.5px;
 }
 
-#modelLibraryPage .ml-collapse-icon {
-  inline-size: 1em;
-  block-size: 1em;
-  transition: transform var(--blora-duration-fast) var(--blora-ease);
+/* 菜单打开时提升所在层，避免被后面的卡片或分组盖住 */
+#modelLibraryPage :is(.model-library-team, .model-library-provider, .model-library-item):has(.blora-dropdown[data-open]) { z-index: 6; }
+#modelLibraryPage :is(.model-library-binding-bar, .ml-model-filter-bar, .ml-model-quota-section):has(:focus-within, .blora-dropdown[data-open]) { z-index: 7; }
+
+/* ---------- 5. 模型卡：HTML-Clock .font-card 的玻璃卡片 ---------- */
+#modelLibraryPage .model-library-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  cursor: pointer;
+  transition:
+    transform var(--lg-dur) var(--lg-ease),
+    box-shadow var(--lg-dur) var(--lg-ease),
+    background-color var(--lg-dur) var(--lg-ease),
+    border-color var(--lg-dur) var(--lg-ease);
 }
-#modelLibraryPage .collapsed > .model-library-team-header .ml-collapse-icon,
-#modelLibraryPage .collapsed > .model-library-provider-header .ml-collapse-icon { transform: rotate(-90deg); }
-#modelLibraryPage .ml-model-star-heading-icon { inline-size: 1em; block-size: 1em; }
-#modelLibraryPage .ml-library-more-trigger { display: inline-flex; align-items: center; gap: var(--blora-space-1); }
-
-@media (max-width: 768px) {
-  #modelLibraryPage .model-library-sticky-bar { padding: var(--blora-space-2) var(--blora-space-3); }
+#modelLibraryPage .model-library-item:hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+  transform: translateY(-2px);
 }
-
-/* 第 3 步：模型卡 */
-#modelLibraryPage .model-library-item { display: flex; flex-direction: column; gap: var(--blora-space-3); padding: var(--blora-space-4); background: var(--blora-color-surface-default); border: var(--blora-border-subtle); border-radius: var(--blora-radius-xl); cursor: pointer; transition: box-shadow var(--blora-duration-fast) var(--blora-ease); }
-#modelLibraryPage .model-library-item.selected { border-color: var(--blora-color-action-primary-default); }
-#modelLibraryPage .model-library-item.model-disabled { cursor: default; color: var(--blora-color-text-disabled); }
-#modelLibraryPage .model-library-item-info { display: flex; flex-direction: column; gap: var(--blora-space-2); flex: 1; min-width: 0; }
-#modelLibraryPage .model-library-item-name { display: flex; align-items: center; gap: var(--blora-space-2); font-size: var(--blora-text-sm); font-weight: 600; }
-#modelLibraryPage .model-library-item-name img { inline-size: 1.25em; block-size: 1.25em; }
-#modelLibraryPage .ml-model-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#modelLibraryPage .ml-model-star-btn.starred { color: var(--blora-color-text-primary); }
-#modelLibraryPage .ml-model-item-badges { display: flex; flex-wrap: wrap; gap: var(--blora-space-1); }
-#modelLibraryPage .model-library-item-desc { font-size: var(--blora-text-xs); color: var(--blora-color-text-secondary); }
-#modelLibraryPage .model-library-item-price { padding-top: var(--blora-space-2); border-top: var(--blora-border-subtle); font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-#modelLibraryPage .ml-model-price-item { display: inline-flex; gap: var(--blora-space-1); }
-#modelLibraryPage .model-library-item-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--blora-space-2); }
-#modelLibraryPage .ml-model-star-btn.starred svg { fill: currentColor; }
-#modelLibraryPage .ml-model-uptime { display: flex; align-items: center; gap: var(--blora-space-2); cursor: pointer; }
-#modelLibraryPage .ml-model-uptime .blora-progress { flex: 1; }
-#modelLibraryPage .ml-model-uptime-pct { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-#modelLibraryPage .blora-dropdown__item[aria-disabled="true"] { color: var(--blora-color-text-disabled); cursor: not-allowed; }
-#modelLibraryPage .ml-model-star-heading-icon svg { fill: currentColor; }
-
-/* 第 4 步：顶部绑定信息区 */
-#modelLibraryPage .model-library-binding-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--blora-space-4); margin-bottom: var(--blora-space-4); padding: var(--blora-space-4) var(--blora-space-5); background: var(--blora-color-surface-default); border-radius: var(--blora-radius-lg); box-shadow: var(--blora-shadow-1); }
-#modelLibraryPage .model-library-binding-main { display: flex; flex-direction: column; gap: var(--blora-space-2); flex: 1 1 auto; min-width: 0; }
-#modelLibraryPage .model-library-binding-label,
-#modelLibraryPage .model-library-key-label { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-#modelLibraryPage .binding-active { display: flex; flex-direction: column; gap: var(--blora-space-2); }
-#modelLibraryPage .binding-key-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-3); }
-#modelLibraryPage .ml-binding-item { display: flex; flex-direction: column; gap: var(--blora-space-1); min-width: 0; }
-#modelLibraryPage .ml-binding-item-label { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-#modelLibraryPage .ml-binding-item-value { display: flex; align-items: center; gap: var(--blora-space-2); font-size: var(--blora-text-sm); color: var(--blora-color-text-primary); }
-#modelLibraryPage .ml-binding-unset,
-#modelLibraryPage .binding-model-unset { color: var(--blora-color-text-disabled); }
-#modelLibraryPage .binding-model-name { font-weight: 600; }
-#modelLibraryPage .binding-arrow { display: inline-flex; align-self: flex-end; padding-bottom: var(--blora-space-1); color: var(--blora-color-text-muted); }
-#modelLibraryPage .binding-hint { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-#modelLibraryPage .binding-harness-chips { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
-#modelLibraryPage .binding-mode-banner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); font-size: var(--blora-text-sm); }
-#modelLibraryPage .binding-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-3); color: var(--blora-color-text-secondary); }
-#modelLibraryPage .model-library-key-selector-inner { display: flex; flex-direction: column; gap: var(--blora-space-2); }
-#modelLibraryPage .model-library-key-chips { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
-#modelLibraryPage .model-library-binding-main .binding-empty { flex-direction: column; justify-content: center; gap: var(--blora-space-2); padding: var(--blora-space-4); text-align: center; }
-#modelLibraryPage .binding-empty-icon { color: var(--blora-color-text-muted); font-size: var(--blora-text-2xl); }
-#modelLibraryPage .binding-empty-title { font-size: var(--blora-text-sm); font-weight: 600; color: var(--blora-color-text-primary); }
-#modelLibraryPage .binding-empty-desc { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-
-/* 第 5 步：整页规格（Design Bot 5b） */
-/* 一、层级与间距：canvas → surface-default 区块（1px subtle，radius-xl，无阴影）→ sunken 仅供应商标题条 */
-#modelLibraryPage { background: var(--blora-color-surface-canvas); }
-#modelLibraryPage .model-library-header,
-#modelLibraryPage .model-library-binding-bar,
-#modelLibraryPage .ml-model-filter-bar,
-#modelLibraryPage .model-library-team,
-#modelLibraryPage .model-library-starred { margin-block-end: var(--blora-space-6); }
-#modelLibraryPage .model-library-team,
-#modelLibraryPage .model-library-starred { padding: var(--blora-space-4); background: var(--blora-color-surface-default); border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-xl); }
-#modelLibraryPage .model-library-starred > .model-library-team-header { padding: 0; background: transparent; }
-#modelLibraryPage .model-library-team-header h3 { font-size: var(--blora-text-lg); font-weight: 700; }
-#modelLibraryPage .model-library-starred > .model-library-team-header h3 { font-size: var(--blora-text-lg); font-weight: 700; }
-#modelLibraryPage .model-library-starred .model-library-list { padding: var(--blora-space-4) 0 0; }
-
-/* 二、页头 */
-#modelLibraryPage .library-quick-add-system-provider { display: none; }
-#modelLibraryPage .ml-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-#modelLibraryPage .model-library-header { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-4); flex-wrap: wrap; }
-#modelLibraryPage .model-library-header-left { flex: 1 1 320px; min-width: 0; }
-#modelLibraryPage .model-library-header-hint { font-size: var(--blora-text-sm); color: var(--blora-color-text-muted); }
-#modelLibraryPage .model-library-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: var(--blora-space-2); }
-#modelLibraryPage .model-library-header-actions [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
-
-/* 三、绑定栏：在线率放进「模型」一栏 */
-#modelLibraryPage .model-library-binding-bar { border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-xl); box-shadow: none; }
-#modelLibraryPage .ml-binding-item-label { font-size: var(--blora-text-sm); }
-#modelLibraryPage .ml-binding-item-value { flex-wrap: wrap; font-size: var(--blora-text-base); }
-#modelLibraryPage .ml-binding-item-value .binding-uptime { flex-basis: 100%; min-inline-size: 200px; }
-
-/* 四、筛选栏 */
-#modelLibraryPage #libraryProviderFilter,
-#modelLibraryPage .model-library-sticky-select { inline-size: 160px; }
-#modelLibraryPage #librarySearchInput,
-#modelLibraryPage .model-library-sticky-search { flex: 1 1 auto; }
-
-/* 五、供应商头 */
-#modelLibraryPage .model-library-provider { border-radius: var(--blora-radius-lg); }
-#modelLibraryPage .model-library-provider-header { border-radius: var(--blora-radius-lg) var(--blora-radius-lg) 0 0; }
-#modelLibraryPage .model-library-provider-title { font-size: var(--blora-text-base); font-weight: 700; }
-#modelLibraryPage .ml-provider-model-count { font-size: var(--blora-text-sm); }
-
-/* 六、卡片 */
-#modelLibraryPage .model-library-provider .model-library-list,
-#modelLibraryPage .model-library-starred .model-library-list { gap: var(--blora-space-4); }
-#modelLibraryPage .model-library-provider .model-library-list { padding: var(--blora-space-4); }
-#modelLibraryPage .model-library-item { padding: var(--blora-space-4); border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-lg); box-shadow: none; }
-#modelLibraryPage .model-library-item.selected { border-color: var(--blora-color-action-primary-default); }
-#modelLibraryPage .model-library-item-name { font-size: var(--blora-text-base); font-weight: 700; color: var(--blora-color-text-primary); }
-#modelLibraryPage .model-library-item-desc { font-size: var(--blora-text-sm); color: var(--blora-color-text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-#modelLibraryPage .model-library-item-price,
-#modelLibraryPage .ml-model-uptime-pct { font-size: var(--blora-text-sm); }
-#modelLibraryPage .ml-model-uptime { padding-block-end: var(--blora-space-2); border-bottom: var(--blora-border-subtle); }
-#modelLibraryPage .ml-model-test-badge { flex: none; white-space: nowrap; }
-#modelLibraryPage .binding-key-row { align-items: flex-start; }
-#modelLibraryPage .binding-arrow { align-self: auto; padding-block-start: calc(var(--blora-text-sm) + var(--blora-space-2)); }
-
-/* 5c */
-#modelLibraryPage .model-library-starred > .model-library-team-header { padding: var(--blora-space-3) var(--blora-space-4); margin: calc(-1 * var(--blora-space-4)) calc(-1 * var(--blora-space-4)) 0; background: var(--blora-color-surface-sunken); border-radius: var(--blora-radius-xl) var(--blora-radius-xl) 0 0; }
-#modelLibraryPage .model-library-binding-main { flex: 0 1 auto; }
-#modelLibraryPage .model-library-binding-bar { justify-content: flex-start; column-gap: var(--blora-space-4); }
-#modelLibraryPage .ml-model-star-btn [data-icon], #modelLibraryPage .ml-model-star-btn svg { inline-size: var(--blora-text-lg); block-size: var(--blora-text-lg); }
-#modelLibraryPage .model-library-item-name { gap: var(--blora-space-2); }
-#modelLibraryPage .ml-model-uptime { padding-block: var(--blora-space-2); border-top: var(--blora-border-subtle); }
-#modelLibraryPage .model-library-header-actions { padding-inline-end: var(--blora-space-2); }
-#modelLibraryPage .model-library-key-selector { margin-inline-start: 0; flex: 0 0 auto; }
-#modelLibraryPage .model-library-binding-main { flex: 0 1 auto; }
-#modelLibraryPage .model-library-binding-bar .model-library-binding-main { inline-size: fit-content; max-inline-size: 100%; }
-#modelLibraryPage .model-library-item .ml-model-star-btn > svg { inline-size: var(--blora-text-lg); block-size: var(--blora-text-lg); }
-#modelLibraryPage .ml-binding-item-value .binding-uptime { flex: 0 0 auto; flex-basis: 100%; inline-size: 240px; min-inline-size: 0; max-inline-size: 240px; }
-#modelLibraryPage .ml-binding-item-value:has(> .binding-uptime) { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--blora-space-2); row-gap: var(--blora-space-2); }
-#modelLibraryPage .ml-binding-item-value > .binding-uptime { grid-column: 1 / -1; }
-/* 5d */
-#modelLibraryPage .model-library-header-actions { padding-inline-end: var(--blora-space-6); }
-#modelLibraryPage .model-library-item .ml-model-star-btn > svg { max-inline-size: none; max-block-size: none; flex: none; }
-#modelLibraryPage .model-library-key-label { font-size: var(--blora-text-sm); }
-#modelLibraryPage #libraryMoreFiltersBtn [data-icon], #modelLibraryPage .model-library-sticky-more-btn [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
-
-/* 6a: 细节 */
-#modelLibraryPage .model-library-item { box-shadow: none; }
-#modelLibraryPage .model-library-item:hover { box-shadow: none; }
-#modelLibraryPage .ml-model-name { flex: 1; min-width: 0; }
-#modelLibraryPage .ml-model-test-badge { flex: none; }
-#modelLibraryPage .model-library-starred > .model-library-team-header h3 { font-size: var(--blora-text-lg); font-weight: 700; }
-#modelLibraryPage .model-library-item-price { border-top: var(--blora-border-subtle); border-bottom: none; }
-#modelLibraryPage .ml-model-uptime { border-top: var(--blora-border-subtle); border-bottom: var(--blora-border-subtle); margin-block-start: 0; }
-#modelLibraryPage .ml-binding-item-label { font-size: var(--blora-text-sm); }
-
-/* 6b: 名称完整显示 */
-#modelLibraryPage .model-library-item-name { flex-wrap: wrap; }
-#modelLibraryPage .ml-model-name { flex: 1 1 auto; min-width: min(12ch, 100%); overflow: visible; text-overflow: clip; white-space: nowrap; }
-#modelLibraryPage .ml-model-series-icon { inline-size: 1.25em; block-size: 1.25em; flex: none; }
-#modelLibraryPage .ml-model-series-icon[hidden],
-#modelLibraryPage .model-library-item-name img[style*="display: none"] { display: none; }
-
-/* 6c: 测速进标签行，名称最多两行 */
-#modelLibraryPage .model-library-item-name { flex-wrap: nowrap; }
+#modelLibraryPage .model-library-item:active:not(:has(button:active, .blora-dropdown[data-open])) { transform: scale(0.985); transition-duration: 0.12s; }
+/* 当前绑定：强调色描边 + 光晕 + 右上角对勾（HTML-Clock .font-card.active / .check） */
+#modelLibraryPage .model-library-item.selected {
+  border-color: var(--lg-accent);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-accent), 0 12px 30px var(--lg-accent-glow);
+}
+#modelLibraryPage .model-library-item.selected::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-end: 14px;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: 50%;
+  background: var(--lg-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.3 4.9 8.7 9.6 3.6' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat;
+  box-shadow: 0 2px 8px var(--lg-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+#modelLibraryPage .model-library-item.selected .model-library-item-name { padding-inline-end: 28px; }
+#modelLibraryPage .model-library-item.model-disabled { cursor: default; }
+#modelLibraryPage .model-library-item.model-hidden { opacity: 0.66; }
+#modelLibraryPage .model-library-item-info { display: flex; flex: 1; flex-direction: column; gap: 8px; min-width: 0; }
+#modelLibraryPage .model-library-item-name {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--lg-fg);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
 #modelLibraryPage .ml-model-name {
+  display: -webkit-box;
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   white-space: normal;
-  text-overflow: unset;
-  display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
-
-/* 6d: Outage / <99% 破例覆盖，仅模型库在线率 */
-#modelLibraryPage .ml-model-uptime .blora-progress__fill.ml-uptime-danger {
-  background: var(--blora-color-status-danger);
+#modelLibraryPage .ml-model-series-icon { inline-size: 20px; block-size: 20px; flex: none; border-radius: 5px; }
+#modelLibraryPage .ml-model-series-icon[hidden] { display: none; }
+#modelLibraryPage .ml-model-star-btn {
+  --blora-button-height: 28px;
+  --blora-button-fg: var(--lg-fg-tertiary);
+  inline-size: 28px;
+  margin-inline-start: -6px;
+  padding: 0;
 }
-
-/* 6e: 绑定栏对齐 */
-#modelLibraryPage .model-library-binding-bar {
-  align-items: flex-start;
+#modelLibraryPage .ml-model-star-btn > svg,
+#modelLibraryPage .ml-model-star-btn [data-icon] { inline-size: 17px; block-size: 17px; max-inline-size: none; max-block-size: none; flex: none; }
+#modelLibraryPage .ml-model-star-btn:hover { --blora-button-fg: var(--lg-orange); }
+#modelLibraryPage .ml-model-star-btn.starred { --blora-button-fg: var(--lg-orange); color: var(--lg-orange); }
+#modelLibraryPage .ml-model-star-btn.starred svg { fill: currentColor; }
+#modelLibraryPage .ml-model-item-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+#modelLibraryPage .ml-model-test-badge { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 测速通过：绿色小圆点 + 中性底（Apple 状态指示） */
+#modelLibraryPage .ml-model-test-badge.pass::before { content: ""; inline-size: 6px; block-size: 6px; flex: none; border-radius: 50%; background: var(--lg-green); }
+#modelLibraryPage .ml-model-test-badge.fail::before { content: ""; inline-size: 6px; block-size: 6px; flex: none; border-radius: 50%; background: var(--lg-red); }
+#modelLibraryPage .model-library-item-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--lg-fg-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
-#modelLibraryPage .binding-key-row {
-  align-items: flex-start;
-}
-#modelLibraryPage .binding-arrow {
-  align-self: flex-start;
-  padding-block-start: calc(var(--blora-text-sm) + var(--blora-space-1) + 0.35em);
-  padding-block-end: 0;
-}
-#modelLibraryPage .model-library-key-selector,
-#modelLibraryPage .model-library-key-selector-inner {
-  align-self: flex-start;
-}
-#modelLibraryPage .ml-binding-item-value:has(> .binding-uptime) {
+#modelLibraryPage .model-library-item-price {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--blora-space-2);
+  padding-block-start: 10px;
+  border-top: 1px solid var(--lg-divider);
+  font-size: 13px;
 }
-#modelLibraryPage .ml-binding-item-value > .binding-model-name,
-#modelLibraryPage .ml-binding-item-value > .binding-uptime {
-  flex-basis: auto;
-  inline-size: 100%;
-  max-inline-size: 280px;
-}
-#modelLibraryPage .ml-binding-item-value > .ml-model-test-badge,
-#modelLibraryPage .ml-binding-item-value > [class*="test"] {
-  align-self: flex-start;
-}
+#modelLibraryPage .ml-model-price-item { display: flex; flex: 1; align-items: baseline; justify-content: space-between; gap: 8px; }
+#modelLibraryPage .ml-model-price-label { color: var(--lg-fg-secondary); }
+#modelLibraryPage .ml-model-price-value { color: var(--lg-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+#modelLibraryPage .model-library-item .ml-model-uptime { padding-block-start: 10px; border-top: 1px solid var(--lg-divider); }
+#modelLibraryPage .model-library-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+#modelLibraryPage .model-library-item-actions .model-action-disabled { --blora-button-height: 30px; font-size: 12.5px; }
 
-/* 6e: 在线率单独一行，绑定链水平对齐 */
-#modelLibraryPage .binding-active > .ml-model-uptime,
-#modelLibraryPage .binding-active > .binding-uptime {
-  margin-block-start: var(--blora-space-3);
-  max-inline-size: 320px;
-}
-#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime {
-  margin: 0;
-}
-#modelLibraryPage .binding-key-row .ml-binding-item {
-  justify-content: flex-start;
-}
-#modelLibraryPage .model-library-key-label {
-  font-size: var(--blora-text-sm);
-  color: var(--blora-color-text-muted);
-  line-height: 1.2;
-  min-block-size: var(--blora-text-sm);
-}
-#modelLibraryPage .ml-binding-item-label {
-  line-height: 1.2;
-  min-block-size: var(--blora-text-sm);
-}
-#modelLibraryPage .ml-binding-item-value {
-  min-block-size: var(--blora-control-height, 2rem);
+/* ---------- 6. 在线率时间线（卡片与绑定卡共用） ---------- */
+#modelLibraryPage .ml-uptime-timeline {
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
+  gap: 6px 12px;
+  cursor: pointer;
 }
-#modelLibraryPage .model-library-key-chips,
-#modelLibraryPage .model-library-key-selector-inner > blora-segmented,
-#modelLibraryPage .model-library-key-selector-inner > blora-select {
-  min-block-size: var(--blora-control-height, 2rem);
-}
-
-/* 6e final: 绑定链对齐 + 在线率只往下长 */
-#modelLibraryPage .model-library-binding-bar { align-items: flex-start; }
-#modelLibraryPage .binding-key-row { align-items: flex-start; }
-#modelLibraryPage .ml-binding-item { align-items: stretch; }
-#modelLibraryPage .ml-binding-item-label,
-#modelLibraryPage .model-library-key-label {
-  font-size: var(--blora-text-sm);
-  line-height: 1.2;
-  color: var(--blora-color-text-muted);
-}
-#modelLibraryPage .ml-binding-item-value {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  min-block-size: var(--blora-control-height, 2rem);
-  font-size: var(--blora-text-base);
-}
-#modelLibraryPage .ml-binding-model-value {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--blora-space-2);
-}
-#modelLibraryPage .ml-binding-model-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--blora-space-2);
-  min-block-size: var(--blora-control-height, 2rem);
-}
-#modelLibraryPage .ml-binding-item-value .binding-uptime,
-#modelLibraryPage .ml-binding-model-value .binding-uptime,
-#modelLibraryPage .ml-binding-model-value .ml-model-uptime {
-  inline-size: 100%;
-  max-inline-size: 240px;
-  margin: 0;
-}
-#modelLibraryPage .binding-arrow {
-  align-self: flex-start;
-  padding-block-start: calc(var(--blora-text-sm) * 1.2 + var(--blora-space-1) + (var(--blora-control-height, 2rem) - 1em) / 2);
-  padding-block-end: 0;
-}
-#modelLibraryPage .model-library-key-selector { align-self: flex-start; }
-#modelLibraryPage .model-library-key-selector-inner { gap: var(--blora-space-1); }
-#modelLibraryPage .model-library-key-chips { display: flex; align-items: center; min-block-size: var(--blora-control-height, 2rem); }
-
-/* 6f: 绑定卡在线率去掉整卡分隔线观感，只贴在模型列下 */
-#modelLibraryPage .binding-active .ml-binding-model-value .ml-model-uptime,
-#modelLibraryPage .binding-active .binding-uptime .ml-model-uptime {
-  border-top: none;
-  border-bottom: none;
-  padding-block: 0;
-  max-inline-size: 240px;
-}
-#modelLibraryPage .binding-active .ml-binding-model-value .ml-model-uptime .blora-progress__bar {
-  block-size: 6px;
-}
-
-/* 6f A+C: Key+切换同列；测速 muted 跟模型名；在线率第二行全宽；侧栏切换列隐藏 */
-#modelLibraryPage .model-library-key-selector {
-  display: none !important;
-}
-#modelLibraryPage .model-library-binding-bar .model-library-binding-main {
-  flex: 1 1 auto;
-  inline-size: 100%;
-  max-inline-size: 100%;
-}
-#modelLibraryPage .ml-binding-key-value {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--blora-space-3);
-  min-block-size: var(--blora-control-height, 2rem);
-}
-#modelLibraryPage .ml-binding-key-value .ml-key-switch {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: var(--blora-control-height, 2rem);
-}
-#modelLibraryPage .ml-binding-key-value .ml-key-segmented,
-#modelLibraryPage .ml-binding-key-value .ml-key-select {
-  min-block-size: var(--blora-control-height, 2rem);
-}
-#modelLibraryPage .ml-binding-item-value {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  min-block-size: var(--blora-control-height, 2rem);
-}
-#modelLibraryPage .ml-binding-model-line {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--blora-space-2);
-  min-block-size: var(--blora-control-height, 2rem);
-}
-#modelLibraryPage .ml-binding-speed-meta {
-  font-size: var(--blora-text-sm);
-  font-weight: 400;
-  color: var(--blora-color-text-muted);
-  white-space: nowrap;
-}
-#modelLibraryPage .ml-binding-speed-meta.is-fail {
-  color: var(--blora-color-status-danger);
-}
-#modelLibraryPage .binding-active > .binding-uptime {
-  display: flex;
-  align-items: center;
-  gap: var(--blora-space-3);
-  inline-size: 100%;
-  max-inline-size: none;
-  margin-block-start: var(--blora-space-3);
-  padding-block-start: var(--blora-space-3);
-  border-top: 1px solid var(--blora-color-border-subtle);
-}
-#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime {
-  flex: 1 1 auto;
-  inline-size: 100%;
-  max-inline-size: none;
-  margin: 0;
-  padding-block: 0;
-  border-top: none;
-  border-bottom: none;
-}
-#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime .blora-progress__bar {
-  block-size: 6px;
-}
-#modelLibraryPage .binding-key-row {
-  align-items: flex-start;
-}
-#modelLibraryPage .binding-arrow {
-  align-self: flex-start;
-  padding-block-start: calc(var(--blora-text-sm) * 1.2 + var(--blora-space-1) + (var(--blora-control-height, 2rem) - 1em) / 2);
-  padding-block-end: 0;
-}
-
-
-/* 6g A+C hardened: ensure full-width uptime row wins over earlier 6e caps */
-#modelLibraryPage .binding-active > .binding-uptime {
-  display: flex;
-  align-items: center;
-  gap: var(--blora-space-3);
-  inline-size: 100%;
-  max-inline-size: none !important;
-  margin-block-start: var(--blora-space-3);
-  padding-block-start: var(--blora-space-3);
-  border-top: 1px solid var(--blora-color-border-subtle);
-}
-#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime,
-#modelLibraryPage .binding-active > .binding-uptime .ml-model-uptime .blora-progress {
-  inline-size: 100%;
-  max-inline-size: none !important;
-  flex: 1 1 auto;
-}
-#modelLibraryPage .ml-binding-item-value .ml-binding-key-value {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--blora-space-3);
-}
-
-
-/* 6h: 在线率时间线 + 切换 Key 在时间线下方 */
-#modelLibraryPage .ml-uptime-timeline { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: var(--blora-space-3); row-gap: var(--blora-space-1); cursor: pointer; }
-#modelLibraryPage .ml-uptime-track { display: flex; gap: 1px; block-size: 16px; min-inline-size: 0; }
-#modelLibraryPage .ml-uptime-seg { flex: 1 1 0; min-inline-size: 1px; border-radius: 1px; background: var(--blora-color-border-subtle); }
-#modelLibraryPage .ml-uptime-seg[data-status="ok"] { background: var(--blora-color-status-success); }
-#modelLibraryPage .ml-uptime-seg[data-status="degraded"] { background: var(--blora-color-status-warning); }
-#modelLibraryPage .ml-uptime-seg[data-status="outage"] { background: var(--blora-color-status-danger); }
-#modelLibraryPage .ml-uptime-axis { grid-column: 1; grid-row: 2; display: flex; justify-content: space-between; font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-#modelLibraryPage .ml-uptime-timeline .ml-model-uptime-pct { grid-column: 2; grid-row: 1; font-size: var(--blora-text-sm); font-variant-numeric: tabular-nums; }
-#modelLibraryPage .ml-uptime-timeline.is-danger .ml-model-uptime-pct { color: var(--blora-color-status-danger); }
-#modelLibraryPage .model-library-item .ml-uptime-track { block-size: 10px; }
-#modelLibraryPage .ml-binding-key-switch-row { display: flex; align-items: center; margin-block-start: var(--blora-space-3); }
-#modelLibraryPage .ml-binding-key-switch-row:has(.ml-key-switch:empty) { display: none; }
-
-/* 6i: 时间线规格（Design Bot） */
-#modelLibraryPage .ml-uptime-seg { border-radius: var(--blora-radius-sm); }
-#modelLibraryPage .ml-uptime-seg[data-status="none"] { background: var(--blora-color-status-neutral-soft); }
-#modelLibraryPage .binding-active > .binding-uptime .ml-uptime-track { gap: 2px; block-size: 24px; }
-#modelLibraryPage .ml-uptime-timeline .ml-model-uptime-pct { font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
-
-/* 6j: blora-tooltip 悬停 + 示例数据标识 */
-#modelLibraryPage .ml-uptime-seg-wrap { flex: 1 1 0; min-inline-size: 1px; display: flex; }
+#modelLibraryPage .ml-uptime-track { display: flex; gap: 2px; block-size: 10px; min-inline-size: 0; }
+#modelLibraryPage .ml-uptime-seg-wrap { display: flex; flex: 1 1 0; min-inline-size: 1px; }
 #modelLibraryPage .ml-uptime-seg-wrap > .ml-uptime-seg { flex: 1 1 auto; }
-#modelLibraryPage .ml-uptime-seg-wrap:hover > .blora-tooltip__bubble,
-#modelLibraryPage .ml-uptime-seg-wrap:focus-visible > .blora-tooltip__bubble { opacity: 1; transform: translateX(calc(-50% + var(--blora-float-shift-x))) translateY(0); }
-#modelLibraryPage .ml-uptime-seg-wrap:hover > .ml-uptime-seg { outline: 1px solid var(--blora-color-text-primary); outline-offset: 1px; }
-#modelLibraryPage .binding-active > .binding-uptime .ml-demo-tag { flex: none; }
-/* 6k: 示例数据标签放时间线右上角 */
-#modelLibraryPage .binding-active > .binding-uptime { flex-wrap: wrap; row-gap: var(--blora-space-1); }
-#modelLibraryPage .binding-active > .binding-uptime > .ml-model-uptime { flex-basis: 100%; }
-#modelLibraryPage .binding-active > .binding-uptime > .ml-demo-tag { order: -1; margin-inline-start: auto; }
-
-/* 6l: 格子小圆角、卡片按小时合并、示例标签不占行、切换 Key 间距 12px */
-#modelLibraryPage .ml-uptime-seg { border-radius: calc(var(--blora-radius-xs) / 3); }
-#modelLibraryPage .model-library-item .ml-uptime-track { gap: 2px; }
-#modelLibraryPage .ml-uptime-timeline .ml-uptime-meta { grid-column: 2; grid-row: 1; display: inline-flex; align-items: center; gap: var(--blora-space-2); }
-#modelLibraryPage .binding-active > .binding-uptime { flex-wrap: nowrap; }
-#modelLibraryPage .binding-active > .binding-uptime > .ml-model-uptime { flex-basis: auto; }
-#modelLibraryPage .ml-binding-key-switch-row { margin-block-start: calc(var(--blora-space-3) - var(--blora-space-2)); }
-
-/* 6m: 最小 radius token 仍成胶囊 → 不加圆角；示例标签进轴标签行右侧 */
-#modelLibraryPage .ml-uptime-seg { border-radius: 0; }
-#modelLibraryPage .ml-uptime-axis-end { display: inline-flex; align-items: center; gap: var(--blora-space-2); }
-/* 6n: 隐藏的 tooltip 不参与滚动宽度，悬停时才显示 */
+#modelLibraryPage .ml-uptime-seg {
+  flex: 1 1 0;
+  min-inline-size: 1px;
+  border-radius: 2px;
+  background: var(--lg-chip-hover);
+  transition: transform var(--lg-dur-fast) var(--lg-ease), filter var(--lg-dur-fast) var(--lg-ease);
+}
+#modelLibraryPage .ml-uptime-seg[data-status="ok"] { background: var(--lg-green); }
+#modelLibraryPage .ml-uptime-seg[data-status="degraded"] { background: var(--lg-orange); }
+#modelLibraryPage .ml-uptime-seg[data-status="outage"] { background: var(--lg-red); }
+#modelLibraryPage .ml-uptime-seg[data-status="none"] { background: var(--lg-chip-hover); }
+#modelLibraryPage .ml-uptime-seg-wrap:hover > .ml-uptime-seg { filter: brightness(1.12) saturate(1.1); transform: scaleY(1.22); }
+#modelLibraryPage .ml-uptime-axis {
+  display: flex;
+  grid-column: 1;
+  grid-row: 2;
+  justify-content: space-between;
+  color: var(--lg-fg-tertiary);
+  font-size: 11.5px;
+}
+#modelLibraryPage .ml-uptime-axis-end { display: inline-flex; align-items: center; gap: 8px; }
+#modelLibraryPage .ml-uptime-timeline .ml-uptime-meta { display: inline-flex; grid-column: 2; grid-row: 1; align-items: center; gap: 8px; }
+#modelLibraryPage .ml-uptime-timeline .ml-model-uptime-pct { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#modelLibraryPage .ml-uptime-timeline.is-danger .ml-model-uptime-pct { color: var(--lg-red-ink); }
+#modelLibraryPage .ml-model-uptime .blora-progress__fill.ml-uptime-danger { background: var(--lg-red); }
+#modelLibraryPage .ml-demo-tag { flex: none; }
+/* 悬停提示：隐藏时不参与滚动宽度；首尾 8 格贴边显示 */
 #modelLibraryPage .ml-uptime-seg-wrap > .blora-tooltip__bubble { display: none; }
 #modelLibraryPage .ml-uptime-seg-wrap:hover > .blora-tooltip__bubble,
-#modelLibraryPage .ml-uptime-seg-wrap:focus-visible > .blora-tooltip__bubble { display: block; }
+#modelLibraryPage .ml-uptime-seg-wrap:focus-visible > .blora-tooltip__bubble {
+  display: block;
+  opacity: 1;
+  transform: translateX(calc(-50% + var(--blora-float-shift-x))) translateY(0);
+}
 #modelLibraryPage .ml-uptime-seg-wrap:nth-child(-n+8) > .blora-tooltip__bubble { inset-inline-start: 0; transform: none; }
 #modelLibraryPage .ml-uptime-seg-wrap:nth-last-child(-n+8) > .blora-tooltip__bubble { inset-inline-start: auto; inset-inline-end: 0; transform: none; }
+
+/* ---------- 7. 额度、排序、空态、加载、分页、拖拽 ---------- */
+#modelLibraryPage .ml-model-quota-section {
+  position: relative;
+  z-index: 2;
+  margin-block-end: var(--ml-section-gap);
+  padding: 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+}
+#modelLibraryPage .ml-model-quota-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block-end: 14px; padding-inline: 4px; }
+#modelLibraryPage .ml-model-quota-section-header h3 { margin: 0; color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+#modelLibraryPage .ml-model-quota-section-header p { margin: 2px 0 0; color: var(--lg-fg-secondary); font-size: 12.5px; }
+#modelLibraryPage .ml-model-quota-refresh {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg);
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), transform 0.4s var(--lg-ease);
+}
+#modelLibraryPage .ml-model-quota-refresh:hover { background: var(--lg-chip-hover); transform: rotate(45deg); }
+#modelLibraryPage .ml-model-quota-refresh:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: 2px; }
+#modelLibraryPage .ml-model-quota-refresh > * { grid-area: 1 / 1; }
+#modelLibraryPage .ml-model-quota-refresh [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
+#modelLibraryPage .ml-model-quota-refresh .ml-loading-spinner { display: none; }
+#modelLibraryPage .ml-model-quota-refresh.is-loading { cursor: progress; transform: none; }
+#modelLibraryPage .ml-model-quota-refresh.is-loading [data-icon] { display: none; }
+#modelLibraryPage .ml-model-quota-refresh.is-loading .ml-loading-spinner {
+  display: block;
+  inline-size: 16px;
+  block-size: 16px;
+  border: 2px solid var(--lg-chip-hover);
+  border-top-color: var(--lg-accent);
+  border-radius: 50%;
+  animation: ml-spin 0.8s linear infinite;
+}
+#modelLibraryPage .ml-model-quota-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+#modelLibraryPage .ml-model-quota-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#modelLibraryPage .ml-model-quota-card.error { border-color: color-mix(in srgb, var(--lg-red) 40%, transparent); }
+#modelLibraryPage .ml-model-quota-card.error .ml-model-quota-header > span:not(.ml-model-quota-name) { color: var(--lg-red-ink); font-size: 12.5px; font-weight: 500; }
+#modelLibraryPage .ml-model-quota-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+#modelLibraryPage .ml-model-quota-name { color: var(--lg-fg); font-size: 14px; font-weight: 600; }
+#modelLibraryPage .ml-model-quota-plan { padding: 2px 8px; border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); color: var(--lg-fg-secondary); font-size: 11.5px; }
+#modelLibraryPage .ml-model-quota-numbers { display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
+#modelLibraryPage .ml-model-quota-remaining { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+#modelLibraryPage .ml-model-quota-total { color: var(--lg-fg-secondary); font-size: 13px; }
+#modelLibraryPage .ml-model-quota-period-header { display: flex; justify-content: space-between; gap: 8px; color: var(--lg-fg-secondary); font-size: 12px; }
+#modelLibraryPage .model-quota-period,
+#modelLibraryPage .model-quota-key { display: flex; flex-direction: column; gap: 6px; }
+#modelLibraryPage .model-quota-periods,
+#modelLibraryPage .model-quota-keys { display: flex; flex-direction: column; gap: 10px; }
+#modelLibraryPage .model-quota-period-reset,
+#modelLibraryPage .ml-model-quota-updated,
+#modelLibraryPage .model-quota-credits { color: var(--lg-fg-tertiary); font-size: 11.5px; }
+#modelLibraryPage .ml-model-quota-updated:empty { display: none; }
+/* 进度：HTML-Clock .schedule-progress（4px 胶囊轨道 + 强调色填充） */
+#modelLibraryPage progress.model-quota-progress {
+  inline-size: 100%;
+  block-size: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-accent);
+  -webkit-appearance: none;
+  appearance: none;
+}
+#modelLibraryPage progress.model-quota-progress::-webkit-progress-bar { border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); }
+#modelLibraryPage progress.model-quota-progress::-webkit-progress-value { border-radius: var(--lg-radius-pill); background: var(--lg-accent); transition: width 0.3s var(--lg-ease); }
+#modelLibraryPage progress.model-quota-progress::-moz-progress-bar { border-radius: var(--lg-radius-pill); background: var(--lg-accent); }
+#modelLibraryPage .ml-model-quota-card > button[data-quota-provider] {
+  align-self: flex-start;
+  margin-block-start: 2px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-accent-tint);
+  color: var(--lg-accent-ink);
+  font: 500 12px/1.2 var(--lg-font);
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+}
+#modelLibraryPage .ml-model-quota-card > button[data-quota-provider]:hover { background: color-mix(in srgb, var(--lg-accent) 22%, transparent); }
+#modelLibraryPage .ml-model-quota-card > button[data-quota-provider]:active { transform: scale(0.96); }
+
+#modelLibraryPage .ml-library-reorder-toolbar {
+  position: relative;
+  z-index: 2;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-block-end: var(--ml-section-gap);
+  padding: 10px 10px 10px 20px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 24px;
+  background-color: var(--lg-panel-bg);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+}
+#modelLibraryPage .ml-library-reorder-toolbar-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; color: var(--lg-fg); font-weight: 600; }
+#modelLibraryPage .ml-library-reorder-toolbar-hint { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 400; }
+#modelLibraryPage .ml-library-reorder-toolbar-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#modelLibraryPage .ml-library-reorder-toolbar-actions button,
+#modelLibraryPage .model-library-empty-actions button {
+  min-block-size: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg);
+  font: 500 13px/1 var(--lg-font);
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+}
+#modelLibraryPage .ml-library-reorder-toolbar-actions button:hover,
+#modelLibraryPage .model-library-empty-actions button:hover { background: var(--lg-chip-hover); }
+#modelLibraryPage .ml-library-reorder-toolbar-actions button:active,
+#modelLibraryPage .model-library-empty-actions button:active { transform: scale(0.96); }
+#modelLibraryPage .ml-library-reorder-toolbar-actions button:focus-visible,
+#modelLibraryPage .model-library-empty-actions button:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: 2px; }
+#modelLibraryPage .model-library-empty-actions button:last-child { background: var(--lg-accent); color: var(--lg-on-accent); box-shadow: 0 4px 14px var(--lg-accent-glow); }
+
+#modelLibraryPage .model-library-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 24px 32px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+}
+#modelLibraryPage .model-library-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+#modelLibraryPage .model-library-loading,
+#modelLibraryPage .library-inline-loading,
+#modelLibraryPage .model-quota-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--lg-fg-secondary);
+  font-size: 13px;
+}
+#modelLibraryPage .model-library-loading { min-block-size: 180px; }
+#modelLibraryPage :is(.model-library-loading, .library-inline-loading) > span[aria-hidden="true"]:empty {
+  inline-size: 18px;
+  block-size: 18px;
+  border: 2px solid var(--lg-chip-hover);
+  border-top-color: var(--lg-accent);
+  border-radius: 50%;
+  animation: ml-spin 0.8s linear infinite;
+}
+#modelLibraryPage .binding-placeholder { justify-content: flex-start; min-block-size: var(--lg-control-h); }
+#modelLibraryPage .model-library-placeholder {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 64px;
+  color: var(--lg-fg-secondary);
+  font-size: 13px;
+}
+#modelLibraryPage .model-library-placeholder a { color: var(--lg-accent-ink); }
+#modelLibraryPage .model-library-pagination {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-block-start: 4px;
+}
+#modelLibraryPage .model-library-page-btn {
+  --blora-button-height: 30px;
+  --blora-button-bg: var(--lg-chip-bg);
+  --blora-button-bd: transparent;
+  --blora-button-fg: var(--lg-fg);
+  min-inline-size: 30px;
+  min-block-size: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg);
+  font: 500 12.5px/1 var(--lg-font);
+  cursor: pointer;
+}
+#modelLibraryPage .model-library-page-btn:hover:not(:disabled) { background: var(--lg-chip-hover); }
+#modelLibraryPage .model-library-page-btn.active { --blora-button-bg: var(--lg-accent); --blora-button-fg: var(--lg-on-accent); background: var(--lg-accent); color: var(--lg-on-accent); opacity: 1; }
+#modelLibraryPage .model-library-page-btn:disabled:not(.active) { opacity: 0.42; cursor: default; }
+#modelLibraryPage .model-library-page-ellipsis,
+#modelLibraryPage .model-library-page-summary { color: var(--lg-fg-secondary); font-size: 12px; }
+#modelLibraryPage .library-drag-handle { inline-size: 26px; block-size: 26px; border-radius: 50%; color: var(--lg-fg-tertiary); cursor: grab; }
+#modelLibraryPage .library-drag-handle:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+#modelLibraryPage .library-dragging { opacity: 0.5; }
+#modelLibraryPage .library-drag-over { outline: 2px dashed var(--lg-accent); outline-offset: 3px; }
+#modelLibraryPage .ml-trace-reports-banner:not(:empty) { margin-block-end: var(--ml-section-gap); }
+#modelLibraryPage .model-library-count:not([hidden]) { margin: -6px 6px 12px; color: var(--lg-fg-secondary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- 8. Key 工具浮层（挂在 body 下，单独套用玻璃菜单） ---------- */
+body.blora-page #libraryKeyBubbleMenu {
+  padding: 6px;
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-card);
+  background: var(--lg-menu-bg);
+  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  font-family: var(--lg-font);
+}
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item {
+  min-height: 2.25rem;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--lg-fg);
+}
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item.active { background: var(--lg-accent-tint); color: var(--lg-accent-ink); }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item-main { font-size: 13.5px; }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item-meta { color: var(--lg-fg-secondary); font-size: 12px; }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item-meta.is-override { color: var(--lg-accent-ink); }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-section-label { padding: 8px 10px 4px; color: var(--lg-fg-tertiary); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; }
+body.blora-page #libraryKeyBubbleMenu .expand-dropdown-divider { margin: 5px 8px; background: var(--lg-divider); }
+
+/* ---------- 9. 动效与响应式 ---------- */
+@keyframes ml-glass-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ml-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  #modelLibraryPage { --ml-section-gap: 16px; --ml-card-min: 240px; }
+  #modelLibraryPage .model-library-binding-bar { padding: 16px; border-radius: 22px; }
+  #modelLibraryPage .model-library-team,
+  #modelLibraryPage .ml-model-quota-section { padding: 12px; border-radius: 22px; }
+  #modelLibraryPage .model-library-provider .model-library-list { padding: 2px 8px 8px; }
+  #modelLibraryPage .model-library-provider-header { flex-wrap: wrap; padding-inline: 12px 8px; }
+  #modelLibraryPage .ml-model-filter-bar,
+  #modelLibraryPage .model-library-sticky-bar { border-radius: 22px; }
+  #modelLibraryPage #libraryProviderFilter,
+  #modelLibraryPage .model-library-sticky-select { inline-size: 132px; }
+}
+@media (max-width: 640px) {
+  #modelLibraryPage .model-library-header-actions { flex-wrap: wrap; }
+  #modelLibraryPage .model-library-team-header { flex-wrap: wrap; row-gap: 6px; }
+  #modelLibraryPage .binding-arrow { display: none; }
+  #modelLibraryPage .binding-key-row { flex-direction: column; gap: 12px; }
+  #modelLibraryPage .ml-model-filter-advanced blora-select,
+  #modelLibraryPage .model-library-sticky-advanced blora-select { flex: 1 1 140px; inline-size: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #modelLibraryPage .model-library-team,
+  #modelLibraryPage .model-library-sticky-bar { animation: none; }
+  #modelLibraryPage .model-library-item:hover,
+  #modelLibraryPage .model-library-item:active:not(:has(button:active, .blora-dropdown[data-open])) { transform: none; }
+  #modelLibraryPage .ml-uptime-seg-wrap:hover > .ml-uptime-seg { transform: none; }
+}
