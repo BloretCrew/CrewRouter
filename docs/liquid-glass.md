@@ -11,6 +11,8 @@
 | `public/css/liquid-glass.css` | 令牌、可复用材质、Blora 令牌桥接、组件皮肤、控制台壳层、无障碍降级 |
 | `public/css/model-library-console.css` | 模型库页面布局与材质层级 |
 | `public/css/my-upstream.css` | 我的上游页面布局，以及其 6 个弹窗内部的布局 |
+| `public/css/api-keys.css` | API Key 页布局、Key 卡片、标签 / 路由浮层、本页弹窗与 Key picker 列表 |
+| `public/css/config-dialog-blora.css` | 客户端配置弹窗内部布局（面板外观交给玻璃面板） |
 | `public/js/blora-dialog.js` | 从玻璃页面打开的确认框 / 提示框自动加 `lg-scope` |
 
 `liquid-glass.css` 在 `console.html` 中排在 `console-blora.css` / `sidebar-blora.css`
@@ -74,7 +76,11 @@
   横向滚动时内容从玻璃下滑过；批量操作条为强调色胶囊。
 - 复选框：圆角方框，选中为强调色实心 + 白色对勾（开关里的隐藏 input 除外）。
 - 表单：字段标签次级小字；`blora-fieldset` 为 iOS 分组底；步骤条强调色。
-- 对话框：玻璃面板（blur 60px + saturate 200%），圆形关闭按钮悬停旋转。
+- 对话框：玻璃面板（blur 60px + saturate 200%），圆形关闭按钮悬停旋转；
+  由 `blora-dialog.js` 托管的旧版 `.modal-content` 弹窗同样改为玻璃面板。
+- 旧版内容区 `.content-section` / `.section-header`：玻璃面板 + 页内标题。
+- 卡片（`.blora-card`）、统计数字（`blora-statistic`）、iOS 绿色开关（`blora-switch`）、
+  组合控件（`blora-join` 改为留间距）、时间选择面板。
 - app.js 行内样式使用的旧变量（`--muted-foreground`、`--border`、`--destructive` 等）
   在作用域内同样映射到玻璃令牌。
 
@@ -91,7 +97,10 @@
 1. 模型库 `#modelLibraryPage` — 已完成
 2. 我的上游 `#myUpstreamPage`，含添加 / 编辑供应商、管理模型、添加 / 编辑模型、
    批量编辑、批量设置价格 6 个弹窗，以及删除确认等临时弹窗 — 已完成
-3. 下一步：API Key 与用量 `#apiKeysPage`，之后按侧栏顺序继续。
+3. API Key 与用量 `#apiKeysPage`：Key 卡片、标签栏、悬浮顶栏、授权管理，
+   标签 / 路由队列浮层，创建密钥、成员、选项、签名、定时、新建标签、额度脚本、
+   模型队列（Key picker）、客户端配置等弹窗 — 已完成
+4. 下一步：统计信息 `#statsPage`，之后按侧栏顺序继续。
 
 ## 新页面迁移清单
 
@@ -111,14 +120,17 @@ node scripts/verify-blora-correction-browser.js --chrome
 node scripts/test-agent-model-library-browser.js
 node scripts/test-client-config-browser.js
 node scripts/test-provider-editor-pages-browser.js
+node scripts/test-api-key-card-controls-browser.js
 # 自带服务与浏览器
 node scripts/test-unified-provider-browser.js
 ```
 
 迁移后通过：`test-agent-model-library-browser.js`、`test-client-config-browser.js`、
-`test-provider-editor-pages-browser.js`、`test-unified-provider-browser.js`。
+`test-provider-editor-pages-browser.js`、`test-unified-provider-browser.js`、
+`test-api-key-card-controls-browser.js`。
 
 `test-library-sticky-alignment-browser.js`、`test-model-card-badges-browser.js`、
 `test-inject-uptime-menu-browser.js`、`test-library-closed-keys-browser.js`、
 `test-provider-quota-layout-browser.js`、`test-cpa-quota-browser.js`、
-`test-provider-wizard-browser.js` 在迁移前已在同一断言失败，迁移后结果相同。
+`test-provider-wizard-browser.js`、`test-api-keys-desktop-layout-browser.js`、
+`test-config-dialog-browser.js` 在迁移前已在同一断言失败，迁移后结果相同。

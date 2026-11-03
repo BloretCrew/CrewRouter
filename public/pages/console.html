@@ -34,10 +34,10 @@
   <link rel="stylesheet" href="/css/sliders-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=lg-2">
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-2">
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-3">
   <link rel="stylesheet" href="/css/model-library-console.css?v=lg-1">
-  <link rel="stylesheet" href="/css/api-keys.css?v=page3-step4d">
-  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=page3-step2b">
+  <link rel="stylesheet" href="/css/api-keys.css?v=lg-3">
+  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=lg-3">
   <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
@@ -437,7 +437,7 @@
       </blora-dialog>
 
       <!-- API密钥页面 -->
-      <div id="apiKeysPage" class="page blora-api-keys-page">
+      <div id="apiKeysPage" class="page blora-api-keys-page lg-page">
         <!-- 滚动后悬浮顶栏：创建密钥 + 可拖拽标签（默认隐藏，由 JS 控制） -->
         <div id="apiKeysStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -1659,7 +1659,7 @@
   </div>
 
   <!-- 创建API密钥模态框 -->
-  <blora-dialog id="createApiKeyModal">
+  <blora-dialog id="createApiKeyModal" class="lg-scope">
     <span slot="title" id="createApiKeyModalTitle" data-i18n="创建 API 密钥">创建 API 密钥</span>
     <div class="ak-dialog-stack">
       <blora-field label="密钥名称（可选）"><input type="text" id="apiKeyName" class="blora-input" placeholder="例如：生产环境、开发测试" data-i18n-placeholder="例如：生产环境、开发测试"></blora-field>
@@ -1679,7 +1679,7 @@
   </blora-dialog>
 
   <!-- 统计上报授权模态框（仅管理员首次进入时展示） -->
-        <blora-dialog id="hookNotifySelectModal">
+        <blora-dialog id="hookNotifySelectModal" class="lg-scope">
           <span slot="title" id="hookNotifySelectTitle" data-i18n="选择要推送的事件">选择要推送的事件</span>
           <div class="ak-dialog-stack">
             <fieldset class="blora-fieldset"><legend class="blora-fieldset__legend">客户端（harness）</legend><div id="hookNotifyHarnessChecks" class="ak-check-grid ak-check-grid--3"></div></fieldset>
@@ -1728,7 +1728,7 @@
   </blora-dialog>
 
   <!-- Co-Key 成员管理模态框 -->
-  <blora-dialog id="keyMembersModal">
+  <blora-dialog id="keyMembersModal" class="lg-scope">
     <span slot="title" data-i18n="Co-Key 成员管理">Co-Key 成员管理</span>
     <div class="ak-dialog-stack">
       <p class="ak-dialog-note" data-i18n="共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。">共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。</p>
@@ -1744,7 +1744,7 @@
   </blora-dialog>
 
   <!-- API密钥模型管理模态框（支持有序模型队列） -->
-  <blora-dialog id="keyModelsModal" size="lg">
+  <blora-dialog id="keyModelsModal" class="lg-scope" size="lg">
     <span slot="title" id="keyModelsTitle" data-i18n="管理可用模型">管理可用模型</span>
     <div id="keyModelsContent" data-blora-state="loading"></div>
     <div slot="footer" class="ak-dialog-actions">
@@ -1754,7 +1754,7 @@
   </blora-dialog>
 
   <!-- API Key 选项设置模态框 -->
-  <blora-dialog id="keyOptionsModal">
+  <blora-dialog id="keyOptionsModal" class="lg-scope">
     <span slot="title" id="keyOptionsTitle" data-i18n="API Key 选项">API Key 选项</span>
     <div class="ak-dialog-stack">
       <p class="ak-dialog-note" data-i18n="集中管理当前 API Key 的附加开关。">集中管理当前 API Key 的附加开关。</p>
@@ -1771,7 +1771,7 @@
   </blora-dialog>
 
   <!-- API Key 签名设置模态框 -->
-  <blora-dialog id="keySignatureModal">
+  <blora-dialog id="keySignatureModal" class="lg-scope">
     <span slot="title" id="keySignatureTitle" data-i18n="API Key 签名设置">API Key 签名设置</span>
     <div class="ak-dialog-stack">
       <p class="ak-dialog-note" data-i18n="为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择&quot;继承&quot;，则使用用户默认签名配置。">为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择"继承"，则使用用户默认签名配置。</p>
@@ -1799,7 +1799,7 @@
   </blora-dialog>
 
   <!-- 定时开关设置弹窗 -->
-  <blora-dialog id="keyScheduleModal">
+  <blora-dialog id="keyScheduleModal" class="lg-scope">
     <span slot="title" id="keyScheduleTitle" data-i18n="定时开关设置">定时开关设置</span>
     <div class="ak-dialog-stack">
       <p class="ak-dialog-note" data-i18n="设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。">设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。</p>
@@ -1942,7 +1942,7 @@
   </blora-dialog>
 
   <!-- 选择 API Key 模态框 -->
-  <blora-dialog id="selectKeyModal" size="sm">
+  <blora-dialog id="selectKeyModal" class="lg-scope" size="sm">
     <span slot="title" id="selectKeyTitle" data-i18n="选择 API Key">选择 API Key</span>
     <div id="selectKeyContent" data-blora-state="idle"></div>
     <div slot="footer" class="ak-dialog-actions">
@@ -1952,7 +1952,7 @@
   </blora-dialog>
 
   <!-- 配置工具选择模态框 -->
-  <blora-dialog id="configToolSelectModal" role="dialog" aria-modal="true" aria-labelledby="configToolSelectTitle">
+  <blora-dialog id="configToolSelectModal" class="lg-scope" role="dialog" aria-modal="true" aria-labelledby="configToolSelectTitle">
     <div class="blora-dialog__panel modal-content" style="max-width:420px;">
       <div class="modal-header">
         <h3 id="configToolSelectTitle"><span data-i18n="生成配置">生成配置</span></h3>
@@ -2014,7 +2014,7 @@
   <!-- 配置生成结果模态框 -->
 
   <!-- CC Switch 子菜单模态框 -->
-  <blora-dialog id="ccSwitchSubmenuModal" role="dialog" aria-modal="true">
+  <blora-dialog id="ccSwitchSubmenuModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width:420px;">
       <div class="modal-header">
         <h3 id="configToolSelectTitle"><span data-i18n="CC Switch 一键导入">CC Switch 一键导入</span></h3>
@@ -2041,7 +2041,7 @@
   </blora-dialog>
 
   <!-- CC Switch 链接结果模态框 -->
-  <blora-dialog id="ccSwitchResultModal" role="dialog" aria-modal="true">
+  <blora-dialog id="ccSwitchResultModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width:500px;">
       <div class="modal-header">
         <h3 id="ccSwitchResultTitle">CC Switch</h3>
@@ -2057,7 +2057,7 @@
       </div>
     </div>
   </blora-dialog>
-  <blora-dialog id="configOutputModal" size="lg" role="dialog" aria-modal="true">
+  <blora-dialog id="configOutputModal" class="lg-scope" size="lg" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="configOutputTitle"><span data-i18n="配置">配置</span></h3>
@@ -2086,7 +2086,7 @@
   </blora-dialog>
 
   <!-- 新建/编辑标签弹窗 -->
-  <blora-dialog id="createKeyTagPopover" size="sm">
+  <blora-dialog id="createKeyTagPopover" class="lg-scope" size="sm">
     <span slot="title" id="keyTagPopoverTitle"><span data-i18n="新建标签">新建标签</span></span>
     <div class="ak-dialog-stack">
       <div class="blora-field">
@@ -2123,7 +2123,7 @@
   </blora-dialog>
 
   <!-- cc-switch 额度查询脚本模态框 -->
-  <blora-dialog id="usageScriptModal" size="lg" role="dialog" aria-modal="true">
+  <blora-dialog id="usageScriptModal" class="lg-scope" size="lg" role="dialog" aria-modal="true">
     <span slot="title"><span data-i18n="cc-switch 额度查询脚本">cc-switch 额度查询脚本</span></span>
     <div class="ccs-stack">
       <p class="ccs-note"><span data-i18n="自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。">自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。</span></p>

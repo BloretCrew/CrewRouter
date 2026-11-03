@@ -5,16 +5,13 @@
   width: min(92vw, 700px);
 }
 
+/* 面板外观（玻璃面板）由 liquid-glass.css 的 blora-dialog.lg-scope > .modal-content 提供 */
 #configToolSelectModal .modal-content,
 #ccSwitchSubmenuModal .modal-content,
 #ccSwitchResultModal .modal-content,
 #configOutputModal .modal-content {
   max-height: min(88dvh, 760px);
   overflow: hidden;
-  border: 0;
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-4);
 }
 
 #configToolSelectModal .modal-body,
@@ -132,7 +129,7 @@
   #configOutputModal .modal-content {
     width: calc(100vw - 1.5rem);
     max-height: calc(100dvh - 2rem);
-    border-radius: var(--blora-radius-lg);
+    border-radius: 24px;
   }
 
   #configToolSelectModal .config-tool-option-path {

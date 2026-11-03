@@ -715,6 +715,120 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 :is(.lg-page, .lg-scope) .blora-step__title { color: var(--lg-fg); font-weight: 500; }
 :is(.lg-page, .lg-scope) .blora-spinner { border-color: var(--lg-chip-hover); border-top-color: var(--lg-accent); }
 
+/* 旧版内容区（.content-section + .section-header）：玻璃面板 + 页内标题 */
+.lg-page .content-section,
+.lg-page .content-section:hover {
+  position: relative;
+  padding: 24px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+}
+.lg-page .content-section::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: var(--lg-rim-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.lg-page .content-section + .content-section { margin-block-start: 20px; }
+.lg-page .section-header { margin-block-end: 18px; }
+.lg-page .section-header h2 {
+  margin: 0;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.lg-page .section-header p { color: var(--lg-fg-secondary); }
+
+/* Blora 卡片：HTML-Clock .font-card 玻璃卡片 */
+:is(.lg-page, .lg-scope) .blora-card {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+:is(.lg-page, .lg-scope) .blora-card[data-variant="hover"]:hover { box-shadow: var(--lg-rim), var(--lg-shadow-card-hover); }
+
+/* 统计数字：Display 字形的大号数字，标签为次级小字 */
+:is(.lg-page, .lg-scope) .blora-stat { gap: 6px; }
+:is(.lg-page, .lg-scope) .blora-stat__label { color: var(--lg-fg-secondary); font-size: 12.5px; letter-spacing: 0; }
+:is(.lg-page, .lg-scope) .blora-stat__value {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+:is(.lg-page, .lg-scope) .blora-stat__suffix { margin-inline-start: 4px; color: var(--lg-fg-secondary); font-size: 14px; font-weight: 500; letter-spacing: 0; }
+
+/* 开关：iOS 绿色开关（HTML-Clock .toggle.on 为 #34c759） */
+:is(.lg-page, .lg-scope) .blora-switch__track {
+  --blora-switch-w: 2.85em;
+  --blora-switch-h: 1.72em;
+  --blora-switch-pad: 0.14em;
+  border: 0;
+  background: var(--lg-chip-hover);
+}
+:is(.lg-page, .lg-scope) .blora-switch__track::after { background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+:is(.lg-page, .lg-scope) .blora-switch > input:checked + .blora-switch__track { border-color: transparent; background: var(--lg-green); }
+:is(.lg-page, .lg-scope) .blora-switch > input:focus-visible + .blora-switch__track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--lg-green) 40%, transparent); }
+:is(.lg-page, .lg-scope) blora-switch[label] .blora-switch { color: var(--lg-fg); font-size: 14px; }
+
+/* 组合控件：玻璃控件各自成形，改为留间距而不是焊接 */
+:is(.lg-page, .lg-scope) .blora-join { gap: 8px; }
+:is(.lg-page, .lg-scope) .blora-join > * { margin-inline-start: 0; }
+
+/* 时间选择面板：厚玻璃 */
+:is(.lg-page, .lg-scope) .blora-timepicker__panel {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-card);
+  background: var(--lg-menu-bg);
+  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+}
+
+/* 旧版弹窗（.modal-content 由 blora-dialog.js 适配器托管，组件面板透明）：
+   内容层本身改成玻璃面板 */
+blora-dialog.lg-scope > .modal-content {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-sheet);
+  background-color: var(--lg-sheet-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 40px 100px var(--lg-sheet-shadow);
+  color: var(--lg-fg);
+}
+blora-dialog.lg-scope > .modal-content .modal-header h3 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+blora-dialog.lg-scope > .modal-content .modal-close {
+  --blora-button-height: 30px;
+  inline-size: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur) var(--lg-ease);
+}
+blora-dialog.lg-scope > .modal-content .modal-close:hover { background: var(--lg-chip-hover); color: var(--lg-fg); transform: rotate(90deg); }
+
 /* 对话框：玻璃面板（HTML-Clock .settings-modal：blur 60px + saturate 200% + 高光描边），
    关闭按钮为圆形灰底、悬停旋转（.settings-close）。对话框加 .lg-scope 即可启用 */
 blora-dialog.lg-scope::part(panel) {
