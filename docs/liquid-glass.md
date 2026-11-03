@@ -10,6 +10,8 @@
 | --- | --- |
 | `public/css/liquid-glass.css` | 令牌、可复用材质、Blora 令牌桥接、组件皮肤、控制台壳层、无障碍降级 |
 | `public/css/model-library-console.css` | 模型库页面布局与材质层级 |
+| `public/css/my-upstream.css` | 我的上游页面布局，以及其 6 个弹窗内部的布局 |
+| `public/js/blora-dialog.js` | 从玻璃页面打开的确认框 / 提示框自动加 `lg-scope` |
 
 `liquid-glass.css` 在 `console.html` 中排在 `console-blora.css` / `sidebar-blora.css`
 之后、各页面样式之前加载；页面样式可以覆盖基础皮肤。
@@ -40,6 +42,8 @@
 - 页面容器加 `lg-page`（如 `<div id="modelLibraryPage" class="page lg-page">`）。
   作用域内的 Blora 组件通过令牌桥接（`--blora-*` → `--lg-*`）与统一皮肤呈现玻璃外观。
 - 不在页面容器内的弹层（对话框、挂在 body 下的菜单）加 `lg-scope`。
+  `<blora-dialog class="lg-scope">` 的面板变为玻璃面板（`::part(panel)` 等）。
+  `Dialog.confirm / alert / showModal` 生成的临时弹窗在当前页带 `lg-page` 时自动加上。
 - 当前页带 `lg-page` 时，`body::before` 显示背景光斑；切到未迁移页面时淡出。
 - 壳层（侧栏、页面大标题、主题按钮、移动顶栏）对整个控制台生效。
 
@@ -56,18 +60,38 @@
   模糊取不到工具栏以外的内容，必须不依赖模糊也可读。
 - 菜单打开时提升所在卡片 / 分组的 `z-index`，避免被后面的元素盖住。
 
+## 已有的组件皮肤
+
+作用域内统一生效，后续页面直接复用：
+
+- 按钮：primary 实心强调色 + 光晕；secondary 灰色胶囊；outline 玻璃胶囊；ghost 透明；danger 红色。
+- 标签 / 徽章：无边框着色胶囊（中性、强调、成功、警告、危险、信息）。
+- 下拉选择（`blora-select`，经 `::part`）：胶囊触发器 + 上下双箭头，弹层为厚玻璃。
+- 搜索与输入：iOS 填充式，聚焦时强调色光环；作用域内的普通文本输入框同样生效。
+- 菜单（`blora-dropdown`）、提示气泡、分段控件（`blora-segmented`）。
+- 页签（`blora-tabs`）：iOS 分段控件，滑块沿用 Blora 计算的位置变量。
+- 表格（`blora-table`）：玻璃面板中的分组列表；右侧固定列为透明 + 模糊，
+  横向滚动时内容从玻璃下滑过；批量操作条为强调色胶囊。
+- 复选框：圆角方框，选中为强调色实心 + 白色对勾（开关里的隐藏 input 除外）。
+- 表单：字段标签次级小字；`blora-fieldset` 为 iOS 分组底；步骤条强调色。
+- 对话框：玻璃面板（blur 60px + saturate 200%），圆形关闭按钮悬停旋转。
+- app.js 行内样式使用的旧变量（`--muted-foreground`、`--border`、`--destructive` 等）
+  在作用域内同样映射到玻璃令牌。
+
 ## 与旧样式的优先级
 
 `console-blora.css` 未分层，并直接写了 `background`、`border-radius`、输入框边框
 （`.blora-page input:not(...)×3`）。基础皮肤因此写实际属性而不只是改 Blora 变量，
 并使用同等或更高的特异性，靠加载顺序胜出。迁移新页面时如果组件颜色没变，
-先检查是否被 `console-blora.css` 的同名规则覆盖。
+先检查是否被 `console-blora.css` 的同名规则覆盖。复选框同理：`toggles-blora.css`
+用 `:not()` 链给所有复选框定了尺寸与圆角，玻璃皮肤沿用同样的 `:not()` 链。
 
 ## 迁移进度
 
 1. 模型库 `#modelLibraryPage` — 已完成
-2. 我的上游 `#myUpstreamPage` — 下一步
-3. 其余页面按侧栏顺序继续：API Key 与用量、统计信息、项目工作、排行榜……
+2. 我的上游 `#myUpstreamPage`，含添加 / 编辑供应商、管理模型、添加 / 编辑模型、
+   批量编辑、批量设置价格 6 个弹窗，以及删除确认等临时弹窗 — 已完成
+3. 下一步：API Key 与用量 `#apiKeysPage`，之后按侧栏顺序继续。
 
 ## 新页面迁移清单
 
@@ -81,13 +105,20 @@
 ## 验证
 
 ```sh
-# 演示服务与无头 Chrome（隔离数据，不连生产库）
-BLORA_TEST_URL=http://127.0.0.1:18481 node scripts/verify-blora-2.1-browser.js --server
+# 隔离的演示服务与无头 Chrome（不连生产库），浏览器测试默认连 18571 / 18572
+node scripts/verify-blora-correction-browser.js --server
+node scripts/verify-blora-correction-browser.js --chrome
 node scripts/test-agent-model-library-browser.js
 node scripts/test-client-config-browser.js
+node scripts/test-provider-editor-pages-browser.js
+# 自带服务与浏览器
+node scripts/test-unified-provider-browser.js
 ```
+
+迁移后通过：`test-agent-model-library-browser.js`、`test-client-config-browser.js`、
+`test-provider-editor-pages-browser.js`、`test-unified-provider-browser.js`。
 
 `test-library-sticky-alignment-browser.js`、`test-model-card-badges-browser.js`、
 `test-inject-uptime-menu-browser.js`、`test-library-closed-keys-browser.js`、
-`test-provider-quota-layout-browser.js`、`test-cpa-quota-browser.js` 在迁移前已在同一断言失败，
-迁移后结果相同。
+`test-provider-quota-layout-browser.js`、`test-cpa-quota-browser.js`、
+`test-provider-wizard-browser.js` 在迁移前已在同一断言失败，迁移后结果相同。

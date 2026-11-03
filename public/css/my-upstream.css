@@ -1,51 +1,189 @@
-/* 我的上游：page2-step1 已清空，只保留个人版内嵌供应商管理的功能性规则 */
-#myUpstreamPage.unified-provider-page > .up-body { display: none; }
-#myUpstreamPage #unifiedProviderManager { display: block; width: 100%; height: calc(100dvh - 5rem); min-height: 480px; border: 0; }
+/* =========================================================================
+   我的上游 · Liquid Glass（第二个迁移页）
+   组件皮肤（分段页签、玻璃表格、批量条、复选框、对话框面板）见 liquid-glass.css；
+   本文件只负责本页布局，以及「我的上游」5 个弹窗内部的布局与材质。
+   ========================================================================= */
 
-/* page2-step3：标签页和工具栏 */
+/* 个人版：内嵌统一供应商管理页 */
+#myUpstreamPage.unified-provider-page > .up-body { display: none; }
+#myUpstreamPage #unifiedProviderManager {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 5rem);
+  min-height: 480px;
+  border: 0;
+  border-radius: var(--lg-radius-panel);
+  box-shadow: var(--lg-shadow-panel);
+}
+
 #myUpstreamPage {
-  & .up-hint { margin: 0 0 var(--blora-space-3); color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
-  & .up-toolbar-slot { display: grid; align-items: start; margin-block-end: var(--blora-space-3); }
+  & .up-hint { margin: 0 4px 14px; color: var(--lg-fg-secondary); font-size: 13.5px; line-height: 1.5; }
+
+  /* 工具栏与批量条叠在同一格，外层为玻璃胶囊（与模型库筛选栏一致） */
+  & .up-toolbar-slot {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    align-items: center;
+    margin-block-end: 20px;
+    padding: 6px;
+    border: 1px solid var(--lg-glass-border);
+    border-radius: var(--lg-radius-pill);
+    background-color: var(--lg-panel-bg);
+    background-image: var(--lg-sheen);
+    -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+    backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+    box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+  }
+  & .up-toolbar-slot::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--lg-rim-gradient);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
   & .up-toolbar-slot > * { grid-area: 1 / 1; margin-block-end: 0; }
   & .up-toolbar-slot > [data-up-off] { visibility: hidden; }
-  & .up-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); }
-  & .up-search { display: block; inline-size: 280px; }
-  & .up-cell-title { font-weight: 500; color: var(--blora-color-text-primary); }
-  & .up-cell-sub { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
-  & .up-mono { font-family: var(--blora-font-mono); }
-  & .up-cell-url { max-inline-size: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  & .up-cell-id { max-inline-size: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--blora-text-xs); color: var(--blora-color-text-muted); }
+  & .up-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-block-size: var(--lg-control-h); }
+  & .up-toolbar .blora-button {
+    --blora-button-height: var(--lg-control-h);
+    min-height: var(--lg-control-h);
+    padding-inline: 16px;
+    font-size: 13.5px;
+  }
+  & .up-toolbar .blora-button [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
+  & .up-search { display: block; flex: 0 1 340px; inline-size: auto; min-width: 0; }
+  & .up-count { margin-inline-start: auto; color: var(--lg-fg-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+  & .up-toolbar-slot .blora-table-bulk { min-block-size: var(--lg-control-h); padding-block: 2px; }
+
+  /* 表格单元 */
+  & .up-cell-title { color: var(--lg-fg); font-weight: 500; }
+  & .up-cell-sub { margin-block-start: 2px; color: var(--lg-fg-secondary); font-size: 12px; }
+  & .up-mono { font-family: var(--lg-font-mono); font-size: 12px; }
+  & .up-cell-url { max-inline-size: 260px; overflow: hidden; color: var(--lg-fg-secondary); text-overflow: ellipsis; white-space: nowrap; }
+  & .up-cell-id { max-inline-size: 200px; overflow: hidden; color: var(--lg-fg-secondary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
   & .up-cell-desc { inline-size: 100%; contain: inline-size; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  & .up-row-actions { display: flex; gap: var(--blora-space-1); }
-  & .up-count { margin-inline-start: auto; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+  & .up-row-actions { display: flex; gap: 2px; }
+  & .up-row-actions .blora-button[data-size="icon"] { --blora-button-height: 32px; inline-size: 32px; padding: 0; }
+  & .blora-table .blora-button[data-size="sm"] { --blora-button-height: 30px; min-height: 30px; padding-inline: 12px; font-size: 12.5px; }
+  & .blora-table .blora-button[data-size="sm"] [data-icon] { display: inline-flex; inline-size: 14px; block-size: 14px; }
+  & .blora-table-wrap { animation: up-glass-in 0.36s var(--lg-ease-out) backwards; }
 }
 
-/* page2-step2：「我的上游」的 5 个弹窗。弹窗会移到 body 下，所以按弹窗 id 限定作用范围 */
-:is(#addProviderModal, #editProviderModal, #batchEditMyModelsModal, #manageModelsModal, #addEditModelModal, #batchPriceModal) {
-  & .up-dialog-stack { display: flex; flex-direction: column; gap: var(--blora-space-4); }
-  & .up-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-4); }
-  & .up-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--blora-space-4); }
-  & .blora-field, & blora-field, & blora-select, & blora-search { display: block; inline-size: 100%; min-inline-size: 0; }
-  & .blora-field > blora-select { margin-block-start: var(--blora-space-1); }
-  & .up-readonly { padding: var(--blora-space-2) var(--blora-space-3); border-radius: var(--blora-radius-sm); background: var(--blora-color-surface-raised); color: var(--blora-color-text-primary); overflow-wrap: anywhere; }
-  & .up-dialog-error { padding: var(--blora-space-2) var(--blora-space-3); border-radius: var(--blora-radius-sm); border: 1px solid var(--blora-color-status-danger); color: var(--blora-color-status-danger); font-size: var(--blora-text-sm); }
-  & .up-dialog-note { margin: 0; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
-  & .up-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--blora-space-2); }
-  & [slot="footer"][hidden] { display: none; }
-  & .up-check-label { display: inline-flex; align-items: center; gap: var(--blora-space-2); cursor: pointer; }
-  & .up-toolbar { display: flex; align-items: center; gap: var(--blora-space-3); margin-block-end: var(--blora-space-3); }
-  & .up-toolbar > .blora-input { flex: 1 1 auto; min-inline-size: 0; }
-  & .up-toolbar > #manageModelsCount { margin-inline-start: auto; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
-  & .up-bulk-bar { display: flex; align-items: center; gap: var(--blora-space-2); margin-block-end: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); border-radius: var(--blora-radius-sm); background: var(--blora-color-surface-raised); }
-  & .up-bulk-bar > .up-dialog-actions { margin-inline-start: auto; }
-  & .up-scroll-list { max-block-size: 300px; overflow-y: auto; border: var(--blora-border-subtle); border-radius: var(--blora-radius-sm); }
-  & blora-steps { display: block; margin-block-end: var(--blora-space-4); }
+@keyframes up-glass-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
-#addProviderModal .provider-list-item { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); cursor: pointer; border-block-end: var(--blora-border-subtle); }
-#addProviderModal .provider-list-item:last-child { border-block-end: 0; }
-#addProviderModal .provider-list-item:hover { background: var(--blora-color-surface-raised); }
-#addProviderModal .provider-list-name { min-inline-size: 0; overflow-wrap: anywhere; color: var(--blora-color-text-primary); }
-#addProviderModal .provider-list-url { max-inline-size: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+
+@media (max-width: 640px) {
+  #myUpstreamPage {
+    & .up-toolbar-slot { border-radius: 22px; }
+    & .up-toolbar { flex-wrap: wrap; }
+    & .up-search { flex: 1 1 100%; }
+    & .up-count { margin-inline-start: 4px; }
+    & .up-toolbar .blora-button { margin-inline-start: auto; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #myUpstreamPage .blora-table-wrap { animation: none; }
+}
+
+/* 「我的上游」的弹窗：弹窗会移到 body 下，所以按弹窗 id 限定；外观由 .lg-scope 启用 */
+:is(#addProviderModal, #editProviderModal, #batchEditMyModelsModal, #manageModelsModal, #addEditModelModal, #batchPriceModal) {
+  & .up-dialog-stack { display: flex; flex-direction: column; gap: 16px; }
+  & .up-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  & .up-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  & .blora-field, & blora-field, & blora-select, & blora-search { display: block; inline-size: 100%; min-inline-size: 0; }
+  & .blora-field { display: flex; flex-direction: column; gap: 6px; margin-block-end: 0; }
+  & .blora-field > blora-select { margin-block-start: 0; }
+  & .up-readonly {
+    padding: 9px 12px;
+    border-radius: var(--lg-radius-field);
+    background: var(--lg-chip-bg);
+    color: var(--lg-fg);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  & .up-dialog-error {
+    padding: 10px 14px;
+    border: 0;
+    border-radius: var(--lg-radius-field);
+    background: color-mix(in srgb, var(--lg-red) 12%, transparent);
+    color: var(--lg-red-ink);
+    font-size: 13px;
+  }
+  & .up-dialog-note { margin: 0; color: var(--lg-fg-secondary); font-size: 13px; line-height: 1.5; }
+  & .up-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  & .up-dialog-actions .blora-button { --blora-button-height: 36px; min-height: 36px; min-inline-size: 76px; padding-inline: 18px; }
+  & [slot="footer"][hidden] { display: none; }
+  & .up-check-label { display: inline-flex; align-items: center; gap: 8px; color: var(--lg-fg); cursor: pointer; }
+  & .up-toolbar { display: flex; align-items: center; gap: 8px; margin-block-end: 12px; }
+  & .up-toolbar > input { flex: 1 1 auto; min-inline-size: 0; }
+  & .up-toolbar > #manageModelsCount { margin-inline-start: auto; color: var(--lg-fg-secondary); font-size: 13px; }
+  & .up-bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-block-end: 12px;
+    padding: 4px 4px 4px 16px;
+    border-radius: var(--lg-radius-pill);
+    background: var(--lg-accent-tint);
+    color: var(--lg-fg);
+    font-size: 13px;
+  }
+  & .up-bulk-bar strong { color: var(--lg-accent-ink); }
+  & .up-bulk-bar > .up-dialog-actions { gap: 6px; margin-inline-start: auto; }
+  & .up-bulk-bar .blora-button { --blora-button-bg: var(--lg-surface); --blora-button-height: 30px; min-height: 30px; min-inline-size: 0; padding-inline: 12px; }
+  & .up-scroll-list {
+    max-block-size: 320px;
+    overflow-y: auto;
+    padding: 4px;
+    border: 0;
+    border-radius: var(--lg-radius-card);
+    background: var(--lg-group-bg);
+  }
+  & blora-steps { display: block; margin-block-end: 16px; }
+}
+/* 供应商目录：分组列表行，悬停为中性填充 */
+#addProviderModal .provider-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--lg-radius-item);
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease);
+}
+#addProviderModal .provider-list-item + .provider-list-item { box-shadow: 0 -1px 0 var(--lg-divider); }
+#addProviderModal .provider-list-item:hover { background: var(--lg-chip-bg); box-shadow: none; }
+#addProviderModal .provider-list-item:hover + .provider-list-item { box-shadow: none; }
+#addProviderModal .provider-list-name { min-inline-size: 0; overflow-wrap: anywhere; color: var(--lg-fg); font-weight: 500; }
+#addProviderModal .provider-list-url { max-inline-size: 55%; overflow: hidden; color: var(--lg-fg-secondary); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+#addProviderModal .provider-list-item.custom .provider-list-url { color: var(--lg-accent-ink); font-weight: 500; }
+/* 管理模型：可勾选的列表行 */
+#manageModelsModal .model-check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--lg-radius-item);
+  background: transparent;
+  box-shadow: none;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease);
+}
+#manageModelsModal .model-check-item + .model-check-item { box-shadow: 0 -1px 0 var(--lg-divider); }
+#manageModelsModal .model-check-item:hover { background: var(--lg-group-bg); }
+#manageModelsModal .model-check-item:has(input:checked) { background: var(--lg-accent-tint); box-shadow: none; }
+#manageModelsModal #manageModelsList { display: flex; flex-direction: column; padding: 4px; border-radius: var(--lg-radius-card); background: var(--lg-group-bg); }
+#manageModelsModal #manageModelsList:empty { display: none; }
 @media (max-width: 560px) {
   :is(#batchEditMyModelsModal, #addEditModelModal) :is(.up-grid-2, .up-grid-3) { grid-template-columns: minmax(0, 1fr); }
 }

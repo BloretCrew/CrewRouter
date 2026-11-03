@@ -74,6 +74,8 @@
   --lg-card-bg-hover: rgba(255, 255, 255, 0.9);
   --lg-group-bg: rgba(120, 120, 128, 0.07);
   --lg-menu-bg: rgba(250, 250, 252, 0.95);
+  --lg-sheet-bg: rgba(255, 255, 255, 0.82);
+  --lg-sheet-shadow: rgba(0, 0, 0, 0.22);
   --lg-sidebar-bg: rgba(255, 255, 255, 0.58);
   --lg-selection-bg: rgba(255, 255, 255, 0.86);
   --lg-tooltip-bg: rgba(29, 29, 31, 0.9);
@@ -144,6 +146,8 @@
   --lg-card-bg-hover: rgba(255, 255, 255, 0.1);
   --lg-group-bg: rgba(120, 120, 128, 0.1);
   --lg-menu-bg: rgba(38, 38, 42, 0.95);
+  --lg-sheet-bg: rgba(30, 30, 32, 0.74);
+  --lg-sheet-shadow: rgba(0, 0, 0, 0.6);
   --lg-sidebar-bg: rgba(22, 22, 24, 0.55);
   --lg-selection-bg: rgba(255, 255, 255, 0.14);
   --lg-tooltip-bg: rgba(58, 58, 60, 0.94);
@@ -290,6 +294,23 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   --blora-focus-ring-strong: 0 0 0 4px var(--lg-accent-glow);
   --blora-easing-standard: var(--lg-ease);
   --blora-ease: var(--lg-ease);
+
+  /* app.js 行内样式仍在用的旧变量（shadcn 风格），作用域内同样换成玻璃令牌 */
+  --foreground: var(--lg-fg);
+  --muted-foreground: var(--lg-fg-secondary);
+  --muted: var(--lg-chip-bg);
+  --border: var(--lg-divider);
+  --primary: var(--lg-accent);
+  --background: var(--lg-surface);
+  --card: var(--lg-card-bg);
+  --destructive: var(--lg-red-ink);
+  --danger: var(--lg-red-ink);
+  --success: var(--lg-green-ink);
+  --warning: var(--lg-orange-ink);
+  --info: var(--lg-accent-ink);
+  --purple: var(--lg-purple-ink);
+  --pink: var(--lg-pink-ink);
+  --cyan: var(--lg-teal-ink);
 
   font-family: var(--lg-font);
   color: var(--lg-fg);
@@ -462,7 +483,7 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 /* 搜索 / 输入：iOS 填充式胶囊，聚焦时强调色光环（HTML-Clock .input-row）。
    console-blora.css 用 `.blora-page input:not(...)×3` 统一给输入框上边框和底色，
    这里沿用同样的 :not() 组合以取得更高特异性。 */
-:is(.lg-page, .lg-scope) :is(input.blora-input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea.blora-input, .blora-input) {
+:is(.lg-page, .lg-scope) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']), textarea, select.blora-input) {
   border: 1px solid transparent;
   border-radius: var(--lg-radius-field);
   background: var(--lg-chip-bg);
@@ -471,15 +492,15 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   box-shadow: none;
   transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
 }
-:is(.lg-page, .lg-scope) .blora-input::placeholder { color: var(--lg-fg-tertiary); }
-:is(.lg-page, .lg-scope) :is(input.blora-input:not([type='checkbox']):not([type='radio']):not([type='range']), .blora-input):hover { border-color: transparent; background: var(--lg-chip-hover); }
-:is(.lg-page, .lg-scope) :is(input.blora-input:not([type='checkbox']):not([type='radio']):not([type='range']), .blora-input):focus {
+:is(.lg-page, .lg-scope) :is(input, textarea)::placeholder { color: var(--lg-fg-tertiary); }
+:is(.lg-page, .lg-scope) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']), textarea, select.blora-input):hover { border-color: transparent; background: var(--lg-chip-hover); }
+:is(.lg-page, .lg-scope) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']), textarea, select.blora-input):focus {
   border-color: var(--lg-accent);
   outline: none;
   background: var(--lg-surface);
   box-shadow: 0 0 0 3px var(--lg-accent-glow);
 }
-:is(.lg-page, .lg-scope) .blora-search :is(input.blora-input:not([type='checkbox']):not([type='radio']):not([type='range']), .blora-input) {
+:is(.lg-page, .lg-scope) .blora-search input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']) {
   box-sizing: border-box;
   height: var(--lg-control-h);
   padding-block: 0;
@@ -546,6 +567,191 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 
 :is(.lg-page, .lg-scope) .blora-empty__title { color: var(--lg-fg); font-weight: 600; }
 :is(.lg-page, .lg-scope) .blora-empty__desc { color: var(--lg-fg-secondary); }
+
+/* 页签：iOS 分段控件（灰色胶囊轨道 + 滑动的白色选中块），沿用 Blora 写入的
+   --blora-tab-x / --blora-tab-w / --blora-tab-h 定位滑块 */
+:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav {
+  align-self: flex-start;
+  gap: 0;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+}
+:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab {
+  margin: 0;
+  padding: 7px 18px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab:hover { color: var(--lg-fg); }
+:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab[aria-selected="true"] { color: var(--lg-fg); font-weight: 600; }
+:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: -2px; }
+:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__indicator {
+  top: 3px;
+  bottom: auto;
+  height: var(--blora-tab-h, calc(100% - 6px));
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-selection-bg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), var(--lg-rim);
+  transition: width var(--lg-dur) var(--lg-ease), transform var(--lg-dur) var(--lg-ease);
+}
+:is(.lg-page, .lg-scope) .blora-tabs__panel { padding-top: 20px; }
+
+/* 表格：玻璃面板里的分组列表——表头为次级小字，行间细分隔线，悬停/选中轻着色；
+   右侧固定列改为透明 + 背景模糊，横向滚动时内容从玻璃下方滑过 */
+:is(.lg-page, .lg-scope) .blora-table-wrap {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+}
+/* separate 边框：每个单元格自己画分隔线，固定列的模糊层不会盖住分隔线 */
+:is(.lg-page, .lg-scope) .blora-table { border-collapse: separate; border-spacing: 0; font-family: var(--lg-font); font-size: 13.5px; }
+:is(.lg-page, .lg-scope) .blora-table thead th {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--lg-divider);
+  background: transparent;
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+:is(.lg-page, .lg-scope) .blora-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--lg-divider);
+  color: var(--lg-fg);
+}
+:is(.lg-page, .lg-scope) .blora-table tbody tr:last-child > td { border-bottom: 0; }
+:is(.lg-page, .lg-scope) .blora-table tbody tr { transition: background-color var(--lg-dur-fast) var(--lg-ease); }
+:is(.lg-page, .lg-scope) .blora-table tbody tr:hover { background: var(--lg-group-bg); }
+:is(.lg-page, .lg-scope) .blora-table tbody tr:has(> .blora-table-select-col input:checked) { background: var(--lg-accent-tint); }
+:is(.lg-page, .lg-scope) .blora-table :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right),
+:is(.lg-page, .lg-scope) .blora-table tbody tr:hover :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right),
+:is(.lg-page, .lg-scope) .blora-table thead :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right) {
+  background: transparent;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+/* 固定列不画竖向分隔线：横向滚动时，内容在模糊层下滑过即可看出边界 */
+:is(.lg-page, .lg-scope) .blora-table :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right) { box-shadow: none; }
+:is(.lg-page, .lg-scope) .blora-table-loading { background: color-mix(in srgb, var(--lg-surface) 60%, transparent); color: var(--lg-fg-secondary); }
+/* 批量操作条：强调色着色胶囊 */
+:is(.lg-page, .lg-scope) .blora-table-bulk {
+  gap: 8px;
+  padding: 5px 6px 5px 16px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-accent-tint);
+  color: var(--lg-fg);
+  font-size: 13.5px;
+}
+:is(.lg-page, .lg-scope) .blora-table-bulk__count { margin-inline-end: auto; color: var(--lg-accent-ink); font-weight: 600; }
+:is(.lg-page, .lg-scope) .blora-table-bulk .blora-button { --blora-button-height: 32px; min-height: 32px; padding-inline: 14px; font-size: 13px; }
+:is(.lg-page, .lg-scope) .blora-table-bulk .blora-button[data-variant="secondary"] { --blora-button-bg: var(--lg-surface); }
+
+/* 复选框：圆角方框，选中为强调色实心 + 白色对勾。排除各类开关里的隐藏 input；
+   :not() 链同时用来压过 toggles-blora.css 的全局复选框规则 */
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]) {
+  display: inline-grid;
+  flex: none;
+  place-content: center;
+  inline-size: 18px;
+  block-size: 18px;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--lg-fg-tertiary);
+  border-radius: 6px;
+  background: var(--lg-surface);
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
+}
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):hover { border-color: var(--lg-fg-secondary); }
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):is(:checked, :indeterminate) {
+  border-color: var(--lg-accent);
+  background: var(--lg-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.3 4.9 8.7 9.6 3.6' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat;
+  box-shadow: 0 2px 6px var(--lg-accent-glow);
+}
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='%23fff' stroke-width='1.9' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):focus-visible { outline: 2px solid var(--lg-accent); outline-offset: 2px; }
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 表单：字段标签为次级小字；分组（fieldset）为 iOS 分组底；步骤条强调色 */
+:is(.lg-page, .lg-scope) .blora-field__label { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 500; }
+:is(.lg-page, .lg-scope) .blora-field__help { color: var(--lg-fg-tertiary); font-size: 11.5px; }
+:is(.lg-page, .lg-scope) .blora-field__error { color: var(--lg-red-ink); }
+:is(.lg-page, .lg-scope) .blora-fieldset {
+  padding: 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--lg-group-bg);
+}
+:is(.lg-page, .lg-scope) .blora-fieldset__legend {
+  float: left;
+  inline-size: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+:is(.lg-page, .lg-scope) .blora-fieldset__description { color: var(--lg-fg-secondary); font-size: 12.5px; }
+:is(.lg-page, .lg-scope) .blora-step__icon { border: 0; background: var(--lg-chip-bg); color: var(--lg-fg-secondary); }
+:is(.lg-page, .lg-scope) .blora-step[data-state="active"] .blora-step__icon { background: var(--lg-accent); color: var(--lg-on-accent); box-shadow: 0 4px 14px var(--lg-accent-glow); }
+:is(.lg-page, .lg-scope) .blora-step[data-state="done"] .blora-step__icon { background: var(--lg-green); color: #fff; }
+:is(.lg-page, .lg-scope) .blora-step__line { background: var(--lg-divider); }
+:is(.lg-page, .lg-scope) .blora-step__title { color: var(--lg-fg); font-weight: 500; }
+:is(.lg-page, .lg-scope) .blora-spinner { border-color: var(--lg-chip-hover); border-top-color: var(--lg-accent); }
+
+/* 对话框：玻璃面板（HTML-Clock .settings-modal：blur 60px + saturate 200% + 高光描边），
+   关闭按钮为圆形灰底、悬停旋转（.settings-close）。对话框加 .lg-scope 即可启用 */
+blora-dialog.lg-scope::part(panel) {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-sheet);
+  background-color: var(--lg-sheet-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 40px 100px var(--lg-sheet-shadow);
+}
+blora-dialog.lg-scope::part(header) { padding: 22px 24px 16px 26px; }
+blora-dialog.lg-scope::part(title) {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+blora-dialog.lg-scope::part(close-button) {
+  inline-size: 30px;
+  block-size: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur) var(--lg-ease);
+}
+blora-dialog.lg-scope::part(close-button):hover { background: var(--lg-chip-hover); color: var(--lg-fg); transform: rotate(90deg); }
+blora-dialog.lg-scope::part(close-button):focus-visible { outline: 2px solid var(--lg-accent); outline-offset: 2px; }
+blora-dialog.lg-scope::part(body) { padding: 20px 26px; color: var(--lg-fg); font-size: 13.5px; }
+blora-dialog.lg-scope::part(footer) { padding: 14px 24px 22px; }
+blora-dialog.lg-scope > [slot="footer"] { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+blora-dialog.lg-scope > [slot="footer"] .blora-button { --blora-button-height: 36px; min-height: 36px; min-inline-size: 76px; padding-inline: 18px; }
+/* Dialog.confirm / alert 生成的提示框：标题加粗一行，说明为次级色 */
+blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) { color: var(--lg-fg-secondary); line-height: 1.6; }
+blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-child { display: inline-block; margin-block-end: 2px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
 
 /* ---------- 6. 壳层：侧栏为悬浮玻璃面板（macOS 26 侧栏），选中态中性 ---------- */
 .blora-page .content-header {
@@ -665,14 +871,14 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 /* ---------- 7. 无障碍与降级 ---------- */
 /* 系统「减少透明度」：玻璃改为实色，保留圆角、层级与描边 */
 @media (prefers-reduced-transparency: reduce) {
-  :root { --lg-panel-bg: #fff; --lg-sidebar-bg: #fff; --lg-glass-bg: #fff; --lg-glass-bg-strong: #fff; --lg-card-bg: #fff; --lg-card-bg-hover: #fff; --lg-menu-bg: #fff; --lg-surface: #fff; --lg-group-bg: #f2f2f7; --lg-blur: 0px; --lg-wallpaper: var(--lg-bg); }
-  :root[data-blora-color-scheme="dark"] { --lg-panel-bg: #1c1c1e; --lg-sidebar-bg: #1c1c1e; --lg-glass-bg: #2c2c2e; --lg-glass-bg-strong: #2c2c2e; --lg-card-bg: #3a3a3c; --lg-card-bg-hover: #48484a; --lg-menu-bg: #2c2c2e; --lg-surface: #2c2c2e; --lg-group-bg: #2c2c2e; --lg-wallpaper: var(--lg-bg); }
+  :root { --lg-panel-bg: #fff; --lg-sidebar-bg: #fff; --lg-glass-bg: #fff; --lg-glass-bg-strong: #fff; --lg-card-bg: #fff; --lg-card-bg-hover: #fff; --lg-menu-bg: #fff; --lg-sheet-bg: #fff; --lg-surface: #fff; --lg-group-bg: #f2f2f7; --lg-blur: 0px; --lg-wallpaper: var(--lg-bg); }
+  :root[data-blora-color-scheme="dark"] { --lg-panel-bg: #1c1c1e; --lg-sidebar-bg: #1c1c1e; --lg-glass-bg: #2c2c2e; --lg-glass-bg-strong: #2c2c2e; --lg-card-bg: #3a3a3c; --lg-card-bg-hover: #48484a; --lg-menu-bg: #2c2c2e; --lg-sheet-bg: #1c1c1e; --lg-surface: #2c2c2e; --lg-group-bg: #2c2c2e; --lg-wallpaper: var(--lg-bg); }
   .lg-glass, .lg-glass-pill { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 /* 不支持背景模糊的浏览器：提高不透明度保证可读 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root { --lg-panel-bg: rgba(255, 255, 255, 0.92); --lg-sidebar-bg: rgba(255, 255, 255, 0.94); --lg-menu-bg: #fff; --lg-glass-bg-strong: rgba(255, 255, 255, 0.9); }
-  :root[data-blora-color-scheme="dark"] { --lg-panel-bg: rgba(28, 28, 30, 0.94); --lg-sidebar-bg: rgba(28, 28, 30, 0.96); --lg-menu-bg: #2c2c2e; --lg-glass-bg-strong: rgba(58, 58, 60, 0.9); }
+  :root { --lg-panel-bg: rgba(255, 255, 255, 0.92); --lg-sidebar-bg: rgba(255, 255, 255, 0.94); --lg-menu-bg: #fff; --lg-sheet-bg: rgba(255, 255, 255, 0.97); --lg-glass-bg-strong: rgba(255, 255, 255, 0.9); }
+  :root[data-blora-color-scheme="dark"] { --lg-panel-bg: rgba(28, 28, 30, 0.94); --lg-sidebar-bg: rgba(28, 28, 30, 0.96); --lg-menu-bg: #2c2c2e; --lg-sheet-bg: rgba(28, 28, 30, 0.97); --lg-glass-bg-strong: rgba(58, 58, 60, 0.9); }
 }
 /* 系统「增强对比度」：加深分隔线与玻璃描边 */
 @media (prefers-contrast: more) {
