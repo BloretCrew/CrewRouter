@@ -1,229 +1,243 @@
-/* Blora surface migration for the statistics dashboard. */
-.blora-stats-page {
-  --stats-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --stats-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
-}
+/* =========================================================================
+   统计信息 · Liquid Glass（第四个迁移页）
+   面板 / 分段 / 表格等通用皮肤见 liquid-glass.css；本文件负责本页布局：
+   筛选条、统计瓷片、实时活动、缓存命中、今日昨日、分段页签、洞察卡、图表卡与数据表。
+   图表配色由 app.js 以页面为作用域读取玻璃令牌（Apple 系统色）。
+   ========================================================================= */
 
-.blora-stats-page > .content-section {
-  border: var(--stats-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
-}
-
-.blora-stats-page .section-header h2,
-.blora-stats-page h3,
-.blora-stats-page h4 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-stats-page .stats-filters {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: end;
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-4);
-  border: var(--stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-stats-page .stats-filter-group {
-  min-width: 0;
-  gap: var(--blora-space-1);
-}
-
-.blora-stats-page .stats-filter-label {
-  color: var(--blora-color-text-subtle);
-  font-family: var(--blora-font-body);
-  font-size: var(--blora-text-xs);
-  font-weight: 600;
-}
-
-.blora-stats-page .stats-filters blora-select {
-  width: 100%;
-  display: block;
-}
-
-.blora-stats-page .stats-filters blora-select::part(trigger) {
-  box-sizing: border-box;
-  min-height: 2.5rem;
-}
-
-.blora-stats-page .stats-overview-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--blora-space-3);
-}
-
-.blora-stats-page .stats-overview-card {
-  min-height: 8.5rem;
-  padding: var(--blora-space-5);
-  border: var(--stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised) !important;
-  color: var(--blora-color-text-primary);
-  box-shadow: var(--blora-shadow-1);
-}
-
-.blora-stats-page .stats-overview-card:nth-child(1) {
-  --stats-card-accent: var(--blora-color-info);
-}
-
-.blora-stats-page .stats-overview-card:nth-child(2) {
-  --stats-card-accent: var(--blora-color-support);
-}
-
-.blora-stats-page .stats-overview-card:nth-child(3) {
-  --stats-card-accent: var(--blora-color-success);
-}
-
-.blora-stats-page .stats-overview-card:nth-child(4) {
-  --stats-card-accent: var(--blora-color-warning);
-}
-
-.blora-stats-page .stats-overview-card:nth-child(5) {
-  --stats-card-accent: var(--blora-color-accent-secondary);
-}
-
-.blora-stats-page .stats-overview-card:nth-child(n + 6) {
-  --stats-card-accent: var(--blora-color-info);
-}
-
-.blora-stats-page .stats-overview-icon {
-  width: 2.75rem;
-  height: 2.75rem;
-  border: 1px solid color-mix(in srgb, var(--stats-card-accent) 22%, var(--blora-color-border-subtle));
-  border-radius: var(--blora-radius-lg);
-  background: color-mix(in srgb, var(--stats-card-accent) 12%, var(--blora-color-surface-default));
-  color: var(--stats-card-accent);
-}
-
-.blora-stats-page .stats-overview-label {
-  color: var(--blora-color-text-subtle);
-  font-size: var(--blora-text-sm);
-  opacity: 1;
-}
-
-.blora-stats-page .stats-overview-value {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-  font-size: var(--blora-text-2xl);
-  font-weight: 600;
-}
-
-.blora-stats-page .stats-overview-sub {
-  color: var(--blora-color-text-subtle);
-  opacity: 1;
-}
-
-.blora-stats-page .content-section[style*="margin-top"] {
-  border: var(--stats-border-soft);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-raised);
-  padding: var(--blora-space-5);
-}
-
-.blora-stats-page .live-activity-section,
-.blora-stats-page .cache-hit-section,
-.blora-stats-page .today-yesterday-card,
-.blora-stats-page .stats-insight-card,
-.blora-stats-page .chart-card {
-  border: var(--stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-  box-shadow: none;
-}
-
-.blora-stats-page .today-yesterday-card,
-.blora-stats-page .stats-insight-card,
-.blora-stats-page .chart-card {
-  padding: var(--blora-space-5);
-}
-
-.blora-stats-page .stats-tab-bar {
-  gap: var(--blora-space-1);
-  padding: var(--blora-space-1);
-  border: var(--stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-  overflow-x: auto;
-}
-
-.blora-stats-page .stats-tab-bar button {
-  min-height: 2.5rem;
+/* ---------- 筛选：分组底上的标签 + 白色胶囊下拉，重置按钮跟在同一行末尾 ---------- */
+#statsPage .stats-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  margin-block-end: 20px;
+  padding: 12px 14px 14px;
   border: 0;
-  border-radius: var(--blora-radius-md);
-  padding: var(--blora-space-2) var(--blora-space-4);
-  color: var(--blora-color-text-subtle);
-  font-family: var(--blora-font-body);
+  border-radius: 20px;
+  background: var(--lg-group-bg);
+}
+#statsPage .stats-filter-group { display: flex; flex: 1 1 160px; flex-direction: column; gap: 6px; min-width: 0; }
+#statsPage .stats-filter-group:last-child { flex: none; }
+#statsPage .stats-filter-label { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; }
+#statsPage .stats-filters blora-select { display: block; width: 100%; }
+#statsPage .stats-filters blora-select::part(trigger),
+#statsPage .admin-filter-bar blora-select::part(trigger) { background: var(--lg-surface); box-shadow: 0 0 0 1px var(--lg-glass-edge), 0 1px 2px rgba(0, 0, 0, 0.04); }
+#statsPage .stats-filters blora-select::part(trigger):hover,
+#statsPage .admin-filter-bar blora-select::part(trigger):hover { background: var(--lg-card-bg-hover); }
+#statsPage .stats-filters .blora-button { --blora-button-height: var(--lg-control-h); min-height: var(--lg-control-h); justify-self: start; }
+#statsPage .stats-custom-range { flex-wrap: wrap; align-items: center; gap: 8px; margin-block-end: 16px; padding: 10px 14px; border-radius: 18px; background: var(--lg-group-bg); }
+#statsPage .stats-custom-range input[type="date"] { inline-size: auto; }
+
+/* ---------- 统计瓷片：白色玻璃卡 + 着色图标（替换原渐变色块），图标在上、数值在下（小组件式） ---------- */
+#statsPage .stats-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 12px; margin-block-end: 20px; }
+#statsPage .stats-overview-card {
+  --st-tint: var(--lg-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 0;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background: var(--lg-card-bg) !important; /* 覆盖行内渐变色 */
+  background-image: var(--lg-sheen) !important;
+  color: var(--lg-fg) !important;
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#statsPage .stats-overview-card:nth-child(5n + 2) { --st-tint: var(--lg-purple); }
+#statsPage .stats-overview-card:nth-child(5n + 3) { --st-tint: var(--lg-green); }
+#statsPage .stats-overview-card:nth-child(5n + 4) { --st-tint: var(--lg-orange); }
+#statsPage .stats-overview-card:nth-child(5n + 5) { --st-tint: var(--lg-teal); }
+#statsPage .stats-overview-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--st-tint) 14%, transparent);
+  color: var(--st-tint);
+}
+#statsPage .stats-overview-icon svg { width: 18px; height: 18px; }
+#statsPage .stats-overview-content { display: flex; flex-direction: column; min-width: 0; max-width: 100%; }
+#statsPage .stats-overview-label { margin-block-end: 2px; color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 500; opacity: 1; }
+#statsPage .stats-overview-value {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+#statsPage .stats-overview-sub { margin-block-start: 4px; color: var(--lg-fg-tertiary); font-size: 12px; opacity: 1; }
+
+/* ---------- 实时活动、缓存命中、今日 / 昨日：同一级玻璃卡 ---------- */
+#statsPage :is(.live-activity-section, .cache-hit-section, .today-yesterday-card, .stats-insight-card, .chart-card) {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#statsPage .live-activity-section { margin-block: 0 20px; padding: 14px 18px 10px; }
+#statsPage .live-activity-header { display: flex; align-items: center; gap: 8px; margin-block-end: 6px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#statsPage .live-activity-dot { background: var(--lg-green); }
+#statsPage .live-activity-sub { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 400; }
+#statsPage :is(.live-activity-row, .live-activity-sess) { gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); font-size: 13px; }
+#statsPage .live-activity-sessions > .live-activity-sess:last-child { border-bottom: 0; }
+#statsPage .live-activity-harness { font-weight: 500; }
+#statsPage .live-activity-num { color: var(--lg-fg-secondary); }
+#statsPage .live-activity-last { color: var(--lg-fg-tertiary); font-variant-numeric: tabular-nums; }
+#statsPage .live-activity-tool { padding: 1px 8px; border-radius: var(--lg-radius-pill); background: var(--lg-accent-tint); color: var(--lg-accent-ink); font-size: 11px; font-weight: 500; }
+#statsPage .live-activity-empty { color: var(--lg-fg-secondary); }
+
+#statsPage .cache-hit-section { margin-block-end: 20px; padding: 16px 18px; }
+#statsPage .cache-hit-header { align-items: center; margin-block-end: 12px; }
+#statsPage .cache-hit-title { gap: 8px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#statsPage .cache-hit-title svg { stroke: var(--lg-green); }
+#statsPage .cache-hit-percent { color: var(--lg-green-ink); font-family: var(--lg-font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+#statsPage .cache-hit-bar-container { height: 8px; overflow: hidden; border: 0; border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); }
+#statsPage .cache-hit-bar { border-radius: var(--lg-radius-pill); background: var(--lg-green); }
+#statsPage .cache-hit-stats { gap: 28px; margin-block-start: 12px; }
+#statsPage .cache-hit-stat-label { color: var(--lg-fg-secondary); font-size: 12px; }
+#statsPage .cache-hit-stat-value { color: var(--lg-fg); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#statsPage .cache-hit-stat-value.cache-saved { color: var(--lg-green-ink); }
+
+#statsPage .today-yesterday-grid { gap: 12px; margin-block-end: 20px; }
+#statsPage .today-yesterday-card { padding: 16px 18px; }
+#statsPage .today-yesterday-header { gap: 8px; margin-block-end: 12px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+/* 图标的 stroke 写在 SVG 属性里（旧色板），CSS 属性优先级更高，直接换成 Apple 系统色 */
+#statsPage .today-yesterday-card:first-child .today-yesterday-header svg { stroke: var(--lg-orange); }
+#statsPage .today-yesterday-card:last-child .today-yesterday-header svg { stroke: var(--lg-indigo); }
+#statsPage .today-yesterday-metric-label { color: var(--lg-fg-secondary); font-size: 12px; }
+#statsPage .today-yesterday-metric-value { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+#statsPage .today-yesterday-trend { font-size: 12px; font-weight: 600; }
+#statsPage :is(.trend-up, .trend-up-text) { color: var(--lg-green-ink); }
+#statsPage :is(.trend-down, .trend-down-text) { color: var(--lg-red-ink); }
+#statsPage .trend-neutral { color: var(--lg-fg-secondary); }
+
+/* ---------- 分段页签（iOS 分段控件，横向可滚动） ---------- */
+#statsPage .stats-tab-bar {
+  display: flex;
+  gap: 2px;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin-block-end: 20px;
+  padding: 3px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  scrollbar-width: none;
+}
+#statsPage .stats-tab-bar::-webkit-scrollbar { display: none; }
+#statsPage .stats-tab-bar button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: transparent;
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
+}
+#statsPage .stats-tab-bar button svg { width: 14px; height: 14px; }
+#statsPage .stats-tab-bar button:hover { color: var(--lg-fg); }
+#statsPage .stats-tab-bar button:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: -2px; }
+#statsPage .stats-tab-bar button.active {
+  border: 0;
+  background: var(--lg-selection-bg);
+  color: var(--lg-fg);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), var(--lg-rim);
+}
+#statsPage .stats-tab-content { animation: st-tab-in 0.3s var(--lg-ease-out) backwards; }
+@keyframes st-tab-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
-.blora-stats-page .stats-tab-bar button.active {
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-text-primary);
-  box-shadow: var(--blora-shadow-1);
-  border-bottom: 0;
-}
+/* ---------- 洞察卡（概览页签） ---------- */
+#statsPage .stats-overview-insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; gap: 12px; }
+#statsPage #statsTabOverview { margin-block-end: 20px; }
+#statsPage .stats-insight-card { padding: 16px; }
+#statsPage .stats-insight-header { gap: 8px; margin-block-end: 12px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#statsPage .stats-insight-card:nth-child(6n + 1) .stats-insight-header svg { stroke: var(--lg-accent); }
+#statsPage .stats-insight-card:nth-child(6n + 2) .stats-insight-header svg { stroke: var(--lg-orange); }
+#statsPage .stats-insight-card:nth-child(6n + 3) .stats-insight-header svg { stroke: var(--lg-green); }
+#statsPage .stats-insight-card:nth-child(6n + 4) .stats-insight-header svg { stroke: var(--lg-purple); }
+#statsPage .stats-insight-card:nth-child(6n + 5) .stats-insight-header svg { stroke: var(--lg-indigo); }
+#statsPage .stats-insight-card:nth-child(6n + 6) .stats-insight-header svg { stroke: var(--lg-teal); }
+#statsPage .stats-insight-list { display: flex; flex-direction: column; gap: 4px; }
+#statsPage .stats-insight-item { gap: 10px; padding: 8px 10px; border: 0; border-radius: 12px; background: var(--lg-group-bg); color: var(--lg-fg); font-size: 13px; }
+#statsPage .stats-insight-name { color: var(--lg-fg); }
+#statsPage .stats-insight-value { color: var(--lg-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+#statsPage .stats-insight-empty { color: var(--lg-fg-secondary); font-size: 13px; }
 
-.blora-stats-page .stats-overview-insights {
-  align-items: start;
+/* ---------- 图表卡与数据表 ---------- */
+#statsPage .responsive-grid-2 { gap: 12px; }
+#statsPage .chart-card { padding: 16px 18px; }
+#statsPage .chart-card h4 { margin: 0 0 12px; color: var(--lg-fg); font-family: var(--lg-font); font-size: 15px; font-weight: 600; }
+#statsPage .chart-container { height: 280px; }
+#statsPage .stats-table-card { margin-block-start: 20px; }
+#statsPage .stats-table-card > div { overflow-x: auto; }
+#statsPage :is(.stats-table, .stats-table-card table) {
+  width: 100%;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lg-fg);
+  font-size: 13px;
 }
+#statsPage .stats-table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--lg-divider);
+  background: transparent;
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+#statsPage .stats-table td { padding: 10px 12px; border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); font-variant-numeric: tabular-nums; }
+/* app.js 渲染的数据行带行内 padding:8px / 虚线色边框：统一成表头同款内边距与发丝分隔线（空状态行保留自己的留白） */
+#statsPage .stats-table td:not([colspan]) { padding: 10px 12px !important; }
+#statsPage .stats-table td { border-bottom-color: var(--lg-divider) !important; }
+#statsPage .stats-table tbody tr:last-child td { border-bottom-color: transparent !important; }
+#statsPage .stats-table tbody tr { transition: background-color var(--lg-dur-fast) var(--lg-ease); }
+#statsPage .stats-table tbody tr:hover { background: var(--lg-group-bg); }
+#statsPage .stats-table th.sortable { cursor: pointer; }
+#statsPage .stats-table th.sortable:hover { color: var(--lg-fg); }
+#statsPage .latency-stats-notice { margin: 0 0 16px; color: var(--lg-fg-secondary); font-size: 13px; line-height: 1.55; }
 
-.blora-stats-page #statsTabOverview {
-  margin-bottom: var(--blora-space-4);
-}
-
-.blora-stats-page .stats-table,
-.blora-stats-page .stats-table-card {
-  border: var(--stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  overflow: hidden;
-  background: var(--blora-color-surface-default);
-}
-
-.blora-stats-page .stats-table th {
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-  border-bottom: var(--stats-border-soft);
-}
-
-.blora-stats-page .stats-table td {
-  border-bottom: var(--stats-border-soft);
-  color: var(--blora-color-text-emphasis);
-}
-
-.blora-stats-page .stats-table tbody tr:hover {
-  background: var(--blora-color-surface-raised);
-}
+/* ---------- 调用记录：筛选条与分页 ---------- */
+#statsPage .admin-filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border-radius: 20px; background: var(--lg-group-bg); }
+#statsPage .admin-filter-bar > input { inline-size: auto; min-height: var(--lg-control-h); padding-block: 0; border-radius: var(--lg-radius-pill); background: var(--lg-surface); box-shadow: 0 0 0 1px var(--lg-glass-edge); }
+#statsPage .admin-filter-bar > .blora-button { --blora-button-height: var(--lg-control-h); min-height: var(--lg-control-h); }
+#statsPage .filter-info { margin-inline-start: auto; color: var(--lg-fg-secondary); font-size: 12.5px; }
 
 @media (max-width: 640px) {
-  .blora-stats-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .blora-stats-page .stats-overview-grid,
-  .blora-stats-page .today-yesterday-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .blora-stats-page .stats-filters {
-    grid-template-columns: 1fr;
-  }
-
-  .blora-stats-page .stats-filter-group {
-    width: 100%;
-  }
+  #statsPage .stats-filters { grid-template-columns: minmax(0, 1fr); }
+  #statsPage .stats-overview-grid,
+  #statsPage .today-yesterday-grid { grid-template-columns: minmax(0, 1fr); }
+  #statsPage .stats-overview-value { font-size: 24px; }
+  #statsPage .chart-container { height: 240px; }
 }
-
-/* 延迟与吞吐 */
-.latency-stats-notice {
-  margin: 0 0 var(--blora-space-4);
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--blora-color-text-subtle);
-}
-.blora-stats-page .stats-overview-card .stats-overview-value {
-  word-break: break-word;
+@media (prefers-reduced-motion: reduce) {
+  #statsPage .stats-tab-content { animation: none; }
 }

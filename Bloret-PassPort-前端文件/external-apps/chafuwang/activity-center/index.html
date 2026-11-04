@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动管理中心</title>
+    <link rel="stylesheet" href="activity.css">
+</head>
+
+<body>
+    <main class="activity-page">
+        <header class="page-header">
+            <div>
+                <p class="page-overline">作者工作台</p>
+                <h1>活动管理中心</h1>
+                <p id="page-subtitle" class="page-subtitle">正在加载服务器信息...</p>
+            </div>
+            <div class="page-actions">
+                <button id="reload-button" class="ghost-button" type="button">刷新</button>
+                <a class="ghost-button" href="/">返回首页</a>
+            </div>
+        </header>
+
+        <section class="card" aria-live="polite">
+            <h2>服务器信息</h2>
+            <div id="server-meta" class="server-meta">
+                <p class="empty">正在读取服务器信息...</p>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 id="form-title">新增活动</h2>
+            <form id="activity-form" class="activity-form" novalidate>
+                <label>
+                    <span>活动标题 *</span>
+                    <input id="activity-title" type="text" maxlength="80" required>
+                </label>
+                <label>
+                    <span>活动简介</span>
+                    <textarea id="activity-summary" rows="3" maxlength="300"
+                        placeholder="例如：本周末开放双倍经验与签到礼包"></textarea>
+                </label>
+                <label>
+                    <span>封面图链接</span>
+                    <input id="activity-banner" type="url" placeholder="https://...">
+                </label>
+                <div class="inline-grid">
+                    <label>
+                        <span>开始时间</span>
+                        <input id="activity-start" type="datetime-local">
+                    </label>
+                    <label>
+                        <span>结束时间</span>
+                        <input id="activity-end" type="datetime-local">
+                    </label>
+                </div>
+                <label>
+                    <span>活动链接</span>
+                    <input id="activity-link" type="text" placeholder="https://... 或 域名:端口">
+                </label>
+                <p id="form-error" class="form-error" hidden></p>
+                <div class="form-actions">
+                    <button id="cancel-edit" class="ghost-button" type="button" hidden>取消编辑</button>
+                    <button id="submit-button" class="primary-button" type="submit">添加活动</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>活动列表</h2>
+            <div id="activity-list" class="activity-list">
+                <p class="empty">暂无活动，请先创建活动。</p>
+            </div>
+        </section>
+
+        <section class="card card-tip">
+            <h2>提交说明</h2>
+            <p>普通作者提交活动后会进入审核队列；超级管理员提交后会直接生效。</p>
+        </section>
+    </main>
+
+    <script src="../server-display.js"></script>
+    <script src="activity.js"></script>
+</body>
+
+</html>

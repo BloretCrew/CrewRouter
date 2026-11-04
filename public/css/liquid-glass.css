@@ -102,6 +102,8 @@
   --lg-indigo: #5856d6; --lg-indigo-ink: #3634a3;
   --lg-purple: #af52de; --lg-purple-ink: #8944ab;
   --lg-pink: #ff2d55;   --lg-pink-ink: #d30f45;
+  --lg-cyan: #32ade6;   --lg-cyan-ink: #0071a4;
+  --lg-mint: #00c7be;   --lg-mint-ink: #0c817b;
   --lg-gray: #8e8e93;   --lg-gray-ink: #6c6c70;
 
   /* 背景：HTML-Clock 环境光斑（accent 100% / 50%）改为静态渐变，并加冷暖辅色 */
@@ -171,6 +173,8 @@
   --lg-indigo: #5e5ce6; --lg-indigo-ink: #7d7aff;
   --lg-purple: #bf5af2; --lg-purple-ink: #da8fff;
   --lg-pink: #ff375f;   --lg-pink-ink: #ff6482;
+  --lg-cyan: #64d2ff;   --lg-cyan-ink: #70d7ff;
+  --lg-mint: #63e6e2;   --lg-mint-ink: #66d4cf;
   --lg-gray: #8e8e93;   --lg-gray-ink: #aeaeb2;
 
   /* HTML-Clock「午夜」背景 + 两枚 accent 光斑 */
@@ -311,6 +315,16 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   --purple: var(--lg-purple-ink);
   --pink: var(--lg-pink-ink);
   --cyan: var(--lg-teal-ink);
+  /* 客户端标识 / 图表色（行内徽标当文字色用，故取 ink；Chart.js 图形由 app.js 换成标准系统色） */
+  --chart-1: var(--lg-cyan-ink);
+  --chart-2: var(--lg-purple-ink);
+  --chart-3: var(--lg-green-ink);
+  --chart-4: var(--lg-orange-ink);
+  --chart-5: var(--lg-red-ink);
+  --chart-6: var(--lg-teal-ink);
+  --chart-7: var(--lg-pink-ink);
+  --chart-8: var(--lg-mint-ink);
+  --brand-blue: var(--lg-indigo-ink);
 
   font-family: var(--lg-font);
   color: var(--lg-fg);

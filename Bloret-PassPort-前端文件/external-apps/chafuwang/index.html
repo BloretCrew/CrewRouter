@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查服网 · 今日</title>
+    <meta name="description" content="查服网 Fluent2 版首页">
+    <meta name="keywords" content="查服网, Minecraft, 服务器">
+    <link rel="icon" href="bloret.png">
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <div class="app-shell" id="app-shell">
+        <aside class="side-rail" id="side-rail" aria-label="侧边导航">
+            <div class="brand-block">
+                <img src="bloret.png" alt="查服网图标" class="brand-logo" onerror="this.style.display='none'">
+                <div>
+                    <p class="brand-overline">Minecraft 服务器精选平台</p>
+                    <h1 class="brand-title">查服网</h1>
+                </div>
+            </div>
+
+            <label class="search-field" for="search-input">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 14 15.5l.27.28v.79L20 21.49 21.49 20 15.5 14zm-6 0A4.5 4.5 0 1 1 10 5a4.5 4.5 0 0 1-.5 9z">
+                    </path>
+                </svg>
+                <input id="search-input" type="search" placeholder="搜索服务器名称、地址或标签">
+            </label>
+
+            <nav class="primary-nav" aria-label="页面定位">
+                <button class="nav-item is-active" type="button" data-target="today-section">今日</button>
+                <button class="nav-item" type="button" data-target="events-section">推荐</button>
+                <button class="nav-item" type="button" data-target="servers-section">全部服务器</button>
+            </nav>
+
+            <div class="tag-pane">
+                <div class="tag-head">
+                    <p class="pane-title">标签筛选</p>
+                    <button id="clear-tag-filter" class="chip subtle" type="button">清除</button>
+                </div>
+                <ul id="sidebar-tags" class="tag-list"></ul>
+            </div>
+
+            <footer class="side-footer">© 2026 BloretCrew</footer>
+        </aside>
+
+        <main class="content" id="content">
+            <header id="home-content-header" class="content-header">
+                <button id="sidebar-toggle" class="icon-button" type="button" aria-label="展开导航">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="header-main">
+                    <p class="header-overline">今日</p>
+                    <h2 class="header-title">发现高质量 Minecraft 服务器</h2>
+                </div>
+                <div class="header-actions">
+                    <div id="user-menu-anchor" class="user-menu-anchor" hidden>
+                        <button id="user-chip" class="user-chip" type="button" aria-haspopup="menu"
+                            aria-expanded="false">
+                            <img id="user-chip-avatar" class="user-chip-avatar" src="assets/bloret.png" alt="用户头像">
+                            <span id="user-chip-name" class="user-chip-name">用户</span>
+                        </button>
+                        <div id="user-menu" class="user-menu" role="menu" hidden>
+                            <button id="user-menu-add-server" class="user-menu-item" type="button"
+                                role="menuitem">添加服务器</button>
+                            <button id="user-menu-manage-activity" class="user-menu-item" type="button"
+                                role="menuitem">管理活动</button>
+                            <button id="user-menu-admin-center" class="user-menu-item" type="button" role="menuitem"
+                                hidden>管理中心</button>
+                            <a id="user-menu-passport" class="user-menu-item" href="/api/oauth/passport" target="_blank"
+                                rel="noopener noreferrer" role="menuitem">前往账号中心</a>
+                            <button id="user-menu-logout" class="user-menu-item" type="button"
+                                role="menuitem">退出登录</button>
+                        </div>
+                    </div>
+                    <div id="user-hint-toast" class="hint-toast" role="status" aria-live="polite" hidden>请先登录后使用用户菜单
+                    </div>
+                    <a id="login-entry" class="fluent-button" href="/api/oauth/entry">登录</a>
+                </div>
+            </header>
+
+            <div id="home-content-sections">
+                <section id="today-section" class="section-block">
+                    <div class="hero-layout">
+                        <article id="hero-card" class="card hero-card">
+                            <p class="card-pill">今日推荐</p>
+                            <h3 class="hero-title">正在加载服务器推荐...</h3>
+                        </article>
+
+                        <article id="spotlight-card" class="card spotlight-card">
+                            <p class="card-pill light">精选服务器</p>
+                            <h3 class="spotlight-title">正在加载侧栏推荐...</h3>
+                        </article>
+                    </div>
+                </section>
+
+                <section id="events-section" class="section-block">
+                    <div class="section-head">
+                        <h3>今日重点</h3>
+                        <p>看看现在值得体验的热门服务器</p>
+                    </div>
+                    <div id="feature-grid" class="feature-grid"></div>
+                </section>
+
+                <section id="servers-section" class="section-block">
+                    <div class="section-head">
+                        <h3>全部服务器</h3>
+                        <p id="results-summary">正在加载服务器列表...</p>
+                    </div>
+                    <div id="servers-grid" class="servers-grid"></div>
+                </section>
+
+                <div id="loading" class="loading-state">正在加载服务器数据...</div>
+                <div id="empty-state" class="empty-state" hidden>没有匹配的服务器，试试更短的关键词或清除标签筛选。</div>
+            </div>
+
+            <section id="server-dialog" class="server-detail-page" aria-labelledby="server-dialog-title" hidden>
+                <div class="as-top-section">
+                    <div class="as-top-bg">
+                        <img id="server-dialog-background-image" src="" alt="">
+                    </div>
+                    
+                    <div class="as-content-max">
+                        <header class="as-hero-container">
+                            <img id="server-dialog-avatar" class="as-hero-icon" src="assets/bloret.png" alt="服务器图标">
+                            <div class="as-hero-info">
+                                <h1 id="server-dialog-title" class="as-hero-title">服务器名称</h1>
+                                <h2 id="server-dialog-name" class="as-hero-subtitle">服务器副标题</h2>
+                                <p class="as-hero-meta">
+                                    <span id="server-dialog-official" hidden>Bloret 官方精选 · </span>
+                                    <span id="server-dialog-category">角色扮演</span>
+                                </p>
+                                <div class="as-hero-actions">
+                                    <a id="server-dialog-open-link" class="app-store-button" href="#" target="_blank" rel="noopener noreferrer">获取</a>
+                                    <button class="app-store-button app-store-button-ghost" type="button" aria-label="分享" onclick="navigator.clipboard.writeText(window.location.href); alert('链接已复制')">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                                    </button>
+                                    <button id="server-dialog-close-icon" class="app-store-button app-store-button-ghost" type="button" aria-label="关闭">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                    <button id="server-dialog-edit" class="app-store-button app-store-button-ghost" type="button" hidden>编辑</button>
+                                    <button id="server-dialog-manage-activities" class="app-store-button app-store-button-ghost" type="button" hidden>管理活动</button>
+                                    <button id="server-dialog-delete" class="app-store-button app-store-button-ghost app-store-button-danger" type="button" hidden>删除服务器</button>
+                                </div>
+                            </div>
+                        </header>
+
+                        <div class="as-ribbon">
+                            <div class="as-ribbon-item">
+                                <p class="as-ribbon-label">评分</p>
+                                <strong class="as-ribbon-value" id="server-dialog-rating">4.5</strong>
+                                <p class="as-ribbon-sub" id="server-dialog-rating-stars">★★★★☆</p>
+                            </div>
+                            <div class="as-ribbon-item">
+                                <p class="as-ribbon-label">状态</p>
+                                <strong class="as-ribbon-value" id="server-dialog-status-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6" fill="#68cd52"/></svg>
+                                </strong>
+                                <p class="as-ribbon-sub" id="server-dialog-status">检测中</p>
+                            </div>
+                            <div class="as-ribbon-item">
+                                <p class="as-ribbon-label">客户端</p>
+                                <strong class="as-ribbon-value" id="server-dialog-ribbon-client">--</strong>
+                                <p class="as-ribbon-sub">兼容信息</p>
+                            </div>
+                            <div class="as-ribbon-item">
+                                <p class="as-ribbon-label">在线</p>
+                                <strong class="as-ribbon-value" id="server-dialog-players">--</strong>
+                                <p class="as-ribbon-sub">在线人数</p>
+                            </div>
+                            <div class="as-ribbon-item">
+                                <p class="as-ribbon-label">作者</p>
+                                <strong class="as-ribbon-value">
+                                    <img id="server-dialog-author-avatar" class="as-ribbon-avatar" src="assets/bloret.png" alt="作者头像">
+                                </strong>
+                                <p class="as-ribbon-sub" id="server-dialog-author">未知作者</p>
+                            </div>
+                            <div class="as-ribbon-item">
+                                <p class="as-ribbon-label">语言</p>
+                                <strong class="as-ribbon-value" id="server-dialog-ribbon-language">--</strong>
+                                <p class="as-ribbon-sub">界面语言</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="as-main-content">
+                    <div class="as-content-max">
+                        <div class="as-gallery-container">
+                            <h3 class="as-section-title">预览</h3>
+                            <div id="server-dialog-gallery-scroll" class="as-gallery-scroll"></div>
+                            <div class="as-device-switch">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                <span id="server-dialog-client-hint">客户端信息待补充</span>
+                            </div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <div id="server-dialog-summary" class="as-description-text as-markdown">暂无简介</div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 class="as-section-title">最新动态</h3>
+                            <div class="as-whats-new-card">
+                                <div class="as-whats-new-header">
+                                    <span class="as-version">服务器提示</span>
+                                    <span class="as-date" id="server-dialog-time-raw">--</span>
+                                </div>
+                                <div class="as-description-text as-markdown" id="server-dialog-tip">暂无提示信息。</div>
+                            </div>
+                            <div class="as-promo-card as-best-time-card">
+                                   <p class="as-promo-kicker">Bloriko 推荐入服时段</p>
+                                   <div id="server-dialog-best-time" class="as-promo-main as-markdown">暂无推荐</div>
+                            </div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 class="as-section-title">活动</h3>
+                            <div id="server-dialog-activities" class="as-activities-list">
+                                <p class="dialog-empty">暂无活动，作者尚未发布活动安排。</p>
+                            </div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 class="as-section-title">趋势与历史</h3>
+                            <div class="as-ratings-layout">
+                                <div class="as-rating-summary">
+                                    <strong class="as-rating-big" id="server-history-meta-score">4.8</strong>
+                                    <p class="as-rating-stars" id="server-history-meta-stars">★★★★★</p>
+                                </div>
+                                <div class="as-rating-chart-container">
+                                    <div id="server-history-chart" style="width:100%; height: 100px;"></div>
+                                    <p id="server-history-meta" style="font-size:12px; color:#86868b; text-align:right; margin-top:4px;">加载中...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 class="as-section-title">评分与评论</h3>
+                            <p id="server-comment-summary" class="as-comment-summary">暂无评分数据</p>
+
+                            <form id="server-comment-form" class="as-comment-form" novalidate>
+                                <div class="as-comment-rating-row">
+                                    <span class="as-comment-rating-label">你的评分</span>
+                                    <div id="server-comment-rating" class="as-comment-stars" role="radiogroup" aria-label="选择评分">
+                                        <button class="as-comment-star-btn is-active" type="button" data-rating="1" role="radio" aria-checked="false" aria-label="1 星">★</button>
+                                        <button class="as-comment-star-btn is-active" type="button" data-rating="2" role="radio" aria-checked="false" aria-label="2 星">★</button>
+                                        <button class="as-comment-star-btn is-active" type="button" data-rating="3" role="radio" aria-checked="false" aria-label="3 星">★</button>
+                                        <button class="as-comment-star-btn is-active" type="button" data-rating="4" role="radio" aria-checked="false" aria-label="4 星">★</button>
+                                        <button class="as-comment-star-btn is-active" type="button" data-rating="5" role="radio" aria-checked="true" aria-label="5 星">★</button>
+                                    </div>
+                                </div>
+
+                                <label class="as-comment-field">
+                                    <span>评论内容</span>
+                                    <textarea id="server-comment-content" rows="3" maxlength="280"
+                                        placeholder="分享你的游玩体验、优点或建议" required></textarea>
+                                </label>
+
+                                <div class="as-comment-form-footer">
+                                    <div class="as-comment-form-messages">
+                                        <p id="server-comment-form-hint" class="as-comment-form-hint">登录后可发布评论。</p>
+                                        <p id="server-comment-form-error" class="as-comment-form-error" hidden></p>
+                                    </div>
+                                    <button id="server-comment-submit" class="app-store-button" type="submit">发布</button>
+                                </div>
+                            </form>
+
+                            <div id="server-comment-list" class="as-comment-list">
+                                <p class="dialog-empty">正在加载评论...</p>
+                            </div>
+                            <div class="as-comment-list-actions">
+                                <button id="server-comment-open-all" class="chip subtle" type="button" hidden>展开全部评论</button>
+                            </div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 class="as-section-title">信息</h3>
+                            <div class="as-info-grid">
+                                <div class="as-info-item">
+                                    <span class="as-info-label">地址</span>
+                                    <span class="as-info-val" id="server-dialog-address">示例地址</span>
+                                </div>
+                                <div class="as-info-item">
+                                    <span class="as-info-label">验证</span>
+                                    <span class="as-info-val" id="server-dialog-online-check">已验证</span>
+                                </div>
+                                <div class="as-info-item">
+                                    <span class="as-info-label">更新</span>
+                                    <span class="as-info-val" id="server-dialog-updated">近期</span>
+                                </div>
+                                <div class="as-info-item">
+                                    <span class="as-info-label">标签</span>
+                                    <div class="as-info-val" id="server-dialog-tags"></div>
+                                </div>
+                                <div class="as-info-item">
+                                    <span class="as-info-label">版权与隐私说明</span>
+                                    <strong class="as-info-val" id="server-dialog-policy" style="font-weight:400;">--</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 class="as-section-title">备用地址</h3>
+                            <div id="server-dialog-otherip" style="margin-bottom:12px;"></div>
+                            <div id="server-dialog-links"></div>
+                            
+                            <!-- <details style="margin-top: 20px;">
+                                <summary style="color:#007aff; cursor:pointer; font-size:14px;">原始数据</summary>
+                                <pre id="server-dialog-raw" style="font-size:11px; background:#f5f5f7; padding:10px; border-radius:8px; margin-top:10px; overflow-x:auto;"></pre>
+                            </details> -->
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 id="server-dialog-author-more-title" class="as-section-title">来自该作者的更多服务器</h3>
+                            <div id="server-dialog-more-from-author" class="as-related-grid">
+                                <p class="dialog-empty">暂无更多服务器。</p>
+                            </div>
+                        </div>
+
+                        <div class="as-separator"></div>
+
+                        <div class="as-section">
+                            <h3 class="as-section-title">你可能喜欢的更多服务器</h3>
+                            <div id="server-dialog-might-like" class="as-related-grid">
+                                <p class="dialog-empty">暂无推荐服务器。</p>
+                            </div>
+                        </div>
+                        
+                        <div class="as-footer-space"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <dialog id="server-editor-dialog" class="fluent-dialog editor-dialog" aria-labelledby="server-editor-title">
+        <div class="dialog-shell">
+            <header class="dialog-header">
+                <div class="dialog-title-wrap">
+                    <p class="dialog-overline">服务器编辑</p>
+                    <h3 id="server-editor-title" class="dialog-title">添加服务器</h3>
+                </div>
+                <button id="server-editor-close-icon" class="dialog-icon-button" type="button"
+                    aria-label="关闭编辑器">✕</button>
+            </header>
+
+            <section class="dialog-body">
+                <form id="server-editor-form" class="editor-form" novalidate>
+                    <label class="editor-field">
+                        <span>服务器名称 *</span>
+                        <input id="server-editor-title-input" type="text" maxlength="80" required>
+                    </label>
+                    <label class="editor-field">
+                        <span>服务器地址 *</span>
+                        <input id="server-editor-url-input" type="text" placeholder="example.com 或 example.com:25565"
+                            required>
+                    </label>
+                    <label class="editor-field editor-field-full">
+                        <span>简介 *</span>
+                        <textarea id="server-editor-text-input" rows="3" required></textarea>
+                    </label>
+                    <label class="editor-field editor-field-full">
+                        <span>标签</span>
+                        <div id="server-editor-type-picker" class="editor-tag-picker" role="group" aria-label="可选标签"></div>
+                        <p id="server-editor-type-hint" class="editor-tag-hint">仅可添加允许作者使用的标签，可点击下方标签快速添加或移除。</p>
+                    </label>
+                    <div class="editor-field editor-field-full">
+                        <span>图片画廊（最多 8 张）</span>
+                        <div class="editor-json-actions">
+                            <button id="server-editor-gallery-open" class="chip subtle" type="button">编辑图片画廊</button>
+                            <p id="server-editor-gallery-summary" class="editor-json-summary">暂未添加画廊图片</p>
+                        </div>
+                    </div>
+                    <label class="editor-field editor-field-full">
+                        <span>提示信息</span>
+                        <textarea id="server-editor-tip-input" rows="3"></textarea>
+                    </label>
+                    <label class="editor-field editor-field-full">
+                        <span>作者头像链接</span>
+                        <input id="server-editor-author-avatar-input" type="url" placeholder="自动读取当前账号头像" readonly aria-readonly="true">
+                    </label>
+                    <label class="editor-field">
+                        <span>客户端（至少选择一个，可多选）</span>
+                        <div id="server-editor-client-options" class="editor-client-options" role="group" aria-label="客户端">
+                            <div class="editor-toggle">
+                                <input id="server-editor-client-java" class="server-editor-client-checkbox" type="checkbox" value="Java" aria-label="Java">
+                                <span>Java</span>
+                            </div>
+                            <div class="editor-toggle">
+                                <input id="server-editor-client-bedrock" class="server-editor-client-checkbox" type="checkbox" value="基岩版 / Bedrock" aria-label="基岩版 / Bedrock">
+                                <span>基岩版 / Bedrock</span>
+                            </div>
+                            <div class="editor-toggle">
+                                <input id="server-editor-client-other" class="server-editor-client-checkbox" type="checkbox" value="其他 / Other" aria-label="其他 / Other">
+                                <span>其他 / Other</span>
+                            </div>
+                        </div>
+                        <input id="server-editor-client-input" type="text" placeholder="例如：Java + Bedrock">
+                    </label>
+                    <label class="editor-field">
+                        <span>语言</span>
+                        <input id="server-editor-language-input" type="text" placeholder="例如：中文 / English">
+                    </label>
+                    <label class="editor-field">
+                        <span>版本</span>
+                        <input id="server-editor-version-input" type="text" placeholder="例如：1.20.4">
+                    </label>
+                    <label class="editor-field">
+                        <span>模式</span>
+                        <input id="server-editor-mode-input" type="text" placeholder="例如：生存 / 空岛">
+                    </label>
+                    <label class="editor-field editor-field-full">
+                        <span>版权与隐私说明</span>
+                        <textarea id="server-editor-privacy-input" rows="2" placeholder="例如：© 2026 BloretCrew"></textarea>
+                    </label>
+                    <label class="editor-field editor-field-full">
+                        <span>Bloriko 推荐入服时段</span>
+                        <textarea id="server-editor-besttime-input" rows="2" placeholder="例如：周末 20:00 - 23:00"></textarea>
+                    </label>
+                    <div class="editor-field editor-field-full">
+                        <span>备用地址</span>
+                        <div class="editor-json-actions">
+                            <button id="server-editor-otherip-open" class="chip subtle" type="button">编辑备用地址</button>
+                            <p id="server-editor-otherip-summary" class="editor-json-summary">未设置</p>
+                        </div>
+                    </div>
+                    <div class="editor-field editor-field-full">
+                        <span>服务器链接</span>
+                        <div class="editor-json-actions">
+                            <button id="server-editor-links-open" class="chip subtle" type="button">编辑服务器链接</button>
+                            <p id="server-editor-links-summary" class="editor-json-summary">未设置</p>
+                        </div>
+                    </div>
+                    <label class="editor-toggle">
+                        <input id="server-editor-onlinecheck-input" type="checkbox">
+                        <span>服务器已启用正版验证</span>
+                    </label>
+                </form>
+                <p id="server-editor-error" class="editor-error" hidden></p>
+            </section>
+
+            <footer class="dialog-footer">
+                <button id="server-editor-cancel" class="chip subtle" type="button">取消</button>
+                <button id="server-editor-save" class="fluent-button" type="button">保存</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <dialog id="otherip-editor-dialog" class="fluent-dialog editor-sub-dialog" aria-labelledby="otherip-editor-title">
+        <div class="dialog-shell">
+            <header class="dialog-header">
+                <div class="dialog-title-wrap">
+                    <p class="dialog-overline">备用地址编辑</p>
+                    <h3 id="otherip-editor-title" class="dialog-title">编辑备用地址</h3>
+                </div>
+                <button id="otherip-editor-close-icon" class="dialog-icon-button" type="button"
+                    aria-label="关闭备用地址编辑器">✕</button>
+            </header>
+            <section class="dialog-body">
+                <p class="editor-sub-desc">填写“名称 + 地址”，例如：香港 / hk.example.com</p>
+                <div id="otherip-editor-list" class="editor-kv-list"></div>
+                <button id="otherip-editor-add" class="chip subtle" type="button">添加备用地址</button>
+                <p id="otherip-editor-error" class="editor-error" hidden></p>
+            </section>
+            <footer class="dialog-footer">
+                <button id="otherip-editor-cancel" class="chip subtle" type="button">取消</button>
+                <button id="otherip-editor-save" class="fluent-button" type="button">保存</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <dialog id="links-editor-dialog" class="fluent-dialog editor-sub-dialog editor-links-dialog"
+        aria-labelledby="links-editor-title">
+        <div class="dialog-shell">
+            <header class="dialog-header">
+                <div class="dialog-title-wrap">
+                    <p class="dialog-overline">链接编辑</p>
+                    <h3 id="links-editor-title" class="dialog-title">编辑服务器链接</h3>
+                </div>
+                <button id="links-editor-close-icon" class="dialog-icon-button" type="button"
+                    aria-label="关闭链接编辑器">✕</button>
+            </header>
+            <section class="dialog-body">
+                <p class="editor-sub-desc">可填写链接名称、地址，以及浅色/深色图标链接（可选）。</p>
+                <div id="links-editor-list" class="editor-link-list"></div>
+                <button id="links-editor-add" class="chip subtle" type="button">添加链接</button>
+                <p id="links-editor-error" class="editor-error" hidden></p>
+            </section>
+            <footer class="dialog-footer">
+                <button id="links-editor-cancel" class="chip subtle" type="button">取消</button>
+                <button id="links-editor-save" class="fluent-button" type="button">保存</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <dialog id="gallery-editor-dialog" class="fluent-dialog editor-sub-dialog" aria-labelledby="gallery-editor-title">
+        <div class="dialog-shell">
+            <header class="dialog-header">
+                <div class="dialog-title-wrap">
+                    <p class="dialog-overline">图片画廊</p>
+                    <h3 id="gallery-editor-title" class="dialog-title">编辑画廊</h3>
+                </div>
+                <button id="gallery-editor-close-icon" class="dialog-icon-button" type="button"
+                    aria-label="关闭画廊编辑器">✕</button>
+            </header>
+            <section class="dialog-body">
+                <p class="editor-sub-desc">拖拽本地图片到任意位置即可上传；拖拽已有图片可调整顺序。</p>
+                <input id="gallery-editor-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+                <div id="gallery-editor-dropzone" class="gallery-editor-dropzone">
+                    <div id="gallery-editor-list" class="gallery-editor-list">
+                        <p class="editor-gallery-empty">暂未添加画廊图片</p>
+                    </div>
+                </div>
+                <div class="gallery-editor-toolbar">
+                    <button id="gallery-editor-pick" class="chip subtle" type="button">选择图片</button>
+                    <p id="gallery-editor-result" class="editor-upload-result" hidden></p>
+                </div>
+            </section>
+            <footer class="dialog-footer">
+                <button id="gallery-editor-cancel" class="chip subtle" type="button">取消</button>
+                <button id="gallery-editor-save" class="fluent-button" type="button">保存</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <dialog id="comment-viewer-dialog" class="fluent-dialog editor-sub-dialog" aria-labelledby="comment-viewer-title">
+        <div class="dialog-shell">
+            <header class="dialog-header">
+                <div class="dialog-title-wrap">
+                    <p class="dialog-overline">服务器评论</p>
+                    <h3 id="comment-viewer-title" class="dialog-title">全部评论</h3>
+                </div>
+                <button id="comment-viewer-close-icon" class="dialog-icon-button" type="button"
+                    aria-label="关闭评论弹窗">✕</button>
+            </header>
+            <section class="dialog-body">
+                <p id="comment-viewer-summary" class="editor-sub-desc">暂无评论</p>
+                <div id="comment-viewer-list" class="as-comment-list">
+                    <p class="dialog-empty">暂无评论</p>
+                </div>
+            </section>
+            <footer class="dialog-footer">
+                <button id="comment-viewer-close" class="fluent-button" type="button">关闭</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <dialog id="review-center-dialog" class="fluent-dialog editor-dialog" aria-labelledby="review-center-title">
+        <div class="dialog-shell">
+            <header class="dialog-header">
+                <div class="dialog-title-wrap">
+                    <p class="dialog-overline">管理中心</p>
+                    <h3 id="review-center-title" class="dialog-title">管理中心</h3>
+                </div>
+                <button id="review-center-close-icon" class="dialog-icon-button" type="button"
+                    aria-label="关闭管理中心">✕</button>
+            </header>
+            <section class="dialog-body">
+                <p class="editor-sub-desc">普通用户提交的服务器发布/编辑请求会在这里等待超级管理员审核。</p>
+                <div id="review-center-list" class="review-center-list"></div>
+                <p id="review-center-error" class="editor-error" hidden></p>
+            </section>
+            <footer class="dialog-footer">
+                <button id="review-center-refresh" class="chip subtle" type="button">刷新</button>
+                <button id="review-center-close" class="fluent-button" type="button">关闭</button>
+            </footer>
+        </div>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js" defer></script>
+    <script src="server-display.js" defer></script>
+    <script src="index.js" defer></script>
+</body>
+
+</html>

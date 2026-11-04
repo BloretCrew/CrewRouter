@@ -4900,6 +4900,18 @@ class ConsoleApp {
    */
   _upsertChart(storeKey, canvasEl, type, data, options) {
     if (!canvasEl || typeof Chart === 'undefined') return null;
+    // canvas 不认识 var(--x)，先按图表所在页面解析颜色；Liquid Glass 页再套玻璃图表外观
+    const scope = canvasEl.closest?.('.page') || document.documentElement;
+    const style = getComputedStyle(scope);
+    const glass = !!scope.classList?.contains('lg-page');
+    data = {
+      ...data,
+      datasets: (data.datasets || []).map(ds => ({ ...ds, ...(glass ? this._glassChartDataset(ds, type, style) : this._resolveChartDataset(ds, style)) }))
+    };
+    if (glass) {
+      options = this._glassChartOptions(options, type, style);
+      this._watchGlassChartTheme();
+    }
     const existing = this[storeKey];
     if (existing) {
       try {
@@ -4927,6 +4939,184 @@ class ConsoleApp {
     }
     this[storeKey] = new Chart(canvasEl, { type, data, options });
     return this[storeKey];
+  }
+
+  // Liquid Glass 页的图形用 Apple 标准系统色：玻璃作用域里 --info 等是加深过的文字色（ink），不适合画线和填充
+  _glassChartTokens = {
+    '--info': '--lg-accent', '--status-info': '--lg-accent', '--primary': '--lg-accent',
+    '--success': '--lg-green', '--status-success': '--lg-green',
+    '--warning': '--lg-orange', '--status-warn': '--lg-orange',
+    '--danger': '--lg-red', '--destructive': '--lg-red', '--status-danger': '--lg-red',
+    '--purple': '--lg-purple', '--pink': '--lg-pink', '--cyan': '--lg-teal', '--muted-foreground': '--lg-gray',
+    '--chart-1': '--lg-cyan', '--chart-2': '--lg-purple', '--chart-3': '--lg-green', '--chart-4': '--lg-orange',
+    '--chart-5': '--lg-red', '--chart-6': '--lg-teal', '--chart-7': '--lg-pink', '--chart-8': '--lg-mint',
+    '--brand-blue': '--lg-indigo'
+  };
+
+  /** 把颜色里的 var(--x[, 回退]) 换成作用域内的实际值（canvas 无法解析 CSS 变量，会退回黑色） */
+  _resolveChartColor(value, style, glass = false) {
+    if (Array.isArray(value)) return value.map(v => this._resolveChartColor(v, style, glass));
+    if (typeof value !== 'string' || !value.includes('var(')) return value;
+    return value.replace(/var\(\s*(--[\w-]+)\s*(?:,([^()]*))?\)/g, (_, name, fallback) => {
+      const alias = glass ? this._glassChartTokens[name] : '';
+      return (alias && style.getPropertyValue(alias).trim()) || style.getPropertyValue(name).trim() || (fallback || '').trim() || '#8e8e93';
+    });
+  }
+
+  _resolveChartDataset(ds, style) {
+    const out = {};
+    ['borderColor', 'backgroundColor', 'pointBackgroundColor', 'pointBorderColor', 'hoverBackgroundColor', 'hoverBorderColor'].forEach((key) => {
+      if (ds[key] != null) out[key] = this._resolveChartColor(ds[key], style);
+    });
+    return out;
+  }
+
+  /** 实际颜色（#rgb / #rrggbb[aa] / rgb[a]()）换透明度；其他格式原样返回 */
+  _chartColorWithAlpha(color, alpha) {
+    if (typeof color !== 'string') return color;
+    const c = color.trim();
+    const hex = c.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (hex) {
+      const full = hex[1].length <= 4 ? hex[1].replace(/./g, ch => ch + ch) : hex[1];
+      const [r, g, b] = [0, 2, 4].map(i => parseInt(full.slice(i, i + 2), 16));
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    const rgb = c.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+    return rgb ? `rgba(${rgb[1]}, ${rgb[2]}, ${rgb[3]}, ${alpha})` : c;
+  }
+
+  /** 读取 rgba() / #rrggbbaa 的透明度，读不到返回 null */
+  _chartAlphaOf(color) {
+    if (typeof color !== 'string') return null;
+    const c = color.trim();
+    const hex = c.match(/^#[0-9a-f]{6}([0-9a-f]{2})$/i);
+    if (hex) return Math.round(parseInt(hex[1], 16) / 2.55) / 100;
+    const rgba = c.match(/^rgba?\(.*[,/]\s*([\d.]+)(%?)\s*\)$/i);
+    if (!rgba) return null;
+    return rgba[2] ? parseFloat(rgba[1]) / 100 : parseFloat(rgba[1]);
+  }
+
+  /** Liquid Glass 数据集：细线无点 + 渐隐面积、圆角柱、带间隙的圆环；原始颜色留在 $crColors 供切换主题时重算 */
+  _glassChartDataset(ds, chartType, style) {
+    const type = ds.type || chartType;
+    const stroke = this._resolveChartColor(ds.borderColor, style, true);
+    const fill = this._resolveChartColor(ds.backgroundColor, style, true);
+    const out = { $crColors: { borderColor: ds.borderColor, backgroundColor: ds.backgroundColor, fill: ds.fill } };
+    if (type === 'line') {
+      const color = typeof stroke === 'string' ? stroke : (typeof fill === 'string' ? fill : '#8e8e93');
+      Object.assign(out, {
+        borderColor: color, borderWidth: 2,
+        pointRadius: 0, pointHitRadius: 12, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+        pointBackgroundColor: color, pointBorderColor: color, pointHoverBackgroundColor: color,
+        pointHoverBorderColor: style.getPropertyValue('--lg-surface').trim() || '#fff'
+      });
+      if (ds.fill && ds.stack) {
+        // 堆叠面积：只填到下一层，各层不互相叠色
+        out.fill = 'stack';
+        out.backgroundColor = this._chartColorWithAlpha(color, 0.78);
+      } else if (ds.fill) {
+        const top = this._chartColorWithAlpha(color, 0.26);
+        const bottom = this._chartColorWithAlpha(color, 0);
+        out.backgroundColor = ({ chart }) => {
+          const area = chart?.chartArea;
+          if (!area) return top;
+          const gradient = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+          gradient.addColorStop(0, top);
+          gradient.addColorStop(1, bottom);
+          return gradient;
+        };
+      } else {
+        out.backgroundColor = color;
+      }
+    } else if (type === 'bar') {
+      const base = stroke ?? fill;
+      const alpha = this._chartAlphaOf(Array.isArray(ds.backgroundColor) ? ds.backgroundColor[0] : ds.backgroundColor) ?? 0.85;
+      const tint = c => this._chartColorWithAlpha(c, alpha);
+      Object.assign(out, {
+        backgroundColor: Array.isArray(base) ? base.map(tint) : tint(base),
+        hoverBackgroundColor: base, borderColor: base,
+        borderWidth: 0, borderRadius: 6, borderSkipped: 'start', maxBarThickness: 28
+      });
+    } else if (type === 'doughnut' || type === 'pie') {
+      Object.assign(out, { backgroundColor: fill, borderWidth: 0, spacing: 2, borderRadius: 4, hoverOffset: 6 });
+    } else {
+      if (stroke != null) out.borderColor = stroke;
+      if (fill != null) out.backgroundColor = fill;
+    }
+    return out;
+  }
+
+  /** Liquid Glass 图表选项：系统字体、次要文字色刻度、发丝网格、深色圆角提示框；颜色在绘制时读取，随主题变化 */
+  _glassChartOptions(options, type, style) {
+    const token = (name, fallback) => () => style.getPropertyValue(name).trim() || fallback;
+    const family = style.getPropertyValue('--lg-font').trim() || undefined;
+    const font = (base, size, weight) => ({ ...(base || {}), family, size: base?.size ?? size, ...(weight ? { weight } : {}) });
+    const text = token('--lg-fg-secondary', '#8e8e93');
+    const opts = { ...(options || {}) };
+    const plugins = { ...(opts.plugins || {}) };
+    const labels = plugins.legend?.labels || {};
+    plugins.legend = {
+      ...(plugins.legend || {}),
+      labels: { ...labels, color: text, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: labels.padding ?? 14, font: font(labels.font, 11) }
+    };
+    plugins.tooltip = {
+      backgroundColor: token('--lg-tooltip-bg', 'rgba(29, 29, 31, 0.9)'),
+      titleColor: token('--lg-tooltip-fg', '#fff'),
+      bodyColor: token('--lg-tooltip-fg', '#fff'),
+      footerColor: token('--lg-tooltip-fg', '#fff'),
+      borderWidth: 0, cornerRadius: 12, padding: 10, boxPadding: 4, caretSize: 0, caretPadding: 10, usePointStyle: true,
+      titleFont: { family, size: 12, weight: '600' }, bodyFont: { family, size: 12 }, footerFont: { family, size: 11 },
+      ...(plugins.tooltip || {})
+    };
+    opts.plugins = plugins;
+    if (type === 'doughnut' || type === 'pie') {
+      if (type === 'doughnut') opts.cutout = '64%';
+      return opts;
+    }
+    const scales = { ...(opts.scales || {}) };
+    if (type === 'line' || type === 'bar') {
+      scales.x = scales.x || {};
+      scales.y = scales.y || {};
+    }
+    Object.keys(scales).forEach((id) => {
+      const scale = { ...scales[id] };
+      scale.ticks = { ...(scale.ticks || {}), color: text, padding: 6, font: font(scale.ticks?.font, 11) };
+      if (scale.grid?.display !== false) scale.grid = { ...(scale.grid || {}), color: token('--lg-divider', 'rgba(0, 0, 0, 0.08)'), drawTicks: false };
+      scale.border = { ...(scale.border || {}), display: false };
+      if (scale.title) scale.title = { ...scale.title, color: text, font: font(scale.title.font, 11, '600') };
+      scales[id] = scale;
+    });
+    opts.scales = scales;
+    return opts;
+  }
+
+  /** 切换浅色 / 深色后重算玻璃图表的数据色（选项里的颜色本身在绘制时读取） */
+  _watchGlassChartTheme() {
+    if (this._glassChartThemeObserver || typeof MutationObserver === 'undefined') return;
+    let frame = 0;
+    this._glassChartThemeObserver = new MutationObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => this._restyleGlassCharts());
+    });
+    this._glassChartThemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-blora-color-scheme'] });
+  }
+
+  _restyleGlassCharts() {
+    if (typeof Chart === 'undefined') return;
+    Object.values(Chart.instances || {}).forEach((chart) => {
+      const scope = chart.canvas?.closest?.('.lg-page');
+      if (!scope) return;
+      const style = getComputedStyle(scope);
+      chart.data.datasets.forEach((ds) => {
+        if (ds.$crColors) Object.assign(ds, this._glassChartDataset({ ...ds, ...ds.$crColors }, chart.config.type, style));
+      });
+      chart.update('none');
+    });
+  }
+
+  /** 分类配色：var() 字符串，由 _upsertChart 按页面作用域解析（Liquid Glass 页为 Apple 系统色） */
+  _chartPalette() {
+    return ['var(--status-info, #2563eb)', 'var(--chart-2, #a855f7)', 'var(--status-success, #16a34a)', 'var(--status-warn, #d97706)', 'var(--status-danger, #dc2626)', 'var(--cyan, #06b6d4)', 'var(--pink, #ec4899)', 'var(--chart-8, #14b8a6)'];
   }
 
   _lineChartOpts(yLabel) {
@@ -5005,7 +5195,7 @@ class ConsoleApp {
     });
     const requests = top.map(m => parseInt(m.requests || 0));
     const costs = top.map(m => parseFloat(m.cost || 0));
-    const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6')];
+    const colors = this._chartPalette();
     const c = this._getChartColors();
     const doughnutOpts = {
       responsive: true, maintainAspectRatio: false,
@@ -5027,12 +5217,12 @@ class ConsoleApp {
     if (!d || !d.byApiKey || d.byApiKey.length === 0 || typeof Chart === 'undefined') return;
     const labels = d.byApiKey.map(k => k.key_name || k.key_prefix || 'Key');
     const requests = d.byApiKey.map(k => parseInt(k.requests || 0));
-    const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6')];
+    const colors = this._chartPalette();
     const c = this._getChartColors();
 
     this._upsertChart('_uApiKeyChart', document.getElementById('userApiKeyChart'), 'bar', {
       labels,
-      datasets: [{ label: t('请求数'), data: requests, backgroundColor: colors.map(co => co + 'cc'), borderColor: colors, borderWidth: 1, borderRadius: 4 }]
+      datasets: [{ label: t('请求数'), data: requests, backgroundColor: colors, borderColor: colors, borderWidth: 1, borderRadius: 4 }]
     }, {
       responsive: true, maintainAspectRatio: false, indexAxis: 'y',
       plugins: { legend: { display: false } },
