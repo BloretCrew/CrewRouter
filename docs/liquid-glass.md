@@ -100,7 +100,18 @@
 3. API Key 与用量 `#apiKeysPage`：Key 卡片、标签栏、悬浮顶栏、授权管理，
    标签 / 路由队列浮层，创建密钥、成员、选项、签名、定时、新建标签、额度脚本、
    模型队列（Key picker）、客户端配置等弹窗 — 已完成
-4. 下一步：统计信息 `#statsPage`，之后按侧栏顺序继续。
+4. 统计信息 `#statsPage`：筛选条、统计瓷片、实时活动、缓存命中、今日 / 昨日、
+   分段页签、10 个分析页签（概览、延迟与吞吐、多维分析、每日、时段、模型、密钥、
+   客户端、消息、调用记录）、供应商额度与图表配色 — 已完成
+5. 下一步：项目工作 `#projectWorkPage`，之后按侧栏顺序继续。
+
+## 图表配色（Liquid Glass 页）
+
+canvas 不解析 `var(--x)`，`app.js` 的 `_upsertChart` 会按图表所在 `.page` 作用域解析颜色：
+Liquid Glass 页额外把 `--info` / `--success` 等文字用的 ink 色换成 `--lg-accent` /
+`--lg-green` 等标准系统色（`_glassChartTokens`），线条 2px 无点 + 渐隐面积，柱状圆角、
+圆环带间隙；主题切换时由 `_watchGlassChartTheme` 重算数据色。`multi-dimension-chart.js`
+单独建图，用 `container.closest('.lg-page')` 判断后套用同一套系统色与刻度色。
 
 ## 新页面迁移清单
 

@@ -1058,7 +1058,7 @@
           <div id="statsTabLogs" class="stats-tab-content" style="display:none;">
             <div class="admin-filter-bar" style="margin-bottom:16px;">
               <input type="text" id="usageLogModelFilter" class="blora-input input" placeholder="模型名称..." data-i18n-placeholder="模型名称..." style="min-width:140px;">
-              <blora-select id="usageLogRequestTypeFilter" class="blora-input input" style="min-width:130px;">
+              <blora-select id="usageLogRequestTypeFilter" class="blora-input input" placeholder="全部类型" data-i18n-placeholder="全部类型" style="min-width:130px;">
                 <blora-option value=""><span data-i18n="全部类型">全部类型</span></blora-option>
                 <blora-option value="chat">chat</blora-option>
                 <blora-option value="responses">responses</blora-option>
@@ -1067,7 +1067,7 @@
                 <blora-option value="imagine">Imagine</blora-option>
                 <blora-option value="agent_manage">Agent Manage</blora-option>
               </blora-select>
-              <blora-select id="usageLogRequestSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
+              <blora-select id="usageLogRequestSourceFilter" class="blora-input input" placeholder="全部客户端" data-i18n-placeholder="全部客户端" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
                 <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
                 <blora-option value="grok">Grok</blora-option>
                 <blora-option value="codex">Codex</blora-option>
@@ -1089,7 +1089,7 @@
             <div id="usageLogsList" class="models-table">
               <!-- 调用记录由 JS 动态加载 -->
             </div>
-            <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+            <div class="usage-log-pager">
               <button type="button" id="usageLogPrevBtn" class="blora-button" onclick="app.loadUsageLogs(app.usageLogPage - 1)" disabled data-variant="secondary"><span data-i18n="上一页">上一页</span></button>
               <span id="usageLogPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
               <button type="button" id="usageLogNextBtn" class="blora-button" onclick="app.loadUsageLogs(app.usageLogPage + 1)" data-variant="secondary"><span data-i18n="下一页">下一页</span></button>
@@ -2205,7 +2205,7 @@
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <script src="/js/quota-cycle-report.js?v=request-cycles-20261012"></script>
   <script src="/js/provider-quota-stats.js?v=request-cycles-20261012"></script>
-  <script src="/js/multi-dimension-chart.js?v=quota-additive-20261012"></script>
+  <script src="/js/multi-dimension-chart.js?v=lg-4"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>

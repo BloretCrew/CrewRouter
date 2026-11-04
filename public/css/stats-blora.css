@@ -8,6 +8,7 @@
 /* ---------- 筛选：分组底上的标签 + 白色胶囊下拉，重置按钮跟在同一行末尾 ---------- */
 #statsPage .stats-filters {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 10px 12px;
@@ -22,10 +23,17 @@
 #statsPage .stats-filter-label { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; }
 #statsPage .stats-filters blora-select { display: block; width: 100%; }
 #statsPage .stats-filters blora-select::part(trigger),
-#statsPage .admin-filter-bar blora-select::part(trigger) { background: var(--lg-surface); box-shadow: 0 0 0 1px var(--lg-glass-edge), 0 1px 2px rgba(0, 0, 0, 0.04); }
+#statsPage .admin-filter-bar blora-select::part(trigger) {
+  box-sizing: border-box;
+  min-height: 40px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  line-height: 40px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
 #statsPage .stats-filters blora-select::part(trigger):hover,
 #statsPage .admin-filter-bar blora-select::part(trigger):hover { background: var(--lg-card-bg-hover); }
-#statsPage .stats-filters .blora-button { --blora-button-height: var(--lg-control-h); min-height: var(--lg-control-h); justify-self: start; }
+#statsPage .stats-filters .blora-button { --blora-button-height: 40px; min-height: 40px; justify-self: start; }
 #statsPage .stats-custom-range { flex-wrap: wrap; align-items: center; gap: 8px; margin-block-end: 16px; padding: 10px 14px; border-radius: 18px; background: var(--lg-group-bg); }
 #statsPage .stats-custom-range input[type="date"] { inline-size: auto; }
 
@@ -227,17 +235,120 @@
 
 /* ---------- 调用记录：筛选条与分页 ---------- */
 #statsPage .admin-filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border-radius: 20px; background: var(--lg-group-bg); }
-#statsPage .admin-filter-bar > input { inline-size: auto; min-height: var(--lg-control-h); padding-block: 0; border-radius: var(--lg-radius-pill); background: var(--lg-surface); box-shadow: 0 0 0 1px var(--lg-glass-edge); }
-#statsPage .admin-filter-bar > .blora-button { --blora-button-height: var(--lg-control-h); min-height: var(--lg-control-h); }
+#statsPage .admin-filter-bar > input { inline-size: auto; min-height: 40px; padding-block: 0; border-radius: var(--lg-radius-pill); background: var(--lg-surface); box-shadow: 0 0 0 1px var(--lg-glass-edge); }
+#statsPage .admin-filter-bar > .blora-button { --blora-button-height: 40px; min-height: 40px; }
 #statsPage .filter-info { margin-inline-start: auto; color: var(--lg-fg-secondary); font-size: 12.5px; }
 
 @media (max-width: 640px) {
-  #statsPage .stats-filters { grid-template-columns: minmax(0, 1fr); }
+  #statsPage .stats-filters { flex-direction: column; align-items: stretch; }
+  #statsPage .stats-filter-group,
+  #statsPage .stats-filter-group:last-child { flex: 0 0 auto; inline-size: 100%; }
   #statsPage .stats-overview-grid,
   #statsPage .today-yesterday-grid { grid-template-columns: minmax(0, 1fr); }
   #statsPage .stats-overview-value { font-size: 24px; }
   #statsPage .chart-container { height: 240px; }
+  #statsPage .stats-overview-card { padding: 14px 16px; }
+  #statsPage .admin-filter-bar { flex-direction: column; align-items: stretch; }
+  #statsPage .admin-filter-bar > input,
+  #statsPage .admin-filter-bar blora-select,
+  #statsPage .admin-filter-bar > .blora-button { inline-size: 100%; }
+  #statsPage .admin-filter-bar > .filter-info { margin-inline-start: 0; padding-block-start: 2px; text-align: end; }
 }
 @media (prefers-reduced-motion: reduce) {
   #statsPage .stats-tab-content { animation: none; }
 }
+
+/* ---------- 多维分析：面板与内嵌表格 ---------- */
+#statsPage .multi-dimension-panel {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#statsPage .multi-dimension-panel h4 { margin: 0 0 12px; color: var(--lg-fg); font-family: var(--lg-font); font-size: 15px; font-weight: 600; }
+#statsPage .multi-dimension-choices[role="group"] { margin: 0; padding: 12px 0; border-top: 1px solid var(--lg-divider); }
+#statsPage .multi-dimension-choices { gap: 10px 18px; }
+#statsPage .multi-dimension-actions { align-items: flex-end; gap: 12px; margin-block-end: 16px; }
+#statsPage .multi-dimension-actions label { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 600; }
+#statsPage .multi-dimension-actions blora-select { min-inline-size: 8rem; }
+#statsPage .multi-dimension-status { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 400; }
+#statsPage .multi-dimension-table-wrap { max-height: 350px; border: 1px solid var(--lg-divider); border-radius: 14px; }
+#statsPage :is(.multi-dimension-table-wrap, .quota-member-estimate-wrap) table { inline-size: 100%; border-collapse: separate; border-spacing: 0; }
+#statsPage :is(.multi-dimension-table-wrap, .quota-member-estimate-wrap) :is(th, td) { padding: 9px 12px; border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); font-size: 13px; text-align: start; }
+#statsPage :is(.multi-dimension-table-wrap, .quota-member-estimate-wrap) th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+#statsPage :is(.multi-dimension-table-wrap, .quota-member-estimate-wrap) tbody tr:last-child td { border-bottom: 0; }
+#statsPage .quota-member-estimate-wrap { overflow: hidden; border-color: var(--lg-divider); border-radius: 14px; }
+#statsPage .quota-member-estimate-heading { background: var(--lg-group-bg); border-bottom-color: var(--lg-divider); color: var(--lg-fg); font-size: 13px; font-weight: 600; }
+#statsPage .quota-member-estimate-heading span { color: var(--lg-fg-secondary); }
+#statsPage .quota-member-estimate-wrap td small { color: var(--lg-fg-secondary); }
+#statsPage .multi-dimension-chart-container { margin: 16px 0 4px; }
+
+/* ---------- 供应商额度（概览页签） ---------- */
+#statsPage .quota-analysis {
+  margin-block: 16px 0;
+  padding: 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  color: var(--lg-fg);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#statsPage .quota-analysis h4 { color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#statsPage .quota-analysis label { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; }
+#statsPage .quota-summary { border-bottom-color: var(--lg-divider); }
+#statsPage .quota-summary span { color: var(--lg-fg-secondary); }
+#statsPage .quota-summary strong { color: var(--lg-fg); font-family: var(--lg-font-display); font-weight: 700; }
+#statsPage .quota-account-item + .quota-account-item { border-top-color: var(--lg-divider); }
+#statsPage .quota-analysis summary { color: var(--lg-fg-secondary); }
+
+/* ---------- 延迟汇总瓷片：无图标时也用同一外观；第 8 张文字较长，用正文尺寸 ---------- */
+#statsPage #latencySummaryCards .stats-overview-value { font-size: 24px; }
+#statsPage #latencySummaryCards .stats-overview-card:nth-child(8) .stats-overview-value { font-family: var(--lg-font); font-size: 14.5px; font-weight: 600; line-height: 1.6; letter-spacing: 0; }
+
+/* ---------- 调用记录：models-table 玻璃化 ---------- */
+#statsPage #usageLogsList {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  overflow: auto;
+}
+#statsPage #usageLogsList table { border-collapse: separate; border-spacing: 0; background: transparent; }
+#statsPage #usageLogsList th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  backdrop-filter: blur(16px);
+}
+#statsPage #usageLogsList td { border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); }
+#statsPage #usageLogsList tbody tr:last-child td { border-bottom: 0; }
+#statsPage #usageLogsList tbody tr { transition: background-color var(--lg-dur-fast) var(--lg-ease); }
+#statsPage #usageLogsList tbody tr:hover { background: var(--lg-group-bg); }
+#statsPage #usageLogsList code { background: transparent; color: var(--lg-fg-secondary); }
+#statsPage .usage-log-pager { display: flex; justify-content: center; align-items: center; gap: 8px; margin-block-start: 16px; }
+#statsPage .usage-log-pager > span { color: var(--lg-fg-secondary); }
+

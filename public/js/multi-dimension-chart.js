@@ -95,10 +95,16 @@
     if (quotaGroups.size) canvas.setAttribute('aria-label', `${tr('请求用量与供应商额度参照')}：${tr('额度关联上下文')}；${categories.join('、')}`);
     box.append(canvas);
     container.append(box);
+    // Liquid Glass 页：柱与额度参照线改用 Apple 系统色（与 app.js 图表配色一致）
+    const lgStyle = container.closest('.lg-page') ? getComputedStyle(container) : null;
+    const lgColor = (token, fallback) => (lgStyle && lgStyle.getPropertyValue(token).trim()) || fallback;
+    const barColor = lgColor('--lg-teal', '#14b8a6');
+    const windowColor = lgColor('--lg-orange', '#f97316');
+    const balanceColor = lgColor('--lg-purple', '#a855f7');
     const datasets = [
-      { label: tr(metrics[result.metric]), data: rows.map(row => Number(row[quota ? 'value' : result.metric])), backgroundColor: '#14b8a6', borderRadius: 5, xAxisID: 'xUsage' },
+      { label: tr(metrics[result.metric]), data: rows.map(row => Number(row[quota ? 'value' : result.metric])), backgroundColor: barColor, borderRadius: lgStyle ? 6 : 5, xAxisID: 'xUsage' },
       ...[...(result.quota_mode === 'member_estimate' ? [] : quotaGroups.values())].map((group, groupIndex) => {
-        const color = group.kind === 'window' ? '#f97316' : '#a855f7';
+        const color = group.kind === 'window' ? windowColor : balanceColor;
         return {
           type: 'line',
           label: group.kind === 'window'
@@ -150,6 +156,20 @@
         scales
       }
     }));
+    if (lgStyle) {
+      const chart = charts[charts.length - 1];
+      const text = lgColor('--lg-fg-secondary', '#8e8e93');
+      const grid = lgColor('--lg-divider', 'rgba(0,0,0,.08)');
+      Object.values(chart.options.scales).forEach(scale => {
+        scale.ticks = { ...(scale.ticks || {}), color: text };
+        if (scale.grid?.display !== false) scale.grid = { ...(scale.grid || {}), color: grid, drawTicks: false };
+        scale.border = { ...(scale.border || {}), display: false };
+        if (scale.title) scale.title = { ...scale.title, color: text };
+      });
+      chart.options.plugins.tooltip = { ...chart.options.plugins.tooltip, backgroundColor: lgColor('--lg-tooltip-bg', 'rgba(29,29,31,.9)'), titleColor: '#fff', bodyColor: '#fff', borderWidth: 0, cornerRadius: 12, padding: 10, caretSize: 0 };
+      if (chart.options.plugins.legend?.labels) chart.options.plugins.legend.labels = { ...chart.options.plugins.legend.labels, color: text };
+      chart.update('none');
+    }
     instances.set(targetId, charts);
   }
 
