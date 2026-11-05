@@ -80,6 +80,10 @@
   由 `blora-dialog.js` 托管的旧版 `.modal-content` 弹窗同样改为玻璃面板。
   面板用 `box-sizing: border-box`（描边不吃宽度），并把组件的回弹曲线换成
   `--lg-ease-out`：回弹会在动画中途把面板放大到超过 `max-width`。
+  旧版弹窗的宽度上限取 HTML 声明值（行内 `max-width` 或 `.modal-wide`），
+  适配器原先先把内容 `max-width` 改写为 `100%` 再读取，导致所有声明宽度失效、
+  面板铺满视口；现在先读取声明值再改写，并把它写到面板的 `max-width` 上。
+  控制台与 `admin.html` 的 46 个静态弹窗全部加了 `lg-scope`。
 - 旧版内容区 `.content-section` / `.section-header`：玻璃面板 + 页内标题。
 - 卡片（`.blora-card`）、统计数字（`blora-statistic`）、iOS 绿色开关（`blora-switch`）、
   组合控件（`blora-join` 改为留间距）、时间选择面板。

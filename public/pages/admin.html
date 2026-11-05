@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=console-design-20261018b">
   <script type="module" src="/vendor/blora-2.0.8/auto.js?v=restore-0930-20261003"></script>
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
-  <script src="/js/blora-dialog.js?v=restore-0930-20261003"></script>
+  <script src="/js/blora-dialog.js?v=lg-3"></script>
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/model-library-blora.css?v=admin-library-20261014">
@@ -1661,7 +1661,7 @@
   </blora-dialog>
 
   <!-- 添加模型模态框 -->
-  <blora-dialog id="addModelModal" role="dialog" aria-modal="true">
+  <blora-dialog id="addModelModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="添加模型">添加模型</span></h3>
@@ -1776,7 +1776,7 @@
   </blora-dialog>
 
   <!-- 添加/编辑供应商模态框 -->
-  <blora-dialog id="addProviderModal" role="dialog" aria-modal="true">
+  <blora-dialog id="addProviderModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content modal-content-lg provider-editor">
       <div class="modal-header provider-editor-header">
         <div class="provider-editor-heading">
@@ -2163,7 +2163,7 @@
   </blora-dialog>
 
   <!-- 导入 OpenCode 配置模态框 -->
-  <blora-dialog id="importOpenCodeModal" role="dialog" aria-modal="true">
+  <blora-dialog id="importOpenCodeModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="导入配置">导入配置</span></h3>
@@ -2210,7 +2210,7 @@
   </blora-dialog>
 
   <!-- 批量设置固定价格模态框 -->
-  <blora-dialog id="batchSetPricesModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchSetPricesModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="批量设置固定价格">批量设置固定价格</span></h3>
@@ -2235,7 +2235,7 @@
   </blora-dialog>
 
   <!-- JSON 批量定价模态框 -->
-  <blora-dialog id="batchJsonPricesModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchJsonPricesModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 560px;">
       <div class="modal-header">
         <h3><span data-i18n="JSON 批量定价">JSON 批量定价</span></h3>
@@ -2261,7 +2261,7 @@
   </blora-dialog>
 
   <!-- JSON 批量定参考价模态框 -->
-  <blora-dialog id="batchJsonRefPricesModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchJsonRefPricesModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 560px;">
       <div class="modal-header">
         <h3><span data-i18n="JSON 批量定参考价">JSON 批量定参考价</span></h3>
@@ -2287,7 +2287,7 @@
   </blora-dialog>
 
   <!-- 批量调整价格（按比例）模态框 -->
-  <blora-dialog id="batchAdjustPricesModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchAdjustPricesModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="批量按比例调整价格">批量按比例调整价格</span></h3>
@@ -2307,7 +2307,7 @@
   </blora-dialog>
 
   <!-- 批量设置速率限制模态框 -->
-  <blora-dialog id="batchSetRateLimitModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchSetRateLimitModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="批量设置速率限制">批量设置速率限制</span></h3>
@@ -2331,7 +2331,7 @@
   </blora-dialog>
 
   <!-- 批量修改说明模态框 -->
-  <blora-dialog id="batchEditDescModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchEditDescModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 600px;">
       <div class="modal-header">
         <h3><span data-i18n="批量修改模型说明">批量修改模型说明</span></h3>
@@ -2362,7 +2362,7 @@
   </blora-dialog>
 
   <!-- 批量设置系列模态框 -->
-  <blora-dialog id="batchSetSeriesModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchSetSeriesModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 500px;">
       <div class="modal-header">
         <h3><span data-i18n="批量设置系列">批量设置系列</span></h3>
@@ -2386,7 +2386,7 @@
   </blora-dialog>
 
   <!-- 系列图标管理模态框 -->
-  <blora-dialog id="seriesIconsModal" role="dialog" aria-modal="true">
+  <blora-dialog id="seriesIconsModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 600px;">
       <div class="modal-header">
         <h3><span data-i18n="系列图标管理">系列图标管理</span></h3>
@@ -2408,7 +2408,7 @@
   </blora-dialog>
 
   <!-- 按参考价百分比批量设置价格模态框 -->
-  <blora-dialog id="batchAdjustByRefModal" role="dialog" aria-modal="true">
+  <blora-dialog id="batchAdjustByRefModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 800px;">
       <div class="modal-header">
         <h3><span data-i18n="按参考价百分比设置价格">按参考价百分比设置价格</span></h3>
@@ -2456,7 +2456,7 @@
   </blora-dialog>
 
   <!-- 供应商额度查询模态框 -->
-  <blora-dialog id="providerQuotaModal" role="dialog" aria-modal="true">
+  <blora-dialog id="providerQuotaModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 560px;">
       <div class="modal-header">
         <h3><span data-i18n="供应商额度查询">供应商额度查询</span></h3>
@@ -2540,7 +2540,7 @@
   </blora-dialog>
 
   <!-- 用量详情模态框 -->
-  <blora-dialog id="usageDetailModal" role="dialog" aria-modal="true">
+  <blora-dialog id="usageDetailModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3><span data-i18n="用量详情">用量详情</span></h3>
@@ -2553,7 +2553,7 @@
   </blora-dialog>
 
   <!-- 调用错误详情模态框 -->
-  <blora-dialog id="errorDetailModal" role="dialog" aria-modal="true">
+  <blora-dialog id="errorDetailModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3><span data-i18n="调用错误详情">调用错误详情</span></h3>
@@ -2763,7 +2763,7 @@
   </div>
 
   <!-- 模型测试结果弹窗 -->
-  <blora-dialog id="adminTestResultModal" role="dialog" aria-modal="true">
+  <blora-dialog id="adminTestResultModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-overlay" onclick="adminApp.closeTestResultModal()"></div>
     <div class="modal-content" style="max-width:640px;">
       <div class="modal-header">
@@ -2777,7 +2777,7 @@
   </blora-dialog>
 
   <!-- 模型调用可用率详情 -->
-  <blora-dialog id="modelUptimeModal" role="dialog" aria-modal="true">
+  <blora-dialog id="modelUptimeModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width:720px;">
       <div class="modal-header">
         <h3 id="modelUptimeModalTitle"><span data-i18n="模型调用状态">模型调用状态</span></h3>

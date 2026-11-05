@@ -26,6 +26,11 @@ const Dialog = (() => {
     // Existing pages already provide their own header/body/footer. Keeping the
     // inner panel class would create a second panel inside Blora's shadow panel.
     content.classList.remove('blora-dialog__panel');
+    // 先取页面为内容声明的宽度上限（行内 max-width 或 .modal-wide 等类），
+    // 再改写内容样式；否则下面读到的永远是刚写回的 100%。
+    const declaredMaxWidth = content.style.maxWidth
+      || (content.classList.contains('modal-wide') ? getComputedStyle(content).maxWidth : '')
+      || '';
     content.style.width = '100%';
     content.style.maxWidth = '100%';
     content.style.maxHeight = '100%';
@@ -49,12 +54,15 @@ const Dialog = (() => {
         body.style.setProperty('padding', '0', 'important');
         body.style.setProperty('background', 'transparent', 'important');
       }
+      // 宽度：优先用页面为内容声明的上限（行内 max-width / .modal-wide 等），
+      // 其次是组件按 size 给出的尺寸（sm 400 / lg 800）；都没有才放开。
+      const hasWidthCap = declaredMaxWidth && declaredMaxWidth !== '100%' && declaredMaxWidth !== 'none';
       const panel = shadow.querySelector('.blora-dialog__panel');
       if (panel) {
         panel.style.setProperty('display', 'flex', 'important');
         panel.style.setProperty('flex-direction', 'column', 'important');
-        // 带 size 的旧版弹窗交给组件尺寸（sm 400 / lg 800）
-        if (!dialog.hasAttribute('size')) panel.style.maxWidth = 'none';
+        if (hasWidthCap) panel.style.maxWidth = declaredMaxWidth;
+        else if (!dialog.hasAttribute('size')) panel.style.maxWidth = 'none';
         panel.style.width = '100%';
         panel.style.background = 'transparent';
         panel.style.boxShadow = 'none';
@@ -63,14 +71,8 @@ const Dialog = (() => {
         panel.style.overflow = 'hidden';
       }
 
-      // 宽度：优先用内容节点上的内联 max-width（如 style="max-width:720px"）
       // 高度：绝不要把内容的 "100%" 回写到面板——百分比在未定高父级上会解析为 none，
       // 面板应保留组件 CSS 的 calc(100dvh - …) 上限。
-      const contentMaxWidth = content.style.maxWidth;
-      if (contentMaxWidth && contentMaxWidth !== '100%' && contentMaxWidth !== 'none') {
-        dialog.style.setProperty('--blora-dialog-max-width', contentMaxWidth);
-      }
-
       // 旧版内容自带 header/body/footer。高度链路：
       // 面板（组件 CSS max-height + flex 列）→ shadow body（flex:1, min-height:0）
       // → .modal-content（flex:1）→ .modal-body（overflow-y:auto）滚动。
