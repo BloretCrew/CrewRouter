@@ -116,3 +116,64 @@
     flex: 1 1 100%;
   }
 }
+
+/* =========================================================================
+   Liquid Glass：管理后台提示词
+   通用皮肤见 liquid-glass.css（.content-section、admin-filter-bar、models-table、
+   blora-dialog 玻璃面板）；本文件只做本页剩余布局与详情弹窗。
+   ========================================================================= */
+
+.lg-page.blora-admin-prompts-page > .content-section { padding: 24px; }
+.lg-page.blora-admin-prompts-page .section-header { margin-block-end: 16px; }
+.lg-page.blora-admin-prompts-page .section-header h2 { margin: 0; }
+.lg-page.blora-admin-prompts-page .section-header p { color: var(--lg-fg-secondary) !important; font-size: 12.5px !important; }
+.lg-page.blora-admin-prompts-page .admin-filter-bar > .input,
+.lg-page.blora-admin-prompts-page .admin-filter-bar > input {
+  min-height: 40px;
+  padding-block: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+.lg-page.blora-admin-prompts-page .models-table { border-radius: 20px; }
+.lg-page.blora-admin-prompts-page .models-table table { min-inline-size: 52rem; }
+.lg-page.blora-admin-prompts-page .models-table td code { background: transparent; color: var(--lg-fg-secondary); font-family: var(--lg-font-mono); }
+.lg-page.blora-admin-prompts-page #adminPromptPrevBtn,
+.lg-page.blora-admin-prompts-page #adminPromptNextBtn { --blora-button-height: 34px; min-height: 34px; }
+.lg-page.blora-admin-prompts-page #adminPromptPageInfo { color: var(--lg-fg-secondary) !important; font-size: 12.5px; }
+
+/* 详情弹窗：内联样式里的边框与底色改为玻璃令牌 */
+#adminPromptDetailModal.lg-scope .modal-header h3,
+#adminPromptDetailModal .modal-header h3 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+#adminPromptDetailModal .prompt-detail-tabs { border-bottom-color: var(--lg-divider); }
+#adminPromptDetailModal :is(pre, code, .prompt-detail-body) {
+  border-color: var(--lg-divider) !important;
+  border-radius: 12px;
+  background: var(--lg-group-bg) !important;
+  color: var(--lg-fg) !important;
+  font-family: var(--lg-font-mono) !important;
+}
+#adminPromptDetailModal table { border-collapse: separate; border-spacing: 0; }
+#adminPromptDetailModal th {
+  border-bottom: 1px solid var(--lg-divider) !important;
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: start;
+}
+#adminPromptDetailModal td { border-bottom: 1px solid var(--lg-divider) !important; color: var(--lg-fg); font-size: 12.5px; }
+#adminPromptDetailModal tr:last-child td { border-bottom: 0 !important; }
+
+@media (max-width: 640px) {
+  .lg-page.blora-admin-prompts-page > .content-section { padding: 18px; }
+  .lg-page.blora-admin-prompts-page .admin-filter-bar { align-items: stretch; flex-direction: column; }
+  .lg-page.blora-admin-prompts-page .admin-filter-bar > .input,
+  .lg-page.blora-admin-prompts-page .admin-filter-bar > input { inline-size: 100%; }
+}

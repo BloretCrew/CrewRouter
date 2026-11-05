@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/model-library-blora.css?v=admin-library-20261014">
-  <link rel="stylesheet" href="/css/admin-library-manager.css?v=admin-library-20261014">
+  <link rel="stylesheet" href="/css/admin-library-manager.css?v=lg-1">
   <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
@@ -46,11 +46,11 @@
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=cards-20261005">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=model-cards-20261005">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=admin-editor-20261021c">
-  <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=paged-error-detail-20261008">
-  <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=rounded-audit-badges-20261008">
-  <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=paged-prompt-detail-20261008">
-  <link rel="stylesheet" href="/css/admin-settings-blora.css?v=report-granularity-select-20261008">
-  <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=lg-1">
+  <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=lg-1">
+  <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=lg-1">
+  <link rel="stylesheet" href="/css/admin-settings-blora.css?v=lg-1">
+  <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=lg-1">
   <link rel="stylesheet" href="/css/admin-dialogs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-12">
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
@@ -215,7 +215,7 @@
       </div>
 
       <!-- Team 管理页面 -->
-      <div id="adminTeamsPage" class="page blora-admin-teams-page">
+      <div id="adminTeamsPage" class="page lg-page blora-admin-teams-page">
         <!-- 滚动后悬浮顶栏：列表搜索 / 创建（默认隐藏，由 JS 控制） -->
         <div id="adminTeamsStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -349,7 +349,7 @@
 
 
       <!-- 模型管理页面（界面与用户侧模型库对齐） -->
-      <div id="adminModelsPage" class="page blora-admin-models-page">
+      <div id="adminModelsPage" class="page lg-page blora-admin-models-page">
         <!-- 滚动后悬浮顶栏：筛选 + 搜索（默认隐藏，由 JS 控制） -->
         <div id="adminModelsStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -470,7 +470,7 @@
       </div>
 
       <!-- 供应商管理页面 -->
-      <div id="adminProvidersPage" class="page blora-admin-providers-page">
+      <div id="adminProvidersPage" class="page lg-page blora-admin-providers-page">
         <!-- 滚动后悬浮顶栏：筛选 + 可拖拽标签（默认隐藏，由 JS 控制） -->
         <div id="adminProvidersStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -623,7 +623,7 @@
       </div>
 
       <!-- DS2API 独立页面 -->
-      <div id="adminPluginsPage" class="page blora-admin-plugins-page">
+      <div id="adminPluginsPage" class="page lg-page blora-admin-plugins-page">
         <div class="content-section" id="adminPluginsContent">
           <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
         </div>
@@ -1168,7 +1168,7 @@
       </div>
 
       <!-- 调用错误记录页面 -->
-      <div id="adminErrorLogsPage" class="page blora-admin-error-logs-page">
+      <div id="adminErrorLogsPage" class="page lg-page blora-admin-error-logs-page">
         <div class="content-section">
           <div class="section-header">
             <div>
@@ -1208,7 +1208,7 @@
       </div>
 
       <!-- 操作日志页面 -->
-      <div id="adminAuditLogsPage" class="page blora-admin-audit-page">
+      <div id="adminAuditLogsPage" class="page lg-page blora-admin-audit-page">
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="操作日志">操作日志</span></h2>
@@ -1235,7 +1235,7 @@
       </div>
 
       <!-- 提示词页面（历史自定义提示词，重复合并） -->
-      <div id="adminPromptsPage" class="page blora-admin-prompts-page">
+      <div id="adminPromptsPage" class="page lg-page blora-admin-prompts-page">
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="提示词">提示词</span></h2>
@@ -1276,7 +1276,7 @@
       </div>
 
       <!-- 系统设置页面 -->
-      <div id="adminSettingsPage" class="page blora-admin-settings-page">
+      <div id="adminSettingsPage" class="page lg-page blora-admin-settings-page">
         <div id="adminSettingsOverview" class="settings-overview">
           <div class="settings-version-card">
             <img class="settings-brand-icon" src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="CrewRouter">
@@ -2752,7 +2752,7 @@
     });
   </script>
 
-  <div id="adminLibraryManager" class="admin-library-manager" role="dialog" aria-modal="true" aria-labelledby="adminLibraryManagerTitle" hidden>
+  <div id="adminLibraryManager" class="admin-library-manager lg-scope" role="dialog" aria-modal="true" aria-labelledby="adminLibraryManagerTitle" hidden>
     <div class="admin-library-manager-panel">
       <header class="admin-library-manager-header">
         <h2 id="adminLibraryManagerTitle">管理配置</h2>
@@ -2790,7 +2790,7 @@
   </blora-dialog>
 
   <!-- 提示词详情弹窗 -->
-  <blora-dialog id="adminPromptDetailModal" role="dialog" aria-modal="true">
+  <blora-dialog id="adminPromptDetailModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3 id="adminPromptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>

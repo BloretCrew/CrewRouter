@@ -17,3 +17,95 @@
     padding: var(--blora-space-4);
   }
 }
+
+/* =========================================================================
+   Liquid Glass：管理后台插件管理
+   插件页由 plugin-runtime.js 渲染，类名 mstat / mcard / chip 定义在内联 <style> 里；
+   内联样式位于文档中段，同特异性下先于本文件？否——内联 <style> 在 body 内，
+   层叠顺序按出现位置：它晚于本文件，因此这里用更高特异性覆盖。
+   ========================================================================= */
+
+.lg-page.blora-admin-plugins-page > .content-section { min-height: 12rem; padding: 24px; }
+.lg-page.blora-admin-plugins-page .section-header { margin-block-end: 16px; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.lg-page.blora-admin-plugins-page .section-header h2 { margin: 0; }
+.lg-page.blora-admin-plugins-page .section-header p { color: var(--lg-fg-secondary) !important; font-size: 12.5px !important; }
+.lg-page.blora-admin-plugins-page .page-loading { color: var(--lg-fg-secondary); }
+
+/* 统计瓷片 */
+.lg-page.blora-admin-plugins-page .mstat-grid { gap: 12px; margin-block: 16px; }
+.lg-page.blora-admin-plugins-page .mstat {
+  padding: 14px 16px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page.blora-admin-plugins-page .mstat .v { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.lg-page.blora-admin-plugins-page .mstat .l { color: var(--lg-fg-secondary); font-size: 12px; }
+.lg-page.blora-admin-plugins-page .mstat.err .v { color: var(--lg-red-ink); }
+.lg-page.blora-admin-plugins-page .mstat.warn .v { color: var(--lg-orange-ink); }
+
+/* 搜索与排序 */
+.lg-page.blora-admin-plugins-page .msearch { gap: 8px; margin: 0 0 16px; padding: 8px; border-radius: 20px; background: var(--lg-group-bg); }
+.lg-page.blora-admin-plugins-page .msearch > .input {
+  min-height: 40px;
+  padding-block: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+.lg-page.blora-admin-plugins-page .msearch > .select {
+  min-height: 40px;
+  padding-inline: 14px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  color: var(--lg-fg);
+  font-family: var(--lg-font);
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+
+/* 插件卡 */
+.lg-page.blora-admin-plugins-page .mcard {
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-group);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page.blora-admin-plugins-page .mtitle { color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+.lg-page.blora-admin-plugins-page .mtag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 11px;
+}
+.lg-page.blora-admin-plugins-page .mdesc { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.lg-page.blora-admin-plugins-page .msec { color: var(--lg-fg-tertiary); font-size: 11px; letter-spacing: 0.06em; }
+.lg-page.blora-admin-plugins-page .mtable th { border-bottom-color: var(--lg-divider); color: var(--lg-fg-secondary); font-weight: 600; }
+.lg-page.blora-admin-plugins-page .mtable td { border-bottom-color: var(--lg-divider); color: var(--lg-fg-secondary); }
+
+/* 能力 / 权限标签 */
+.lg-page.blora-admin-plugins-page .chip {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 11px;
+}
+.lg-page.blora-admin-plugins-page .chip.on { background: color-mix(in srgb, var(--lg-green) 16%, transparent); color: var(--lg-green-ink); }
+.lg-page.blora-admin-plugins-page .chip.warn { background: color-mix(in srgb, var(--lg-orange) 16%, transparent); color: var(--lg-orange-ink); }
+.lg-page.blora-admin-plugins-page .chip.off { color: var(--lg-fg-tertiary); }
+.lg-page.blora-admin-plugins-page .chip.perm { font-family: var(--lg-font-mono); background: var(--lg-chip-bg); color: var(--lg-fg-secondary); }
+.lg-page.blora-admin-plugins-page .chip.cap { background: var(--lg-accent-tint); color: var(--lg-accent-ink); }
+.lg-page.blora-admin-plugins-page .mmut .btn { border-radius: var(--lg-radius-pill); }
+.lg-page.blora-admin-plugins-page .mmut .btn-ghost:hover { background: var(--lg-chip-bg); }
+
+@media (max-width: 640px) {
+  .lg-page.blora-admin-plugins-page > .content-section { padding: 18px; }
+}

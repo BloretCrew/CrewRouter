@@ -98,3 +98,32 @@
 .error-detail-pagination { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding-top: .75rem; border-top: var(--blora-border-subtle); }
 .error-detail-pagination > span { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); }
 @media (max-width: 640px) { #errorDetailModal::part(panel) { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); } #errorDetailContent { min-height: calc(100dvh - 11rem); } .error-detail-row { grid-template-columns: 1fr; gap: .25rem; } .error-detail-pagination { justify-content: space-between; } }
+
+/* =========================================================================
+   Liquid Glass：管理后台调用错误
+   通用皮肤见 liquid-glass.css（.content-section、admin-filter-bar、models-table）；
+   本文件只做本页剩余布局。
+   ========================================================================= */
+
+.lg-page.blora-admin-error-logs-page > .content-section { padding: 24px; }
+.lg-page.blora-admin-error-logs-page .section-header { margin-block-end: 16px; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.lg-page.blora-admin-error-logs-page .section-header h2 { margin: 0; }
+.lg-page.blora-admin-error-logs-page .admin-filter-bar > .input,
+.lg-page.blora-admin-error-logs-page .admin-filter-bar > input {
+  min-height: 40px;
+  padding-block: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+.lg-page.blora-admin-error-logs-page .admin-filter-bar label { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.lg-page.blora-admin-error-logs-page #errorLogRetentionHint { color: var(--lg-fg-secondary) !important; font-size: 12px; }
+.lg-page.blora-admin-error-logs-page #errorLogsList { border-radius: 20px; }
+.lg-page.blora-admin-error-logs-page #errorLogsList table { min-inline-size: 64rem; }
+.lg-page.blora-admin-error-logs-page #errorLogPrevBtn,
+.lg-page.blora-admin-error-logs-page #errorLogNextBtn { --blora-button-height: 34px; min-height: 34px; }
+.lg-page.blora-admin-error-logs-page #errorLogPageInfo { color: var(--lg-fg-secondary); font-size: 12.5px; }
+
+@media (max-width: 640px) {
+  .lg-page.blora-admin-error-logs-page > .content-section { padding: 18px; }
+}

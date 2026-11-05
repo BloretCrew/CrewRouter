@@ -93,3 +93,117 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================================
+   Liquid Glass：管理后台系统设置（与用户设置同一套概览与分组材质）
+   ========================================================================= */
+
+.lg-page.blora-admin-settings-page .settings-overview {
+  max-inline-size: none;
+  padding: 24px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+}
+.lg-page.blora-admin-settings-page .settings-version-card {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--lg-divider) !important;
+  border-radius: var(--lg-radius-group) !important;
+  background: var(--lg-group-bg) !important;
+  box-shadow: none !important;
+  color: var(--lg-fg);
+}
+.lg-page.blora-admin-settings-page .settings-brand-icon {
+  inline-size: 46px;
+  block-size: 46px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 13px;
+  box-shadow: var(--lg-rim);
+}
+.lg-page.blora-admin-settings-page .settings-version-info > strong { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.lg-page.blora-admin-settings-page .settings-version-info > span { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.lg-page.blora-admin-settings-page .settings-link-button {
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  color: var(--lg-fg);
+  font-size: 12px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease);
+}
+.lg-page.blora-admin-settings-page .settings-link-button:hover { border-color: var(--lg-glass-border-strong); background: var(--lg-card-bg-hover); }
+.lg-page.blora-admin-settings-page .settings-link-button img,
+.lg-page.blora-admin-settings-page .settings-link-icon { inline-size: 15px; block-size: 15px; border-radius: 4px; }
+
+.lg-page.blora-admin-settings-page .settings-overview-hint { margin: 18px 0 10px; color: var(--lg-fg-secondary) !important; font-size: 12px; font-weight: 500; }
+.lg-page.blora-admin-settings-page .settings-category-grid { gap: 12px; }
+.lg-page.blora-admin-settings-page .settings-category-card {
+  min-block-size: 82px;
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  color: var(--lg-fg);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+}
+.lg-page.blora-admin-settings-page .settings-category-card:hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+  transform: translateY(-1px);
+}
+.lg-page.blora-admin-settings-page .settings-category-icon { inline-size: 30px; block-size: 30px; opacity: 1; }
+.lg-page.blora-admin-settings-page .settings-category-card strong { color: var(--lg-fg); font-size: 14.5px; font-weight: 600; }
+.lg-page.blora-admin-settings-page .settings-category-card small { color: var(--lg-fg-secondary) !important; font-size: 12px; }
+.lg-page.blora-admin-settings-page .settings-category-arrow { color: var(--lg-fg-tertiary); font-size: 22px; }
+
+.lg-page.blora-admin-settings-page .settings-detail { max-inline-size: none; margin: 0 0 16px; }
+.lg-page.blora-admin-settings-page .settings-back-button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 0; color: var(--lg-accent-ink); font-size: 13px; font-weight: 500; }
+.lg-page.blora-admin-settings-page .settings-back-button:hover { color: var(--lg-accent); }
+.lg-page.blora-admin-settings-page .settings-detail-title { margin-block-start: 8px; color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+
+.lg-page.blora-admin-settings-page .settings-section { padding: 22px 24px; }
+.lg-page.blora-admin-settings-page .settings-section > h2,
+.lg-page.blora-admin-settings-page .settings-section .section-header h2 { margin: 0; }
+.lg-page.blora-admin-settings-page .settings-section h3 { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.lg-page.blora-admin-settings-page .settings-section > div[style*="border"] {
+  border: 1px solid var(--lg-divider) !important;
+  border-radius: var(--lg-radius-group) !important;
+  background: var(--lg-group-bg) !important;
+}
+.lg-page.blora-admin-settings-page .settings-section p,
+.lg-page.blora-admin-settings-page .settings-section small { color: var(--lg-fg-secondary) !important; line-height: 1.6; }
+.lg-page.blora-admin-settings-page .settings-section .form-group label { color: var(--lg-fg); font-size: 13px; font-weight: 500; }
+.lg-page.blora-admin-settings-page .settings-section code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 11.5px;
+}
+.lg-page.blora-admin-settings-page .admin-default-theme-control blora-select::part(trigger),
+.lg-page.blora-admin-settings-page .settings-section blora-select::part(trigger) {
+  box-sizing: border-box;
+  min-height: 40px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  line-height: 40px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+.lg-page.blora-admin-settings-page .admin-default-theme-help { color: var(--lg-fg-tertiary); }
+.lg-page.blora-admin-settings-page .settings-section .blora-button { font-family: var(--lg-font); }
+
+@media (max-width: 640px) {
+  .lg-page.blora-admin-settings-page .settings-overview,
+  .lg-page.blora-admin-settings-page .settings-section { padding: 18px; }
+  .lg-page.blora-admin-settings-page .settings-category-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .lg-page.blora-admin-settings-page .settings-detail-title { font-size: 21px; }
+}

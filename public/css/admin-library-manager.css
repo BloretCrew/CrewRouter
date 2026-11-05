@@ -21,3 +21,36 @@
   .admin-library-manager-body .section-header { flex-wrap: wrap; }
   .admin-library-manager-body .section-actions { flex-wrap: wrap; }
 }
+
+/* =========================================================================
+   Liquid Glass：管理后台「配置抽屉」（供应商 / 模型 / TEAM）
+   抽屉挂在 body 下，不在 .lg-page 内，因此用 .lg-scope 提供令牌与组件皮肤；
+   本文件只做抽屉本身的布局与材质。
+   ========================================================================= */
+
+.admin-library-manager { background: var(--lg-scrim); }
+.admin-library-manager-panel {
+  border-inline-start: 1px solid var(--lg-glass-border-strong);
+  background-color: var(--lg-sheet-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), -24px 0 70px var(--lg-sheet-shadow);
+  color: var(--lg-fg);
+}
+.admin-library-manager-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--lg-divider);
+  gap: 16px;
+}
+.admin-library-manager-header h2 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.admin-library-manager-body { padding: 20px 24px; }
+.admin-library-manager-body .model-library-sticky-bar { display: none !important; }
+#adminLibraryTeamRules form { gap: 12px; }
+#adminLibraryTeamRules label { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; }
