@@ -487,3 +487,235 @@
 .blora-admin-stats-page .stats-overview-card .stats-overview-value {
   word-break: break-word;
 }
+
+/* =========================================================================
+   Liquid Glass：管理后台统计信息（与用户端统计页同一材质与配色）
+   通用皮肤见 liquid-glass.css（Blora 令牌桥接、按钮、分段、表格）；
+   本文件负责本页：统计瓷片、页签栏、图表卡、分析表格与多维面板。
+   ========================================================================= */
+
+/* ---------- 统计瓷片：白色玻璃卡 + 着色图标（覆盖行内渐变色） ---------- */
+.lg-page.blora-admin-stats-page { --admin-stats-border: 1px solid var(--lg-glass-border); --admin-stats-border-soft: 1px solid var(--lg-divider); }
+.lg-page .stats-overview-grid { gap: 12px; margin-block-end: 20px; }
+.lg-page .stats-overview-card {
+  --st-tint: var(--lg-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 0;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background: var(--lg-card-bg) !important;
+  background-image: var(--lg-sheen) !important;
+  color: var(--lg-fg) !important;
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page .stats-overview-card:nth-child(5n + 2) { --st-tint: var(--lg-purple); }
+.lg-page .stats-overview-card:nth-child(5n + 3) { --st-tint: var(--lg-green); }
+.lg-page .stats-overview-card:nth-child(5n + 4) { --st-tint: var(--lg-orange); }
+.lg-page .stats-overview-card:nth-child(5n + 5) { --st-tint: var(--lg-teal); }
+.lg-page .stats-overview-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 34px;
+  block-size: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--st-tint) 14%, transparent);
+  color: var(--st-tint);
+}
+.lg-page .stats-overview-icon svg { inline-size: 18px; block-size: 18px; }
+.lg-page .stats-overview-content { display: flex; flex-direction: column; min-width: 0; max-width: 100%; }
+.lg-page .stats-overview-label { margin-block-end: 2px; color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 500; opacity: 1; }
+.lg-page .stats-overview-value {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+.lg-page .stats-overview-sub { margin-block-start: 4px; color: var(--lg-fg-tertiary); font-size: 12px; opacity: 1; }
+
+
+
+/* ---------- 页签栏：iOS 分段控件 ---------- */
+.lg-page .stats-tab-bar {
+  display: flex;
+  gap: 2px;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin-block-end: 20px;
+  padding: 3px;
+  overflow-x: auto;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  scrollbar-width: none;
+}
+.lg-page .stats-tab-bar::-webkit-scrollbar { display: none; }
+.lg-page .stats-tab-bar button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: transparent;
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
+}
+.lg-page .stats-tab-bar button svg { inline-size: 14px; block-size: 14px; }
+.lg-page .stats-tab-bar button:hover { color: var(--lg-fg); }
+.lg-page .stats-tab-bar button:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: -2px; }
+.lg-page .stats-tab-bar button.active {
+  border: 0;
+  background: var(--lg-selection-bg);
+  color: var(--lg-fg);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), var(--lg-rim);
+}
+.lg-page .stats-tab-content { animation: ad-st-tab-in 0.3s var(--lg-ease-out) backwards; }
+@keyframes ad-st-tab-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- 图表卡 / 数据表卡 ---------- */
+.lg-page .responsive-grid-2 { gap: 12px; }
+.lg-page .chart-card {
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page .chart-card h4 { margin: 0 0 12px; color: var(--lg-fg); font-family: var(--lg-font); font-size: 15px; font-weight: 600; }
+.lg-page .chart-container { height: 280px; }
+.lg-page .multi-stats-card-heading { color: var(--lg-fg); }
+.lg-page .multi-stats-card-heading h4 { color: var(--lg-fg); }
+.lg-page .multi-stats-eyebrow,
+.lg-page .multi-stats-kicker { color: var(--lg-accent-ink); }
+.lg-page .multi-stats-caption,
+.lg-page .multi-stats-legend,
+.lg-page .multi-stats-caveats,
+.lg-page .multi-stats-load-status,
+.lg-page .latency-stats-notice { color: var(--lg-fg-secondary); }
+.lg-page .multi-stats-dot { background: var(--lg-accent); }
+.lg-page .multi-dimension-result-summary { background: var(--lg-chip-bg); color: var(--lg-fg-secondary); }
+
+/* 多维面板：强调色浅染的玻璃卡 */
+.lg-page .multi-dimension-panel {
+  padding: 20px 22px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--lg-accent-tint) 60%, transparent), transparent 180px), var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page .multi-dimension-panel-heading h4 { color: var(--lg-fg); }
+.lg-page .multi-dimension-panel-heading p { color: var(--lg-fg-secondary); }
+.lg-page .multi-stats-intro {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+
+/* 折叠面板与筛选披露 */
+.lg-page .multi-stats-filter-disclosure,
+.lg-page .multi-stats-secondary,
+.lg-page .multi-stats-details {
+  border: 1px solid var(--lg-divider);
+  border-radius: 18px;
+  background: var(--lg-card-bg);
+  box-shadow: var(--lg-rim);
+}
+.lg-page .multi-stats-filter-disclosure > summary,
+.lg-page .multi-stats-secondary > summary,
+.lg-page .multi-stats-details > summary { color: var(--lg-fg-secondary); }
+.lg-page .multi-stats-secondary > summary strong,
+.lg-page .multi-stats-details > summary strong,
+.lg-page .multi-stats-filter-title { color: var(--lg-fg); }
+.lg-page .multi-stats-filters { background: transparent; border: 0; }
+.lg-page .multi-stats-filters label { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; }
+
+/* 数据表：表头分组底、发丝分隔线 */
+.lg-page :is(.stats-table, .stats-table-card table) {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 16px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--lg-card-bg);
+  color: var(--lg-fg);
+  font-size: 13px;
+}
+.lg-page .stats-table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.lg-page .stats-table td { padding: 10px 12px; border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); font-variant-numeric: tabular-nums; }
+.lg-page .stats-table td:not([colspan]) { padding: 10px 12px !important; }
+.lg-page .stats-table tbody tr:last-child td { border-bottom: 0; }
+.lg-page .stats-table tbody tr { transition: background-color var(--lg-dur-fast) var(--lg-ease); }
+.lg-page .stats-table tbody tr:hover { background: var(--lg-group-bg); }
+.lg-page .stats-table .sortable:hover { background: var(--lg-group-bg); color: var(--lg-fg); }
+.lg-page .multi-stats-caveats { margin-block-start: 12px; }
+
+/* 页签内的筛选条与分页 */
+.lg-page .admin-stats-range label { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.lg-page #adminStatsDays::part(trigger),
+.lg-page.blora-admin-stats-page #adminStatsDays::part(trigger) {
+  box-sizing: border-box;
+  min-height: 40px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  line-height: 40px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+
+@media (max-width: 640px) {
+  .lg-page .stats-overview-value { font-size: 24px; }
+  .lg-page .chart-container { height: 240px; }
+  .lg-page .multi-dimension-panel { padding: 16px; }
+}
+
+/* 今日 / 昨日对比：与瓷片同级的玻璃卡 */
+.lg-page .today-yesterday-grid { gap: 12px; margin-block-end: 20px; }
+.lg-page .today-yesterday-card {
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page .today-yesterday-header { display: flex; align-items: center; gap: 8px; margin-block-end: 12px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+.lg-page .today-yesterday-card:first-child .today-yesterday-header svg { stroke: var(--lg-orange); }
+.lg-page .today-yesterday-card:last-child .today-yesterday-header svg { stroke: var(--lg-indigo); }
+.lg-page .today-yesterday-metric-label { color: var(--lg-fg-secondary); font-size: 12px; }
+.lg-page .today-yesterday-metric-value { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.lg-page .today-yesterday-trend { font-size: 12px; font-weight: 600; }
+@media (max-width: 640px) {
+  .lg-page .today-yesterday-grid { grid-template-columns: minmax(0, 1fr); }
+}
