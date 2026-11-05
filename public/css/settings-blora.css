@@ -1,117 +1,271 @@
-/* Blora surface migration for user settings. */
+/* =========================================================================
+   用户设置 · Liquid Glass（第十二个迁移页）
+   通用皮肤见 liquid-glass.css（.content-section 玻璃面板、按钮、输入框、
+   blora-switch、blora-checkbox）；
+   本文件只做本页布局：概览卡、类别网格、详情返回、设置分组、通知卡。
+   ========================================================================= */
+
+/* ---------- 概览：玻璃面板内再放版本卡与类别网格 ---------- */
 .blora-settings-page {
-  --settings-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --settings-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+  --settings-border: 1px solid var(--lg-glass-border);
+  --settings-border-soft: 1px solid var(--lg-divider);
+}
+.lg-page.blora-settings-page .settings-overview {
+  max-inline-size: none;
+  padding: 24px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
 }
 
-.blora-settings-page .settings-overview {
-  max-width: none;
-  padding: var(--blora-space-6);
-  border: var(--settings-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
+/* 版本卡：分组底，品牌图标圆角与玻璃描边 */
+.lg-page.blora-settings-page .settings-version-card {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--lg-divider);
+  border-radius: var(--lg-radius-group);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg);
+}
+.lg-page.blora-settings-page .settings-brand-icon {
+  inline-size: 46px;
+  block-size: 46px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 13px;
+  box-shadow: var(--lg-rim);
+}
+.lg-page.blora-settings-page .settings-version-info > strong {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.lg-page.blora-settings-page .settings-version-info > span { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.lg-page.blora-settings-page .settings-link-button {
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  color: var(--lg-fg);
+  font-size: 12px;
+  text-decoration: none;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease);
+}
+.lg-page.blora-settings-page .settings-link-button:hover {
+  border-color: var(--lg-glass-border-strong);
+  background: var(--lg-card-bg-hover);
+}
+.lg-page.blora-settings-page .settings-link-button img,
+.lg-page.blora-settings-page .settings-link-icon { inline-size: 15px; block-size: 15px; border-radius: 4px; }
+
+/* 提示语：分组标题小字 */
+.lg-page.blora-settings-page .settings-overview-hint {
+  margin: 18px 0 10px;
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.blora-settings-page .settings-version-card {
-  padding: var(--blora-space-5);
-  border: var(--settings-border-soft);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-raised);
+/* 类别卡：玻璃卡，右侧箭头，悬停提亮并轻微上浮 */
+.lg-page.blora-settings-page .settings-category-grid { gap: 12px; }
+.lg-page.blora-settings-page .settings-category-card {
+  min-block-size: 82px;
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  color: var(--lg-fg);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+}
+.lg-page.blora-settings-page .settings-category-card:hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+  transform: translateY(-1px);
+}
+.lg-page.blora-settings-page .settings-category-card:active { transform: scale(0.995); }
+.lg-page.blora-settings-page .settings-category-icon {
+  inline-size: 30px;
+  block-size: 30px;
+  opacity: 1;
+}
+.lg-page.blora-settings-page .settings-category-card strong { color: var(--lg-fg); font-size: 14.5px; font-weight: 600; }
+.lg-page.blora-settings-page .settings-category-card small { margin-block-start: 3px; color: var(--lg-fg-secondary); font-size: 12px; }
+.lg-page.blora-settings-page .settings-category-arrow { color: var(--lg-fg-tertiary); font-size: 22px; }
+
+/* ---------- 详情：返回 + 标题 ---------- */
+.lg-page.blora-settings-page .settings-detail { max-inline-size: none; margin: 0 0 16px; }
+.lg-page.blora-settings-page .settings-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  color: var(--lg-accent-ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.lg-page.blora-settings-page .settings-back-button:hover { color: var(--lg-accent); }
+.lg-page.blora-settings-page .settings-detail-title {
+  margin-block-start: 8px;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.blora-settings-page .settings-version-info > strong,
-.blora-settings-page .settings-detail-title,
-.blora-settings-page .settings-section h2,
-.blora-settings-page .settings-section h3 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
+/* ---------- 设置分组：.content-section 已是玻璃面板，这里收内边距与标题 ---------- */
+.lg-page.blora-settings-page .settings-section { padding: 22px 24px; }
+.lg-page.blora-settings-page .settings-section > h2,
+.lg-page.blora-settings-page .settings-section .section-header h2 { margin: 0; }
+.lg-page.blora-settings-page .settings-section .section-header { margin-block-end: 16px; }
+.lg-page.blora-settings-page .settings-section h3 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+/* 分组内的内联边框块（通知、插件授权、2FA、Passkey、签名）：统一为分组底 */
+.lg-page.blora-settings-page .settings-section > div[style*="border"] {
+  border: 1px solid var(--lg-divider) !important;
+  border-radius: var(--lg-radius-group) !important;
+  background: var(--lg-group-bg) !important;
+}
+.lg-page.blora-settings-page .settings-section .form-group label { color: var(--lg-fg); font-size: 13px; font-weight: 500; }
+.lg-page.blora-settings-page .settings-section small { color: var(--lg-fg-secondary); line-height: 1.6; }
+.lg-page.blora-settings-page .settings-section code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 11.5px;
+}
+.lg-page.blora-settings-page .settings-section .blora-button { font-family: var(--lg-font); }
+.lg-page.blora-settings-page .settings-desktop-embed { padding: 0 !important; border: 0 !important; background: transparent !important; }
+
+/* 头像预览与上传 */
+.lg-page.blora-settings-page #settingsAvatarPreview {
+  inline-size: 64px;
+  block-size: 64px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 50%;
+  background: var(--lg-chip-bg) !important;
+  box-shadow: var(--lg-rim);
+}
+.lg-page.blora-settings-page #avatarUploadStatus { color: var(--lg-fg-tertiary); font-size: 12px; }
+
+/* 主题选择：原生 select 换成玻璃胶囊字段 */
+.lg-page.blora-settings-page #pluginThemePicker select {
+  min-inline-size: 220px;
+  min-height: 38px;
+  padding-inline: 14px;
+  border: 1px solid transparent;
+  border-radius: var(--lg-radius-pill);
+  background-color: var(--lg-surface);
+  color: var(--lg-fg);
+  font-family: var(--lg-font);
+  font-size: 13px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+.lg-page.blora-settings-page #pluginThemePicker select:focus {
+  border-color: var(--lg-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--lg-accent-glow);
+}
+.lg-page.blora-settings-page #pluginThemeStatus { color: var(--lg-fg-tertiary); font-size: 12.5px; }
+
+/* 2FA 状态徽章与密钥块 */
+.lg-page.blora-settings-page #twoFactorStatus.status-badge {
+  padding: 4px 12px;
+  border-radius: var(--lg-radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+}
+.lg-page.blora-settings-page #twoFactorQR { border: 1px solid var(--lg-glass-border); border-radius: 12px; background: #fff !important; box-shadow: var(--lg-rim); }
+.lg-page.blora-settings-page #twoFactorSecret {
+  padding: 8px 10px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 10px;
+  background: var(--lg-surface) !important;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+}
+.lg-page.blora-settings-page #tfaSetupStatus,
+.lg-page.blora-settings-page #tfaDisableStatus,
+.lg-page.blora-settings-page #passkeyStatus,
+.lg-page.blora-settings-page #signatureSaveStatus,
+.lg-page.blora-settings-page #notificationSettingsStatus,
+.lg-page.blora-settings-page #pluginPrefOptinStatus { color: var(--lg-fg-secondary); font-size: 12.5px; }
+
+/* 通行密钥列表 */
+.lg-page.blora-settings-page #passkeyList > li {
+  border-bottom-color: var(--lg-divider) !important;
+  color: var(--lg-fg);
+}
+.lg-page.blora-settings-page #passkeyList > li > div > div:nth-child(2),
+.lg-page.blora-settings-page #passkeyList > li > div > div:nth-child(3) { color: var(--lg-fg-secondary) !important; }
+.lg-page.blora-settings-page #passkeyList > li > div > div:nth-child(2) { font-family: var(--lg-font-mono) !important; }
+
+/* 签名预览：等宽分组底 */
+.lg-page.blora-settings-page #signaturePreview {
+  padding: 12px 14px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 12px;
+  background: var(--lg-surface) !important;
+  color: var(--lg-fg-secondary) !important;
+  font-family: var(--lg-font-mono) !important;
+  font-size: 12.5px;
+}
+.lg-page.blora-settings-page #apiSignatureTemplate {
+  border-radius: 12px;
+  font-family: var(--lg-font-mono) !important;
+  font-size: 12.5px;
 }
 
-.blora-settings-page .settings-link-button {
-  border: var(--settings-border-soft);
-  border-radius: var(--blora-radius-md);
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-text-emphasis);
+/* ---------- 我的通知：玻璃行卡 ---------- */
+.lg-page.blora-settings-page #notificationsList { display: grid; gap: 10px; }
+.lg-page.blora-settings-page .notification-card {
+  padding: 14px 16px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
+.lg-page.blora-settings-page .notification-card.is-unread {
+  border-inline-start: 3px solid var(--lg-accent);
+  background-color: var(--lg-accent-tint);
+}
+.lg-page.blora-settings-page .notification-header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.lg-page.blora-settings-page .notification-header strong { color: var(--lg-fg); font-size: 13.5px; font-weight: 600; }
+.lg-page.blora-settings-page .notification-header time { color: var(--lg-fg-tertiary); font-size: 11.5px; }
+.lg-page.blora-settings-page .notification-body { margin-block-start: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; }
+.lg-page.blora-settings-page .notification-actions { gap: 8px; margin-block-start: 10px; }
+.lg-page.blora-settings-page .notification-actions .blora-button { --blora-button-height: 30px; min-height: 30px; }
 
-.blora-settings-page .settings-link-button:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-settings-page .settings-category-card {
-  min-height: 5.5rem;
-  border: var(--settings-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-text-primary);
-  box-shadow: var(--blora-shadow-1);
-}
-
-.blora-settings-page .settings-category-card:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  background: var(--blora-color-surface-raised);
-  box-shadow: var(--blora-shadow-2);
-}
-
-.blora-settings-page .settings-category-card small,
-.blora-settings-page .settings-overview-hint,
-.blora-settings-page .settings-version-info > span {
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-settings-page .settings-detail {
-  max-width: none;
-  margin: var(--blora-space-5) 0;
-}
-
-.blora-settings-page .settings-back-button {
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-settings-page .settings-back-button:hover {
-  color: var(--blora-color-text-primary);
-}
-
-.blora-settings-page .settings-section {
-  border: var(--settings-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
-}
-
-.blora-settings-page .settings-section > div[style*="border"] {
-  border: var(--settings-border-soft) !important;
-  border-radius: var(--blora-radius-lg) !important;
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-settings-page .settings-section .blora-button {
-  font-family: var(--blora-font-body);
-}
-
-.blora-settings-page .settings-section .form-group label,
-.blora-settings-page .settings-section small {
-  color: var(--blora-color-text-subtle);
-}
+/* ---------- 修改密码：表单字段限宽 ---------- */
+.lg-page.blora-settings-page #changePasswordForm .blora-input { max-inline-size: 400px; }
 
 @media (max-width: 640px) {
-  .blora-settings-page .settings-overview,
-  .blora-settings-page .settings-section {
-    padding: var(--blora-space-4);
-  }
-
-  .blora-settings-page .settings-category-grid {
-    grid-template-columns: 1fr;
-  }
+  .lg-page.blora-settings-page .settings-overview,
+  .lg-page.blora-settings-page .settings-section { padding: 18px; }
+  .lg-page.blora-settings-page .settings-category-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .lg-page.blora-settings-page .settings-version-card { padding: 16px; }
+  .lg-page.blora-settings-page .settings-detail-title { font-size: 21px; }
+  .lg-page.blora-settings-page #pluginThemePicker select { inline-size: 100%; min-inline-size: 0; }
+  .lg-page.blora-settings-page #changePasswordForm .blora-input { max-inline-size: none; }
 }
-
-#notificationsList { display: grid; gap: var(--blora-space-3); }
-.notification-card { padding: var(--blora-space-4); border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg); background: var(--blora-color-surface-default); min-width: 0; }
-.notification-card.is-unread { border-inline-start: 3px solid var(--blora-color-action-primary-default); background: var(--blora-color-surface-raised); }
-.notification-header { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--blora-space-2); }
-.notification-header time { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); }
-.notification-body { margin-top: var(--blora-space-2); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
-.notification-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--blora-space-2); margin-top: var(--blora-space-3); }
+@media (prefers-reduced-motion: reduce) {
+  .lg-page.blora-settings-page .settings-category-card { transition: none; }
+  .lg-page.blora-settings-page .settings-category-card:hover { transform: none; }
+}
