@@ -1419,6 +1419,16 @@ function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provi
     }
   }
 
+  // 协议级 Anthropic 头必须透传（含 anthropic-beta 新能力值），与 forward_headers 开关无关；
+  // 基础头（如 anthropic-version、Authorization）已存在时不覆盖。
+  if (targetProtocol === 'anthropic') {
+    for (const [key, val] of Object.entries(req.headers || {})) {
+      const lower = key.toLowerCase();
+      if (!lower.startsWith('anthropic-') || !val || headers[lower] !== undefined) continue;
+      headers[lower] = Array.isArray(val) ? val.join(', ') : val;
+    }
+  }
+
   // 供应商级静态 User-Agent 覆盖（插件仍可在 beforeUpstream 钩子中动态改写）
   if (provider.request_user_agent && String(provider.request_user_agent).trim()) {
     headers['user-agent'] = String(provider.request_user_agent).trim();
@@ -2073,10 +2083,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   if (provider.api_key) {
     headers['x-api-key'] = provider.api_key;
   }
-  // 透传 anthropic-beta 扩展能力头（始终透传，属于协议级头）
-  if (req.headers['anthropic-beta']) {
-    headers['anthropic-beta'] = req.headers['anthropic-beta'];
-  }
+  // anthropic-beta 等协议级头由 buildUpstreamHeaders 统一透传
 
   // 代理池支持：获取代理 agent 和重试次数
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
@@ -3362,12 +3369,37 @@ router.get('/models', oauthBearer, async (req, res) => {
 // Anthropic 兼容: /v1/messages 和 /api/messages
 router.post('/messages', oauthBearer, handleAnthropicMessage);
 
+// Claude Code auto 模式服务端安全检查：请求携带 safeguards 字段与 dangerous-tool-use beta。
+// 只有原生 Anthropic 上游能原样承载；其余上游按官方契约返回点名 safeguards 的 400，
+// 客户端会据此去掉该字段与 beta 重试，并回退到本地分类（绝不静默剥离或伪造裁决）。
+const AUTO_MODE_SAFEGUARDS_BETA = 'dangerous-tool-use-2026-09-03';
+
+function autoModeSafeguardsRequested(req) {
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, 'safeguards')) return true;
+  const beta = req.headers?.['anthropic-beta'];
+  const value = Array.isArray(beta) ? beta.join(',') : String(beta || '');
+  return value.split(',').some(part => part.trim() === AUTO_MODE_SAFEGUARDS_BETA);
+}
+
+function sendSafeguardsUnsupported(res, provider) {
+  Logger.warn(`[Anthropic] 拒绝 safeguards 请求: provider=${provider?.id || '-'}, format=${provider?.format || 'openai'}`);
+  return res.status(400).json({
+    type: 'error',
+    error: {
+      type: 'invalid_request_error',
+      message: 'The `safeguards` request field is not supported for the selected upstream provider. Retry without `safeguards` and without the dangerous-tool-use-2026-09-03 beta to use local classification.'
+    }
+  });
+}
+
 async function handleAnthropicMessage(req, res) {
   if (!await refreshApiUserForRequest(req, res)) return;
   if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
   req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
+  const safeguardsAtEntry = autoModeSafeguardsRequested(req);
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
-  if (await tryHandleCrewRouterCommand(req, res)) return;
+  // 本地合成回复没有 safeguard_results，带 safeguards 时跳过拦截，交给后续的官方 400 契约。
+  if (!safeguardsAtEntry && await tryHandleCrewRouterCommand(req, res)) return;
 
   // 插件 gateway:requestReceived 钩子：可改写请求体或短路直接响应
   if (pluginHooks.hasSubscribers('gateway:requestReceived')) {
@@ -3375,6 +3407,7 @@ async function handleAnthropicMessage(req, res) {
     if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
     if (out?.body !== undefined) req.body = out.body;
   }
+  const safeguardsRequested = safeguardsAtEntry || autoModeSafeguardsRequested(req);
 
   // 吞图：在转发前剥离客户端图片并注入提示（默认禁用）
   applySwallowImagesIfEnabled(req);
@@ -3391,6 +3424,8 @@ async function handleAnthropicMessage(req, res) {
 
   // 检测 Fusion 模型请求
   if ((model === 'fusion' || model?.startsWith('fusion')) && req.apiUser.fusionEnabled) {
+    // Fusion 固定转 OpenAI 协议，无法承载 safeguards 字段
+    if (safeguardsRequested) return sendSafeguardsUnsupported(res);
     // 将 Anthropic 格式的 messages 转换为 OpenAI 格式（如果需要）
     // 注意：吞图已剥离 image 块；此处文本化时忽略非 text 块
     const fusionMessages = [];
@@ -3445,7 +3480,15 @@ async function handleAnthropicMessage(req, res) {
   );
 
   let lastError = null;
-  const anthropicBody = { messages, system, max_tokens, temperature, top_p, top_k, stop_sequences, tools, tool_choice, thinking, metadata, output_config, service_tier, cache_control, container, inference_geo };
+  // 前向兼容：透传客户端所有顶层字段，仅覆盖网关自己拥有的字段（model/stream/response_format）。
+  // 这样 Claude Code 新增的能力字段（如 safeguards、context_management、speed）不会被静默丢弃。
+  const anthropicBody = { ...(req.body && typeof req.body === 'object' ? req.body : {}) };
+  delete anthropicBody.model;           // 上游模型由 Key 绑定队列决定
+  delete anthropicBody.stream;          // 由各代理函数按 attempt 设置
+  delete anthropicBody.response_format; // 本路由上的 OpenAI 兼容别名，不是 Anthropic 字段
+  anthropicBody.messages = messages;
+  if (system !== undefined) anthropicBody.system = system; else delete anthropicBody.system;
+  if (max_tokens !== undefined) anthropicBody.max_tokens = max_tokens;
 
   for (let i = 0; i < modelQueue.length; i++) {
     req._upstreamAttemptContext.modelIdentity = null;
@@ -3469,6 +3512,8 @@ async function handleAnthropicMessage(req, res) {
 
     // TestModel 特殊处理
     if (modelConfig.id === 'test-model' || model === 'test-model') {
+      // 固定文本回复没有 safeguard_results，按官方契约拒绝
+      if (safeguardsRequested) return sendSafeguardsUnsupported(res);
       Logger.info(`[Anthropic] TestModel: 直接返回固定文本, stream=${!!stream}`);
 
       if (stream) {
@@ -3582,6 +3627,11 @@ async function handleAnthropicMessage(req, res) {
       lastError = { status: 500, body: { type: 'error', error: { type: 'api_error', message: 'Provider not configured' } }, retryable: true };
       if (hasMore && lastError.retryable) continue;
       return res.status(500).json(lastError.body);
+    }
+
+    // 非原生 Anthropic 上游无法承载 safeguards，按官方契约返回点名 safeguards 的 400
+    if (provider.format !== 'anthropic' && safeguardsRequested) {
+      return sendSafeguardsUnsupported(res, provider);
     }
 
     let result;
@@ -3773,9 +3823,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   if (provider.api_key) {
     headers['x-api-key'] = provider.api_key;
   }
-  if (req.headers['anthropic-beta']) {
-    headers['anthropic-beta'] = req.headers['anthropic-beta'];
-  }
+  // anthropic-beta 等协议级头由 buildUpstreamHeaders 统一透传
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
   let preloadedSignatureData = {};
@@ -3787,22 +3835,10 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     );
   }
 
-  const upstreamBody = { model, max_tokens: body.max_tokens, messages: body.messages, stream: !!stream };
-  if (body.system) upstreamBody.system = body.system;
-  if (body.temperature !== undefined) upstreamBody.temperature = body.temperature;
-  if (body.top_p !== undefined) upstreamBody.top_p = body.top_p;
-  if (body.top_k !== undefined) upstreamBody.top_k = body.top_k;
-  if (body.stop_sequences) upstreamBody.stop_sequences = body.stop_sequences;
-  if (body.tools) upstreamBody.tools = body.tools;
-  if (body.tool_choice) upstreamBody.tool_choice = body.tool_choice;
-  if (body.thinking) upstreamBody.thinking = body.thinking;
-  if (body.metadata) upstreamBody.metadata = body.metadata;
-  if (body.output_config) upstreamBody.output_config = body.output_config;
-  if (body.service_tier) upstreamBody.service_tier = body.service_tier;
-  if (body.speed) upstreamBody.speed = body.speed;
-  if (body.cache_control) upstreamBody.cache_control = body.cache_control;
-  if (body.container) upstreamBody.container = body.container;
-  if (body.inference_geo) upstreamBody.inference_geo = body.inference_geo;
+  // 前向兼容：整包透传上游 Anthropic 字段（含 safeguards、context_management 等新能力），
+  // 只覆盖网关自有的 model/stream。协议桥在同方言往返中保留未知顶层字段。
+  const upstreamBody = { ...body, model, max_tokens: body.max_tokens, messages: body.messages, stream: !!stream };
+  delete upstreamBody.response_format;
   addFourthCacheBreakpoint(upstreamBody, body.system);
   Object.assign(upstreamBody, bridgeRequest('anthropic', upstreamBody, { quirks: protocolBridge.getDialectCapability('anthropic').quirks }));
 

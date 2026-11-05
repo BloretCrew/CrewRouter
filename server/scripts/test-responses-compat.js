@@ -61,6 +61,21 @@ for (const body of [{}, { reasoning: { effort: 'low' } }]) {
 }
 const compatibleHeaders = filterResponsesLiteHeader({ [liteHeader]: 'true' }, 'responses', { reasoning: { context: 'all_turns' } });
 assert.equal(compatibleHeaders[liteHeader], 'true');
+
+// 协议级 anthropic-* 头透传与 forward_headers 开关无关；基础头优先，其他请求头不外泄
+for (const [provider, expectedBeta] of [
+  [{ format: 'anthropic', forward_headers: false }, 'b1,b2'],
+  [{ format: 'openai', forward_headers: false }, undefined],
+]) {
+  const headers = context.buildUpstreamHeaders(provider, {
+    headers: { 'anthropic-beta': 'b1,b2', 'anthropic-version': '2099-01-01', 'anthropic-new-capability': 'x', 'x-custom-client': 'trace', authorization: 'secret' },
+  }, { 'anthropic-version': '2023-06-01' });
+  assert.equal(headers['anthropic-beta'], expectedBeta, JSON.stringify(provider));
+  assert.equal(headers['anthropic-version'], '2023-06-01');
+  assert.equal(headers['anthropic-new-capability'], provider.format === 'anthropic' ? 'x' : undefined);
+  assert.equal(headers['x-custom-client'], undefined);
+  assert.equal(headers.authorization, undefined);
+}
 assert.deepEqual(normalizeResponsesError(JSON.stringify({ error: upstreamError })), upstreamError);
 assert.equal(normalizeResponsesError('Bad Gateway').message, 'Bad Gateway');
 assert.equal(normalizeResponsesError(null).code, 'upstream_error');

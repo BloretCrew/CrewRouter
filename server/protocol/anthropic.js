@@ -118,7 +118,11 @@ function decodeStreamEvent(event) {
     else if (event.delta?.type === 'thinking_delta') delta = { role: 'assistant', blocks: [{ type: 'thinking', thinking: event.delta.thinking || '' }] };
     else if (event.delta?.type === 'input_json_delta') delta = { role: 'assistant', blocks: [{ type: 'tool_call_delta', argumentsText: event.delta.partial_json || '', index: event.index || 0 }] };
   }
-  return { kind: 'stream_event', sourceDialect: 'anthropic', id: event.message?.id, model: event.message?.model, eventType: event.type, index: event.index, delta, finishReason: ({ end_turn: 'stop', max_tokens: 'length', tool_use: 'tool_calls', stop_sequence: 'stop' }[event.delta?.stop_reason] || event.delta?.stop_reason), usage: decodeUsage(event.usage || event.message?.usage), passthrough: { anthropic: omitKnown(event, EVENT_KEYS) } };
+  // delta 上的未知字段（如 message_delta 中的 safeguard_results）单独保留，供同方言编码还原
+  const deltaExtra = event.delta && typeof event.delta === 'object'
+    ? omitKnown(event.delta, new Set(['type', 'text', 'thinking', 'partial_json', 'stop_reason', 'stop_sequence']))
+    : null;
+  return { kind: 'stream_event', sourceDialect: 'anthropic', id: event.message?.id, model: event.message?.model, eventType: event.type, index: event.index, delta, finishReason: ({ end_turn: 'stop', max_tokens: 'length', tool_use: 'tool_calls', stop_sequence: 'stop' }[event.delta?.stop_reason] || event.delta?.stop_reason), usage: decodeUsage(event.usage || event.message?.usage), deltaExtra, passthrough: { anthropic: omitKnown(event, EVENT_KEYS) } };
 }
 
 function encodeStreamEvent(ir) {
@@ -129,7 +133,15 @@ function encodeStreamEvent(ir) {
   else if (block?.type === 'text') event = { type: 'content_block_delta', index: ir.index || 0, delta: { type: 'text_delta', text: block.text || '' } };
   else if (block?.type === 'thinking') event = { type: 'content_block_delta', index: ir.index || 0, delta: { type: 'thinking_delta', thinking: block.thinking || '' } };
   else if (block?.type === 'tool_call_delta') event = { type: 'content_block_delta', index: block.index || ir.index || 0, delta: { type: 'input_json_delta', partial_json: block.argumentsText || '' } };
-  else if (ir.eventType === 'usage' || ir.eventType === 'message_delta' || ir.finishReason) event = { type: 'message_delta', delta: { stop_reason: ir.finishReason || null, stop_sequence: null }, ...(ir.usage ? { usage: encodeUsage(ir.usage) } : {}) };
+  else if (ir.eventType === 'usage' || ir.eventType === 'message_delta' || ir.finishReason) {
+    // 同方言往返时保留 delta 上的未知字段（如服务端安全检查的 safeguard_results）
+    const extraDelta = ir.deltaExtra && typeof ir.deltaExtra === 'object' ? ir.deltaExtra : {};
+    event = {
+      type: 'message_delta',
+      delta: { ...extraDelta, stop_reason: ir.finishReason || null, stop_sequence: extraDelta.stop_sequence ?? null },
+      ...(ir.usage ? { usage: encodeUsage(ir.usage) } : {})
+    };
+  }
   else event = { type: ir.eventType || 'message_stop' };
   return withPassthrough(event, ir.passthrough?.anthropic);
 }

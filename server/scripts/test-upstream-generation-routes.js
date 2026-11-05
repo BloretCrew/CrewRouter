@@ -127,7 +127,8 @@ async function closeServer(server) {
 function frame(data, event) {
   return `${event ? `event: ${event}\n` : ''}data: ${JSON.stringify(data)}\n\n`;
 }
-function streamFrames(format) {
+function streamFrames(format, safeguards = false) {
+  const safeguardResults = safeguards ? { safeguard_results: SAFEGUARD_RESULTS } : {};
   if (format === 'responses') return {
     start: frame({ type: 'response.created', response: { id: 'resp_local', object: 'response', status: 'in_progress', output: [] } }, 'response.created'),
     delta: frame({ type: 'response.output_text.delta', item_id: 'msg_local', output_index: 0, content_index: 0, delta: 'local-text' }, 'response.output_text.delta'),
@@ -136,7 +137,7 @@ function streamFrames(format) {
   if (format === 'anthropic') return {
     start: frame({ type: 'message_start', message: { id: 'msg_local', type: 'message', role: 'assistant', model: 'local', content: [], usage: { input_tokens: 0, output_tokens: 0 } } }, 'message_start') + frame({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }, 'content_block_start'),
     delta: frame({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'local-text' } }, 'content_block_delta'),
-    end: frame({ type: 'content_block_stop', index: 0 }, 'content_block_stop') + frame({ type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 0 } }, 'message_delta') + frame({ type: 'message_stop' }, 'message_stop'),
+    end: frame({ type: 'content_block_stop', index: 0 }, 'content_block_stop') + frame({ type: 'message_delta', delta: { stop_reason: 'end_turn', ...safeguardResults }, usage: { output_tokens: 0 } }, 'message_delta') + frame({ type: 'message_stop' }, 'message_stop'),
   };
   return {
     start: frame({ id: 'chatcmpl-local', object: 'chat.completion.chunk', model: 'local', choices: [{ index: 0, delta: { role: 'assistant' } }] }),
@@ -145,7 +146,11 @@ function streamFrames(format) {
   };
 }
 
-async function fixture(router, { format = 'openai', mode = 'success', fallback = false } = {}) {
+const SAFEGUARDS_REQUEST = [{ type: 'dangerous_tool_use', classifier_context: { opaque: ['x', 1] } }];
+const SAFEGUARD_RESULTS = [{ type: 'dangerous_tool_use', status: { type: 'available', tool_uses: { toolu_1: { type: 'evaluated', outcome: 'not_flagged' } } } }];
+const SAFEGUARDS_BETA = 'dangerous-tool-use-2026-09-03';
+
+async function fixture(router, { format = 'openai', mode = 'success', fallback = false, safeguards = false, provider = {}, queue = null } = {}) {
   const received = [];
   const timers = new Set();
   const sockets = new Set();
@@ -153,7 +158,7 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
-      const entry = { path: req.url, body: JSON.parse(body), auth: req.headers.authorization || req.headers['x-api-key'], closed: false, completed: false };
+      const entry = { path: req.url, body: JSON.parse(body), headers: req.headers, auth: req.headers.authorization || req.headers['x-api-key'], closed: false, completed: false };
       received.push(entry);
       res.on('close', () => { entry.closed = true; });
       const httpFailure = /^(rate-limit|server-error)-(text|empty|json|json-null|json-string)-(seconds|date|invalid)$/.exec(mode);
@@ -175,7 +180,7 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
         return;
       }
       if (entry.body.stream) {
-        const frames = streamFrames(format);
+        const frames = streamFrames(format, safeguards);
         res.writeHead(200, { 'Content-Type': 'text/event-stream' });
         res.write(frames.start);
         const interval = setInterval(() => res.write(frames.delta), 25);
@@ -196,15 +201,15 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
       entry.completed = true;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(format === 'anthropic'
-        ? { id: 'msg_local', type: 'message', role: 'assistant', model: 'local', content: [{ type: 'text', text: 'local-text' }], stop_reason: 'end_turn', usage: { input_tokens: 0, output_tokens: 0 } }
+        ? { id: 'msg_local', type: 'message', role: 'assistant', model: 'local', content: [{ type: 'text', text: 'local-text' }], stop_reason: 'end_turn', usage: { input_tokens: 0, output_tokens: 0 }, ...(safeguards ? { safeguard_results: SAFEGUARD_RESULTS } : {}) }
         : { id: 'chatcmpl-local', object: 'chat.completion', model: 'local', choices: [{ index: 0, message: { role: 'assistant', content: 'local-text' }, finish_reason: 'stop' }], usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }));
     });
   });
   upstream.on('connection', socket => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
   const upstreamPort = await listen(upstream);
   state.upstreamPort = upstreamPort;
-  state.queue = fallback ? ['route-primary', 'route-backup'] : ['route-primary'];
-  state.provider = { id: 'local-provider', name: 'isolated', enabled: true, format, base_url: `http://127.0.0.1:${upstreamPort}/v1`, api_key: 'local-key-primary', api_keys: fallback ? ['local-key-primary', 'local-key-backup'] : ['local-key-primary'], api_key_select_mode: 'order', proxy_enabled: false };
+  state.queue = queue || (fallback ? ['route-primary', 'route-backup'] : ['route-primary']);
+  state.provider = { id: 'local-provider', name: 'isolated', enabled: true, format, base_url: `http://127.0.0.1:${upstreamPort}/v1`, api_key: 'local-key-primary', api_keys: fallback ? ['local-key-primary', 'local-key-backup'] : ['local-key-primary'], api_key_select_mode: 'order', proxy_enabled: false, ...provider };
   const requestCloses = [];
   const app = express();
   app.use(express.json());
@@ -229,10 +234,10 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
   };
 }
 
-function post(f, route, body, cancelOnText = false) {
+function post(f, route, body, cancelOnText = false, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify(body);
-    const request = http.request({ hostname: '127.0.0.1', port: f.port, path: `/v1${route}`, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), Authorization: 'Bearer isolated-client' } });
+    const request = http.request({ hostname: '127.0.0.1', port: f.port, path: `/v1${route}`, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), Authorization: 'Bearer isolated-client', ...extraHeaders } });
     const timeout = setTimeout(() => { request.destroy(); reject(new Error(`Client timed out: ${route}`)); }, 3000);
     let settled = false;
     const finish = (error, value) => {
@@ -389,6 +394,67 @@ async function main() {
       }
     }
   }
+
+  // Claude Code auto 模式服务端安全检查：原生 Anthropic 原样透传
+  const safeguardsBetaHeader = { 'anthropic-beta': `${SAFEGUARDS_BETA},context-management-2025-06-27` };
+  test('Native Anthropic forwards safeguards and an unknown top-level field verbatim', { format: 'anthropic', safeguards: true }, async f => {
+    const body = {
+      ...chatBody,
+      safeguards: SAFEGUARDS_REQUEST,
+      vendor_extension: { enabled: true },
+    };
+    const result = await post(f, '/messages', body, false, safeguardsBetaHeader);
+    assert.equal(result.status, 200, result.text);
+    assert.equal(f.received.length, 1);
+    assert.deepEqual(f.received[0].body.safeguards, SAFEGUARDS_REQUEST);
+    assert.deepEqual(f.received[0].body.vendor_extension, { enabled: true });
+    assert.equal(f.received[0].headers['anthropic-beta'], safeguardsBetaHeader['anthropic-beta']);
+    assert.deepEqual(JSON.parse(result.text).safeguard_results, SAFEGUARD_RESULTS);
+  });
+  test('Native Anthropic stream delivers delta.safeguard_results unchanged', { format: 'anthropic', safeguards: true }, async f => {
+    const result = await post(f, '/messages', { ...chatBody, stream: true, safeguards: SAFEGUARDS_REQUEST }, false, safeguardsBetaHeader);
+    assert.equal(result.status, 200, result.text);
+    assert.equal(f.received.length, 1);
+    assert.deepEqual(f.received[0].body.safeguards, SAFEGUARDS_REQUEST);
+    const deltas = result.text.split('\n')
+      .filter(line => line.startsWith('data: '))
+      .map(line => JSON.parse(line.slice(6)))
+      .filter(event => event.type === 'message_delta');
+    assert.equal(deltas.length, 1, result.text);
+    assert.deepEqual(deltas[0].delta.safeguard_results, SAFEGUARD_RESULTS);
+    assert.ok(result.text.includes('"type":"message_stop"'), result.text);
+  });
+  test('Native Anthropic with forward_headers=false still forwards anthropic-beta', { format: 'anthropic', provider: { forward_headers: false } }, async f => {
+    const result = await post(f, '/messages', chatBody, false, { ...safeguardsBetaHeader, 'x-custom-client': 'trace' });
+    assert.equal(result.status, 200, result.text);
+    assert.equal(f.received.length, 1);
+    assert.equal(f.received[0].headers['anthropic-beta'], safeguardsBetaHeader['anthropic-beta']);
+    assert.equal(f.received[0].headers['anthropic-version'], '2023-06-01');
+    assert.equal(f.received[0].headers['x-custom-client'], undefined);
+  });
+  // 非原生上游：按官方契约返回点名 safeguards 的 400，且不发起上游请求
+  for (const [label, options, body, headers] of [
+    ['safeguards field', { format: 'openai' }, { ...chatBody, safeguards: SAFEGUARDS_REQUEST }, safeguardsBetaHeader],
+    ['beta header only', { format: 'openai' }, chatBody, safeguardsBetaHeader],
+    ['streaming safeguards field', { format: 'openai' }, { ...chatBody, stream: true, safeguards: SAFEGUARDS_REQUEST }, safeguardsBetaHeader],
+    ['test-model safeguards field', { format: 'openai', queue: ['test-model'] }, { ...chatBody, safeguards: SAFEGUARDS_REQUEST }, safeguardsBetaHeader],
+  ]) {
+    test(`Non-native upstream refuses ${label} without an upstream call`, options, async f => {
+      const result = await post(f, '/messages', body, false, headers);
+      assert.equal(result.status, 400, result.text);
+      const error = JSON.parse(result.text).error;
+      assert.equal(error.type, 'invalid_request_error');
+      assert.match(error.message, /safeguards/);
+      await sleep(20);
+      assert.equal(f.received.length, 0);
+    });
+  }
+  test('Non-native upstream without safeguards keeps the normal path', { format: 'openai' }, async f => {
+    const result = await post(f, '/messages', chatBody, false, { 'anthropic-beta': 'context-management-2025-06-27' });
+    assert.equal(result.status, 200, result.text);
+    assert.equal(f.received.length, 1);
+    assert.equal(Object.hasOwn(f.received[0].body, 'safeguards'), false);
+  });
   let failed = 0;
   for (const { name, options, run } of tests) {
     let f;

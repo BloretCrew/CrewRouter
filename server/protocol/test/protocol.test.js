@@ -84,6 +84,26 @@ test('unknown fields pass through only when encoding the same dialect', () => {
   assert.equal(anthropic.vendor_top, undefined);
 });
 
+test('Anthropic request round-trip preserves safeguards and future top-level fields', () => {
+  const source = {
+    model: 'm', max_tokens: 8, messages: [{ role: 'user', content: 'hi' }],
+    safeguards: [{ type: 'dangerous_tool_use', classifier_context: { opaque: [1, 'x'] } }],
+    vendor_extension: { enabled: true },
+  };
+  const roundTrip = protocol.codecs.anthropic.encodeRequest(protocol.codecs.anthropic.decodeRequest(source));
+  assert.deepEqual(roundTrip.safeguards, source.safeguards);
+  assert.deepEqual(roundTrip.vendor_extension, { enabled: true });
+});
+
+test('Anthropic message_delta round-trip preserves safeguard_results', () => {
+  const safeguardResults = [{ type: 'dangerous_tool_use', status: { type: 'available', tool_uses: { toolu_1: { type: 'evaluated', outcome: 'not_flagged' } } } }];
+  const event = { type: 'message_delta', delta: { stop_reason: 'end_turn', safeguard_results: safeguardResults }, usage: { output_tokens: 3 } };
+  const roundTrip = protocol.codecs.anthropic.encodeStreamEvent(protocol.codecs.anthropic.decodeStreamEvent(event));
+  assert.deepEqual(roundTrip.delta.safeguard_results, safeguardResults);
+  assert.equal(roundTrip.delta.stop_reason, 'stop');
+  assert.equal(roundTrip.usage.output_tokens, 3);
+});
+
 test('Responses codec handles input, output and stream deltas', () => {
   assert.equal(transforms.detectResponseFormat({ output: [] }), 'responses');
   const bridge = transforms.getTransform('responses', 'anthropic');

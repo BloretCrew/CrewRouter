@@ -8,6 +8,20 @@ CrewRouter 保留 Chat 和 Responses 转 OpenAI 的 `prompt_cache_key`，保留 
 
 原生 Anthropic 是有签名思考和 redacted thinking 的推荐流式接口。旧跨协议流转换不能完整表达这些内容时返回明确的能力错误，避免静默丢失数据。不要把该兼容性限制理解为可以修改或省略原生签名。
 
+## auto 模式服务端安全检查（safeguards）
+
+Claude Code auto 模式会携带 `anthropic-beta: dangerous-tool-use-2026-09-03` 与顶层字段
+`safeguards: [{ type: "dangerous_tool_use", classifier_context: … }]`，上游在同一次模型请求里返回
+`safeguard_results`（非流式在响应顶层，流式在 `message_delta` 事件的 `delta` 中）。
+
+- 原生 Anthropic 上游：请求整体透传（只覆盖网关自有的 `model`、`stream`），`anthropic-*` 协议头与
+  `safeguards` / `safeguard_results` 均不改写、不丢弃，与 `provider.forward_headers` 开关无关。
+- 非原生上游（`openai`/`gemini`/`responses`）：协议转换无法承载该字段，网关在任何上游请求、计费与限流之前返回
+  `400 invalid_request_error` 且消息点名 `safeguards`。Claude Code 会据此去掉该字段与 beta 重试，回退到本地分类。
+  不要改为静默剥离：客户端收不到结果会把本会话的 auto 模式工具调用降级为「无裁决即拒绝」；也不得伪造裁决。
+- Fusion 与 TestModel 的合成回复没有 `safeguard_results`，带 `safeguards` 时同样返回该 400；本地 `@CrewRouter` 指令拦截在带
+  `safeguards` 时让行，不再用本地合成文本应答。
+
 ## 重试规则
 
 | 情况 | 行为 |
