@@ -8914,7 +8914,7 @@ ${extractorBody}
     };
     const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
     const detail = document.createElement('div');
-    detail.className = 'trace-report-modal';
+    detail.className = 'trace-report-modal lg-scope';
     detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="blora-button" onclick="this.closest(\'.trace-report-modal\').remove()" data-variant="secondary" data-size="sm">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
     document.body.appendChild(detail);
     detail.addEventListener('click', e => { if (e.target === detail) detail.remove(); });
@@ -12752,7 +12752,7 @@ ${extractorBody}
     if (menu) return menu;
     menu = document.createElement('div');
     menu.id = 'libraryKeyBubbleMenu';
-    menu.className = 'library-key-bubble-menu';
+    menu.className = 'library-key-bubble-menu lg-scope';
     menu.setAttribute('role', 'menu');
     menu.setAttribute('aria-hidden', 'true');
     menu.hidden = true;

@@ -84,6 +84,9 @@
   适配器原先先把内容 `max-width` 改写为 `100%` 再读取，导致所有声明宽度失效、
   面板铺满视口；现在先读取声明值再改写，并把它写到面板的 `max-width` 上。
   控制台与 `admin.html` 的 46 个静态弹窗全部加了 `lg-scope`。
+- 挂在 `body` 下、由 JS 动态创建的浮层同样需要作用域：模型库 Key 气泡菜单、
+  跟踪报告浮层、脚本「AI 辅助模型」选择器、供应商标签分配下拉。
+  前三个在创建时加 `lg-scope`；供应商标签下拉在内联样式里，按类名在基础文件中换皮。
 - 旧版内容区 `.content-section` / `.section-header`：玻璃面板 + 页内标题。
 - 卡片（`.blora-card`）、统计数字（`blora-statistic`）、iOS 绿色开关（`blora-switch`）、
   组合控件（`blora-join` 改为留间距）、时间选择面板。

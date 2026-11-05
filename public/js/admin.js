@@ -5328,6 +5328,7 @@ class AdminApp {
 
     const overlay = document.createElement('div');
     overlay.id = 'scriptAiModelPickerOverlay';
+    overlay.classList.add('lg-scope');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = `
       <div role="dialog" aria-label="${t('选择 AI 辅助模型')}" style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">

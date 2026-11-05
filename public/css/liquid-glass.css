@@ -1162,3 +1162,72 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
   body.blora-page::before { transition: none; }
   :is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: none; }
 }
+
+/* ---------- 8. 挂在 body 下的浮层（不在 .lg-page 内，按类名直接换皮） ---------- */
+/* 模型库 Key 气泡菜单：厚玻璃浮层，条目圆角悬停 */
+.library-key-bubble-menu {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-group);
+  background: var(--lg-menu-bg);
+  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  color: var(--lg-fg);
+}
+.library-key-bubble-menu .expand-dropdown-divider { background: var(--lg-divider); opacity: 1; }
+.library-key-bubble-menu .library-key-bubble-item { border-radius: var(--lg-radius-item); color: var(--lg-fg); }
+.library-key-bubble-menu .library-key-bubble-item:hover,
+.library-key-bubble-menu .library-key-bubble-item.active { background: var(--lg-chip-bg); }
+.library-key-bubble-menu .library-key-bubble-dot { box-shadow: 0 0 0 1px var(--lg-glass-edge); }
+
+/* 供应商页标签分配下拉：厚玻璃浮层 */
+.provider-tag-assign-dropdown {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-group);
+  background: var(--lg-menu-bg);
+  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  color: var(--lg-fg);
+}
+.provider-tag-assign-dropdown :is(.provider-tag-assign-item, .provider-tag-assign-empty) { color: var(--lg-fg-secondary); border-radius: var(--lg-radius-item); }
+.provider-tag-assign-dropdown .provider-tag-assign-item:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+
+/* 跟踪报告全屏浮层（模型库「未查看的跟踪报告」） */
+.trace-report-modal { background: var(--lg-scrim); }
+.trace-report-dialog {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-panel);
+  background: var(--lg-sheet-bg);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow);
+  color: var(--lg-fg);
+}
+.trace-report-dialog-head h3 { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 18px; font-weight: 650; letter-spacing: -0.02em; }
+.trace-report-dialog > p { color: var(--lg-fg-secondary); }
+.trace-report-table-wrap table { border-collapse: separate; border-spacing: 0; }
+.trace-report-table-wrap th {
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.trace-report-table-wrap td { border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); }
+.trace-report-table-wrap tr:last-child td { border-bottom: 0; }
+
+/* 管理后台脚本「AI 辅助模型」选择浮层：浮层本身挂 body，内联样式写死了白底 */
+#scriptAiModelPickerOverlay { background: var(--lg-scrim) !important; }
+#scriptAiModelPickerOverlay > [role="dialog"] {
+  border: 1px solid var(--lg-glass-border-strong) !important;
+  border-radius: var(--lg-radius-panel) !important;
+  background: var(--lg-sheet-bg) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow) !important;
+  color: var(--lg-fg) !important;
+}
+#scriptAiModelPickerOverlay [role="dialog"] > div { border-color: var(--lg-divider) !important; }
+#scriptAiModelPickerOverlay [role="dialog"] span,
+#scriptAiModelPickerOverlay [role="dialog"] div[style*="muted-foreground"] { color: var(--lg-fg-secondary) !important; }
