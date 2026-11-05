@@ -108,7 +108,8 @@
 6. 排行榜 `#leaderboardPage`：玻璃排行表（名次徽章、头像、当前用户行高亮、页脚） — 已完成
 7. 积分 `#balancePage`：余额数字、Team 与限额卡、进度条 — 已完成
 8. 操作日志 `#auditLogsPage`：动作筛选胶囊、玻璃日志行、详情展开、分页 — 已完成
-9. 下一步：提示词 `#promptsPage`，之后按侧栏顺序继续。
+9. 提示词 `#promptsPage`：注入条目卡、筛选条、提示词表格、详情 / 编辑弹窗（lg-scope） — 已完成
+10. 下一步：会话 `#sessionsPage`，之后按侧栏顺序继续。
 
 `.stats-filters` 筛选条的玻璃皮肤已提到 `liquid-glass.css`，统计信息、项目工作、
 排行榜等页面直接复用，页面 CSS 只调下拉宽度与排布。

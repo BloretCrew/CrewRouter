@@ -34,22 +34,22 @@
   <link rel="stylesheet" href="/css/sliders-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=lg-2">
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-8">
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-9">
   <link rel="stylesheet" href="/css/model-library-console.css?v=lg-1">
   <link rel="stylesheet" href="/css/api-keys.css?v=lg-3">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=lg-3">
-  <link rel="stylesheet" href="/css/stats-blora.css?v=lg-8">
+  <link rel="stylesheet" href="/css/stats-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=lg-7">
   <link rel="stylesheet" href="/css/leaderboard-blora.css?v=lg-8">
-  <link rel="stylesheet" href="/css/balance-blora.css?v=lg-8">
-  <link rel="stylesheet" href="/css/audit-logs-blora.css?v=lg-8">
+  <link rel="stylesheet" href="/css/balance-blora.css?v=lg-9">
+  <link rel="stylesheet" href="/css/audit-logs-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/settings-blora.css?v=notifications-20261005">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=summary-dialog-20261010">
   <link rel="stylesheet" href="/css/blora-agent.css?v=options-layout-20261005">
-  <link rel="stylesheet" href="/css/prompts-blora.css?v=filter-labels-20261008">
+  <link rel="stylesheet" href="/css/prompts-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <script>
     (function() {
@@ -1099,7 +1099,7 @@
       </div>
 
       <!-- 提示词页面（历史自定义提示词，重复合并） -->
-      <div id="promptsPage" class="page blora-prompts-page">
+      <div id="promptsPage" class="page lg-page blora-prompts-page">
         <!-- 注入提示词配置（模型库同款卡片风格） -->
         <div class="content-section">
           <div class="section-header">
@@ -1147,7 +1147,7 @@
           <div id="promptsList" class="models-table">
             <!-- 提示词列表由 JS 动态加载 -->
           </div>
-          <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+          <div class="prompt-pager">
             <button type="button" id="promptPrevBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadCustomPrompts(app.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
             <span id="promptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
             <button type="button" id="promptNextBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadCustomPrompts(app.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
@@ -2210,7 +2210,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=lg-8"></script>
+  <script src="/js/app.js?v=lg-9"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
@@ -2399,7 +2399,7 @@
   </blora-dialog>
 
   <!-- 注入提示词编辑弹窗 -->
-  <blora-dialog id="injectPromptModal" role="dialog" aria-modal="true">
+  <blora-dialog id="injectPromptModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width:640px;">
       <div class="modal-header">
         <h3 id="injectPromptModalTitle"><span data-i18n="新建条目">新建条目</span></h3>
@@ -2421,7 +2421,7 @@
     </div>
   </blora-dialog>
 
-  <blora-dialog id="promptDetailModal" style="--blora-dialog-max-width:960px;" role="dialog" aria-modal="true">
+  <blora-dialog id="promptDetailModal" class="lg-scope" style="--blora-dialog-max-width:960px;" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3 id="promptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>

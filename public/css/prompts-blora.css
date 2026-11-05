@@ -1,124 +1,145 @@
-/* Blora surface migration for the prompts page. */
-.blora-prompts-page {
-  --prompt-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --prompt-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
-}
+/* =========================================================================
+   提示词 · Liquid Glass（第九个迁移页）
+   通用皮肤见 liquid-glass.css（.content-section、.admin-filter-bar 筛选条、
+   blora-dialog 玻璃面板、models-table 表格）；
+   本文件只做本页布局：注入条目卡、提示词筛选条、列表表格、分页与详情弹窗。
+   ========================================================================= */
 
-.blora-prompts-page > .content-section {
-  border: var(--prompt-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
-}
-
-.blora-prompts-page .section-header h2 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-prompts-page .admin-filter-bar {
-  gap: var(--blora-space-2);
-  padding: var(--blora-space-3);
-  border: var(--prompt-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-prompts-page .admin-filter-bar .blora-input {
-  min-height: 2.5rem;
-  border-color: color-mix(in srgb, var(--border) 55%, transparent);
-  background: var(--blora-color-surface-default);
-}
-
-.blora-prompts-page .models-table {
-  overflow-x: auto;
-  border: var(--prompt-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
-}
-
-.blora-prompts-page .models-table table {
-  min-width: 48rem;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.blora-prompts-page .models-table th {
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-  border-bottom: var(--prompt-border-soft);
-}
-
-.blora-prompts-page .models-table td {
-  border-bottom: var(--prompt-border-soft);
-  color: var(--blora-color-text-emphasis);
-}
-
-.blora-prompts-page .models-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.blora-prompts-page .models-table tbody tr:hover {
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-prompts-page #injectPromptsList {
+/* ---------- 注入提示词卡：玻璃卡，悬停提亮；与模型库卡片同一材质层级 ---------- */
+#promptsPage #injectPromptsList {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--blora-space-3);
+  gap: 12px;
+  padding: 0 !important;
 }
-
-.blora-prompts-page #injectPromptsList .model-library-item {
+#promptsPage #injectPromptsList .model-library-item {
   min-height: 0;
-  padding: var(--blora-space-5);
-  border: var(--prompt-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 18px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
 }
+#promptsPage #injectPromptsList .model-library-item:hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+}
+#promptsPage #injectPromptsList .model-library-item.model-hidden { opacity: 0.62; }
+#promptsPage #injectPromptsList .model-library-item-info { gap: 6px; }
+#promptsPage #injectPromptsList .model-library-item-name { color: var(--lg-fg); font-size: 14px; font-weight: 600; }
+#promptsPage #injectPromptsList .model-library-item-desc { color: var(--lg-fg-secondary); font-size: 12.5px; }
+#promptsPage #injectPromptsList .model-library-item-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 
-.blora-prompts-page #injectPromptsList .model-library-item:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  background: var(--blora-color-surface-raised);
-  box-shadow: var(--blora-shadow-2);
+/* ---------- 提示词筛选条：沿用调用记录同款分组底容器 ---------- */
+#promptsPage .admin-filter-bar { margin-block-end: 16px; }
+#promptsPage .admin-filter-bar > input {
+  min-width: 200px;
+  min-height: 40px;
+  padding-block: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+#promptsPage .admin-filter-bar > blora-select { display: block; flex: 0 1 150px; min-inline-size: 0; }
+#promptsPage .admin-filter-bar > .blora-button { --blora-button-height: 40px; min-height: 40px; }
+#promptsPage .admin-filter-bar .filter-info { margin-inline-start: auto; }
+
+/* ---------- 列表：玻璃表格卡 ---------- */
+#promptsPage #promptsList {
+  overflow-x: auto;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#promptsPage #promptsList table { min-inline-size: 48rem; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+#promptsPage #promptsList th {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: start;
+  white-space: nowrap;
+}
+#promptsPage #promptsList td { padding: 11px 14px; border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); }
+#promptsPage #promptsList tbody tr:last-child td { border-bottom: 0; }
+#promptsPage #promptsList tbody tr { transition: background-color var(--lg-dur-fast) var(--lg-ease); }
+#promptsPage #promptsList tbody tr:hover { background: var(--lg-group-bg); }
+#promptsPage #promptsList .cell-clip { color: var(--lg-fg); }
+#promptsPage #promptsList .cell-clip > div:last-child { color: var(--lg-fg-tertiary) !important; }
+#promptsPage #promptsList .cell-actions .blora-button { --blora-button-height: 30px; min-height: 30px; }
+
+/* ---------- 分页 ---------- */
+#promptsPage .prompt-pager { display: flex; justify-content: center; align-items: center; gap: 8px; margin-block-start: 16px; }
+#promptsPage .prompt-pager > span { color: var(--lg-fg-secondary); font-size: 12.5px; }
+#promptsPage .prompt-pager .blora-button { --blora-button-height: 32px; min-height: 32px; }
+
+/* ---------- 详情弹窗内容 ---------- */
+#promptsPage #promptDetailContent,
+#promptDetailModal #promptDetailContent { color: var(--lg-fg); }
+#promptDetailModal {
+  --blora-dialog-max-width: 960px;
+}
+#promptDetailModal::part(panel) { max-width: min(60rem, calc(100vw - 2rem)) !important; }
+#promptDetailModal #promptDetailContent > div[style*="grid"] { border-bottom-color: var(--lg-divider) !important; }
+#promptDetailModal #promptDetailContent pre {
+  border: 1px solid var(--lg-divider) !important;
+  border-radius: 12px !important;
+  background: var(--lg-group-bg) !important;
+  color: var(--lg-fg) !important;
+  font-family: var(--lg-font-mono) !important;
+}
+#promptDetailModal #promptDetailContent h4 { color: var(--lg-fg); font-size: 14px; font-weight: 600; }
+#promptDetailModal .prompt-refs-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; }
+#promptDetailModal .prompt-refs-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: start;
+}
+#promptDetailModal .prompt-refs-table td { padding: 8px 12px; border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); font-size: 12.5px; }
+#promptDetailModal .prompt-refs-table tbody tr:last-child td { border-bottom: 0; }
+#promptDetailModal .prompt-refs-table code { background: transparent; color: var(--lg-fg-secondary); }
+
+/* 注入条目编辑弹窗 */
+#injectPromptModal::part(panel) { max-width: min(40rem, calc(100vw - 2rem)) !important; }
+#injectPromptModal #injectPromptKeyList {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 12px;
+  background: var(--lg-group-bg);
+}
+#injectPromptModal #injectPromptKeyList label { border-bottom-color: var(--lg-divider) !important; }
+#injectPromptModal #injectPromptKeyList label:last-child { border-bottom: 0 !important; }
+#injectPromptModal #injectPromptContent {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 12px;
+  background: var(--lg-group-bg);
+  color: var(--lg-fg);
+  font-family: var(--lg-font-mono) !important;
 }
 
 @media (max-width: 720px) {
-  .blora-prompts-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .blora-prompts-page .admin-filter-bar {
-    align-items: stretch;
-    flex-wrap: wrap;
-  }
-
-  .blora-prompts-page .admin-filter-bar .blora-input,
-  .blora-prompts-page .admin-filter-bar .blora-button {
-    flex: 1 1 100%;
-  }
-
-  .blora-prompts-page #injectPromptsList {
-    grid-template-columns: 1fr;
-  }
+  #promptsPage > .content-section { padding: 18px; }
+  #promptsPage #injectPromptsList { grid-template-columns: minmax(0, 1fr); }
+  #promptsPage .admin-filter-bar { align-items: stretch; }
+  #promptsPage .admin-filter-bar > input,
+  #promptsPage .admin-filter-bar > blora-select { flex: 1 1 100%; inline-size: 100%; }
+  #promptsPage .admin-filter-bar > .blora-button { flex: 1 1 auto; inline-size: auto; }
+  #promptsPage .admin-filter-bar .filter-info { flex: 1 1 100%; margin-inline-start: 0; text-align: end; }
+  #promptDetailModal #promptDetailContent > div[style*="grid"] { grid-template-columns: minmax(0, 1fr) !important; }
 }
-
-.blora-prompts-page .admin-filter-bar > blora-select { display: block; flex: 1 1 10rem; width: 100%; min-width: 0; border: 0; background: transparent; box-shadow: none; }
-.blora-prompts-page .admin-filter-bar > blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
-.blora-prompts-page #injectPromptsList .model-library-item-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-2); }
-#promptDetailTitle { overflow-wrap: anywhere; }
-#promptDetailContent > div > span, #promptDetailContent pre { min-width: 0; overflow-wrap: anywhere; }
-#promptDetailContent .prompt-refs-table { width: 100%; min-width: 36rem; border-collapse: collapse; }
-#promptDetailContent .prompt-refs-table th, #promptDetailContent .prompt-refs-table td { padding: var(--blora-space-3); text-align: start; border-bottom: var(--blora-border-subtle); }
-#promptDetailContent .prompt-refs-table th { background: var(--blora-color-surface-raised); }
-@media (max-width: 720px) {
-  .blora-prompts-page .admin-filter-bar blora-select { flex-basis: 100%; }
-  #promptDetailContent > div[style*="display:grid"] { grid-template-columns: minmax(0, 1fr) !important; }
+@media (prefers-reduced-motion: reduce) {
+  #promptsPage #injectPromptsList .model-library-item { transition: none; }
 }
-#promptDetailModal::part(panel) { max-width: min(60rem, calc(100vw - 2 * var(--blora-space-4))) !important; }
-
-#injectPromptModal::part(panel) { max-width: min(40rem, calc(100vw - 2 * var(--blora-space-4))) !important; }
-#injectPromptKeyList label > span { min-width: 0; overflow-wrap: anywhere; }
-#injectPromptKeyList blora-checkbox { flex-shrink: 0; }
-#injectPromptContent { box-sizing: border-box; }
