@@ -1,127 +1,200 @@
-/* Blora surface migration for the project work dashboard. */
-.blora-project-work-page {
-  --project-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --project-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
-}
+/* =========================================================================
+   项目工作 · Liquid Glass（第五个迁移页）
+   通用皮肤见 liquid-glass.css（含 .stats-filters 筛选条）；
+   本文件只做本页布局：工作台标题、统计瓷片、图表 / 最近项目 / 项目卡。
+   图表由 app.js 的 _upsertChart 按 .lg-page 作用域套用玻璃外观与系统色。
+   ========================================================================= */
 
-.blora-project-work-page > .content-section {
-  border: var(--project-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
+/* ---------- 工作台标题：分组底面板 + 状态胶囊 ---------- */
+#projectWorkPage .project-work-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-block-end: 16px;
+  padding: 20px 22px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--lg-group-bg);
 }
-
-.blora-project-work-page .project-work-heading {
-  gap: var(--blora-space-5);
-  margin-bottom: var(--blora-space-5);
-  padding: var(--blora-space-5);
-  border: var(--project-border-soft);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-project-work-page .project-work-kicker {
-  color: var(--blora-color-action-primary-default);
+#projectWorkPage .project-work-kicker {
+  color: var(--lg-accent-ink);
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.12em;
 }
-
-.blora-project-work-page .project-work-heading h3 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
+#projectWorkPage .project-work-heading h3 {
+  margin: 5px 0 6px;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+#projectWorkPage .project-work-heading p { margin: 0; color: var(--lg-fg-secondary); font-size: 13px; }
+#projectWorkPage .project-work-status {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-card-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-.blora-project-work-page .project-work-status {
-  border: var(--project-border-soft);
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-text-subtle);
+/* ---------- 筛选：沿用全局玻璃筛选条；两个下拉定宽，返回按钮跟在行末 ---------- */
+#projectWorkPage .project-work-filters { align-items: flex-end; }
+#projectWorkPage .project-work-filters .stats-filter-group { flex: 0 1 210px; }
+#projectWorkPage .project-work-filters .stats-filter-group:last-child { flex: none; }
+@media (max-width: 640px) {
+  #projectWorkPage .project-work-filters .stats-filter-group,
+  #projectWorkPage .project-work-filters .stats-filter-group:last-child { flex: 0 0 auto; }
 }
 
-.blora-project-work-page .project-work-filters {
-  border: var(--project-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
+/* ---------- 汇总瓷片：玻璃小卡 + 着色圆点标签 ---------- */
+#projectWorkPage .project-work-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 12px; margin-block-end: 16px; }
+#projectWorkPage .project-work-stat {
+  --pw-tint: var(--lg-accent);
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 18px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
 }
-
-.blora-project-work-page .project-work-filters blora-select {
+#projectWorkPage .project-work-stat:nth-child(5n + 2) { --pw-tint: var(--lg-purple); }
+#projectWorkPage .project-work-stat:nth-child(5n + 3) { --pw-tint: var(--lg-green); }
+#projectWorkPage .project-work-stat:nth-child(5n + 4) { --pw-tint: var(--lg-orange); }
+#projectWorkPage .project-work-stat:nth-child(5n + 5) { --pw-tint: var(--lg-teal); }
+#projectWorkPage .project-work-stat > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lg-fg-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+#projectWorkPage .project-work-stat > span::before {
+  content: "";
+  inline-size: 7px;
+  block-size: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--pw-tint);
+}
+#projectWorkPage .project-work-stat > strong {
   display: block;
-  width: 100%;
-  min-width: 9rem;
+  margin: 6px 0 2px;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
+#projectWorkPage .project-work-stat > small { display: block; color: var(--lg-fg-tertiary); font-size: 12px; }
 
-.blora-project-work-page .project-work-filters blora-select::part(trigger) {
-  box-sizing: border-box;
-  min-height: 2.5rem;
+/* ---------- 卡片：图表 / 最近项目 / 项目工作台 ---------- */
+#projectWorkPage :is(.project-work-chart-card, .project-work-focus-card, .project-work-list-card) {
+  padding: 18px 20px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
 }
+#projectWorkPage .project-work-card-title { align-items: baseline; gap: 12px; margin-block-end: 14px; }
+#projectWorkPage .project-work-card-title strong { color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#projectWorkPage .project-work-card-title span { color: var(--lg-fg-secondary); font-size: 12px; }
+#projectWorkPage .project-work-chart { height: 240px; }
+#projectWorkPage .project-work-grid { gap: 12px; margin-block-end: 12px; }
 
-.blora-project-work-page .project-work-summary {
-  gap: var(--blora-space-3);
+/* ---------- 最近活跃项目：发丝分隔行 ---------- */
+#projectWorkPage .project-work-recent { gap: 0; }
+#projectWorkPage .project-work-recent-item {
+  gap: 12px;
+  padding: 10px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--lg-divider);
+  border-radius: 10px;
+  color: var(--lg-fg);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease);
 }
+#projectWorkPage .project-work-recent-item:last-child { border-bottom: 0; }
+#projectWorkPage .project-work-recent-item:hover { background: var(--lg-group-bg); }
+#projectWorkPage .project-work-rank { color: var(--lg-accent-ink); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#projectWorkPage .project-work-recent-main strong { color: var(--lg-fg); font-size: 13.5px; font-weight: 600; }
+#projectWorkPage .project-work-recent-main small { margin-block-start: 3px; color: var(--lg-fg-secondary); font-size: 11.5px; }
+#projectWorkPage .project-work-arrow { color: var(--lg-fg-tertiary); }
 
-.blora-project-work-page .project-work-stat,
-.blora-project-work-page .project-work-chart-card,
-.blora-project-work-page .project-work-focus-card,
-.blora-project-work-page .project-work-list-card,
-.blora-project-work-page .project-work-project-card {
-  border: var(--project-border-soft);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-raised);
+/* ---------- 项目卡 ---------- */
+#projectWorkPage .project-work-projects { gap: 12px; }
+#projectWorkPage .project-work-project-card {
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 18px;
+  background: var(--lg-group-bg);
   box-shadow: none;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur) var(--lg-ease), transform var(--lg-dur) var(--lg-ease);
 }
-
-.blora-project-work-page .project-work-stat {
-  padding: var(--blora-space-5);
-}
-
-.blora-project-work-page .project-work-stat span,
-.blora-project-work-page .project-work-stat small,
-.blora-project-work-page .project-work-card-title span,
-.blora-project-work-page .project-work-project-metrics span,
-.blora-project-work-page .project-work-project-footer {
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-project-work-page .project-work-stat strong,
-.blora-project-work-page .project-work-card-title strong,
-.blora-project-work-page .project-work-project-title h4 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-project-work-page .project-work-recent-item {
-  border-bottom: var(--project-border-soft);
-  color: var(--blora-color-text-emphasis);
-}
-
-.blora-project-work-page .project-work-rank {
-  color: var(--blora-color-action-primary-default);
-}
-
-.blora-project-work-page .project-work-project-card {
-  transition: transform var(--blora-duration-fast) var(--blora-easing-standard), box-shadow var(--blora-duration-base) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard);
-}
-
-.blora-project-work-page .project-work-project-card:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  box-shadow: var(--blora-shadow-2);
+#projectWorkPage .project-work-project-card:hover {
+  border-color: var(--lg-glass-border-strong);
+  background: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
   transform: translateY(-1px);
 }
-
-.blora-project-work-page .project-work-project-icon {
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-action-primary-default);
+#projectWorkPage .project-work-project-icon {
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 11px;
+  background: var(--lg-accent-tint);
+  color: var(--lg-accent-ink);
+  font-size: 11px;
+  font-weight: 700;
 }
+#projectWorkPage .project-work-project-title h4 { margin: 0 0 4px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
+#projectWorkPage .project-work-project-title button { color: var(--lg-fg-tertiary); font-size: 11.5px; }
+#projectWorkPage .project-work-project-title button:hover { color: var(--lg-accent-ink); }
+#projectWorkPage .project-work-project-metrics { gap: 8px; margin: 16px 0 12px; }
+#projectWorkPage .project-work-project-metrics span { color: var(--lg-fg-secondary); font-size: 11.5px; }
+#projectWorkPage .project-work-project-metrics strong { color: var(--lg-fg); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#projectWorkPage .project-work-project-footer { color: var(--lg-fg-secondary); font-size: 11.5px; }
 
-.blora-project-work-page .project-work-project-title button {
-  color: var(--blora-color-text-subtle);
+/* ---------- 加载 / 空状态 ---------- */
+#projectWorkPage .project-work-loading,
+#projectWorkPage .project-work-empty { min-height: 96px; gap: 5px; color: var(--lg-fg-secondary); font-size: 13px; }
+#projectWorkPage .project-work-loading::before {
+  content: "";
+  inline-size: 18px;
+  block-size: 18px;
+  border: 2px solid var(--lg-chip-hover);
+  border-top-color: var(--lg-accent);
+  border-radius: 50%;
+  animation: pw-spin 0.8s linear infinite;
 }
+#projectWorkPage .project-work-empty strong { color: var(--lg-fg); }
+#projectWorkPage .project-work-error strong { color: var(--lg-red-ink); }
+@keyframes pw-spin { to { transform: rotate(360deg); } }
 
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  #projectWorkPage .project-work-grid,
+  #projectWorkPage .project-work-projects { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 800px) {
-  .blora-project-work-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .blora-project-work-page .project-work-heading {
-    padding: var(--blora-space-4);
-  }
+  #projectWorkPage .project-work-heading { flex-direction: column; gap: 12px; padding: 16px 18px; }
+}
+@media (max-width: 560px) {
+  #projectWorkPage .project-work-summary { grid-template-columns: minmax(0, 1fr); }
+  #projectWorkPage .project-work-stat { padding: 14px 16px; }
+  #projectWorkPage :is(.project-work-chart-card, .project-work-focus-card, .project-work-list-card) { padding: 16px; }
+  #projectWorkPage .project-work-project-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #projectWorkPage .project-work-loading::before { animation: none; }
+  #projectWorkPage .project-work-project-card:hover { transform: none; }
 }

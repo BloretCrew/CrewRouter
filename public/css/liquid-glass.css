@@ -729,6 +729,52 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 :is(.lg-page, .lg-scope) .blora-step__title { color: var(--lg-fg); font-weight: 500; }
 :is(.lg-page, .lg-scope) .blora-spinner { border-color: var(--lg-chip-hover); border-top-color: var(--lg-accent); }
 
+/* 筛选条（.stats-filters：统计信息、项目工作、排行榜共用）：
+   分组底 + 顶部小标签 + 白色胶囊下拉；最后一项（重置 / 返回按钮）跟在行末 */
+:is(.lg-page, .lg-scope) .stats-filters {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  margin-block-end: 20px;
+  padding: 12px 14px 14px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--lg-group-bg);
+}
+:is(.lg-page, .lg-scope) .stats-filter-group { display: flex; flex: 1 1 160px; flex-direction: column; gap: 6px; min-width: 0; }
+:is(.lg-page, .lg-scope) .stats-filter-group:last-child { flex: none; }
+:is(.lg-page, .lg-scope) .stats-filter-label { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; }
+:is(.lg-page, .lg-scope) .stats-filters blora-select { display: block; width: 100%; }
+:is(.lg-page, .lg-scope) .stats-filters blora-select::part(trigger),
+:is(.lg-page, .lg-scope) .admin-filter-bar blora-select::part(trigger) {
+  box-sizing: border-box;
+  min-height: 40px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  line-height: 40px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+:is(.lg-page, .lg-scope) .stats-filters blora-select::part(trigger):hover,
+:is(.lg-page, .lg-scope) .admin-filter-bar blora-select::part(trigger):hover { background: var(--lg-card-bg-hover); }
+:is(.lg-page, .lg-scope) .stats-filters .blora-button { --blora-button-height: 40px; min-height: 40px; justify-self: start; }
+:is(.lg-page, .lg-scope) .stats-custom-range {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 16px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: var(--lg-group-bg);
+}
+:is(.lg-page, .lg-scope) .stats-custom-range input[type="date"] { inline-size: auto; }
+@media (max-width: 640px) {
+  :is(.lg-page, .lg-scope) .stats-filters { flex-direction: column; align-items: stretch; }
+  :is(.lg-page, .lg-scope) .stats-filter-group,
+  :is(.lg-page, .lg-scope) .stats-filter-group:last-child { flex: 0 0 auto; inline-size: 100%; }
+}
+
 /* 旧版内容区（.content-section + .section-header）：玻璃面板 + 页内标题 */
 .lg-page .content-section,
 .lg-page .content-section:hover {
