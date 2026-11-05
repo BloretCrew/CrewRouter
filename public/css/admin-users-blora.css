@@ -1,123 +1,49 @@
-/* Blora surface migration for the admin user management page. */
-.blora-admin-users-page {
-  --users-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --users-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+/* =========================================================================
+   用户管理 · Liquid Glass（管理后台第一个迁移页）
+   通用皮肤见 liquid-glass.css（.content-section、admin-stat-card、admin-filter-bar、
+   users-table / models-table、admin-pagination、blora-dialog 玻璃面板）；
+   本文件只做本页剩余布局与列排版。
+   ========================================================================= */
+
+.lg-page.blora-admin-users-page > .content-section { padding: 24px; }
+
+.lg-page.blora-admin-users-page > .content-section > h2 {
+  margin-block: 0 16px;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
-.blora-admin-users-page > .content-section {
-  border: var(--users-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
-}
+.lg-page.blora-admin-users-page .users-table table { min-inline-size: 60rem; }
+.lg-page.blora-admin-users-page .users-table th:first-child { padding-inline-start: 18px; }
+.lg-page.blora-admin-users-page .users-table th:last-child { padding-inline-end: 18px; }
+.lg-page.blora-admin-users-page .users-table td:first-child { padding-inline-start: 18px; }
+.lg-page.blora-admin-users-page .users-table td:last-child { padding-inline-end: 18px; }
+.lg-page.blora-admin-users-page .users-table td strong { color: var(--lg-fg); font-weight: 600; }
+.lg-page.blora-admin-users-page .users-table td[style*="color:var(--muted-foreground)"] { color: var(--lg-fg-secondary) !important; }
+.lg-page.blora-admin-users-page .users-table td[style*="tabular-nums"] { font-variant-numeric: tabular-nums; }
+.lg-page.blora-admin-users-page .users-table td [style*="status-success"] { color: var(--lg-green-ink) !important; }
 
-.blora-admin-users-page > .content-section > h2 {
-  margin-top: 0;
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
+/* 编辑用户弹窗使用旧版 .modal-content 结构 */
+#editUserModal.lg-scope .modal-content { color: var(--lg-fg); }
+#editUserModal.lg-scope .modal-header h3 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
-
-.blora-admin-users-page .admin-stat-cards {
-  gap: var(--blora-space-3);
-}
-
-.blora-admin-users-page .admin-stat-card {
-  border: var(--users-border-soft);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-raised);
-  box-shadow: var(--blora-shadow-1);
-}
-
-.blora-admin-users-page .admin-stat-card-value,
-.blora-admin-users-page .admin-stat-card-label {
-  color: var(--blora-color-text-primary);
-}
-
-.blora-admin-users-page .admin-filter-bar {
-  gap: var(--blora-space-2);
-  padding: var(--blora-space-3);
-  border: var(--users-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-admin-users-page blora-select {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.blora-admin-users-page blora-select::part(trigger) {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 2.5rem;
-}
-
-.blora-admin-users-page .admin-filter-bar .input {
-  min-height: 2.5rem;
-  border-color: color-mix(in srgb, var(--border) 55%, transparent);
-  background: var(--blora-color-surface-default);
-}
-
-.blora-admin-users-page .admin-filter-bar .blora-button {
-  min-height: 2.5rem;
-  padding-inline: var(--blora-space-4);
-  border-radius: var(--blora-radius-md);
-  font-family: var(--blora-font-body);
-  font-size: var(--blora-text-sm);
-  font-weight: 600;
-}
-
-.blora-admin-users-page .admin-filter-bar .blora-button svg {
-  flex: 0 0 auto;
-}
-
-.blora-admin-users-page .users-table {
-  overflow-x: auto;
-  border: var(--users-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
-}
-
-.blora-admin-users-page .users-table table {
-  min-width: 60rem;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.blora-admin-users-page .users-table th {
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-  border-bottom: var(--users-border-soft);
-}
-
-.blora-admin-users-page .users-table td {
-  border-bottom: var(--users-border-soft);
-  color: var(--blora-color-text-emphasis);
-}
-
-.blora-admin-users-page .users-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.blora-admin-users-page .users-table tbody tr:hover {
-  background: var(--blora-color-surface-raised);
-}
+#editUserModal.lg-scope .form-group label { color: var(--lg-fg); font-size: 13px; font-weight: 500; }
+#editUserModal.lg-scope .form-group small,
+#editUserModal.lg-scope .modal-body p[style*="muted-foreground"] { color: var(--lg-fg-secondary) !important; }
 
 @media (max-width: 640px) {
-  .blora-admin-users-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .blora-admin-users-page .admin-filter-bar .input,
-  .blora-admin-users-page .admin-filter-bar .blora-button {
-    width: 100%;
-    flex: 1 1 100%;
-  }
+  .lg-page.blora-admin-users-page > .content-section { padding: 18px; }
+  .lg-page.blora-admin-users-page .admin-stat-cards { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .lg-page.blora-admin-users-page .admin-filter-bar { align-items: stretch; flex-direction: column; }
+  .lg-page.blora-admin-users-page .admin-filter-bar > .input,
+  .lg-page.blora-admin-users-page .admin-filter-bar > input,
+  .lg-page.blora-admin-users-page .admin-filter-bar > .blora-button { inline-size: 100%; }
 }
-
-.blora-admin-users-page .admin-stat-card-icon img { filter: brightness(0) saturate(100%); opacity: .7; }

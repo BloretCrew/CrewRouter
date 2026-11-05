@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-users-blora.css?v=invite-team-select-20261008">
+  <link rel="stylesheet" href="/css/admin-users-blora.css?v=lg-1">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=cards-20261005">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=model-cards-20261005">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=admin-editor-20261021c">
@@ -52,6 +52,7 @@
   <link rel="stylesheet" href="/css/admin-settings-blora.css?v=report-granularity-select-20261008">
   <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-dialogs-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-12">
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -199,7 +200,7 @@
       <div id="adminModelLibraryPage" class="page blora-model-library"></div>
 
       <!-- 用户管理页面 -->
-      <div id="adminUsersPage" class="page blora-admin-users-page">
+      <div id="adminUsersPage" class="page lg-page blora-admin-users-page">
         <div class="content-section">
           <h2><span data-i18n="用户管理">用户管理</span></h2>
           <div id="userStatsCards" class="admin-stat-cards"></div>
@@ -1604,7 +1605,7 @@
   </div>
 
   <!-- 编辑用户模态框 -->
-  <blora-dialog id="editUserModal" role="dialog" aria-modal="true">
+  <blora-dialog id="editUserModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="编辑用户">编辑用户</span></h3>

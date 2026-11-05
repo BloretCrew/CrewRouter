@@ -924,6 +924,11 @@ blora-dialog.lg-scope::part(close-button):hover { background: var(--lg-chip-hove
 blora-dialog.lg-scope::part(close-button):focus-visible { outline: 2px solid var(--lg-accent); outline-offset: 2px; }
 blora-dialog.lg-scope::part(body) { padding: 20px 26px; color: var(--lg-fg); font-size: 13.5px; }
 blora-dialog.lg-scope::part(footer) { padding: 14px 24px 22px; }
+/* 旧版弹窗里的表单字段 / Blora 下拉与输入框同宽 */
+blora-dialog.lg-scope .form-group > blora-select,
+blora-dialog.lg-scope .form-group > .input,
+blora-dialog.lg-scope .form-group > .blora-input { box-sizing: border-box; inline-size: 100%; }
+blora-dialog.lg-scope .form-group > blora-select { display: block; }
 blora-dialog.lg-scope > [slot="footer"] { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 blora-dialog.lg-scope > [slot="footer"] .blora-button { --blora-button-height: 36px; min-height: 36px; min-inline-size: 76px; padding-inline: 18px; }
 /* Dialog.confirm / alert 生成的提示框：标题加粗一行，说明为次级色 */
@@ -1044,6 +1049,97 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
   .blora-page .content-header .theme-toggle { display: none; }
   .blora-page .content-header h1 { font-size: 28px; }
 }
+
+/* ---------- 6b. 管理后台通用组件：统计瓷片、筛选条、表格、分页 ---------- */
+:is(.lg-page, .lg-scope) .admin-stat-cards { gap: 12px; margin-block-end: 18px; }
+:is(.lg-page, .lg-scope) .admin-stat-card {
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
+}
+:is(.lg-page, .lg-scope) .admin-stat-card:hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+}
+:is(.lg-page, .lg-scope) .admin-stat-card-clickable.active {
+  border-color: var(--lg-accent);
+  background-color: var(--lg-accent-tint);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-accent);
+}
+:is(.lg-page, .lg-scope) .admin-stat-card-icon {
+  border: 0;
+  border-radius: 12px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+}
+:is(.lg-page, .lg-scope) .admin-stat-card-icon.blue { background: var(--lg-accent-tint); color: var(--lg-accent-ink); }
+:is(.lg-page, .lg-scope) .admin-stat-card-icon.green { background: color-mix(in srgb, var(--lg-green) 16%, transparent); color: var(--lg-green-ink); }
+:is(.lg-page, .lg-scope) .admin-stat-card-icon.amber { background: color-mix(in srgb, var(--lg-orange) 16%, transparent); color: var(--lg-orange-ink); }
+:is(.lg-page, .lg-scope) .admin-stat-card-icon.purple { background: color-mix(in srgb, var(--lg-purple) 16%, transparent); color: var(--lg-purple-ink); }
+:is(.lg-page, .lg-scope) .admin-stat-card-icon.rose { background: color-mix(in srgb, var(--lg-pink) 16%, transparent); color: var(--lg-pink-ink); }
+:is(.lg-page, .lg-scope) .admin-stat-card-icon svg { stroke: currentColor; }
+:is(.lg-page, .lg-scope) .admin-stat-card-value {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+:is(.lg-page, .lg-scope) .admin-stat-card-label { color: var(--lg-fg-secondary); font-size: 12px; }
+
+:is(.lg-page, .lg-scope) .admin-filter-bar {
+  gap: 10px;
+  margin-block-end: 16px;
+  padding: 8px;
+  border-radius: 20px;
+  background: var(--lg-group-bg);
+}
+:is(.lg-page, .lg-scope) .admin-filter-bar > .input,
+:is(.lg-page, .lg-scope) .admin-filter-bar > input {
+  min-height: 40px;
+  padding-block: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+:is(.lg-page, .lg-scope) .admin-filter-bar > .blora-button { --blora-button-height: 40px; min-height: 40px; }
+:is(.lg-page, .lg-scope) .admin-filter-bar .filter-info { color: var(--lg-fg-secondary); font-size: 12.5px; }
+
+:is(.lg-page, .lg-scope) .users-table,
+:is(.lg-page, .lg-scope) .models-table,
+:is(.lg-page, .lg-scope) .table-scroll {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+:is(.lg-page, .lg-scope) :is(.users-table, .models-table) table { border-collapse: separate; border-spacing: 0; }
+:is(.lg-page, .lg-scope) :is(.users-table, .models-table) th {
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:is(.lg-page, .lg-scope) :is(.users-table, .models-table) td {
+  border-bottom: 1px solid var(--lg-divider);
+  color: var(--lg-fg);
+}
+:is(.lg-page, .lg-scope) :is(.users-table, .models-table) tbody tr:last-child td { border-bottom: 0; }
+:is(.lg-page, .lg-scope) :is(.users-table, .models-table) tbody tr:hover { background: var(--lg-group-bg); }
+:is(.lg-page, .lg-scope) :is(.users-table, .models-table) :is(.cell-actions, .cell-actions-cell) .blora-button { --blora-button-height: 30px; min-height: 30px; }
+
+:is(.lg-page, .lg-scope) .admin-pagination { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+:is(.lg-page, .lg-scope) .admin-pagination-summary { color: var(--lg-fg-secondary); font-size: 12.5px; }
 
 /* ---------- 7. 无障碍与降级 ---------- */
 /* 系统「减少透明度」：玻璃改为实色，保留圆角、层级与描边 */
