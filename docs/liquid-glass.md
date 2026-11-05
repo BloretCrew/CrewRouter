@@ -120,8 +120,10 @@
 13. 管理后台（`admin.html`，独立页面，Blora 2.0.8）：`liquid-glass.css` 已接入，
     壳层同样生效；通用管理组件（统计瓷片、`admin-filter-bar`、
     `users-table` / `models-table`、分页）的玻璃皮肤写在基础文件里。
-    用户管理 `#adminUsersPage`、编辑用户弹窗（lg-scope） — 已完成
-14. 下一步：管理后台其余页面，按侧栏顺序（模型库、统计信息、调用错误、操作日志、
+    用户管理 `#adminUsersPage`、编辑用户弹窗（lg-scope） — 已完成；
+    模型库 `#adminModelLibraryPage`（顶部说明 / 范围 / 筛选玻璃面板、供应商卡、
+    模型卡、供应商额度折叠卡） — 已完成
+14. 下一步：管理后台其余页面，按侧栏顺序（统计信息、调用错误、操作日志、
     提示词、插件管理、系统设置）。
 
 `.stats-filters` 筛选条的玻璃皮肤已提到 `liquid-glass.css`，统计信息、项目工作、
