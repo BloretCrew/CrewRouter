@@ -578,3 +578,138 @@
 #sessionSummaryModal .summary-modal-body { max-height: none; overflow: visible; overflow-wrap: anywhere; }
 #sessionSummaryModal .modal-body { min-height: 0; overflow-y: auto; }
 #sessionSummaryModal .modal-footer { flex-wrap: wrap; gap: var(--blora-space-2); }
+
+/* =========================================================================
+   Liquid Glass：会话页玻璃皮肤（列表卡、筛选条、详情时间线、总结弹窗）
+   ========================================================================= */
+
+/* ---------- 面板 / 标题 ---------- */
+.lg-page.blora-sessions-page .session-panel {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page.blora-sessions-page .session-panel__header h2 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.lg-page.blora-sessions-page .session-panel__header p { color: var(--lg-fg-secondary); }
+
+/* ---------- 筛选条：分组底容器，胶囊控件 ---------- */
+.lg-page.blora-sessions-page .session-filter-bar {
+  gap: 8px;
+  padding: 8px;
+  border-radius: 20px;
+  background: var(--lg-group-bg);
+}
+.lg-page.blora-sessions-page .session-filter-bar blora-select { min-inline-size: 9rem; }
+.lg-page.blora-sessions-page .session-filter-bar blora-select::part(trigger) {
+  box-sizing: border-box;
+  min-height: 40px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  line-height: 40px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+.lg-page.blora-sessions-page .session-filter-bar blora-select::part(trigger):hover { background: var(--lg-card-bg-hover); }
+.lg-page.blora-sessions-page .session-filter-bar .blora-button { --blora-button-height: 40px; min-height: 40px; }
+.lg-page.blora-sessions-page .session-filter-info { color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .session-search { flex: 1 1 14rem; min-inline-size: 12rem; }
+.lg-page.blora-sessions-page .session-search input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']) {
+  block-size: 40px;
+  background: var(--lg-surface);
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+
+/* ---------- 会话卡片：玻璃卡，悬停提亮（.blora-card 已由基础皮肤处理描边/底色） ---------- */
+.lg-page.blora-sessions-page .session-card { border-radius: 18px; gap: 12px; }
+.lg-page.blora-sessions-page .session-card:hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+}
+.lg-page.blora-sessions-page .session-card__title { color: var(--lg-fg); }
+.lg-page.blora-sessions-page .session-card__key { color: var(--lg-fg-tertiary); font-family: var(--lg-font-mono); }
+.lg-page.blora-sessions-page :is(.session-card__cwd, .session-card__preview, .session-card-meta) { color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .session-card__badges { border-top-color: var(--lg-divider); }
+.lg-page.blora-sessions-page .session-search-excerpt { color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .session-search-excerpt mark.search-hit { background: color-mix(in srgb, var(--lg-yellow) 30%, transparent); color: var(--lg-fg); }
+.lg-page.blora-sessions-page .session-list__notice { color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .session-pagination { margin-block-start: 18px; }
+
+/* ---------- 详情：时间线与事件卡 ---------- */
+.lg-page.blora-sessions-page .session-detail__meta { color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .session-timeline { border-left: 2px solid var(--lg-divider); }
+.lg-page.blora-sessions-page .timeline-event {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 14px;
+  background: var(--lg-card-bg);
+  box-shadow: var(--lg-rim);
+}
+.lg-page.blora-sessions-page .timeline-event::before { box-shadow: 0 0 0 3px transparent; }
+.lg-page.blora-sessions-page .timeline-event-tag { color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .timeline-event.role-user .timeline-event-tag { color: var(--lg-accent-ink); }
+.lg-page.blora-sessions-page .timeline-event.role-assistant .timeline-event-tag { color: var(--lg-green-ink); }
+.lg-page.blora-sessions-page .timeline-event-text { color: var(--lg-fg); }
+.lg-page.blora-sessions-page .role-user-text {
+  border: 1px solid color-mix(in srgb, var(--lg-accent) 26%, transparent);
+  border-left: 3px solid var(--lg-accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--lg-accent) 8%, transparent);
+}
+.lg-page.blora-sessions-page .role-assistant-text {
+  border: 1px solid color-mix(in srgb, var(--lg-green) 24%, transparent);
+  border-left: 3px solid var(--lg-green);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--lg-green) 7%, transparent);
+}
+.lg-page.blora-sessions-page .timeline-event details summary { color: var(--lg-fg); }
+.lg-page.blora-sessions-page .timeline-event details summary:hover,
+.lg-page.blora-sessions-page .timeline-event details[open] > summary { color: var(--lg-accent-ink); }
+.lg-page.blora-sessions-page .tool-args { color: var(--lg-fg-tertiary); }
+.lg-page.blora-sessions-page :is(.timeline-event details pre, .tool-args-full, .tool-result-text) {
+  border: 1px solid var(--lg-divider);
+  border-radius: 12px;
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+}
+.lg-page.blora-sessions-page .tool-result-block { border-left: 2px solid var(--lg-divider); }
+.lg-page.blora-sessions-page .timeline-record-head { border-top: 1px dashed var(--lg-divider); color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .timeline-record-cached { color: var(--lg-green-ink); }
+.lg-page.blora-sessions-page .timeline-event.type-tool_result.tool-result-error .tool-result-text {
+  border-color: color-mix(in srgb, var(--lg-red) 35%, transparent);
+  background: color-mix(in srgb, var(--lg-red) 6%, transparent);
+}
+.lg-page.blora-sessions-page .tool-error-tag { background: color-mix(in srgb, var(--lg-red) 14%, transparent); color: var(--lg-red-ink); }
+.lg-page.blora-sessions-page .thinking-block summary { color: var(--lg-fg-secondary); }
+.lg-page.blora-sessions-page .thinking-text { color: var(--lg-fg-secondary); }
+
+/* 总结内联块：玻璃卡 + 强调色左边线 */
+.lg-page.blora-sessions-page .session-summary-inline {
+  border: 1px solid var(--lg-glass-border);
+  border-left: 3px solid var(--lg-accent);
+  border-radius: 14px;
+  background: var(--lg-card-bg);
+  box-shadow: var(--lg-rim);
+}
+.lg-page.blora-sessions-page .session-summary-inline__head strong { color: var(--lg-fg); }
+.lg-page.blora-sessions-page .summary-inline-time { color: var(--lg-fg-tertiary); }
+
+/* 总结弹窗 */
+#sessionSummaryModal.lg-scope .session-summary-modal-meta { color: var(--lg-fg-secondary); }
+#sessionSummaryModal .session-summary-md { color: var(--lg-fg); }
+#sessionSummaryModal .session-summary-md pre { border: 1px solid var(--lg-divider); border-radius: 12px; background: var(--lg-group-bg); font-family: var(--lg-font-mono); }
+
+@media (max-width: 640px) {
+  .lg-page.blora-sessions-page .session-filter-bar { padding: 8px; }
+  .lg-page.blora-sessions-page .session-filter-bar .blora-button,
+  .lg-page.blora-sessions-page .session-filter-bar blora-select,
+  .lg-page.blora-sessions-page .session-search { flex: 1 1 100%; margin-inline-start: 0; }
+  .lg-page.blora-sessions-page .session-detail__header { gap: 12px; }
+}

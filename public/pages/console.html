@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/css/sliders-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=lg-2">
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-9">
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-11">
   <link rel="stylesheet" href="/css/model-library-console.css?v=lg-1">
   <link rel="stylesheet" href="/css/api-keys.css?v=lg-3">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=lg-3">
@@ -47,7 +47,7 @@
   <link rel="stylesheet" href="/css/audit-logs-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/settings-blora.css?v=notifications-20261005">
-  <link rel="stylesheet" href="/css/sessions-blora.css?v=summary-dialog-20261010">
+  <link rel="stylesheet" href="/css/sessions-blora.css?v=lg-10">
   <link rel="stylesheet" href="/css/blora-agent.css?v=options-layout-20261005">
   <link rel="stylesheet" href="/css/prompts-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
@@ -1156,7 +1156,7 @@
       </div>
 
       <!-- 会话页面（经网关的客户端会话聚合，只读） -->
-      <div id="sessionsPage" class="page blora-sessions-page">
+      <div id="sessionsPage" class="page lg-page blora-sessions-page">
         <section class="blora-card session-panel" id="sessionsListWrap" aria-labelledby="sessionsTitle">
           <div class="session-panel__header">
             <div>
@@ -1691,7 +1691,7 @@
             <button type="button" class="blora-button" onclick="app.saveHookNotifySelection()" data-variant="primary"><span data-i18n="保存">保存</span></button>
           </div>
         </blora-dialog>
-  <blora-dialog id="sessionSummaryModal" role="dialog" aria-modal="true">
+  <blora-dialog id="sessionSummaryModal" class="lg-scope" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width:640px;">
       <div class="modal-header">
         <div>
@@ -2210,7 +2210,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=lg-9"></script>
+  <script src="/js/app.js?v=lg-10"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

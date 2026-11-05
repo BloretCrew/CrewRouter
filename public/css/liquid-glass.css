@@ -892,6 +892,7 @@ blora-dialog.lg-scope > .modal-content .modal-close:hover { background: var(--lg
 /* 对话框：玻璃面板（HTML-Clock .settings-modal：blur 60px + saturate 200% + 高光描边），
    关闭按钮为圆形灰底、悬停旋转（.settings-close）。对话框加 .lg-scope 即可启用 */
 blora-dialog.lg-scope::part(panel) {
+  box-sizing: border-box;
   border: 1px solid var(--lg-glass-border-strong);
   border-radius: var(--lg-radius-sheet);
   background-color: var(--lg-sheet-bg);
@@ -899,6 +900,8 @@ blora-dialog.lg-scope::part(panel) {
   -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
   backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
   box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 40px 100px var(--lg-sheet-shadow);
+  /* 组件的回弹曲线会短暂放大面板（超过 max-width），玻璃面板改为平滑淡入上浮 */
+  transition: opacity var(--lg-dur) var(--lg-ease), transform var(--lg-dur) var(--lg-ease-out);
 }
 blora-dialog.lg-scope::part(header) { padding: 22px 24px 16px 26px; }
 blora-dialog.lg-scope::part(title) {

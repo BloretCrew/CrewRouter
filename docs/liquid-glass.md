@@ -78,6 +78,8 @@
 - 表单：字段标签次级小字；`blora-fieldset` 为 iOS 分组底；步骤条强调色。
 - 对话框：玻璃面板（blur 60px + saturate 200%），圆形关闭按钮悬停旋转；
   由 `blora-dialog.js` 托管的旧版 `.modal-content` 弹窗同样改为玻璃面板。
+  面板用 `box-sizing: border-box`（描边不吃宽度），并把组件的回弹曲线换成
+  `--lg-ease-out`：回弹会在动画中途把面板放大到超过 `max-width`。
 - 旧版内容区 `.content-section` / `.section-header`：玻璃面板 + 页内标题。
 - 卡片（`.blora-card`）、统计数字（`blora-statistic`）、iOS 绿色开关（`blora-switch`）、
   组合控件（`blora-join` 改为留间距）、时间选择面板。
@@ -109,7 +111,9 @@
 7. 积分 `#balancePage`：余额数字、Team 与限额卡、进度条 — 已完成
 8. 操作日志 `#auditLogsPage`：动作筛选胶囊、玻璃日志行、详情展开、分页 — 已完成
 9. 提示词 `#promptsPage`：注入条目卡、筛选条、提示词表格、详情 / 编辑弹窗（lg-scope） — 已完成
-10. 下一步：会话 `#sessionsPage`，之后按侧栏顺序继续。
+10. 会话 `#sessionsPage`：会话面板、筛选条、会话卡、详情时间线与事件卡、内联总结、
+    总结弹窗（lg-scope） — 已完成
+11. 下一步：Blora Agent `#bloraAgentPage`，之后按侧栏顺序继续。
 
 `.stats-filters` 筛选条的玻璃皮肤已提到 `liquid-glass.css`，统计信息、项目工作、
 排行榜等页面直接复用，页面 CSS 只调下拉宽度与排布。
@@ -147,7 +151,8 @@ node scripts/test-unified-provider-browser.js
 
 迁移后通过：`test-agent-model-library-browser.js`、`test-client-config-browser.js`、
 `test-provider-editor-pages-browser.js`、`test-unified-provider-browser.js`、
-`test-api-key-card-controls-browser.js`。
+`test-api-key-card-controls-browser.js`、`test-session-attachments-browser.js`、
+`test-session-summary-dialog-browser.js`。
 
 `test-library-sticky-alignment-browser.js`、`test-model-card-badges-browser.js`、
 `test-inject-uptime-menu-browser.js`、`test-library-closed-keys-browser.js`、
