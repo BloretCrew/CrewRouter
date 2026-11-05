@@ -295,6 +295,9 @@ function cacheRouteContext() {
     proxyPool: { getProxyAgent: async () => null, getProxies: async () => [] },
     MAX_UPSTREAM_ATTEMPTS: 1, UPSTREAM_TIMEOUT: 1000, UPSTREAM_STREAM_TIMEOUT: 1000,
     AbortSignal,
+    // api.js 的埋点函数来自 utils/request-metrics，vm 切片不会带进导入语句。
+    getRequestMetrics: () => ({ beginAttempt: () => ({ markFirstByte() {}, markToken() {}, finish() { return {}; } }) }),
+    markActiveFirstByte: () => {}, markActiveToken: () => {},
   });
   for (const name of ['addFourthCacheBreakpoint', 'convertOpenAIContentToAnthropic', 'normalizeMessageRole']) {
     const start = routeSource.indexOf(`function ${name}(`);

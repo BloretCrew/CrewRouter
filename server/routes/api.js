@@ -2373,12 +2373,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
             const data = line.slice(6).trim();
             try {
               const parsed = JSON.parse(data);
-              const block = parsed.content_block;
-              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
-                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
-                error.code = 'unsupported_stream_thinking';
-                throw error;
-              }
+              // 思考签名只在 Anthropic 协议内有意义，OpenAI/Responses 形状无法承载；
+              // 丢弃签名与 redacted_thinking，但继续转发 thinking 明文，不能因此中断整个流。
               if (parsed.error || parsed.type === 'error') {
                 const failure = new Error('Upstream stream reported an error');
                 failure.code = 'upstream_stream_error';
@@ -2466,12 +2462,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
             const data = line.slice(6).trim();
             try {
               const parsed = JSON.parse(data);
-              const block = parsed.content_block;
-              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
-                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
-                error.code = 'unsupported_stream_thinking';
-                throw error;
-              }
+              // 思考签名只在 Anthropic 协议内有意义，OpenAI/Responses 形状无法承载；
+              // 丢弃签名与 redacted_thinking，但继续转发 thinking 明文，不能因此中断整个流。
               if (parsed.error || parsed.type === 'error') {
                 const failure = new Error('Upstream stream reported an error');
                 failure.code = 'upstream_stream_error';
@@ -4423,11 +4415,8 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     if (typeof delta.content === 'string' && delta.content) attempt.markToken('content');
     if (Array.isArray(delta.tool_calls) && delta.tool_calls.length) attempt.markToken('tool');
     if (typeof delta.reasoning_content === 'string' && delta.reasoning_content) attempt.markToken('reasoning');
-    if (Array.isArray(delta.content) && delta.content.some(block => ['thinking', 'redacted_thinking'].includes(block?.type))) {
-      const error = new Error('Opaque thinking requires the native Anthropic streaming endpoint');
-      error.code = 'unsupported_stream_thinking';
-      throw error;
-    }
+    // OpenAI 上游若回传 Anthropic 形状的 thinking 块，这些块在 Chat 协议里没有
+    // 对应表示，丢弃即可；reasoning_content 的正常路径在上方处理，不应中断整个流。
     if (typeof delta.content === 'string' && delta.content) {
       await ensureTextBlockStarted();
       totalContent += delta.content;
@@ -5228,12 +5217,8 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
   };
 
   const handleParsed = async (parsed) => {
-    const block = parsed.content_block;
-    if (block?.type === 'redacted_thinking' || parsed.delta?.type === 'signature_delta' || (block?.type === 'thinking' && String(block.signature || '').trim())) {
-      const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
-      error.code = 'unsupported_stream_thinking';
-      throw error;
-    }
+    // 思考签名与 redacted_thinking 在 Responses 形状里没有对应表示，丢弃即可；
+    // thinking 明文仍会作为 reasoning summary 下发，不能因为签名中断整个流。
     if (parsed.error || parsed.type === 'error') {
       const failure = new Error('Upstream stream reported an error');
       failure.code = 'upstream_stream_error';

@@ -73,7 +73,12 @@ const context = vm.createContext({
   Logger: { warn() {}, info() {}, error() {}, stream() {} },
   pluginHooks: { hasSubscribers: () => false },
   normalizeUsageTokens,
-  wireShapes
+  wireShapes,
+  // api.js 从 utils/request-metrics 导入这两个埋点函数；vm 切片只取函数体，
+  // 不会带进导入语句，因此在此提供空实现。
+  markActiveFirstByte: () => {},
+  markActiveToken: () => {},
+  getRequestMetrics: () => ({ beginAttempt: () => ({ markFirstByte() {}, markToken() {}, finish() { return {}; } }) })
 });
 for (const name of [
   'safeParseJson',
@@ -465,13 +470,19 @@ assert.equal(tooled.choices[0].finish_reason, 'tool_calls');
   assert.equal(Number.isInteger(anthropicIncomplete[0].data.response.usage.output_tokens_details.reasoning_tokens), true);
   assert.equal(Number.isInteger(anthropicIncomplete[0].data.response.usage.input_tokens_details.cache_write_tokens), true);
 
+  // 思考签名在 Responses 形状里没有对应表示：丢弃签名，但流必须正常收尾，
+  // 不能像旧行为那样抛 unsupported_stream_thinking 中断整个响应。
   const signed = responsesResponse();
-  const signedWire = 'data: {"type":"content_block_start","content_block":{"type":"thinking","thinking":"","signature":"signed"}}\n\ndata: {"type":"message_stop"}\n\n';
-  await assert.rejects(context.streamAnthropicAsResponses(
+  const signedWire = 'data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":"SIGNATURE-PAYLOAD-zz9"}}\n\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"weigh options"}}\n\ndata: {"type":"content_block_stop","index":0}\n\ndata: {"type":"message_stop"}\n\n';
+  await context.streamAnthropicAsResponses(
     readerFrom([signedWire]), new TextDecoder(), signed, new EventEmitter(), 'resp_signed', 'wire-model', {},
     async chunk => signed.write(chunk), async () => {}
-  ), error => error.code === 'unsupported_stream_thinking');
-  assert.equal(signed.chunks.join('').includes('response.completed'), false);
+  );
+  const signedText = signed.chunks.join('');
+  assert.equal(signedText.includes('unsupported_stream_thinking'), false);
+  assert.equal(signedText.includes('SIGNATURE-PAYLOAD-zz9'), false, 'the signature must not leak to the client');
+  assert.equal(signedText.includes('weigh options'), true, 'thinking text still reaches the client as a reasoning summary');
+  assert.equal(signedText.includes('response.completed') || signedText.includes('response.incomplete'), true);
 
   const truncatedTool = responsesResponse();
   const truncatedWire = [
