@@ -109,3 +109,291 @@
 .store-target__domain { font-weight: 600; font-size: 14px; word-break: break-all; }
 .store-target__meta { font-size: 12px; color: var(--muted-foreground); margin-top: 2px; }
 .store-target__note { font-size: 12px; color: var(--destructive, #ef4444); margin-top: 4px; }
+
+/* =========================================================================
+   插件商店 · Liquid Glass（独立页面）
+   通用组件皮肤见 liquid-glass.css（按钮走 .blora-button，即 store 的 .blora-button
+   登录/登出按钮；其余 .btn 由本文件补玻璃外观）。
+   本文件负责商店页布局：头部、工具栏、插件卡、详情页、表单、审核行与实例弹窗。
+   ========================================================================= */
+
+body.blora-page:has(.store-shell) { background: var(--lg-bg); }
+body.blora-page:has(.store-shell)::before { opacity: 1; }
+
+.store-shell { max-inline-size: 1120px; padding: 0 16px 40px; }
+
+/* ---------- 头部：悬浮玻璃条 ---------- */
+.store-header {
+  position: sticky;
+  inset-block-start: 12px;
+  z-index: 20;
+  gap: 14px;
+  margin-block: 12px 0;
+  padding: 10px 16px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+}
+.store-brand { gap: 10px; color: var(--lg-fg); }
+.store-brand img { border-radius: 8px; box-shadow: var(--lg-rim); }
+.store-brand__name { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.store-brand__tag {
+  padding: 2px 9px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* 导航：胶囊悬停，当前项为选中玻璃块 */
+.store-nav { gap: 4px; }
+.store-nav__link {
+  padding: 6px 12px;
+  border-radius: var(--lg-radius-pill);
+  color: var(--lg-fg-secondary);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease);
+}
+.store-nav__link:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+.store-nav__link.active { background: var(--lg-selection-bg); color: var(--lg-fg); font-weight: 600; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), var(--lg-rim); }
+.store-nav__user { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.store-nav .blora-button { --blora-button-height: 32px; min-height: 32px; }
+
+/* 语言选择：头部内的小胶囊 */
+.store-shell .store-lang {
+  inline-size: auto;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background-color: var(--lg-surface);
+  color: var(--lg-fg);
+  font-family: var(--lg-font);
+  font-size: 12px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+  cursor: pointer;
+}
+
+/* ---------- 提示条 ---------- */
+.store-banner { margin-block: 14px; padding: 11px 16px; border: 1px solid transparent; border-radius: 14px; font-size: 13px; }
+.store-banner--warn { border-color: color-mix(in srgb, var(--lg-orange) 35%, transparent); background: color-mix(in srgb, var(--lg-orange) 12%, transparent); color: var(--lg-orange-ink); }
+.store-banner--ok { border-color: color-mix(in srgb, var(--lg-green) 32%, transparent); background: color-mix(in srgb, var(--lg-green) 12%, transparent); color: var(--lg-green-ink); }
+.store-banner--err { border-color: color-mix(in srgb, var(--lg-red) 32%, transparent); background: color-mix(in srgb, var(--lg-red) 10%, transparent); color: var(--lg-red-ink); }
+
+/* ---------- 工具栏：分组底 + 胶囊搜索 ---------- */
+.store-toolbar {
+  gap: 8px;
+  margin-block: 16px;
+  padding: 8px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-group-bg);
+}
+.store-toolbar input[type="search"],
+.store-toolbar input[type="text"],
+.store-toolbar select {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  color: var(--lg-fg);
+  font-family: var(--lg-font);
+  font-size: 13px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+.store-toolbar input::placeholder { color: var(--lg-fg-tertiary); }
+.store-toolbar input:focus, .store-toolbar select:focus {
+  border-color: var(--lg-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--lg-accent-glow);
+}
+.store-toolbar .btn { min-height: 38px; }
+
+/* 旧版 .btn：玻璃胶囊（商店页大量使用 .btn，未走 .blora-button） */
+.store-shell .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--lg-radius-pill);
+  font-family: var(--lg-font);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+}
+.store-shell .btn:active:not(:disabled) { transform: scale(0.96); }
+.store-shell .btn-primary {
+  border-color: transparent;
+  background: var(--lg-accent);
+  color: var(--lg-on-accent);
+  box-shadow: 0 4px 14px var(--lg-accent-glow);
+}
+.store-shell .btn-primary:hover { background: var(--lg-accent-strong); }
+.store-shell .btn-secondary { background: var(--lg-chip-bg); color: var(--lg-fg); }
+.store-shell .btn-secondary:hover { background: var(--lg-chip-hover); }
+.store-shell .btn-outline { border-color: var(--lg-glass-border); background: var(--lg-glass-bg-strong); color: var(--lg-fg); }
+.store-shell .btn-outline:hover { border-color: var(--lg-glass-border-strong); background: var(--lg-card-bg-hover); }
+.store-shell .btn-ghost { background: transparent; color: var(--lg-fg-secondary); }
+.store-shell .btn-ghost:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+.store-shell .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+.store-shell .btn:disabled, .store-shell .btn[disabled] { opacity: 0.45; pointer-events: none; }
+
+/* ---------- 插件卡：玻璃卡 ---------- */
+.store-grid { gap: 14px; }
+.store-card {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-group);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+}
+.store-card:hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+  transform: translateY(-1px);
+}
+.store-card__cover { height: 112px; background: var(--lg-group-bg); font-size: 36px; }
+.store-card__cover img { border-radius: 14px; box-shadow: var(--lg-rim); }
+.store-card__name { color: var(--lg-fg); font-size: 15px; font-weight: 650; }
+.store-card__desc { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.store-card__meta { color: var(--lg-fg-tertiary); font-size: 11.5px; }
+.store-card__tags .blora-tag, .store-card__tags .tag { font-size: 11px; }
+.store-card__actions { padding-block-start: 10px; }
+.store-card__actions .btn { inline-size: 100%; }
+
+/* 标签胶囊（store.js 的 tagChips） */
+.store-shell :is(.store-tag, .tag-chip, .store-card__tags > span, .store-related > span) {
+  padding: 2px 9px;
+  border: 0;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 11.5px;
+}
+
+/* ---------- 详情页 ---------- */
+.store-back { color: var(--lg-accent-ink); font-size: 13px; font-weight: 500; }
+.store-back:hover { color: var(--lg-accent); }
+.store-detail__head { gap: 18px; padding-block-end: 18px; border-bottom: 1px solid var(--lg-divider); }
+.store-detail__icon {
+  inline-size: 80px;
+  block-size: 80px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-group);
+  background: var(--lg-group-bg);
+  box-shadow: var(--lg-rim);
+  overflow: hidden;
+}
+.store-detail__icon img { border-radius: inherit; }
+.store-detail__title { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.025em; }
+.store-detail__lead { color: var(--lg-fg-secondary); font-size: 14px; }
+.store-detail__byline, .store-detail__stats { color: var(--lg-fg-tertiary); font-size: 12.5px; }
+.store-detail__section h3 { color: var(--lg-fg); font-size: 15px; font-weight: 650; }
+.store-detail__prose { color: var(--lg-fg); font-size: 13.5px; line-height: 1.7; }
+.store-muted { color: var(--lg-fg-secondary); font-size: 12.5px; }
+.store-shots img { border: 1px solid var(--lg-glass-border); border-radius: 12px; box-shadow: var(--lg-rim); }
+.store-side-card {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-group);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.store-side-card__meta { border-top-color: var(--lg-divider); }
+.store-side-card__meta span { color: var(--lg-fg-secondary); }
+.store-side-card__meta strong { color: var(--lg-fg); }
+.store-rating-item, .store-admin-row { border: 1px solid var(--lg-divider); border-radius: 14px; background: var(--lg-card-bg); }
+.store-rating-item__head { color: var(--lg-fg-secondary); }
+.store-stars .star { color: var(--lg-fg-quaternary); }
+.store-stars .star.on { color: var(--lg-orange); }
+.store-empty, .store-error { color: var(--lg-fg-secondary); }
+
+/* ---------- 表单 ---------- */
+.store-form label { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 500; }
+.store-form input[type="text"], .store-form input[type="url"], .store-form input[type="number"],
+.store-form textarea, .store-form select {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg);
+  font-family: var(--lg-font);
+  font-size: 13px;
+}
+.store-form input:focus, .store-form textarea:focus, .store-form select:focus {
+  border-color: var(--lg-accent);
+  outline: none;
+  background: var(--lg-surface);
+  box-shadow: 0 0 0 3px var(--lg-accent-glow);
+}
+.store-form .form-help { color: var(--lg-fg-tertiary); font-size: 11.5px; }
+
+/* ---------- 实例选择弹窗 ---------- */
+.store-modal-mask { background: var(--lg-scrim); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.store-modal {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-sheet-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow);
+  color: var(--lg-fg);
+}
+.store-modal__head { border-bottom: 1px solid var(--lg-divider); }
+.store-modal__head h3 { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.store-target { border: 1px solid var(--lg-divider); border-radius: 12px; background: var(--lg-surface); color: var(--lg-fg); }
+.store-target--ok { border-color: color-mix(in srgb, var(--lg-accent) 40%, transparent); background: var(--lg-accent-tint); }
+.store-target--ok:hover { border-color: var(--lg-accent); }
+.store-target--disabled { background: var(--lg-group-bg); color: var(--lg-fg-tertiary); }
+.store-target__domain { color: var(--lg-fg); font-size: 13.5px; font-weight: 600; }
+.store-target__meta { color: var(--lg-fg-tertiary); }
+.store-target__note { color: var(--lg-red-ink); }
+
+@media (max-width: 820px) {
+  .store-header { position: static; inset-block-start: auto; }
+  .store-detail__body { grid-template-columns: minmax(0, 1fr); }
+  .store-side-card { position: static; }
+}
+@media (max-width: 640px) {
+  .store-shell { padding: 0 12px 32px; }
+  .store-header { padding: 10px 12px; border-radius: 20px; }
+  .store-nav { gap: 2px; }
+  .store-nav__link { padding: 5px 10px; font-size: 13px; }
+  .store-toolbar { flex-wrap: wrap; }
+  .store-toolbar input[type="search"], .store-toolbar input[type="text"] { flex: 1 1 100%; min-inline-size: 0; }
+  .store-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+  .store-detail__title { font-size: 21px; }
+  .store-detail__head { gap: 12px; }
+  .store-detail__icon { inline-size: 60px; block-size: 60px; border-radius: 16px; }
+  .store-detail__icon img { inline-size: 60px; block-size: 60px; }
+  .store-modal { border-radius: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .store-card, .store-shell .btn, .store-nav__link { transition: none; }
+  .store-card:hover { transform: none; }
+}
+
+/* 详情页与提交页的标题（store.js 直接输出 h某级 / 无 class 的标题） */
+.store-main > h2,
+.store-main > .store-detail__section > h2 { color: var(--lg-fg); font-family: var(--lg-font-display); font-weight: 700; letter-spacing: -0.02em; }
+.store-main .store-detail__section h3 { border-bottom: 0; }
+.store-detail__stats { gap: 14px; }
+.store-detail__stats .store-stars .star { font-size: 13px; }
+.store-side-card .btn { min-height: 38px; }
+.store-side-card .store-card__meta { color: var(--lg-fg-tertiary); }
+.store-side-card .store-card__tags > span { inline-size: 100%; text-align: center; padding: 6px 10px; }
+
+/* 空态与错误：居中说明 */
+.store-empty, .store-error { padding: 56px 20px; font-size: 13px; }

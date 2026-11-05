@@ -22,7 +22,7 @@
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/main.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/store.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/store.css?v=lg-1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <script>
     (function() {
@@ -36,12 +36,9 @@
   </script>
   <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-13">
 </head>
-<body class="blora-page">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon blora-input" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <option value="zh">中文</option>
-      <option value="en">EN</option>
-    </select></div>
+<body class="blora-page lg-scope">
 
   <div class="store-shell">
     <header class="store-header">
@@ -62,6 +59,10 @@
         <span class="store-nav__user" id="storeUserBox" style="display:none;"></span>
         <button class="btn btn-sm btn-secondary blora-button" id="storeLoginBtn"><span data-i18n="登录">登录</span></button>
         <button class="btn btn-sm btn-outline blora-button" id="storeLogoutBtn" style="display:none;"><span data-i18n="登出">登出</span></button>
+        <select id="langToggle" class="btn btn-icon blora-input store-lang" title="Language" aria-label="Language">
+          <option value="zh">中文</option>
+          <option value="en">EN</option>
+        </select>
       </nav>
     </header>
 
