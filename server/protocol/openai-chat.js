@@ -64,13 +64,13 @@ function encodeMessage(message) {
   for (const block of message.blocks || []) {
     if (block.type === 'tool_call') {
       toolCalls.push(withPassthrough({ id: block.id, type: 'function', function: { name: block.name, arguments: block.argumentsText || JSON.stringify(block.input || {}) } }, block.passthrough?.openai));
-    } else if (block.type === 'thinking' && (block.redacted || block.signature !== undefined)) {
-      const value = block.redacted
-        ? { type: 'redacted_thinking', data: block.data ?? '' }
-        : { type: 'thinking', thinking: block.thinking || '', signature: block.signature };
-      contentBlocks.push({ type: 'raw', value: withPassthrough(value, block.passthrough?.anthropic) });
-    } else if (block.type === 'thinking') reasoning = (reasoning || '') + (block.thinking || '');
-    else contentBlocks.push(block);
+    } else if (block.type === 'thinking') {
+      // thinking 一律映射为 reasoning_content：DeepSeek/Kimi 等 OpenAI 兼容上游在带工具的
+      // 思考会话里要求回传推理内容，缺失即 400（content[].thinking must be passed back）。
+      // 签名只对 Anthropic 上游有意义，不能作为是否回传推理文本的判据；redacted_thinking
+      // 无明文可回传，且 Anthropic 形状的块不能出现在 OpenAI 的 content 数组里，只能丢弃。
+      if (!block.redacted) reasoning = (reasoning || '') + (block.thinking || '');
+    } else contentBlocks.push(block);
   }
   const result = { role: message.role, content: encodeContent(contentBlocks, 'openai') };
   if (toolCalls.length) result.tool_calls = toolCalls;

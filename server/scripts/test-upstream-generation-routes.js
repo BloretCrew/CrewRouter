@@ -171,6 +171,8 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
       }
       if (mode === 'rate-limit') { res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '7' }); res.end(JSON.stringify({ error: { message: 'limited' } })); return; }
       if (mode === 'server-error') { res.writeHead(503, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: { message: 'unavailable' } })); return; }
+      if (mode === 'payload-too-large') { res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: { message: 'request body too large' } })); return; }
+      if (mode === 'payload-too-large-null') { res.writeHead(413, { 'Content-Type': 'application/json' }); res.end('null'); return; }
       if (mode === 'reset') return req.socket.destroy();
       if (mode === 'truncated') {
         res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '1024' });
@@ -333,6 +335,17 @@ async function main() {
       assert.equal(result.status, mode === 'rate-limit' ? 429 : 503, result.text);
       assert.equal(f.received.length, 1);
       if (mode === 'rate-limit') assert.equal(result.headers['retry-after'], '7');
+    });
+  }
+  // 413 表示请求体超限，换渠道只会让用户看到误导性的第二个错误；
+  // 同时它必须保持为客户端错误，不能被映射成 api_error/server_error。
+  for (const [mode, label] of [['payload-too-large', 'JSON body'], ['payload-too-large-null', 'null body']]) {
+    test(`Chat ${mode}: 413 surfaces once and stays a client error (${label})`, { mode, fallback: true }, async f => {
+      const result = await post(f, '/chat/completions', chatBody);
+      assert.equal(result.status, 413, result.text);
+      assert.equal(f.received.length, 1, '413 must not regenerate on another proxy/Key/model');
+      assert.equal(f.received[0].body.model, 'upstream-route-primary');
+      assert.equal(JSON.parse(result.text).error.type, 'invalid_request_error', result.text);
     });
   }
   test('Chat to Anthropic preserves tool-result cache blocks', { format: 'anthropic' }, async f => {

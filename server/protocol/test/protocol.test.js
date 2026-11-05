@@ -147,7 +147,7 @@ test('provider quirks describe covered degradation decisions', () => {
 });
 
 
-test('redacted data and signed thinking round-trip through requests, responses and stream starts', () => {
+test('signed and redacted thinking survive same-dialect Anthropic round-trips', () => {
   const blocks = [
     { type: 'redacted_thinking', data: 'opaque+/==\u0000payload', vendor: 'keep' },
     { type: 'thinking', thinking: 'private', signature: 'signed+/==' },
@@ -156,20 +156,61 @@ test('redacted data and signed thinking round-trip through requests, responses a
   const request = { model: 'm', messages: [{ role: 'assistant', content: blocks }] };
   const anthropic = protocol.codecs.anthropic;
   assert.deepEqual(anthropic.encodeRequest(anthropic.decodeRequest(request)).messages[0].content, blocks);
-  const openaiRequest = protocol.convertRequest('anthropic', 'openai', request);
-  assert.deepEqual(openaiRequest.messages[0].content, blocks);
-  assert.equal(openaiRequest.messages[0].reasoning_content, undefined);
-  assert.deepEqual(protocol.convertRequest('openai', 'anthropic', openaiRequest).messages[0].content, blocks);
   const response = { model: 'm', content: blocks, stop_reason: 'end_turn' };
   assert.deepEqual(anthropic.encodeResponse(anthropic.decodeResponse(response)).content, blocks);
-  const openaiResponse = protocol.convertResponse('anthropic', 'openai', response);
-  assert.deepEqual(protocol.convertResponse('openai', 'anthropic', openaiResponse).content, blocks);
   for (const block of blocks.slice(0, 2)) {
     const event = { type: 'content_block_start', index: 0, content_block: block };
     assert.deepEqual(anthropic.encodeStreamEvent(anthropic.decodeStreamEvent(event)), event);
-    const chunk = protocol.convertStreamEvent('anthropic', 'openai', event);
-    assert.deepEqual(chunk.choices[0].delta.content, [block]);
   }
+});
+
+test('thinking text becomes reasoning_content for OpenAI upstreams regardless of signature', () => {
+  // DeepSeek/Kimi 等 OpenAI 兼容上游在带工具的思考会话里要求回传 reasoning_content；
+  // Claude Code 对非 Anthropic 上游拿到的签名恒为空串，仍必须回传推理文本。
+  for (const signature of ['', 'signed+/==', undefined]) {
+    const thinking = { type: 'thinking', thinking: 'private' };
+    if (signature !== undefined) thinking.signature = signature;
+    const request = {
+      model: 'm',
+      messages: [
+        { role: 'user', content: 'hi' },
+        { role: 'assistant', content: [thinking, { type: 'text', text: 'answer' }, { type: 'tool_use', id: 'toolu_1', name: 'Read', input: {} }] },
+        { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'ok' }] }
+      ]
+    };
+    const openai = protocol.convertRequest('anthropic', 'openai', request);
+    const assistant = openai.messages[1];
+    assert.equal(assistant.reasoning_content, 'private', `signature=${JSON.stringify(signature)}`);
+    assert.equal(assistant.content, 'answer');
+    assert.equal(assistant.tool_calls[0].function.name, 'Read');
+    // Anthropic 形状的 thinking 块不能出现在 OpenAI 的 content 数组里
+    assert.doesNotMatch(JSON.stringify(assistant.content), /redacted_thinking|"type":"thinking"/);
+  }
+});
+
+test('redacted thinking never leaks into OpenAI content', () => {
+  const request = {
+    model: 'm',
+    messages: [{ role: 'assistant', content: [{ type: 'redacted_thinking', data: 'opaque' }, { type: 'text', text: 'answer' }] }]
+  };
+  const assistant = protocol.convertRequest('anthropic', 'openai', request).messages[0];
+  assert.equal(assistant.content, 'answer');
+  assert.equal(assistant.reasoning_content, undefined);
+});
+
+test('OpenAI reasoning_content becomes an Anthropic thinking block', () => {
+  const request = {
+    model: 'm',
+    messages: [
+      { role: 'assistant', content: 'answer', reasoning_content: 'private', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'Read', arguments: '{}' } }] },
+      { role: 'tool', tool_call_id: 'c1', content: 'ok' }
+    ]
+  };
+  const [thinking, text, toolUse] = protocol.convertRequest('openai', 'anthropic', request).messages[0].content;
+  assert.equal(thinking.type, 'thinking');
+  assert.equal(thinking.thinking, 'private');
+  assert.equal(text.text, 'answer');
+  assert.equal(toolUse.type, 'tool_use');
 });
 
 test('cache TTL survives OpenAI and Anthropic content, nested results, system and tools', () => {

@@ -338,11 +338,32 @@ function isProxyErrorResult(result) {
 async function readUpstreamErrorBody(response) {
   let text = '';
   try { text = await response.text(); } catch { /* Preserve HTTP status when the error body is unreadable. */ }
-  try {
-    const body = JSON.parse(text);
-    if (body && typeof body === 'object') return body;
-  } catch { /* Non-JSON errors use the same error envelope. */ }
-  return { error: { message: text || 'Upstream request failed', type: 'server_error', code: 'upstream_error' } };
+  return parseUpstreamErrorText(text, response?.status || 502);
+}
+
+/**
+ * 把上游错误文本规整为 OpenAI 形状的错误体。
+ * 上游可能返回非 JSON、字面量 null、数组，或只有 message 没有 type；
+ * 这些情况必须保留原始状态码语义（413 仍是客户端错误），不能降级成 server_error，
+ * 否则客户端会把“请求体过大”误判成服务端故障。
+ */
+function parseUpstreamErrorText(text, statusCode) {
+  let body = null;
+  try { body = JSON.parse(text); } catch { /* 非 JSON 文本按消息处理 */ }
+  const { toOpenAIError } = require('../utils/error-mapper');
+  if (body && typeof body === 'object' && body.error && typeof body.error === 'object') {
+    // 上游已给结构化错误时保留其内容，但缺失 type 时按状态码补齐，
+    // 否则 413 这类客户端错误会因缺 type 而被当作未知服务端故障。
+    if (body.error.type) return body;
+    return toOpenAIError(body, statusCode);
+  }
+  const rawMessage = (body && typeof body === 'object' && typeof body.error === 'string')
+    ? body.error
+    : (typeof body === 'string' ? body : text);
+  return toOpenAIError(
+    { error: { message: String(rawMessage || 'Upstream request failed').slice(0, 2000) } },
+    statusCode
+  );
 }
 
 function forwardUpstreamRetryAfter(res, status, response) {
@@ -1596,18 +1617,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       forwardUpstreamRetryAfter(res, response.status, response);
       const err = await response.text();
       Logger.error(`[proxyOpenAI] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, body=${err.substring(0, 500)}`);
-      let errBody;
-      try { errBody = JSON.parse(err); } catch { errBody = null; }
-      const bodyOut = errBody?.error
-        ? errBody
-        : {
-            error: {
-              message: typeof err === 'string' ? err.slice(0, 2000) : 'Upstream request failed',
-              type: 'server_error',
-              code: 'upstream_error'
-            }
-          };
-      return respondProxyError(res, response.status, bodyOut, { suppressErrorResponse });
+      return respondProxyError(res, response.status, parseUpstreamErrorText(err, response.status), { suppressErrorResponse });
     }
 
     // 标记代理成功

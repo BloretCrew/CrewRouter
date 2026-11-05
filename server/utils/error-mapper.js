@@ -40,6 +40,7 @@ const STATUS_TO_ANTHROPIC = {
   401: 'authentication_error',
   403: 'permission_error',
   404: 'not_found_error',
+  413: 'request_too_large',
   422: 'invalid_request_error',
   429: 'rate_limit_error',
   500: 'api_error',
@@ -54,6 +55,7 @@ const STATUS_TO_OPENAI = {
   401: 'authentication_error',
   403: 'permission_error',
   404: 'not_found_error',
+  413: 'invalid_request_error',
   422: 'invalid_request_error',
   429: 'rate_limit_error',
   500: 'server_error',
@@ -102,10 +104,15 @@ function extractError(body, statusCode) {
     };
   }
 
-  // 未知格式：从状态码推断
+  // 未知格式：上游可能返回空 body、字面量 null、数组或纯文本。
+  // 非对象一律按文本处理，避免在上游已失败时再抛 TypeError 掩盖真实状态码。
+  let message;
+  if (typeof body === 'string') message = body;
+  else if (!body || typeof body !== 'object') message = String(body ?? '');
+  else message = body.message || body.error || JSON.stringify(body).slice(0, 500);
   return {
     upstreamType: STATUS_TO_OPENAI[statusCode] || 'api_error',
-    message: typeof body === 'string' ? body : (body.message || body.error || JSON.stringify(body).slice(0, 500)),
+    message: message || 'Upstream request failed',
     upstreamFormat: 'unknown',
   };
 }
