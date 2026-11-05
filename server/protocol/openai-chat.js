@@ -107,8 +107,28 @@ function decodeRequest(body) {
   };
 }
 
+/**
+ * 把一条 IR 消息展开为 0..n 条 OpenAI 消息。
+ * Anthropic 的一个 user 轮次可以并列多个 tool_result（并行工具调用），
+ * 而 OpenAI 要求每个 tool_call 对应独立的 tool 消息；只取第一个会让上游
+ * 收到缺失工具结果的历史。按原顺序逐个展开，其余内容作为后续 user 消息。
+ */
+function encodeMessages(message) {
+  const results = (message.blocks || []).filter(block => block.type === 'tool_result');
+  if (!results.length) return [encodeMessage(message)];
+  const extra = message.passthrough?.openai;
+  const encoded = results.map(result => withPassthrough({
+    role: 'tool',
+    tool_call_id: result.toolCallId,
+    content: encodeContent(result.content || [], 'openai') || ''
+  }, extra));
+  const rest = message.blocks.filter(block => block.type !== 'tool_result');
+  if (rest.length) encoded.push(encodeMessage({ ...message, blocks: rest }));
+  return encoded;
+}
+
 function encodeRequest(ir) {
-  const body = { model: ir.model, messages: (ir.messages || []).map(encodeMessage) };
+  const body = { model: ir.model, messages: (ir.messages || []).flatMap(encodeMessages) };
   const p = ir.parameters || {};
   if (p.maxTokens !== undefined) body[p.maxTokensField === 'max_tokens' ? 'max_tokens' : 'max_completion_tokens'] = p.maxTokens;
   if (p.temperature !== undefined) body.temperature = p.temperature;

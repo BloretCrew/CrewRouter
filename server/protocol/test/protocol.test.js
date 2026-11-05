@@ -198,6 +198,50 @@ test('redacted thinking never leaks into OpenAI content', () => {
   assert.equal(assistant.reasoning_content, undefined);
 });
 
+test('parallel tool results each become their own OpenAI tool message', () => {
+  // Anthropic 的一个 user 轮次可并列多个 tool_result；OpenAI 要求每个
+  // tool_call 对应独立的 tool 消息，只保留第一个会让上游收到残缺的工具历史。
+  const request = {
+    model: 'm',
+    messages: [
+      { role: 'user', content: 'do two things' },
+      { role: 'assistant', content: [
+        { type: 'thinking', thinking: 'plan', signature: '' },
+        { type: 'text', text: 'ok' },
+        { type: 'tool_use', id: 'toolu_1', name: 'Read', input: {} },
+        { type: 'tool_use', id: 'toolu_2', name: 'Bash', input: {} }
+      ] },
+      { role: 'user', content: [
+        { type: 'tool_result', tool_use_id: 'toolu_1', content: 'a' },
+        { type: 'tool_result', tool_use_id: 'toolu_2', content: 'b' }
+      ] }
+    ]
+  };
+  const messages = protocol.convertRequest('anthropic', 'openai', request).messages;
+  const tools = messages.filter(message => message.role === 'tool');
+  assert.deepEqual(tools.map(message => message.tool_call_id), ['toolu_1', 'toolu_2']);
+  assert.deepEqual(tools.map(message => message.content), ['a', 'b']);
+  assert.equal(messages[1].reasoning_content, 'plan');
+  assert.deepEqual(messages[1].tool_calls.map(call => call.id), ['toolu_1', 'toolu_2']);
+});
+
+test('text alongside parallel tool results stays on a following user message', () => {
+  const request = {
+    model: 'm',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'tool_result', tool_use_id: 'toolu_1', content: 'a' },
+        { type: 'text', text: 'also consider this' }
+      ]
+    }]
+  };
+  const messages = protocol.convertRequest('anthropic', 'openai', request).messages;
+  assert.deepEqual(messages.map(message => message.role), ['tool', 'user']);
+  assert.equal(messages[0].content, 'a');
+  assert.equal(messages[1].content, 'also consider this');
+});
+
 test('OpenAI reasoning_content becomes an Anthropic thinking block', () => {
   const request = {
     model: 'm',
