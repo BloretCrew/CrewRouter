@@ -1,98 +1,119 @@
-/* Blora surface migration for the leaderboard page. */
-.blora-leaderboard-page {
-  --leader-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --leader-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+/* =========================================================================
+   排行榜 · Liquid Glass（第六个迁移页）
+   通用皮肤见 liquid-glass.css（.content-section、.stats-filters 筛选条）；
+   本文件只做本页布局：排行表容器、名次徽章、用户头像、当前用户行与页脚。
+   ========================================================================= */
+
+/* 两个筛选下拉保持紧凑宽度，靠左排列 */
+#leaderboardPage .stats-filters .stats-filter-group,
+#leaderboardPage .stats-filters .stats-filter-group:last-child { flex: 0 1 220px; }
+@media (max-width: 640px) {
+  #leaderboardPage .stats-filters .stats-filter-group,
+  #leaderboardPage .stats-filters .stats-filter-group:last-child { flex: 0 0 auto; inline-size: 100%; }
 }
 
-.blora-leaderboard-page > .content-section {
-  border: var(--leader-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
-}
-
-.blora-leaderboard-page .section-header h2 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-leaderboard-page .stats-filters {
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-4);
-  border: var(--leader-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-leaderboard-page .stats-filters blora-select {
-  display: block;
-  width: 100%;
-  min-width: 9rem;
-}
-
-.blora-leaderboard-page .stats-filters blora-select::part(trigger) {
-  box-sizing: border-box;
-  min-height: 2.5rem;
-}
-
-.blora-leaderboard-page .stats-filter-label {
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-leaderboard-page #leaderboardContent {
+/* 表格容器：整块玻璃卡，宽表在卡内横向滚动 */
+#leaderboardPage #leaderboardContent {
   overflow-x: auto;
-  border: var(--leader-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
 }
-
-.blora-leaderboard-page .leaderboard-table {
-  min-width: 680px;
+#leaderboardPage #leaderboardContent > .table-wrapper {
+  overflow: visible;
+  border: 0;
+  border-radius: inherit;
+}
+#leaderboardPage .leaderboard-table {
+  min-inline-size: 680px;
   border-collapse: separate;
   border-spacing: 0;
+  font-size: 13px;
 }
+#leaderboardPage .leaderboard-table th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+}
+#leaderboardPage .leaderboard-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--lg-divider);
+  color: var(--lg-fg);
+  background: transparent;
+}
+#leaderboardPage .leaderboard-table tbody tr:last-child td { border-bottom: 0; }
+#leaderboardPage .leaderboard-table tbody tr { transition: background-color var(--lg-dur-fast) var(--lg-ease); }
+#leaderboardPage .leaderboard-table tbody tr:hover td { background: var(--lg-group-bg); }
 
-.blora-leaderboard-page .leaderboard-table th {
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-  border-bottom: var(--leader-border-soft);
-  font-family: var(--blora-font-body);
+/* 名次：前三名圆形渐变徽章，其余等宽数字 */
+#leaderboardPage .leaderboard-rank-cell { inline-size: 64px; padding-inline: 8px; }
+#leaderboardPage .rank-badge {
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
 }
+#leaderboardPage .rank-badge.rank-1 { background: linear-gradient(180deg, #ffd60a, #ff9f0a); }
+#leaderboardPage .rank-badge.rank-2 { background: linear-gradient(180deg, #d1d1d6, #8e8e93); }
+#leaderboardPage .rank-badge.rank-3 { background: linear-gradient(180deg, #e0a173, #b26a3a); }
+#leaderboardPage .rank-num { color: var(--lg-fg-secondary); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.blora-leaderboard-page .leaderboard-table td {
-  border-bottom: var(--leader-border-soft);
-  color: var(--blora-color-text-emphasis);
+/* 用户：头像 + 名字 + 「我」徽章 */
+#leaderboardPage .leaderboard-user-cell { gap: 10px; }
+#leaderboardPage .leaderboard-avatar {
+  inline-size: 30px;
+  block-size: 30px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 50%;
+  box-shadow: var(--lg-rim);
 }
+#leaderboardPage .leaderboard-avatar-placeholder {
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: 50%;
+  background: var(--lg-accent-tint);
+  color: var(--lg-accent-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+#leaderboardPage .leaderboard-username { color: var(--lg-fg); font-size: 13.5px; font-weight: 500; }
+#leaderboardPage .leaderboard-stat-cell { color: var(--lg-fg); font-variant-numeric: tabular-nums; }
 
-.blora-leaderboard-page .leaderboard-table tbody tr:last-child td {
-  border-bottom: 0;
-}
+/* 当前用户所在行：强调色浅染 */
+#leaderboardPage .leaderboard-current-row td,
+#leaderboardPage .leaderboard-current-row:hover td { background: var(--lg-accent-tint) !important; }
+#leaderboardPage .leaderboard-current-row .leaderboard-username { font-weight: 600; }
 
-.blora-leaderboard-page .leaderboard-table tbody tr:hover {
-  background: var(--blora-color-surface-raised);
+/* 页脚 */
+#leaderboardPage .leaderboard-footer {
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--lg-divider);
+  color: var(--lg-fg-secondary);
+  font-size: 12.5px;
+  text-align: center;
 }
-
-.blora-leaderboard-page .leaderboard-current-row,
-.blora-leaderboard-page .leaderboard-current-row:hover td {
-  background: color-mix(in srgb, var(--blora-color-action-primary-default) 8%, var(--blora-color-surface-default)) !important;
-}
-
-.blora-leaderboard-page .leaderboard-avatar-placeholder {
-  background: var(--blora-color-action-primary-default);
-}
-
-.blora-leaderboard-page .leaderboard-footer {
-  color: var(--blora-color-text-subtle);
-  padding: var(--blora-space-4);
-}
+#leaderboardPage .leaderboard-footer strong { color: var(--lg-accent-ink); font-weight: 700; }
 
 @media (max-width: 640px) {
-  .blora-leaderboard-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .blora-leaderboard-page .stats-filter-group {
-    width: 100%;
-  }
+  #leaderboardPage .leaderboard-table th,
+  #leaderboardPage .leaderboard-table td { padding-inline: 12px; }
+  #leaderboardPage #leaderboardContent { border-radius: 16px; }
 }

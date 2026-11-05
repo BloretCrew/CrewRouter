@@ -4007,16 +4007,9 @@ class ConsoleApp {
         ? u.cacheHitRate.toFixed(1) : '0.0';
 
       // 生成排名徽章
-      let rankHtml;
-      if (rank === 1) {
-        rankHtml = '<span class="rank-badge rank-1">🥇</span>';
-      } else if (rank === 2) {
-        rankHtml = '<span class="rank-badge rank-2">🥈</span>';
-      } else if (rank === 3) {
-        rankHtml = '<span class="rank-badge rank-3">🥉</span>';
-      } else {
-        rankHtml = `<span class="rank-num">${rank}</span>`;
-      }
+      const rankHtml = rank <= 3
+        ? `<span class="rank-badge rank-${rank}" aria-label="${t('第 {n} 名', { n: rank })}">${rank}</span>`
+        : `<span class="rank-num">${rank}</span>`;
 
       // 用户头像
       const avatarHtml = u.avatar
