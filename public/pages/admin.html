@@ -1794,6 +1794,7 @@
         <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="4" onclick="adminApp.setProviderEditorPage(4)"><span class="provider-editor-nav-index">5</span><span class="provider-editor-nav-copy"><strong data-i18n="测试配置">测试配置</strong><small data-i18n="模型测试 UA">模型测试 UA</small></span></button>
         <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="5" onclick="adminApp.setProviderEditorPage(5)"><span class="provider-editor-nav-index">6</span><span class="provider-editor-nav-copy"><strong data-i18n="请求头转发">请求头转发</strong><small data-i18n="Content-Type / UA">Content-Type / UA</small></span></button>
         <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="6" onclick="adminApp.setProviderEditorPage(6)"><span class="provider-editor-nav-index">7</span><span class="provider-editor-nav-copy"><strong data-i18n="标签">标签</strong><small data-i18n="分类与筛选">分类与筛选</small></span></button>
+        <button type="button" class="blora-button provider-editor-nav-item" data-variant="ghost" data-provider-page="7" onclick="adminApp.setProviderEditorPage(7)"><span class="provider-editor-nav-index">8</span><span class="provider-editor-nav-copy"><strong data-i18n="端点">端点</strong><small data-i18n="多格式与回退">多格式与回退</small></span></button>
       </nav>
       <div class="modal-body provider-editor-body">
         <div id="providerEditorAlert" class="provider-editor-alert" role="alert" hidden></div>
@@ -1811,12 +1812,12 @@
           </div>
           <div class="form-group">
             <label for="providerBaseUrl">Base URL</label>
-            <input type="text" id="providerBaseUrl" class="input" placeholder="例如：https://api.openai.com/v1" data-i18n-placeholder="例如：https://api.openai.com/v1">
+            <input type="text" id="providerBaseUrl" class="input" placeholder="例如：https://api.openai.com/v1" data-i18n-placeholder="例如：https://api.openai.com/v1" oninput="adminApp.onProviderPrimaryEndpointFieldChange()">
           </div>
           <div class="form-row-2">
             <div class="form-group">
               <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-              <blora-select id="providerFormat">
+              <blora-select id="providerFormat" onchange="adminApp.onProviderPrimaryEndpointFieldChange()">
                 <blora-option value="openai">Chat Completions</blora-option>
                 <blora-option value="responses">Responses</blora-option>
                 <blora-option value="anthropic">Anthropic Messages</blora-option>
@@ -2145,6 +2146,24 @@
               <div id="providerTagAssignment" style="display:flex;flex-wrap:wrap;gap:6px;">
                 <!-- 标签 chips 由 JS 动态填充 -->
               </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 高级：附加端点 -->
+        <details class="provider-form-section" id="providerSectionEndpoints">
+          <summary><span data-i18n="附加端点">附加端点 </span><span class="provider-form-section-hint"><span data-i18n="同一供应商的多个 URL / 格式">同一供应商的多个 URL / 格式</span></span></summary>
+          <div class="provider-form-section-body">
+            <div class="form-group">
+              <div id="providerEndpointsList" class="provider-api-keys-list"></div>
+              <button type="button" class="blora-button" id="addProviderEndpointBtn" onclick="adminApp.addProviderEndpointRow()" style="margin-top:8px;" data-variant="secondary" data-size="sm"><span data-i18n="+ 添加端点">+ 添加端点</span></button>
+              <small style="color:var(--muted-foreground);margin-top:6px;display:block;line-height:1.6;">
+                <strong><span data-i18n="主端点">主端点</span></strong> 来自上方 Base URL 与 API 格式，不可在此删除；附加端点按顺序参与回退。
+                客户端请求会优先使用<strong>原生格式</strong>的端点（Chat → OpenAI、Messages → Anthropic、Responses → Responses），命中后无需协议转换。
+                端点返回连接错误、408、429 或 5xx 时自动切换到下一个端点（流式在向客户端输出前完成切换）。
+                所有端点共用下方 Key 列表与顺序/权重策略；额度查询与密钥刷新脚本仍只使用主端点。
+                带 <code>safeguards</code> 的 Anthropic 请求只会使用 Anthropic 格式的端点。
+              </small>
             </div>
           </div>
         </details>
@@ -2608,7 +2627,7 @@
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/admin.js?v=lg-1"></script>
+  <script src="/js/admin.js?v=lg-2"></script>
   <script src="/js/admin-library-i18n.js?v=admin-library-20261014"></script>
   <script src="/js/admin-library-console-view.js?v=admin-library-20261031"></script>
   <script src="/js/admin-model-library.js?v=admin-library-20261031"></script>

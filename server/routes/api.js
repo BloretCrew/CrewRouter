@@ -92,6 +92,12 @@ const {
   buildKeyAttemptOrder,
   normalizeProviderKeyEntries
 } = require('../utils/provider-keys');
+const {
+  endpointCandidatesFor,
+  makeEndpointProvider,
+  isEndpointRetryableStatus,
+  normalizeProviderEndpoints
+} = require('../utils/provider-endpoints');
 const ResponsesUpstream = require('../utils/responses-upstream');
 const { extractAttribution, classifyCompaction } = require('../utils/attribution');
 const { extractRequestIdentity } = require('../utils/session-identity');
@@ -642,6 +648,107 @@ async function runWithProviderKeyFallback(provider, res, outerSuppress, runOnce)
     return lastResult;
   }
 
+  if (lastError) throw lastError;
+  return lastResult;
+}
+
+/** 全局上游尝试预算（与 proxy-pool 的硬上限一致） */
+function endpointBudgetExhausted(req) {
+  return (req?._upstreamAttemptContext?.upstreamAttempts || 0) >= MAX_UPSTREAM_ATTEMPTS;
+}
+
+/**
+ * 端点级失败是否值得切换到下一个端点：
+ * - 发送前连接错误（沿用 canRetryUpstreamError）
+ * - 尚未向客户端提交响应时的 408/429/5xx
+ */
+function shouldFallbackEndpoint({ error, result, req, res, hasMore, isOnlyEndpoint }) {
+  if (!hasMore || res.headersSent || endpointBudgetExhausted(req)) return false;
+  if (error) return canRetryUpstreamError(error, req?._upstreamAttemptContext);
+  // 单端点供应商保持历史语义：HTTP 状态错误直接回给客户端，不做任何重发
+  if (isOnlyEndpoint) return false;
+  return isProxyErrorResult(result) && isEndpointRetryableStatus(result.status);
+}
+
+/** 每次端点尝试前重置模型身份与限流头，避免失败端点污染成功端点的记录 */
+function beginEndpointAttempt(req, provider, endpoint, index, total, clientProtocol) {
+  const ctx = req?._upstreamAttemptContext;
+  if (ctx) {
+    ctx.modelIdentity = null;
+    ctx.retryAfter = null;
+  }
+  Logger.info(
+    `[EndpointFallback] provider=${provider.id} endpoint=${index + 1}/${total}` +
+    ` label=${endpoint.primary ? 'Primary' : endpoint.label} format=${endpoint.format}` +
+    ` url=${cleanBaseUrl(endpoint.url)} protocol=${clientProtocol}`
+  );
+}
+
+/**
+ * 供应商内多端点回退：端点外层、Key 内层。
+ * 中间端点只返回 __proxyError / 抛错，不写响应；只有最后一个端点沿用外层语义。
+ * @param {object} provider
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {boolean} outerSuppress - 外层（模型队列）是否还要 suppress
+ * @param {'chat'|'anthropic'|'responses'} clientProtocol
+ * @param {(providerWithKey: object, opts: object) => Promise<any>} runOnce
+ * @param {((endpoint: object) => boolean) | null} [endpointFilter] 额外筛选端点（如 safeguards 只允许 Anthropic）
+ */
+async function runWithEndpointFallback(provider, req, res, outerSuppress, clientProtocol, runOnce, endpointFilter = null) {
+  const candidates = endpointCandidatesFor(provider, clientProtocol)
+    .filter(e => typeof endpointFilter !== 'function' || endpointFilter(e));
+  if (candidates.length === 0) {
+    throw Object.assign(new Error(`Provider format is unsupported for ${clientProtocol}.`), {
+      code: 'unsupported_provider_format',
+      status: 501
+    });
+  }
+
+  let lastResult = null;
+  let lastError = null;
+  for (let i = 0; i < candidates.length; i++) {
+    const endpoint = candidates[i];
+    const hasMoreEndpoints = i < candidates.length - 1;
+    const suppressErrorResponse = !!outerSuppress || hasMoreEndpoints;
+    const endpointProvider = makeEndpointProvider(provider, endpoint);
+    beginEndpointAttempt(req, provider, endpoint, i, candidates.length, clientProtocol);
+    try {
+      lastResult = await runWithProviderKeyFallback(endpointProvider, res, suppressErrorResponse, async (pwk, keyOpts) => {
+        return runOnce(pwk, {
+          ...keyOpts,
+          endpoint,
+          endpointIndex: i,
+          endpointTotal: candidates.length,
+          hasMoreEndpoints,
+          suppressErrorResponse: keyOpts.suppressErrorResponse
+        });
+      });
+      lastError = null;
+    } catch (err) {
+      lastError = err;
+      lastResult = null;
+      if (shouldFallbackEndpoint({ error: err, req, res, hasMore: hasMoreEndpoints })) {
+        Logger.warn(
+          `[EndpointFallback] provider=${provider.id} endpoint=${i + 1}/${candidates.length} 异常 code=${err.code || err.name}，切换下一端点: ${err.message}`
+        );
+        continue;
+      }
+      throw err;
+    }
+
+    if (res.headersSent) return lastResult;
+
+    if (shouldFallbackEndpoint({ result: lastResult, req, res, hasMore: hasMoreEndpoints, isOnlyEndpoint: candidates.length === 1 })) {
+      Logger.warn(
+        `[EndpointFallback] provider=${provider.id} endpoint=${i + 1}/${candidates.length} status=${lastResult.status}，切换下一端点`
+      );
+      continue;
+    }
+    return lastResult;
+  }
+
+  Logger.warn(`[EndpointFallback] provider=${provider.id} 全部 ${candidates.length} 个端点均失败`);
   if (lastError) throw lastError;
   return lastResult;
 }
@@ -2954,20 +3061,27 @@ async function handleChatCompletion(req, res) {
     const liveCallStart = Date.now();
 
     try {
-      Logger.info(`[Chat] 转发到上游 attempt=${i + 1}/${modelQueue.length}: provider=${provider.id}(${provider.name}), format=${provider.format}, url=${cleanBaseUrl(provider.base_url)}, model=${model}, keys=${normalizeProviderKeyEntries(provider).length || 1}`);
-      result = await runWithProviderKeyFallback(provider, res, suppressErrorResponse, async (pwk, keyOpts) => {
+      const chatEndpoints = endpointCandidatesFor(provider, 'chat');
+      Logger.info(`[Chat] 转发到上游 attempt=${i + 1}/${modelQueue.length}: provider=${provider.id}(${provider.name}), format=${provider.format}, url=${cleanBaseUrl(provider.base_url)}, endpoints=${chatEndpoints.length}, model=${model}, keys=${normalizeProviderKeyEntries(provider).length || 1}`);
+      if (chatEndpoints.length === 0) {
+        throw Object.assign(new Error('Gemini provider protocol is not supported by this gateway yet.'), {
+          code: 'unsupported_provider_format',
+          status: 501
+        });
+      }
+      result = await runWithEndpointFallback(provider, req, res, suppressErrorResponse, 'chat', async (pwk, keyOpts) => {
         providerWithKey = pwk;
         const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
-        if (provider.format === 'gemini') {
+        if (pwk.format === 'gemini') {
           const error = new Error('Gemini provider protocol is not supported by this gateway yet.');
           error.code = 'unsupported_provider_format';
           error.status = 501;
           throw error;
         }
-        if (provider.format === 'responses') {
+        if (pwk.format === 'responses') {
           return proxyChatToResponses(pwk, model, body, !!stream, res, req, proxyOpts);
         }
-        if (provider.format === 'anthropic') {
+        if (pwk.format === 'anthropic') {
           return proxyAnthropic(pwk, model, body, !!stream, res, req, proxyOpts);
         }
         return proxyOpenAI(pwk, model, body, !!stream, res, req, proxyOpts);
@@ -3631,8 +3745,9 @@ async function handleAnthropicMessage(req, res) {
       return res.status(500).json(lastError.body);
     }
 
-    // 非原生 Anthropic 上游无法承载 safeguards，按官方契约返回点名 safeguards 的 400
-    if (provider.format !== 'anthropic' && safeguardsRequested) {
+    // 非原生 Anthropic 上游无法承载 safeguards，按官方契约返回点名 safeguards 的 400。
+    // safeguards 请求只允许停留在 Anthropic 端点上，绝不回退到 OpenAI 端点。
+    if (safeguardsRequested && !endpointCandidatesFor(provider, 'anthropic').some(e => e.format === 'anthropic')) {
       return sendSafeguardsUnsupported(res, provider);
     }
 
@@ -3644,21 +3759,33 @@ async function handleAnthropicMessage(req, res) {
 
     const liveCallStart = Date.now();
     try {
-      Logger.info(`[Anthropic] 转发到上游 attempt=${i + 1}/${modelQueue.length}: provider=${provider.id}(${provider.name}), format=${provider.format}, url=${cleanBaseUrl(provider.base_url)}, model=${model}, keys=${normalizeProviderKeyEntries(provider).length || 1}`);
-      result = await runWithProviderKeyFallback(provider, res, suppressErrorResponse, async (pwk, keyOpts) => {
-        providerWithKey = pwk;
-        const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
-        if (provider.format === 'gemini' || provider.format === 'responses') {
-          const error = new Error(`Provider format ${provider.format} is unsupported for Anthropic Messages.`);
-          error.code = 'unsupported_provider_format';
-          error.status = 501;
-          throw error;
-        }
-        if (provider.format === 'anthropic') {
-          return proxyAnthropicToAnthropic(pwk, model, anthropicBody, !!stream, res, req, proxyOpts);
-        }
-        return proxyOpenAIToAnthropic(pwk, model, anthropicBody, !!stream, res, req, proxyOpts);
-      });
+      const messagesEndpoints = endpointCandidatesFor(provider, 'anthropic')
+        .filter(e => !safeguardsRequested || e.format === 'anthropic');
+      Logger.info(`[Anthropic] 转发到上游 attempt=${i + 1}/${modelQueue.length}: provider=${provider.id}(${provider.name}), format=${provider.format}, url=${cleanBaseUrl(provider.base_url)}, endpoints=${messagesEndpoints.length}, model=${model}, keys=${normalizeProviderKeyEntries(provider).length || 1}`);
+      if (messagesEndpoints.length === 0) {
+        throw Object.assign(new Error(`Provider format ${provider.format} is unsupported for Anthropic Messages.`), {
+          code: 'unsupported_provider_format',
+          status: 501
+        });
+      }
+      result = await runWithEndpointFallback(
+        provider, req, res, suppressErrorResponse, 'anthropic',
+        async (pwk, keyOpts) => {
+          providerWithKey = pwk;
+          const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
+          if (pwk.format === 'gemini' || pwk.format === 'responses') {
+            const error = new Error(`Provider format ${pwk.format} is unsupported for Anthropic Messages.`);
+            error.code = 'unsupported_provider_format';
+            error.status = 501;
+            throw error;
+          }
+          if (pwk.format === 'anthropic') {
+            return proxyAnthropicToAnthropic(pwk, model, anthropicBody, !!stream, res, req, proxyOpts);
+          }
+          return proxyOpenAIToAnthropic(pwk, model, anthropicBody, !!stream, res, req, proxyOpts);
+        },
+        safeguardsRequested ? (e => e.format === 'anthropic') : null
+      );
     } catch (error) {
       Logger.error(`[Anthropic] 上游代理错误 attempt=${i + 1}/${modelQueue.length}: provider=${provider.id}(${provider.name}), model=${model}, error=${error.message}`);
       recordModelCall(modelConfig.id || model, false);
@@ -5834,15 +5961,15 @@ async function handleResponses(req, res) {
 
     // 非流式：在此循环内直接尝试上游并支持回退
     if (!stream) {
-        // === Responses 格式供应商直接透传（非流式）===
-      if (provider.format === 'gemini') {
+      // === 多端点：原生 Responses 透传优先，失败回退到同供应商其他端点（含转换格式）===
+      if (provider.format === 'gemini' && endpointCandidatesFor(provider, 'responses').length === 0) {
         return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
       }
-      if (provider.format === 'responses') {
-        const baseUrl = cleanBaseUrl(provider.base_url);
-        const url = upstreamUrl(baseUrl, '/responses');
-        const headers = buildUpstreamHeaders(providerWithKey, req, { 'Content-Type': 'application/json' }, 'responses');
-        if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
+
+      const runNativeResponses = async (pwk, keyOpts) => {
+        const url = upstreamUrl(cleanBaseUrl(pwk.base_url), '/responses');
+        const headers = buildUpstreamHeaders(pwk, req, { 'Content-Type': 'application/json' }, 'responses');
+        if (pwk.api_key) headers['Authorization'] = `Bearer ${pwk.api_key}`;
         // 原样透传客户端请求，仅覆盖 model；不强制注入 max_output_tokens，交由上游/客户端决定。
         const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
         if (!modelConfig.forward_reasoning_effort) {
@@ -5851,120 +5978,107 @@ async function handleResponses(req, res) {
         }
         filterResponsesLiteHeader(headers, 'responses', upstreamBody);
         if (!upstreamBody.input) {
+          if (keyOpts.suppressErrorResponse) {
+            return { __proxyError: true, status: 400, body: { error: { message: 'input is required', type: 'invalid_request_error' } }, retryable: false };
+          }
           return res.status(400).json({ error: { message: 'input is required', type: 'invalid_request_error' } });
         }
         const passthroughAttempt = getRequestMetrics(req).beginAttempt({
-          stream: false, model: upstreamModel, providerId: provider.id, format: 'responses', serviceTier: body.service_tier
+          stream: false, model: upstreamModel, providerId: pwk.id, format: 'responses', serviceTier: body.service_tier
         });
-        try {
-          const upstreamResp = await fetchWithModelIdentity(url, {
-            quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
-            method: 'POST', headers, body: JSON.stringify(upstreamBody),
-            signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
-            agent: currentProxyInfo?.agent,
-            requestContext: req._upstreamAttemptContext
-          });
-          if (!upstreamResp.ok) {
-            forwardUpstreamRetryAfter(res, upstreamResp.status, upstreamResp);
-            const responseData = await readUpstreamErrorBody(upstreamResp);
-            recordModelCall(modelConfig.id || model, false);
-            recordLiveCallTest(modelConfig.id || model, { ok: false, error: `HTTP ${upstreamResp.status}` });
-            lastError = { status: upstreamResp.status, body: responseData, retryable: isRetryableUpstreamStatus(upstreamResp.status) };
-            const willRetry = hasMore && lastError.retryable;
-            captureCallError(req, {
-              modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
-              status: upstreamResp.status, body: responseData, isFinal: !willRetry
-            });
-            if (willRetry) {
-              Logger.warn(`[Responses] 队列回退 attempt=${i + 1}/${modelQueue.length} model=${queueModelId} status=${upstreamResp.status}`);
-              continue;
-            }
-            return res.status(upstreamResp.status).json(responseData);
+        const upstreamResp = await fetchWithModelIdentity(url, {
+          quotaProvider: pwk, quotaKey: pwk.api_key,
+          method: 'POST', headers, body: JSON.stringify(upstreamBody),
+          signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
+          agent: currentProxyInfo?.agent,
+          requestContext: req._upstreamAttemptContext
+        });
+        if (!upstreamResp.ok) {
+          const responseData = await readUpstreamErrorBody(upstreamResp);
+          if (keyOpts.suppressErrorResponse) {
+            // 中间端点：不写响应，交给端点回退决定是否继续。
+            // retryable 必须保持 false，模型队列仍沿用"HTTP 错误不换模型"的历史语义。
+            // 已是最后一个端点时仍要透出 Retry-After，保持单端点行为不变。
+            if (!keyOpts.hasMoreEndpoints) forwardUpstreamRetryAfter(res, upstreamResp.status, upstreamResp);
+            return { __proxyError: true, status: upstreamResp.status, body: responseData, retryable: false };
           }
-          const responseData = await upstreamResp.json();
-          recordModelCall(modelConfig.id || model, true);
-          const _pt = responseData.usage?.input_tokens || 0;
-          const _ct = responseData.usage?.output_tokens || 0;
-          recordLiveCallTest(modelConfig.id || model, { ok: true, promptTokens: _pt, completionTokens: _ct });
-          // 注入提示词回显净化：直通响应同样剥离，且先于用量入库保证记录一致（仅启用注入的请求）
-          if (req.apiUser?.injectPrompt) {
-            scrubResponsesApiResult(responseData, req.apiUser.injectPrompt);
-          }
-          const usage = responseData.usage || {};
-          const promptTokens = usage.input_tokens || 0;
-          const completionTokens = usage.output_tokens || 0;
-          if (responseData.service_tier) passthroughAttempt.setServiceTier(responseData.service_tier);
-          const passthroughMetrics = passthroughAttempt.finish({ promptTokens, completionTokens, completed: true });
-          const totalTokens = promptTokens + completionTokens;
-          const cachedTokens = usage.cached_tokens || 0;
-          const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens });
-          if (totalTokens > 0) {
-            try {
-              const pointsToDeduct = await adjustBillingCost(calculated.weightedTokens, calculated.pointsCost, {
-                userId: req.apiUser.userId,
-                teamId: req.apiUser.teamId,
-                model: modelConfig.id || model,
-                provider: provider?.id || null,
-                requestType: 'responses',
-              });
-              // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
-              const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct });
-              const pluginMeta = await buildUsagePluginMeta({
-                userId: req.apiUser.userId,
-                model: modelConfig.id || model,
-                provider: provider?.id || null,
-                requestType: 'responses',
-                apiKeyId: req.apiUser.keyId,
-              }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
-              const localModelId = modelConfig.id || model;
-              const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-                 cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
-                 promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
-                 provider?.id || null, 'responses',
-                 typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
-                 null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-                 pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(passthroughMetrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
-        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-        req._usageRecordId = usageResult.id || null;
-              recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
-            } catch (err) {
-              Logger.error('[Responses/Passthru] 用量记录错误:', err);
-              if (err.billingFailure) {
-                if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
-                res.destroy(err);
-                return;
-              }
-            }
-          }
-          forwardUpstreamHeaders(res, upstreamResp.headers);
-          return res.json(responseData);
-        } catch (error) {
-          lastError = buildUpstreamExceptionError(error, 'openai');
-          const willRetry = hasMore && canRetryUpstreamError(error, req._upstreamAttemptContext);
+          forwardUpstreamRetryAfter(res, upstreamResp.status, upstreamResp);
+          recordModelCall(modelConfig.id || model, false);
+          recordLiveCallTest(modelConfig.id || model, { ok: false, error: `HTTP ${upstreamResp.status}` });
           captureCallError(req, {
-            modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
-            status: lastError.status, error, isFinal: !willRetry
+            modelId: modelConfig.id || model, providerId: pwk?.id, requestType: 'responses',
+            status: upstreamResp.status, body: responseData, isFinal: true
           });
-          if (willRetry) {
-            Logger.warn(`[Responses] 队列回退 attempt=${i + 1}/${modelQueue.length} model=${queueModelId} reason=exception`);
-            continue;
-          }
-          return res.status(lastError.status).json(lastError.body);
+          return res.status(upstreamResp.status).json(responseData);
         }
-      }
+        const responseData = await upstreamResp.json();
+        recordModelCall(modelConfig.id || model, true);
+        const _pt = responseData.usage?.input_tokens || 0;
+        const _ct = responseData.usage?.output_tokens || 0;
+        recordLiveCallTest(modelConfig.id || model, { ok: true, promptTokens: _pt, completionTokens: _ct });
+        // 注入提示词回显净化：直通响应同样剥离，且先于用量入库保证记录一致（仅启用注入的请求）
+        if (req.apiUser?.injectPrompt) {
+          scrubResponsesApiResult(responseData, req.apiUser.injectPrompt);
+        }
+        const usage = responseData.usage || {};
+        const promptTokens = usage.input_tokens || 0;
+        const completionTokens = usage.output_tokens || 0;
+        if (responseData.service_tier) passthroughAttempt.setServiceTier(responseData.service_tier);
+        const passthroughMetrics = passthroughAttempt.finish({ promptTokens, completionTokens, completed: true });
+        const totalTokens = promptTokens + completionTokens;
+        const cachedTokens = usage.cached_tokens || 0;
+        const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens });
+        if (totalTokens > 0) {
+          try {
+            const pointsToDeduct = await adjustBillingCost(calculated.weightedTokens, calculated.pointsCost, {
+              userId: req.apiUser.userId,
+              teamId: req.apiUser.teamId,
+              model: modelConfig.id || model,
+              provider: pwk?.id || null,
+              requestType: 'responses',
+            });
+            // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+            const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct });
+            const pluginMeta = await buildUsagePluginMeta({
+              userId: req.apiUser.userId,
+              model: modelConfig.id || model,
+              provider: pwk?.id || null,
+              requestType: 'responses',
+              apiKeyId: req.apiUser.keyId,
+            }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
+            const localModelId = modelConfig.id || model;
+            const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+               cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+               promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
+               pwk?.id || null, 'responses',
+               typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
+               null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+               pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(passthroughMetrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+            if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+            req._usageRecordId = usageResult.id || null;
+            recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
+          } catch (err) {
+            Logger.error('[Responses/Passthru] 用量记录错误:', err);
+            if (err.billingFailure) {
+              if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+              res.destroy(err);
+              return;
+            }
+          }
+        }
+        forwardUpstreamHeaders(res, upstreamResp.headers);
+        return res.json(responseData);
+      };
 
-      // 非流式：OpenAI / Anthropic 转换（多 Key fallback）
-      if (provider.format === 'gemini') {
-        return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
-      }
       const liveCallStart = Date.now();
       try {
         let result;
-        result = await runWithProviderKeyFallback(provider, res, hasMore, async (pwk, keyOpts) => {
+        result = await runWithEndpointFallback(provider, req, res, hasMore, 'responses', async (pwk, keyOpts) => {
           providerWithKey = pwk;
           const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
-          if (provider.format === 'anthropic') {
+          if (pwk.format === 'responses') return runNativeResponses(pwk, keyOpts);
+          if (pwk.format === 'anthropic') {
             return proxyAnthropicForResponses(pwk, upstreamModel, chatBody, res, req, respId, body, proxyOpts);
           }
           return proxyOpenAIForResponses(pwk, upstreamModel, chatBody, res, req, respId, body, proxyOpts);
@@ -6095,54 +6209,80 @@ async function handleResponses(req, res) {
 
   // === Responses 格式供应商直接透传 ===
   // 当上游原生支持 Responses API，直接透传请求体到 /v1/responses
-  if (provider.format === 'responses') {
-    const baseUrl = cleanBaseUrl(provider.base_url);
-    const url = upstreamUrl(baseUrl, '/responses');
-    const headers = buildUpstreamHeaders(providerWithKey, req, {
-      'Content-Type': 'application/json'
-    }, 'responses');
-    if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
-
+  if (endpointCandidatesFor(provider, 'responses').some(e => e.format === 'responses')) {
     const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
     // 未开启透传时去掉 reasoning / reasoning_effort，避免误传给上游
     if (!modelConfig.forward_reasoning_effort) {
       delete upstreamBody.reasoning;
       delete upstreamBody.reasoning_effort;
     }
-    filterResponsesLiteHeader(headers, 'responses', upstreamBody);
     // 过滤 undefined 字段
     if (!upstreamBody.input) return res.status(400).json({ error: { message: 'input is required', type: 'invalid_request_error' } });
 
     if (stream) {
-      // 流式直接透传
+      // 流式直接透传：先按端点顺序尝试，成功建立上游流后才 flush 客户端 SSE 头
       const liveCallStart = Date.now();
-      const attempt = getRequestMetrics(req).beginAttempt({
-        stream: true, model: upstreamModel, providerId: provider.id, format: 'responses', serviceTier: body.service_tier
-      });
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache, no-store');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-
-      const upstreamResp = await fetchWithModelIdentity(url, {
-        quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
-        method: 'POST', headers, body: JSON.stringify(upstreamBody),
-        signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-        agent: currentProxyInfo?.agent,
-        requestContext: req._upstreamAttemptContext
-      });
-      if (!upstreamResp.ok) {
+      const responseCandidates = endpointCandidatesFor(provider, 'responses').filter(e => e.format === 'responses');
+      let upstreamResp = null;
+      let lastAttemptError = null;
+      let attempt = null;
+      for (let ei = 0; ei < responseCandidates.length; ei++) {
+        const endpoint = responseCandidates[ei];
+        const endpointProvider = makeEndpointProvider(provider, endpoint);
+        const hasMoreEndpoints = ei < responseCandidates.length - 1;
+        beginEndpointAttempt(req, provider, endpoint, ei, responseCandidates.length, 'responses');
+        const url = upstreamUrl(cleanBaseUrl(endpoint.url), '/responses');
+        const headers = buildUpstreamHeaders(endpointProvider, req, { 'Content-Type': 'application/json' }, 'responses');
+        if (endpointProvider.api_key) headers['Authorization'] = `Bearer ${endpointProvider.api_key}`;
+        attempt = getRequestMetrics(req).beginAttempt({
+          stream: true, model: upstreamModel, providerId: endpointProvider.id, format: 'responses', serviceTier: body.service_tier
+        });
+        try {
+          upstreamResp = await fetchWithModelIdentity(url, {
+            quotaProvider: endpointProvider, quotaKey: endpointProvider.api_key,
+            method: 'POST', headers, body: JSON.stringify(upstreamBody),
+            signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
+            agent: currentProxyInfo?.agent,
+            requestContext: req._upstreamAttemptContext
+          });
+        } catch (error) {
+          upstreamResp = null;
+          lastAttemptError = error;
+          if (hasMoreEndpoints && !res.headersSent && canRetryUpstreamError(error, req._upstreamAttemptContext)) {
+            Logger.warn(`[EndpointFallback] provider=${provider.id} responses-stream endpoint=${ei + 1}/${responseCandidates.length} 异常，切换下一端点: ${error.message}`);
+            continue;
+          }
+          throw error;
+        }
+        if (upstreamResp.ok) break;
         const err = await upstreamResp.text();
+        if (hasMoreEndpoints && !res.headersSent && isEndpointRetryableStatus(upstreamResp.status)) {
+          Logger.warn(`[EndpointFallback] provider=${provider.id} responses-stream endpoint=${ei + 1}/${responseCandidates.length} status=${upstreamResp.status}，切换下一端点`);          upstreamResp = null;
+          continue;
+        }
         recordModelCall(modelConfig.id || model, false);
         recordLiveCallTest(modelConfig.id || model, { ok: false, error: `HTTP ${upstreamResp.status}` });
         captureCallError(req, {
-          modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
+          modelId: modelConfig.id || model, providerId: endpointProvider?.id, requestType: 'responses',
           status: upstreamResp.status, body: err, isFinal: true
         });
         forwardUpstreamRetryAfter(res, upstreamResp.status, upstreamResp);
         sendGenerationFailure(res, respId, upstreamResp.status, err);
         return;
       }
+      if (!upstreamResp) {
+        const error = lastAttemptError || new Error('Upstream request failed: no response');
+        lastError = buildUpstreamExceptionError(error, 'openai');
+        captureCallError(req, {
+          modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
+          status: lastError.status, error, isFinal: true
+        });
+        return res.status(lastError.status).json(lastError.body);
+      }
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-store');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
       forwardUpstreamHeaders(res, upstreamResp.headers);
       res.flushHeaders();
       const reader = upstreamResp.body.getReader();
@@ -6392,93 +6532,97 @@ async function handleResponses(req, res) {
   try {
     let result;
     if (stream) {
-      // 流式模式
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache, no-store');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-
+      // 流式模式：按端点顺序尝试，成功建立上游流后才 flush 客户端 SSE 头
       const writeWithDrain = (data) => {
         if (res.writableEnded) return false;
         const ok = res.write(data);
         return ok;
       };
       const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
-      const streamAttempt = getRequestMetrics(req).beginAttempt({
-        stream: true, model: upstreamModel, providerId: provider.id, format: provider.format
-      });
 
-      if (provider.format === 'anthropic') {
-        // Anthropic 流式
-        const baseUrl = cleanBaseUrl(provider.base_url);
-        const url = upstreamUrl(baseUrl, '/messages');
-        const headers = buildUpstreamHeaders(providerWithKey, req, {
-          'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01'
-        });
-        if (providerWithKey.api_key) headers['x-api-key'] = providerWithKey.api_key;
-
-        const systemMessage = messages.find(m => m.role === 'system');
-        const nonSystemMessages = messages.filter(m => m.role !== 'system');
-        const upstreamBody = protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks });
-        const response = await fetchWithModelIdentity(url, {
-          quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
-          method: 'POST', headers, body: JSON.stringify(upstreamBody),
-          signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-          agent: currentProxyInfo?.agent,
-          requestContext: req._upstreamAttemptContext
-        });
-        if (!response.ok) {
-          forwardUpstreamRetryAfter(res, response.status, response);
-          const err = await response.text();
-          Logger.error(`[Responses/Anthropic] 上游错误: status=${response.status}`);
-          captureCallError(req, {
-            modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
-            status: response.status, body: err, isFinal: true
-          });
-          sendGenerationFailure(res, respId, response.status, err);
-          return;
+      const streamCandidates = endpointCandidatesFor(provider, 'responses');
+      let streamAttempt = null;
+      let response = null;
+      let streamEndpoint = null;
+      let lastStreamError = null;
+      let streamErrText = null;
+      for (let ei = 0; ei < streamCandidates.length; ei++) {
+        const endpoint = streamCandidates[ei];
+        const endpointProvider = makeEndpointProvider(provider, endpoint);
+        const hasMoreEndpoints = ei < streamCandidates.length - 1;
+        beginEndpointAttempt(req, provider, endpoint, ei, streamCandidates.length, 'responses');
+        const isAnthropic = endpoint.format === 'anthropic';
+        const url = upstreamUrl(cleanBaseUrl(endpoint.url), isAnthropic ? '/messages' : '/chat/completions');
+        const headers = isAnthropic
+          ? buildUpstreamHeaders(endpointProvider, req, { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' })
+          : buildUpstreamHeaders(endpointProvider, req, { 'Content-Type': 'application/json' });
+        if (endpointProvider.api_key) {
+          if (isAnthropic) headers['x-api-key'] = endpointProvider.api_key;
+          else headers['Authorization'] = `Bearer ${endpointProvider.api_key}`;
         }
-
-        forwardUpstreamHeaders(res, response.headers);
-        res.flushHeaders();
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        result = await streamAnthropicAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain);
-      } else {
-        // OpenAI 流式
-        const baseUrl = cleanBaseUrl(provider.base_url);
-        const url = upstreamUrl(baseUrl, '/chat/completions');
-        const headers = buildUpstreamHeaders(providerWithKey, req, {
-          'Content-Type': 'application/json'
+        const upstreamPayload = isAnthropic
+          ? protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks })
+          : chatBody;
+        streamAttempt = getRequestMetrics(req).beginAttempt({
+          stream: true, model: upstreamModel, providerId: endpointProvider.id, format: endpoint.format
         });
-        if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
-
-        const response = await fetchWithModelIdentity(url, {
-          quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
-          method: 'POST', headers, body: JSON.stringify(chatBody),
-          signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-          agent: currentProxyInfo?.agent,
-          requestContext: req._upstreamAttemptContext
-        });
-        if (!response.ok) {
-          forwardUpstreamRetryAfter(res, response.status, response);
-          const err = await response.text();
-          Logger.error(`[Responses/OpenAI] 上游错误: status=${response.status}`);
-          captureCallError(req, {
-            modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
-            status: response.status, body: err, isFinal: true
+        try {
+          response = await fetchWithModelIdentity(url, {
+            quotaProvider: endpointProvider, quotaKey: endpointProvider.api_key,
+            method: 'POST', headers, body: JSON.stringify(upstreamPayload),
+            signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
+            agent: currentProxyInfo?.agent,
+            requestContext: req._upstreamAttemptContext
           });
-          sendGenerationFailure(res, respId, response.status, err);
-          return;
+        } catch (error) {
+          response = null;
+          lastStreamError = error;
+          if (hasMoreEndpoints && !res.headersSent && canRetryUpstreamError(error, req._upstreamAttemptContext)) {
+            Logger.warn(`[EndpointFallback] provider=${provider.id} responses-stream endpoint=${ei + 1}/${streamCandidates.length} 异常，切换下一端点: ${error.message}`);
+            continue;
+          }
+          throw error;
         }
-
-        forwardUpstreamHeaders(res, response.headers);
-        res.flushHeaders();
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        result = await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain);
+        if (response.ok) { streamEndpoint = endpoint; break; }
+        streamErrText = await response.text();
+        if (hasMoreEndpoints && !res.headersSent && isEndpointRetryableStatus(response.status)) {
+          Logger.warn(`[EndpointFallback] provider=${provider.id} responses-stream endpoint=${ei + 1}/${streamCandidates.length} status=${response.status}，切换下一端点`);
+          response = null;
+          continue;
+        }
+        break;
       }
+      if (!response) {
+        const error = lastStreamError || new Error('Upstream request failed: no response');
+        lastError = buildUpstreamExceptionError(error, 'openai');
+        captureCallError(req, {
+          modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
+          status: lastError.status, error, isFinal: true
+        });
+        return res.status(lastError.status).json(lastError.body);
+      }
+      if (!response.ok) {
+        forwardUpstreamRetryAfter(res, response.status, response);
+        Logger.error(`[Responses/${streamEndpoint?.format === 'anthropic' ? 'Anthropic' : 'OpenAI'}] 上游错误: status=${response.status}`);
+        captureCallError(req, {
+          modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
+          status: response.status, body: streamErrText, isFinal: true
+        });
+        sendGenerationFailure(res, respId, response.status, streamErrText);
+        return;
+      }
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-store');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      forwardUpstreamHeaders(res, response.headers);
+      res.flushHeaders();
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      result = streamEndpoint?.format === 'anthropic'
+        ? await streamAnthropicAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain)
+        : await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain);
 
       const streamMetrics = streamAttempt.finish({
         promptTokens: result?.promptTokens,
@@ -6488,11 +6632,14 @@ async function handleResponses(req, res) {
       if (result) result.metrics = streamMetrics;
       res.end();
     } else {
-      // 非流式模式
-      if (provider.format === 'anthropic') {
-        result = await proxyAnthropicForResponses(providerWithKey, upstreamModel, chatBody, res, req, respId, body);
+      // 非流式在循环内已处理并 return，这里只在极端情况下兜底。
+      // 兜底也走端点回退，确保多端点供应商不会退回只读主端点的旧路径。
+      const fallbackEndpoint = endpointCandidatesFor(provider, 'responses')[0];
+      const fallbackProvider = fallbackEndpoint ? makeEndpointProvider(provider, fallbackEndpoint) : provider;
+      if (fallbackProvider.format === 'anthropic') {
+        result = await proxyAnthropicForResponses(fallbackProvider, upstreamModel, chatBody, res, req, respId, body);
       } else {
-        result = await proxyOpenAIForResponses(providerWithKey, upstreamModel, chatBody, res, req, respId, body);
+        result = await proxyOpenAIForResponses(fallbackProvider, upstreamModel, chatBody, res, req, respId, body);
       }
     }
 

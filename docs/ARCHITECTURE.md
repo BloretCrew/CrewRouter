@@ -136,7 +136,7 @@ Key tables (auto-migrated at startup via `server/index.js`):
 |-------|---------|
 | `users` | User accounts, balance, OAuth bindings, 2FA, passkeys |
 | `models` | AI model registry with pricing and provider mapping |
-| `providers` | Provider configurations (URL, keys, format, proxy) |
+| `providers` | Provider configurations (primary URL/format, extra endpoints, keys, proxy) |
 | `api_keys` | User API keys with per-key model binding (`current_model_id` = queue head) |
 | `api_key_models` | Ordered model queue per key (`sort_order`); failover top-to-bottom on retryable upstream errors |
 | `api_key_harness_models` | Optional single-model override per coding harness (`claude_code`, `codex`, …); missing row → default queue |
@@ -188,6 +188,33 @@ Transforms:
     openai-to-anthropic.js
     anthropic-to-openai.js
 ```
+
+---
+
+## Provider Multi-Endpoint Fallback
+
+A provider row keeps `base_url` + `format` as its **primary endpoint**. The
+optional `endpoints` JSONB column holds additional endpoints
+(`[{ url, format, enabled, label }]`); an empty array means single-endpoint
+behaviour, unchanged from before.
+
+- `server/utils/provider-endpoints.js` normalises entries, rejects `gemini`,
+  dedupes by `url+format`, and orders candidates native-format-first
+  (chat → openai, messages → anthropic, responses → responses).
+- `runWithEndpointFallback` in `server/routes/api.js` wraps
+  `runWithProviderKeyFallback`: endpoints are the outer loop, API keys the
+  inner loop, so all endpoints share the provider's key list.
+- Fallback triggers on pre-send connection errors and on HTTP 408/429/5xx
+  **before** `res.headersSent`. Streaming Responses paths defer SSE header
+  setup until the upstream stream is established.
+- Requests carrying `safeguards` only use endpoints whose format is
+  `anthropic`.
+- Single-endpoint providers keep the legacy semantics: HTTP status errors are
+  forwarded to the client without retrying.
+- Model-list fetch and connectivity ping iterate every enabled endpoint
+  (model lists are unioned so stale-model cleanup cannot delete
+  endpoint-only models). Quota queries, key-refresh scripts and quota
+  identity still read only the primary endpoint.
 
 ---
 

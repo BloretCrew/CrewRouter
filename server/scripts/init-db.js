@@ -336,6 +336,7 @@ async function initDatabase() {
         key_expires_at TIMESTAMP,
         key_last_refresh_at TIMESTAMP,
         key_last_error TEXT,
+        endpoints JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -363,6 +364,7 @@ async function initDatabase() {
       { name: 'created_by', type: 'INTEGER REFERENCES users(id)' },
       { name: 'api_keys', type: 'JSONB DEFAULT NULL' },
       { name: 'api_key_select_mode', type: "VARCHAR(20) DEFAULT 'order'" },
+      { name: 'endpoints', type: "JSONB DEFAULT '[]'::jsonb" },
       { name: 'test_user_agent', type: "TEXT DEFAULT ''" },
       { name: 'quota_schedule_enabled', type: 'BOOLEAN DEFAULT FALSE' },
       { name: 'quota_schedule_interval', type: 'INTEGER DEFAULT 3600' },

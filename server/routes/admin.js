@@ -40,6 +40,11 @@ const {
   toStorageFields,
   countProviderApiKeys
 } = require('../utils/provider-keys');
+const {
+  normalizeProviderEndpoints,
+  countProviderEndpoints,
+  normalizeEndpointsInput
+} = require('../utils/provider-endpoints');
 const { parseGrokAuthConfig } = require('../utils/grok-usage');
 const { normalizeTestUserAgent } = require('../utils/model-test');
 const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
@@ -2135,6 +2140,8 @@ router.get('/providers', requireAuth, requireProviderManager, async (req, res) =
         has_ark_secret_key: !!ark_secret_key,
         has_cpa_management_key: !!cpa_management_key,
         api_key_select_mode: getApiKeySelectMode(r),
+        endpoints: normalizeProviderEndpoints(r).filter(e => !e.primary).map(({ index, primary, ...entry }) => ({ url: entry.url, format: entry.format, enabled: entry.enabled, label: entry.label })),
+        endpoint_count: countProviderEndpoints(r),
         tags: tagMap[r.id] || []
       };
     };
@@ -2340,6 +2347,7 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
     try {
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS api_keys JSONB DEFAULT NULL`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS api_key_select_mode VARCHAR(20) DEFAULT 'order'`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS endpoints JSONB DEFAULT '[]'::jsonb`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS proxy_mode VARCHAR(20) DEFAULT 'pool'`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS proxy_url TEXT DEFAULT ''`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS proxy_use_system BOOLEAN DEFAULT FALSE`);
@@ -2401,6 +2409,17 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
     const finalScheduleEnabled = quota_schedule_enabled === true || quota_schedule_enabled === 'true';
     const finalScheduleInterval = normalizeQuotaScheduleInterval(quota_schedule_interval);
 
+    // 多端点：仅在请求体显式包含 endpoints 时校验并写入，未触碰则保留原配置
+    const endpointsProvided = Object.prototype.hasOwnProperty.call(req.body, 'endpoints');
+    let finalEndpoints = null;
+    if (endpointsProvided) {
+      const normalized = normalizeEndpointsInput(req.body.endpoints, { baseUrl: base_url, format: format || 'openai' });
+      if (!normalized.ok) {
+        return res.status(400).json({ error: '端点配置无效', errors: normalized.errors });
+      }
+      finalEndpoints = JSON.stringify(normalized.endpoints);
+    }
+
     // 多 Key：优先 api_keys 数组；否则单个 api_key
     const keyEntries = normalizeKeysInput(api_keys, api_key);
     const storage = keyEntries ? toStorageFields(keyEntries) : null;
@@ -2426,8 +2445,8 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
       INSERT INTO providers (id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
                              key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
                              content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params,
-                             quota_schedule_enabled, quota_schedule_interval, quota_script, cpa_management_url, cpa_management_key)
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $31, $32, $34, $35, $36)
+                             quota_schedule_enabled, quota_schedule_interval, quota_script, cpa_management_url, cpa_management_key, endpoints)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $31, $32, $34, $35, $36, COALESCE($38::jsonb, '[]'::jsonb))
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         base_url = EXCLUDED.base_url,
@@ -2467,14 +2486,16 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(
         ark_usage_action = EXCLUDED.ark_usage_action,
         ark_usage_params = EXCLUDED.ark_usage_params,
         quota_schedule_enabled = CASE WHEN $33 THEN EXCLUDED.quota_schedule_enabled ELSE providers.quota_schedule_enabled END,
-        quota_schedule_interval = CASE WHEN $33 THEN EXCLUDED.quota_schedule_interval ELSE providers.quota_schedule_interval END
+        quota_schedule_interval = CASE WHEN $33 THEN EXCLUDED.quota_schedule_interval ELSE providers.quota_schedule_interval END,
+        endpoints = CASE WHEN $39 THEN EXCLUDED.endpoints ELSE providers.endpoints END
     `, [providerId, name, base_url, finalApiKey || '', finalApiKeys, selectMode, format || 'openai', enabled !== false, grp || '',
         models_url || '', quota_enabled === true, finalQuotaMode, notes || '', keyMode, keyScript, keyRefreshInterval,
         proxy_enabled === true, finalProxyMode, finalProxyUrl, finalProxyUseSystem,
         content_type_mode || 'hardcoded', forward_headers !== false, finalTestUserAgent,
         ark_access_key || '', ark_secret_key || '', ark_region || 'cn-north-1', ark_service || 'ark',
         ark_usage_action || (finalQuotaMode === 'ark_afp' ? 'GetAFPUsage' : 'GetInferenceUsage'), ark_usage_params || '{}',
-        testUaProvided, finalScheduleEnabled, finalScheduleInterval, scheduleProvided, cpaQuotaScript, cpaManagementUrl, encryptedCpaKey, cpaUrlProvided]);
+        testUaProvided, finalScheduleEnabled, finalScheduleInterval, scheduleProvided, cpaQuotaScript, cpaManagementUrl, encryptedCpaKey, cpaUrlProvided,
+        finalEndpoints, endpointsProvided]);
 
     // 注册/更新密钥刷新计划
     keyRefresher.registerProvider({ id: providerId, key_mode: keyMode, key_refresh_interval: keyRefreshInterval });
@@ -2733,6 +2754,8 @@ router.get('/providers/:id', requireAuth, requireProviderManager, async (req, re
     const { cpa_management_key, ...publicProvider } = p;
     res.json({
       ...publicProvider,
+      endpoints: normalizeProviderEndpoints(p).filter(e => !e.primary).map(({ index, primary, ...entry }) => ({ url: entry.url, format: entry.format, enabled: entry.enabled, label: entry.label })),
+      endpoint_count: countProviderEndpoints(p),
       has_cpa_management_key: !!cpa_management_key,
       api_keys: entries,
       api_key: entries[0]?.key || p.api_key || '',
@@ -2779,7 +2802,7 @@ router.post('/providers/:id/toggle-enabled', requireAuth, requireProviderManager
 // 检测供应商连通性
 router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (req, res) => {
   try {
-    const providerResult = await pool.query('SELECT base_url, api_key, api_keys FROM providers WHERE id = $1', [req.params.id]);
+    const providerResult = await pool.query('SELECT base_url, format, api_key, api_keys, endpoints FROM providers WHERE id = $1', [req.params.id]);
     if (providerResult.rows.length === 0) {
       return res.status(404).json({ error: '供应商不存在' });
     }
@@ -2795,58 +2818,92 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
       headers['Authorization'] = `Bearer ${primaryKey}`;
     }
 
-    // 尝试推断的模型路径，并为无版本 Base URL 保留 /models 回退
-    const candidates = [upstreamUrl(baseUrl, '/models')];
-    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(baseUrl)) {
-      candidates.push(`${baseUrl}/models`);
-    }
-
-    for (const url of candidates) {
-      const start = Date.now();
-      try {
-        const urlCheck = await validateUrl(url);
-        if (!urlCheck.ok) continue;
-        const resp = await proxyPool.pinnedFetchValidated(urlCheck, {
-          headers,
-          signal: AbortSignal.timeout(5000),
-          redirect: 'manual'
+    const endpoints = normalizeProviderEndpoints(provider).filter(e => e.enabled !== false);
+    const endpointResults = [];
+    // 多端点：逐个端点探测；顶层字段保持与旧版一致（首个成功者）
+    for (const endpoint of endpoints) {
+      const probe = await pingBaseUrl(endpoint.url, headers);
+      const entry = {
+        url: endpoint.url,
+        format: endpoint.format,
+        label: endpoint.primary ? 'Primary' : endpoint.label,
+        primary: endpoint.primary,
+        ...probe
+      };
+      endpointResults.push(entry);
+      if (probe.ok) {
+        return res.json({
+          ...(endpoints.length > 1 ? { endpoint_results: endpointResults } : {}),
+          ok: true,
+          latency_ms: probe.latency_ms,
+          url: probe.url,
+          ...(probe.note ? { note: probe.note } : {})
         });
-        const latency = Date.now() - start;
-        if (resp.ok) {
-          return res.json({ ok: true, latency_ms: latency, url });
-        }
-        // 401/403 也算连通（只是鉴权问题）
-        if (resp.status === 401 || resp.status === 403) {
-          return res.json({ ok: true, latency_ms: latency, url, note: `HTTP ${resp.status} (鉴权)` });
-        }
-      } catch (e) {
-        // 继续尝试下一个候选 URL
       }
     }
 
-    // 所有候选都失败，用 base_url 做 TCP 连通性测试
+    if (endpoints.length > 1) {
+      const last = endpointResults[endpointResults.length - 1] || {};
+      return res.json({ ok: false, latency_ms: last.latency_ms ?? null, error: last.error || '连接失败', endpoint_results: endpointResults });
+    }
+    const last = endpointResults[0] || {};
+    return res.json({ ok: false, latency_ms: last.latency_ms ?? null, error: last.error || '连接失败' });
+  } catch (error) {
+    Logger.error('[检测连通性] 错误:', error);
+    res.status(500).json({ ok: false, latency_ms: null, error: error.message });
+  }
+});
+
+/** 探测单个 Base URL：/models 推断路径优先，最后回退到 Base URL 本身 */
+async function pingBaseUrl(baseUrl, headers) {
+  const clean = baseUrl.replace(/\/+$/, '');
+  const candidates = [upstreamUrl(clean, '/models')];
+  if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(clean)) {
+    candidates.push(`${clean}/models`);
+  }
+
+  for (const url of candidates) {
     const start = Date.now();
     try {
-      const urlCheck = await validateUrl(baseUrl);
-      if (!urlCheck.ok) {
-        return res.json({ ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` });
-      }
+      const urlCheck = await validateUrl(url);
+      if (!urlCheck.ok) continue;
       const resp = await proxyPool.pinnedFetchValidated(urlCheck, {
         headers,
         signal: AbortSignal.timeout(5000),
         redirect: 'manual'
       });
       const latency = Date.now() - start;
-      return res.json({ ok: true, latency_ms: latency, url: baseUrl, note: `HTTP ${resp.status}` });
+      if (resp.ok) {
+        return { ok: true, latency_ms: latency, url };
+      }
+      // 401/403 也算连通（只是鉴权问题）
+      if (resp.status === 401 || resp.status === 403) {
+        return { ok: true, latency_ms: latency, url, note: `HTTP ${resp.status} (鉴权)` };
+      }
     } catch (e) {
-      const latency = Date.now() - start;
-      return res.json({ ok: false, latency_ms: latency, error: e.message || '连接失败' });
+      // 继续尝试下一个候选 URL
     }
-  } catch (error) {
-    Logger.error('[检测连通性] 错误:', error);
-    res.status(500).json({ ok: false, latency_ms: null, error: error.message });
   }
-});
+
+  // 所有候选都失败，用 base_url 做 TCP 连通性测试
+  const start = Date.now();
+  try {
+    const urlCheck = await validateUrl(clean);
+    if (!urlCheck.ok) {
+      return { ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` };
+    }
+    const resp = await proxyPool.pinnedFetchValidated(urlCheck, {
+      headers,
+      signal: AbortSignal.timeout(5000),
+      redirect: 'manual'
+    });
+    const latency = Date.now() - start;
+    return { ok: true, latency_ms: latency, url: clean, note: `HTTP ${resp.status}` };
+  } catch (e) {
+    const latency = Date.now() - start;
+    return { ok: false, latency_ms: latency, error: e.message || '连接失败' };
+  }
+}
 
 /**
  * 从上游拉取供应商模型列表（自定义 models_url + 多路径回退）
@@ -2855,10 +2912,47 @@ router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (re
  *          | { ok: false, error: string, status?: number, attempts?: any[] }>}
  */
 async function fetchUpstreamModelsForProvider(provider) {
-  const baseUrl = provider.base_url?.replace(/\/+$/, '');
+  const primaryKey = getPrimaryApiKey(provider);
+  const endpoints = normalizeProviderEndpoints(provider).filter(e => e.enabled !== false);
+  if (!endpoints.length) {
+    return { ok: false, error: '供应商未配置 Base URL', status: 400 };
+  }
+  // 多端点：逐个端点取模型列表并合并。cleanup/sync 会据此删除本地模型，
+  // 只看主端点会把仅存在于附加端点上的模型误判为已下架。
+  const merged = new Map();
+  const attempts = [];
+  const succeededUrls = [];
+  let firstSucceededUrl = null;
+  let lastError = null;
+
+  for (const endpoint of endpoints) {
+    const result = await fetchUpstreamModelsFromBase(provider, endpoint.url, primaryKey);
+    if (Array.isArray(result.attempts)) {
+      attempts.push(...result.attempts.map(a => ({ ...a, endpoint: endpoint.url, endpoint_format: endpoint.format })));
+    }
+    if (result.ok) {
+      succeededUrls.push(result.succeededUrl);
+      if (!firstSucceededUrl) firstSucceededUrl = result.succeededUrl;
+      for (const model of result.models) {
+        if (!merged.has(model.id)) merged.set(model.id, model);
+      }
+    } else {
+      lastError = result.error || lastError;
+    }
+  }
+
+  if (succeededUrls.length === 0) {
+    const errorMsg = attempts.map(a => `${a.url}: ${a.error || a.status}`).join('; ');
+    Logger.error(`[获取供应商模型] 所有路径失败: ${errorMsg}`);
+    return { ok: false, error: lastError || '所有模型列表路径均失败', status: 502, attempts };
+  }
+  return { ok: true, models: [...merged.values()], succeededUrl: firstSucceededUrl, succeededUrls, attempts };
+}
+
+/** 针对单个 Base URL 尝试模型列表（models_url 覆盖 + /models 推断） */
+async function fetchUpstreamModelsFromBase(provider, baseUrlRaw, apiKey) {
+  const baseUrl = baseUrlRaw?.replace(/\/+$/, '');
   const customModelsUrl = provider.models_url?.replace(/\/+$/, '') || '';
-  // 获取模型列表：仅使用主 Key（多 Key 列表第一项）
-  const apiKey = getPrimaryApiKey(provider);
 
   if (!baseUrl) {
     return { ok: false, error: '供应商未配置 Base URL', status: 400 };
@@ -2946,8 +3040,6 @@ async function fetchUpstreamModelsForProvider(provider) {
     }
   }
 
-  const errorMsg = attempts.map(a => `${a.url}: ${a.error || a.status}`).join('; ');
-  Logger.error(`[获取供应商模型] 所有路径失败: ${errorMsg}`);
   return { ok: false, error: '所有模型列表路径均失败', status: 502, attempts };
 }
 
@@ -3188,6 +3280,7 @@ router.post('/providers/:id/sync-models', requireAuth, requireProviderManager, a
     const fingerprint = provider => JSON.stringify([
       provider.base_url, provider.models_url, provider.api_key, provider.api_keys,
       provider.format, provider.enabled, provider.created_by,
+      normalizeProviderEndpoints(provider).map(e => [e.url, e.format, e.enabled, e.label]),
     ]);
     const expected = fingerprint(snapshot);
     client = await pool.connect();

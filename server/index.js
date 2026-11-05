@@ -1948,6 +1948,17 @@ async function ensureProviderMultiApiKeyColumns() {
   }
 }
 
+// ========== 自动迁移：供应商多端点（附加端点 URL + 各自格式） ==========
+async function ensureProviderEndpointsColumn() {
+  try {
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS endpoints JSONB DEFAULT '[]'::jsonb`);
+    Logger.info('[迁移] providers.endpoints 字段已就绪');
+  } catch (err) {
+    Logger.error(`[迁移] providers.endpoints 字段迁移跳过: ${err.message}`);
+    throw err;
+  }
+}
+
 // ========== 自动迁移：为 api_keys 添加启用/调度字段 ==========
 async function ensureApiKeyEnabledColumns() {
   try {
@@ -3001,6 +3012,7 @@ async function runPendingMigrations() {
     ensureApiKeySignatureColumns,
     ensureInjectPromptsTable,
     ensureProviderMultiApiKeyColumns,
+    ensureProviderEndpointsColumn,
     ensureProviderKeyEncryption,
     ensureApiKeyEnabledColumns,
     ensureApiKeySwallowImages,

@@ -48,6 +48,7 @@ function fixture(pool, { before = async () => {}, fetch, invalidate } = {}) {
       return fetch ? fetch(provider) : { ok: true, models: ['old', 'other', 'new'].map(id => ({ id })) };
     },
     Logger: { info() {}, error() {}, warn() {} }, requireAuth() {}, requireProviderManager() {},
+    normalizeProviderEndpoints: require('../utils/provider-endpoints').normalizeProviderEndpoints,
     auditMiddleware: () => () => {}, ACTIONS: {}, router: { post(_path, ...callbacks) { handler = callbacks.at(-1); } },
   });
   return { events, async request(ids = [], extra = {}) {
@@ -69,7 +70,7 @@ test('供应商同步原子提交、并发和隔离清理', async t => {
   const pool = new Pool({ ...cluster.connection, max: 8, options: '-c statement_timeout=8000 -c idle_in_transaction_session_timeout=10000' });
   try {
     await cluster.assertIsolation(pool);
-    await pool.query(`CREATE TABLE providers(id text PRIMARY KEY,name text,base_url text,models_url text,api_key text,api_keys jsonb,format text,enabled boolean,created_by int);
+    await pool.query(`CREATE TABLE providers(id text PRIMARY KEY,name text,base_url text,models_url text,api_key text,api_keys jsonb,format text,enabled boolean,created_by int,endpoints jsonb);
       CREATE TABLE models(id text PRIMARY KEY,name text,provider text REFERENCES providers(id),upstream_model_id text,enabled boolean);
       CREATE TABLE teams(id int PRIMARY KEY,is_frontier boolean);
       CREATE TABLE team_models(team_id int REFERENCES teams(id),model_id text REFERENCES models(id),enabled boolean,UNIQUE(team_id,model_id));
@@ -134,6 +135,16 @@ test('供应商同步原子提交、并发和隔离清理', async t => {
       await reset(); const previous = await snapshot();
       const f = fixture(pool, { fetch: async () => {
         await pool.query("UPDATE providers SET base_url='https://changed.example.test'");
+        return { ok: true, models: [{ id: 'new' }] };
+      } });
+      assert.equal((await f.request(['new'])).statusCode, 409);
+      assert.deepEqual(await snapshot(), previous);
+      assert(!f.events.includes('commit'));
+    });
+    await t.test('取上游期间端点配置变更同样返回409', async () => {
+      await reset(); const previous = await snapshot();
+      const f = fixture(pool, { fetch: async () => {
+        await pool.query(`UPDATE providers SET endpoints='[{"url":"https://alt.example.test","format":"anthropic","enabled":true}]'::jsonb`);
         return { ok: true, models: [{ id: 'new' }] };
       } });
       assert.equal((await f.request(['new'])).statusCode, 409);

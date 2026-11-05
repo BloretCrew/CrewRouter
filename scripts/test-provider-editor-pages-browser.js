@@ -93,11 +93,27 @@ async function main() {
 
       await cdp.evaluate(`document.getElementById('providerName').focus();document.getElementById('providerName').select()`);
       await cdp.send('Input.insertText', { text: 'Browser provider edit' });
-      for (let i = 1; i < 7; i++) {
+      for (let i = 1; i < 8; i++) {
         assert.ok(await cdp.click('#providerEditorNext'), '下一页');
         await check(`adminApp._providerEditorPage === ${i} && document.querySelectorAll('#addProviderModal .provider-form-section:not([hidden])').length === 1`, '单页展示');
       }
-      for (let i = 5; i >= 0; i--) assert.ok(await cdp.click('#providerEditorPrevious'), '上一页');
+      await check("document.querySelectorAll('#providerEndpointsList .provider-endpoint-primary').length === 1", '端点页应展示主端点行');
+      assert.ok(await cdp.click('#addProviderEndpointBtn'), '添加端点');
+      await sleep(250);
+      await check("document.querySelectorAll('#providerEndpointsList .provider-api-key-row[data-endpoint-index]').length === 1", '端点行应生成');
+      await cdp.evaluate(`(() => {
+        const input = document.querySelector('#providerEndpointsList .provider-endpoint-url');
+        input.value = 'https://alt.example.test/v1';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        const fmt = document.querySelector('#providerEndpointsList .provider-endpoint-format');
+        fmt.value = 'anthropic';
+        fmt.dispatchEvent(new Event('change', { bubbles: true }));
+      })()`);
+      await check("adminApp._providerEndpointsTouched === true", '改动端点应标记 touched');
+      await cdp.evaluate("adminApp.removeProviderEndpointRow(0)");
+      await sleep(200);
+      await check("document.querySelectorAll('#providerEndpointsList .provider-api-key-row[data-endpoint-index]').length === 0", '删除端点行');
+      for (let i = 6; i >= 0; i--) assert.ok(await cdp.click('#providerEditorPrevious'), '上一页');
       await check("document.getElementById('providerName').value === 'Browser provider edit'", '输入保留');
 
       assert.ok(await cdp.click('#addProviderModal .provider-editor-header .modal-close'), '关闭编辑');

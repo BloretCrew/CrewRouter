@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const editionUtils = require('../utils/instance-edition');
+const { normalizeProviderEndpoints } = require('../utils/provider-endpoints');
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const logger = { info() {}, warn() {}, error() {} };
 
@@ -109,7 +110,7 @@ function handler(file, method, route, pool, extra = {}) {
     router: { [method](_path, ...handlers) { result = handlers.at(-1); } },
     requireAuth() {}, requireAdmin() {}, requireProviderManager() {},
     auditMiddleware: () => () => {}, ACTIONS: {},
-    pool, Logger: logger, ...extra,
+    pool, Logger: logger, normalizeProviderEndpoints, ...extra,
   };
   vm.runInNewContext(source.slice(start, end), context);
   return result;
@@ -189,6 +190,7 @@ async function testAdminList() {
   const res = response();
   await handler('routes/admin.js', 'get', '/providers', pool, {
     ensureKeyModeColumn: async () => {}, countProviderApiKeys: () => 1, getApiKeySelectMode: () => 'order',
+    countProviderEndpoints: () => 0,
   })({ query: {}, personalProviderManager: true }, res);
   assert.strictEqual(res.statusCode, 200);
   assert.strictEqual(res.data.length, 2);

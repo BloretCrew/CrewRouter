@@ -9150,6 +9150,14 @@ ${extractorBody}
       document.getElementById('editProviderBaseUrl').value = provider.base_url || '';
       document.getElementById('editProviderApiKey').value = '';
       document.getElementById('editProviderFormat').value = provider.format || 'openai';
+      this._editProviderEndpoints = (Array.isArray(provider.endpoints) ? provider.endpoints : [])
+        .map(e => ({
+          url: String(e?.url || ''),
+          format: ['openai', 'anthropic', 'responses'].includes(e?.format) ? e.format : 'openai',
+          enabled: e?.enabled !== false,
+          label: String(e?.label || ''),
+        }));
+      this.renderEditProviderEndpoints();
       document.getElementById('editProviderError').style.display = 'none';
 
       this.showModal('editProviderModal');
@@ -9177,6 +9185,9 @@ ${extractorBody}
     try {
       const body = { base_url: baseUrl, format };
       if (apiKey) body.api_key = apiKey;
+      if (Array.isArray(this._editProviderEndpoints)) {
+        body.endpoints = this._collectEditProviderEndpoints();
+      }
 
       const res = await fetch(`/api/user/providers/${providerId}`, {
         method: 'PUT',
@@ -9198,6 +9209,76 @@ ${extractorBody}
       errorEl.textContent = t('网络错误，请重试');
       errorEl.style.display = 'block';
     }
+  }
+
+  renderEditProviderEndpoints() {
+    const list = document.getElementById('editProviderEndpointsList');
+    if (!list) return;
+    const items = Array.isArray(this._editProviderEndpoints) ? this._editProviderEndpoints : [];
+    const formatOptions = (selected) => ['openai', 'anthropic', 'responses']
+      .map(f => `<option value="${f}"${f === selected ? ' selected' : ''}>${f}</option>`).join('');
+    setHTML(list, items.map((item, index) => `
+      <div class="blora-field${item.enabled === false ? ' is-disabled' : ''}" data-edit-endpoint-index="${index}" style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px;${item.enabled === false ? 'opacity:.55;' : ''}">        <div style="flex:1 1 100%;">
+          <input type="text" class="input edit-provider-endpoint-url" id="editProviderEndpointUrl-${index}"
+            value="${escapeHtml(item.url || '')}" placeholder="https://api.example.com/v1"
+            oninput="app.onEditProviderEndpointInput(${index}, 'url', this.value)">
+        </div>
+        <select class="input edit-provider-endpoint-format" style="flex:0 1 140px;" onchange="app.onEditProviderEndpointInput(${index}, 'format', this.value)">
+          ${formatOptions(item.format)}
+        </select>
+        <input type="text" class="input edit-provider-endpoint-label" style="flex:0 1 140px;"
+          value="${escapeHtml(item.label || '')}" placeholder="${t('名称')}"
+          oninput="app.onEditProviderEndpointInput(${index}, 'label', this.value)">
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.toggleEditProviderEndpoint(${index})">${item.enabled === false ? t('启用') : t('禁用')}</button>
+        <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.removeEditProviderEndpoint(${index})" aria-label="${t('删除端点')}">&times;</button>
+      </div>`).join(''));
+  }
+
+  onEditProviderEndpointInput(index, field, value) {
+    const item = this._editProviderEndpoints?.[index];
+    if (!item) return;
+    item[field] = value;
+  }
+
+  toggleEditProviderEndpoint(index) {
+    const item = this._editProviderEndpoints?.[index];
+    if (!item) return;
+    item.enabled = item.enabled === false;
+    this.renderEditProviderEndpoints();
+  }
+
+  removeEditProviderEndpoint(index) {
+    if (!Array.isArray(this._editProviderEndpoints)) return;
+    this._editProviderEndpoints.splice(index, 1);
+    this.renderEditProviderEndpoints();
+  }
+
+  addEditProviderEndpointRow() {
+    if (!Array.isArray(this._editProviderEndpoints)) this._editProviderEndpoints = [];
+    if (this._editProviderEndpoints.length >= 16) {
+      this.showToast(t('最多配置 16 个附加端点'), 'error');
+      return;
+    }
+    this._editProviderEndpoints.push({ url: '', format: 'openai', enabled: true, label: '' });
+    this.renderEditProviderEndpoints();
+    const inputs = document.querySelectorAll('#editProviderEndpointsList .edit-provider-endpoint-url');
+    inputs[inputs.length - 1]?.focus();
+  }
+
+  _collectEditProviderEndpoints() {
+    const rows = [...document.querySelectorAll('#editProviderEndpointsList [data-edit-endpoint-index]')];
+    const items = [];
+    for (const row of rows) {
+      const url = (row.querySelector('.edit-provider-endpoint-url')?.value || '').trim();
+      if (!url) continue;
+      items.push({
+        url,
+        format: row.querySelector('.edit-provider-endpoint-format')?.value || 'openai',
+        label: (row.querySelector('.edit-provider-endpoint-label')?.value || '').trim(),
+        enabled: !row.classList.contains('is-disabled'),
+      });
+    }
+    return items;
   }
 
   async pingUserProvider(providerId) {

@@ -21,6 +21,7 @@ const requireTeamCapability = requireTeamEdition(() => loadPersistedEdition(pool
 router.use(['/api-keys/:id/members', '/api-keys/:id/members/:userId(\\d+)', '/api-keys/:id/members/me'], requireTeamCapability);
 const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
 const { validateUrl, upstreamUrl, cleanBaseUrl: normalizeUpstreamBaseUrl } = require('../utils/url-validator');
+const { normalizeProviderEndpoints, normalizeEndpointsInput } = require('../utils/provider-endpoints');
 const {
   HARNESS_SOURCES,
   isHarnessSource,
@@ -3710,6 +3711,12 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
       insertCols.push('created_by');
       insertValues.push(req.personalProviderManager ? null : req.session.user.id);
     }
+    if (colNames.includes('endpoints') && Object.prototype.hasOwnProperty.call(req.body, 'endpoints')) {
+      const normalized = normalizeEndpointsInput(req.body.endpoints, { baseUrl: base_url, format: format || 'openai' });
+      if (!normalized.ok) return res.status(400).json({ error: '端点配置无效', errors: normalized.errors });
+      insertCols.push('endpoints');
+      insertValues.push(JSON.stringify(normalized.endpoints));
+    }
 
     const placeholders = insertValues.map((_, i) => `$${i + 1}`).join(', ');
     await pool.query(
@@ -3799,11 +3806,11 @@ router.get('/my-providers', requireAuth, async (req, res) => {
     let result;
     if (req.personalProviderManager) {
       result = await pool.query(
-        `SELECT id, name, base_url, format, enabled, created_at FROM providers ORDER BY created_at DESC`
+        `SELECT id, name, base_url, format, endpoints, enabled, created_at FROM providers ORDER BY created_at DESC`
       );
     } else if (hasCreatedBy) {
       result = await pool.query(
-        `SELECT id, name, base_url, format, enabled, created_at
+        `SELECT id, name, base_url, format, endpoints, enabled, created_at
          FROM providers
          WHERE created_by = $1
          ORDER BY created_at DESC`,
@@ -3814,7 +3821,20 @@ router.get('/my-providers', requireAuth, async (req, res) => {
       result = { rows: [] };
     }
 
-    res.json(result.rows);
+    // 端点：动态列探测，表尚未迁移时按无附加端点返回
+    const endpointCol = (result.rows.length > 0 && !('endpoints' in result.rows[0]))
+      ? await pool.query(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'providers' AND column_name = 'endpoints'"
+      )
+      : { rows: [{}] };
+    const hasEndpointsColumn = endpointCol.rows.length > 0;
+    res.json(result.rows.map(row => ({
+      ...row,
+      endpoints: hasEndpointsColumn
+        ? normalizeProviderEndpoints(row).filter(e => !e.primary)
+          .map(({ url, format, enabled, label }) => ({ url, format, enabled, label }))
+        : []
+    })));
   } catch (error) {
     Logger.error('[获取用户供应商列表] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -3941,6 +3961,17 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
       updates.push(`format = $${paramIndex++}`);
       values.push(format);
     }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'endpoints')) {
+      const colCheck = await pool.query(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'providers' AND column_name = 'endpoints'"
+      );
+      if (colCheck.rows.length > 0) {
+        const normalized = normalizeEndpointsInput(req.body.endpoints, { baseUrl: base_url, format });
+        if (!normalized.ok) return res.status(400).json({ error: '端点配置无效', errors: normalized.errors });
+        updates.push(`endpoints = $${paramIndex++}::jsonb`);
+        values.push(JSON.stringify(normalized.endpoints));
+      }
+    }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: '没有要更新的内容' });
@@ -4005,6 +4036,47 @@ router.delete('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVID
   }
 });
 
+/**
+ * 从单个 Base URL 拉取模型列表（models_url 覆盖 + /models 推断），失败返回 null
+ * @returns {Promise<Array<{id:string,name:string}>|null>}
+ */
+async function fetchModelsFromBase(provider, baseUrlRaw, headers) {
+  const baseUrl = baseUrlRaw?.replace(/\/+$/, '');
+  if (!baseUrl) return null;
+  const customModelsUrl = provider.models_url?.replace(/\/+$/, '') || '';
+
+  const candidateUrls = [];
+  if (customModelsUrl) {
+    candidateUrls.push(customModelsUrl.startsWith('http') ? customModelsUrl : `${baseUrl}${customModelsUrl.startsWith('/') ? '' : '/'}${customModelsUrl}`);
+  }
+  const cleanBaseUrl = normalizeUpstreamBaseUrl(baseUrl)
+    .replace(/\/(completions|embeddings)\/?$/i, '')
+    .replace(/\/+$/, '');
+  candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
+  if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
+    candidateUrls.push(`${cleanBaseUrl}/models`);
+  }
+
+  for (const modelsUrl of [...new Set(candidateUrls)]) {
+    Logger.info(`[用户刷新模型] 尝试: ${modelsUrl}`);
+    try {
+      const urlCheck = await validateUrl(modelsUrl, { allowPrivate: false });
+      if (!urlCheck.ok) {
+        Logger.warn(`[用户刷新模型] SSRF 校验拒绝: ${modelsUrl} - ${urlCheck.error}`);
+        continue;
+      }
+      const response = await proxyPool.pinnedFetchValidated(urlCheck, { headers, signal: AbortSignal.timeout(15000), redirect: 'manual' });
+      if (!response.ok) continue;
+      const data = await response.json();
+      const models = data.data || data.models || [];
+      if (models.length > 0) return models;
+    } catch (e) {
+      Logger.warn(`[用户刷新模型] ${modelsUrl} 失败: ${e.message}`);
+    }
+  }
+  return null;
+}
+
 // 用户刷新供应商模型列表
 router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
   const providerId = req.params.id;
@@ -4032,9 +4104,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
       return res.status(403).json({ error: '不支持此操作' });
     }
 
-    // 获取模型列表 - 尝试多个地址
-    const baseUrl = provider.base_url?.replace(/\/+$/, '');
-    const customModelsUrl = provider.models_url?.replace(/\/+$/, '') || '';
+    // 获取模型列表 - 多端点逐个尝试并合并（只新增不删除，合并可覆盖附加端点独有模型）
     const apiKey = decryptSecret(provider.api_key) || '';
 
     const headers = { 'Content-Type': 'application/json' };
@@ -4042,60 +4112,25 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    // 构建候选 URL 列表
-    const candidateUrls = [];
-    if (customModelsUrl) {
-      candidateUrls.push(customModelsUrl.startsWith('http') ? customModelsUrl : `${baseUrl}${customModelsUrl.startsWith('/') ? '' : '/'}${customModelsUrl}`);
-    }
-
-    // 从 base_url 推断 API 根路径
-    const cleanBaseUrl = normalizeUpstreamBaseUrl(baseUrl)
-      .replace(/\/(completions|embeddings)\/?$/i, '')
-      .replace(/\/+$/, '');
-
-    // 自动推断路径
-    candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
-    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
-      candidateUrls.push(`${cleanBaseUrl}/models`);
-    }
-
-    // 去重
-    const uniqueUrls = [...new Set(candidateUrls)];
-
-    let modelsData = null;
-    let successUrl = null;
-
-    for (const modelsUrl of uniqueUrls) {
-      Logger.info(`[用户刷新模型] 尝试: ${modelsUrl}`);
-      try {
-        const urlCheck = await validateUrl(modelsUrl, { allowPrivate: false });
-        if (!urlCheck.ok) {
-          Logger.warn(`[用户刷新模型] SSRF 校验拒绝: ${modelsUrl} - ${urlCheck.error}`);
-          continue;
-        }
-        const response = await proxyPool.pinnedFetchValidated(urlCheck, { headers, signal: AbortSignal.timeout(15000), redirect: 'manual' });
-        if (!response.ok) continue;
-
-        const data = await response.json();
-        const models = data.data || data.models || [];
-        if (models.length > 0) {
-          modelsData = data;
-          successUrl = modelsUrl;
-          break;
-        }
-      } catch (e) {
-        Logger.warn(`[用户刷新模型] ${modelsUrl} 失败: ${e.message}`);
+    const mergedModels = new Map();
+    const successUrls = [];
+    for (const endpoint of normalizeProviderEndpoints(provider).filter(e => e.enabled !== false)) {
+      const fetched = await fetchModelsFromBase(provider, endpoint.url, headers);
+      if (!fetched) continue;
+      successUrls.push(endpoint.url);
+      for (const model of fetched) {
+        if (!mergedModels.has(model.id)) mergedModels.set(model.id, model);
       }
     }
 
-    if (!modelsData) {
+    if (mergedModels.size === 0) {
       Logger.error(`[用户刷新模型] 所有候选地址都失败`);
       return res.status(400).json({ error: '获取模型列表失败，请检查 Base URL 或手动设置模型列表地址' });
     }
 
-    Logger.info(`[用户刷新模型] 成功获取模型列表: ${successUrl}`);
+    Logger.info(`[用户刷新模型] 成功获取模型列表: ${successUrls.join(', ')}`);
 
-    const models = modelsData.data || modelsData.models || [];
+    const models = [...mergedModels.values()];
 
     // 获取用户的个人 Team
     const personalTeam = await getUserPersonalTeam(req.session.user.id);

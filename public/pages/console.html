@@ -1876,6 +1876,14 @@
       <blora-field label="Base URL"><input type="text" id="editProviderBaseUrl"></blora-field>
       <blora-field label="API Key" hint="留空则不更新"><input type="password" id="editProviderApiKey" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm"></blora-field>
       <div class="blora-field"><label class="blora-field__label" for="editProviderFormat">API 格式</label><blora-select id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select></div>
+      <div class="blora-field">
+        <span class="blora-field__label">附加端点（可选）</span>
+        <div class="up-dialog-hint" style="font-size:12px;line-height:1.6;margin-bottom:8px;">
+          第一行为上方 Base URL 的主端点；附加端点按顺序参与回退。请求优先使用原生格式的端点（Chat → OpenAI、Messages → Anthropic、Responses → Responses），返回连接错误、408、429 或 5xx 时自动切换到下一个端点。
+        </div>
+        <div id="editProviderEndpointsList"></div>
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm" style="margin-top:8px;" onclick="app.addEditProviderEndpointRow()">+ 添加端点</button>
+      </div>
     </div>
     <div slot="footer" class="up-dialog-actions">
       <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()">取消</button>
@@ -2210,7 +2218,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=lg-10"></script>
+  <script src="/js/app.js?v=lg-11"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

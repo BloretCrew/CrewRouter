@@ -3602,6 +3602,214 @@ class AdminApp {
     return items;
   }
 
+  // ---------- 附加端点编辑器（镜像多 Key 行编辑器） ----------
+
+  _defaultEndpointLabel(index) {
+    return `Endpoint ${index + 1}`;
+  }
+
+  renderProviderEndpointsEditor(extras = []) {
+    const items = (Array.isArray(extras) ? extras : [])
+      .map((e, i) => ({
+        url: String(e?.url || '').trim(),
+        format: ['openai', 'anthropic', 'responses'].includes(e?.format) ? e.format : 'openai',
+        enabled: e?.enabled !== false,
+        label: String(e?.label || '').trim() || this._defaultEndpointLabel(i),
+      }));
+    this._providerEndpointEditorItems = items;
+    this._providerEndpointsTouched = false;
+    this._providerEndpointsBaseline = JSON.stringify(items.map(this._endpointSignature));
+    this._renderProviderEndpointRows();
+  }
+
+  _endpointSignature(e) {
+    return JSON.stringify([String(e?.url || '').trim().replace(/\/+$/, ''), e?.format || 'openai', e?.enabled !== false, String(e?.label || '').trim()]);
+  }
+
+  _syncProviderEndpointPrimaryRow() {
+    const row = document.querySelector('#providerEndpointsList .provider-endpoint-primary');
+    if (!row) return;
+    const urlEl = row.querySelector('.provider-endpoint-primary-url');
+    const fmtEl = row.querySelector('.provider-endpoint-primary-format');
+    if (urlEl) urlEl.textContent = document.getElementById('providerBaseUrl')?.value.trim() || t('未填写 Base URL');
+    if (fmtEl) fmtEl.textContent = document.getElementById('providerFormat')?.value || 'openai';
+  }
+
+  _renderProviderEndpointRows() {
+    const list = document.getElementById('providerEndpointsList');
+    if (!list) return;
+    const items = Array.isArray(this._providerEndpointEditorItems) ? this._providerEndpointEditorItems : [];
+    const multi = items.length > 1;
+    const primaryUrl = document.getElementById('providerBaseUrl')?.value.trim() || t('未填写 Base URL');
+    const primaryFormat = document.getElementById('providerFormat')?.value || 'openai';
+    const formatOptions = (selected) => ['openai', 'anthropic', 'responses'].map(f =>
+      `<option value="${f}"${f === selected ? ' selected' : ''}>${f}</option>`).join('');
+
+    const primaryRow = `
+      <div class="provider-api-key-row provider-endpoint-primary is-disabled">
+        <span class="provider-api-key-drag" aria-hidden="true">—</span>
+        <div class="provider-api-key-label-wrap">
+          <label>${t('名称')}</label>
+          <div class="input provider-endpoint-primary-label" style="display:flex;align-items:center;">${t('主端点')}</div>
+        </div>
+        <div class="provider-api-key-input-wrap">
+          <div class="input provider-endpoint-primary-url" style="display:flex;align-items:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(primaryUrl)}</div>
+        </div>
+        <div class="provider-api-key-main-badge-wrap"><span class="provider-api-key-main-badge">${t('主端点')}</span></div>
+        <div class="provider-api-key-weight-wrap">
+          <label>${t('格式')}</label>
+          <div class="input provider-endpoint-primary-format" style="display:flex;align-items:center;">${escapeHtml(primaryFormat)}</div>
+        </div>
+      </div>`;
+
+    const rows = items.map((item, index) => {
+      const enabled = item.enabled !== false;
+      return `
+        <div class="provider-api-key-row${enabled ? '' : ' is-disabled'}" data-endpoint-index="${index}" draggable="${multi && enabled ? 'true' : 'false'}">
+          <span class="provider-api-key-drag" title="${multi ? t('拖动排序') : t('仅 1 个端点时无需排序')}" aria-hidden="true">⋮⋮</span>
+          <div class="provider-api-key-label-wrap">
+            <label>${t('名称')}</label>
+            <input type="text" class="input provider-endpoint-label" data-endpoint-index="${index}"
+              value="${escapeHtml(item.label)}" placeholder="${escapeHtml(this._defaultEndpointLabel(index))}"
+              maxlength="50" autocomplete="off" spellcheck="false"
+              oninput="adminApp.onProviderEndpointLabelInput(${index}, this.value)">
+          </div>
+          <div class="provider-api-key-input-wrap">
+            <input type="text" class="input provider-endpoint-url" id="providerEndpointUrl-${index}" data-endpoint-index="${index}"
+              value="${escapeHtml(item.url)}" placeholder="https://api.example.com/v1"
+              autocomplete="off" spellcheck="false"
+              oninput="adminApp.onProviderEndpointUrlInput(${index}, this.value)">
+          </div>
+          <div class="provider-api-key-weight-wrap">
+            <label>${t('格式')}</label>
+            <select class="input provider-endpoint-format" data-endpoint-index="${index}" onchange="adminApp.onProviderEndpointFormatChange(${index}, this.value)">
+              ${formatOptions(item.format)}
+            </select>
+          </div>
+          <button type="button" class="provider-api-key-disable ${enabled ? '' : 'is-on'}" data-endpoint-index="${index}"
+            onclick="adminApp.toggleProviderEndpointEnabled(${index})" title="${enabled ? t('禁用此端点') : t('启用此端点')}">
+            ${enabled ? t('禁用') : t('已禁用')}</button>
+          <button type="button" class="provider-api-key-delete" data-endpoint-index="${index}"
+            onclick="adminApp.removeProviderEndpointRow(${index})" title="${t('删除端点')}">&times;</button>
+        </div>`;
+    }).join('');
+
+    setHTML(list, primaryRow + rows);
+    this._bindProviderEndpointDrag();
+    this._syncProviderEndpointPrimaryRow();
+  }
+
+  onProviderEndpointUrlInput(index, value) {
+    const item = this._providerEndpointEditorItems?.[index];
+    if (!item) return;
+    item.url = value;
+    this._markProviderEndpointsTouched();
+  }
+
+  onProviderEndpointLabelInput(index, value) {
+    const item = this._providerEndpointEditorItems?.[index];
+    if (!item) return;
+    item.label = value;
+    this._markProviderEndpointsTouched();
+  }
+
+  onProviderEndpointFormatChange(index, value) {
+    const item = this._providerEndpointEditorItems?.[index];
+    if (!item) return;
+    item.format = value;
+    this._markProviderEndpointsTouched();
+  }
+
+  toggleProviderEndpointEnabled(index) {
+    const item = this._providerEndpointEditorItems?.[index];
+    if (!item) return;
+    item.enabled = item.enabled === false;
+    this._markProviderEndpointsTouched();
+    this._renderProviderEndpointRows();
+  }
+
+  addProviderEndpointRow() {
+    if (!Array.isArray(this._providerEndpointEditorItems)) this._providerEndpointEditorItems = [];
+    if (this._providerEndpointEditorItems.length >= 16) {
+      this.showToast?.(t('最多配置 16 个附加端点'), 'error');
+      return;
+    }
+    const index = this._providerEndpointEditorItems.length;
+    this._providerEndpointEditorItems.push({
+      url: '',
+      format: 'openai',
+      enabled: true,
+      label: this._defaultEndpointLabel(index),
+    });
+    this._markProviderEndpointsTouched();
+    this._renderProviderEndpointRows();
+    const inputs = document.querySelectorAll('#providerEndpointsList .provider-endpoint-url');
+    inputs[inputs.length - 1]?.focus();
+  }
+
+  removeProviderEndpointRow(index) {
+    if (!Array.isArray(this._providerEndpointEditorItems)) return;
+    this._providerEndpointEditorItems.splice(index, 1);
+    this._markProviderEndpointsTouched();
+    this._renderProviderEndpointRows();
+  }
+
+  _markProviderEndpointsTouched() {
+    this._providerEndpointsTouched = true;
+  }
+
+  _bindProviderEndpointDrag() {
+    const rows = [...document.querySelectorAll('#providerEndpointsList .provider-api-key-row[data-endpoint-index]')];
+    rows.forEach(row => {
+      if (row.dataset.dragBound === 'true') return;
+      row.dataset.dragBound = 'true';
+      row.addEventListener('dragstart', event => {
+        if (row.getAttribute('draggable') !== 'true') { event.preventDefault(); return; }
+        row.classList.add('provider-key-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        try { event.dataTransfer.setData('text/plain', row.dataset.endpointIndex); } catch (_) { /* ignore */ }
+      });
+      row.addEventListener('dragover', event => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        rows.forEach(r => { if (r !== row) r.classList.remove('provider-key-drag-over'); });
+        row.classList.add('provider-key-drag-over');
+      });
+      row.addEventListener('dragleave', () => row.classList.remove('provider-key-drag-over'));
+      row.addEventListener('drop', event => {
+        event.preventDefault();
+        row.classList.remove('provider-key-drag-over');
+        const list = [...document.querySelectorAll('#providerEndpointsList .provider-api-key-row[data-endpoint-index]')];
+        const source = list.findIndex(r => r.classList.contains('provider-key-dragging'));
+        const target = Number(row.dataset.endpointIndex);
+        list.forEach(r => r.classList.remove('provider-key-dragging'));
+        const items = this._providerEndpointEditorItems;
+        if (!Array.isArray(items) || source < 0 || !Number.isInteger(target)) return;
+        const [moved] = items.splice(source, 1);
+        items.splice(target, 0, moved);
+        this._markProviderEndpointsTouched();
+        this._renderProviderEndpointRows();
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('provider-key-dragging');
+        rows.forEach(r => r.classList.remove('provider-key-drag-over'));
+      });
+    });
+  }
+
+  _collectProviderEndpointsFromForm() {
+    const rows = [...document.querySelectorAll('#providerEndpointsList .provider-api-key-row[data-endpoint-index]')];
+    const items = [];
+    for (const row of rows) {
+      const url = (row.querySelector('.provider-endpoint-url')?.value || '').trim();
+      if (!url) continue;
+      const format = row.querySelector('.provider-endpoint-format')?.value || 'openai';
+      const label = (row.querySelector('.provider-endpoint-label')?.value || '').trim();
+      items.push({ url, format, label, enabled: !row.classList.contains('is-disabled') });
+    }
+    return items;
+  }
+
   setProviderView(mode) {
     this.providerViewMode = mode;
     document.getElementById('providerViewTableBtn').className = mode === 'table' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
@@ -4292,7 +4500,7 @@ class AdminApp {
   setProviderEditorPage(page = 0) {
     const root = document.getElementById('addProviderModal');
     if (!root) return;
-    const sections = [root.querySelector('.provider-form-basics'), ...['KeyMode', 'ModelsQuota', 'Proxy', 'Test', 'Headers', 'Tags'].map(name => document.getElementById('providerSection' + name))];
+    const sections = [root.querySelector('.provider-form-basics'), ...['KeyMode', 'ModelsQuota', 'Proxy', 'Test', 'Headers', 'Tags', 'Endpoints'].map(name => document.getElementById('providerSection' + name))];
     this._providerEditorPage = Math.max(0, Math.min(sections.length - 1, page));
     sections.forEach((section, index) => {
       if (!section) return;
@@ -4311,20 +4519,21 @@ class AdminApp {
     if (body) body.scrollTop = 0;
   }
 
-  _setProviderFormSectionsOpen({ keyMode = false, modelsQuota = false, proxy = false, headers = false, tags = false, test = false } = {}) {
+  _setProviderFormSectionsOpen({ keyMode = false, modelsQuota = false, proxy = false, headers = false, tags = false, test = false, endpoints = false } = {}) {
     const map = {
       providerSectionKeyMode: keyMode,
       providerSectionModelsQuota: modelsQuota,
       providerSectionProxy: proxy,
       providerSectionHeaders: headers,
       providerSectionTags: tags,
-      providerSectionTest: test
+      providerSectionTest: test,
+      providerSectionEndpoints: endpoints
     };
     Object.entries(map).forEach(([id, open]) => {
       const el = document.getElementById(id);
       if (el) el.open = !!open;
     });
-    const pageIds = ['providerSectionKeyMode', 'providerSectionModelsQuota', 'providerSectionProxy', 'providerSectionTest', 'providerSectionHeaders', 'providerSectionTags'];
+    const pageIds = ['providerSectionKeyMode', 'providerSectionModelsQuota', 'providerSectionProxy', 'providerSectionTest', 'providerSectionHeaders', 'providerSectionTags', 'providerSectionEndpoints'];
     const selected = pageIds.findIndex(id => map[id]);
     if (selected >= 0 && document.getElementById('addProviderModal')?.hasAttribute('open')) this.setProviderEditorPage(selected + 1);
     const doc = document.getElementById('keyScriptDocDetails');
@@ -4526,6 +4735,31 @@ class AdminApp {
     else if (!this._isHttpUrl(baseUrl)) add('providerBaseUrl', 0, t('Base URL 需以 http:// 或 https:// 开头'));
     if (modelsUrl && !modelsUrl.startsWith('/') && !this._isHttpUrl(modelsUrl)) add('providerModelsUrl', 2, t('模型列表 URL 需为完整地址或以 / 开头'));
 
+    // 附加端点校验
+    const primaryFormat = document.getElementById('providerFormat')?.value || 'openai';
+    const seenEndpointKeys = new Set();
+    if (baseUrl) seenEndpointKeys.add(`${baseUrl.replace(/\/+$/, '').toLowerCase()}\u0000${primaryFormat}`);
+    const endpointRows = [...document.querySelectorAll('#providerEndpointsList .provider-api-key-row[data-endpoint-index]')];
+    for (const row of endpointRows) {
+      const index = Number(row.dataset.endpointIndex);
+      const url = (row.querySelector('.provider-endpoint-url')?.value || '').trim();
+      if (!url) {
+        add(`providerEndpointUrl-${index}`, 7, t('请填写端点 URL'));
+        continue;
+      }
+      if (!this._isHttpUrl(url)) {
+        add(`providerEndpointUrl-${index}`, 7, t('端点 URL 需以 http:// 或 https:// 开头'));
+        continue;
+      }
+      const fmt = row.querySelector('.provider-endpoint-format')?.value || 'openai';
+      const key = `${url.replace(/\/+$/, '').toLowerCase()}\u0000${fmt}`;
+      if (seenEndpointKeys.has(key)) {
+        add(`providerEndpointUrl-${index}`, 7, t('端点与主端点或其他端点重复'));
+        continue;
+      }
+      seenEndpointKeys.add(key);
+    }
+
     const keyMode = document.getElementById('providerKeyMode')?.value || 'fixed';
     const keyScript = document.getElementById('providerKeyScript')?.value || '';
     const keyInterval = parseInt(document.getElementById('providerKeyRefreshInterval')?.value, 10);
@@ -4624,6 +4858,7 @@ class AdminApp {
     if (keyIntervalEl) keyIntervalEl.value = '3600';
     this._setProviderKeySelectMode('order');
     this.renderProviderApiKeysEditor([{ key: '', weight: 1, label: this._defaultKeyLabel(0) }]);
+    this.renderProviderEndpointsEditor([]);
     this.toggleKeyMode();
 
     this._setProviderProxyForm({
@@ -4744,6 +4979,7 @@ class AdminApp {
       }
     }
     this.renderProviderApiKeysEditor(keyEntries);
+    this.renderProviderEndpointsEditor(Array.isArray(provider.endpoints) ? provider.endpoints : []);
     this.toggleKeyMode();
 
     this._setProviderProxyForm(provider);
@@ -4829,6 +5065,13 @@ class AdminApp {
       }
       if (id) body.id = id;
       body.models_url = models_url || '';
+
+      // 端点：只有实际改动过才提交，避免覆盖其他会话的并发修改；显式 [] 表示清空附加端点
+      const collectedEndpoints = this._collectProviderEndpointsFromForm();
+      const endpointsSignature = JSON.stringify(collectedEndpoints.map(this._endpointSignature));
+      if (this._providerEndpointsTouched || endpointsSignature !== this._providerEndpointsBaseline) {
+        body.endpoints = collectedEndpoints;
+      }
 
       if (collectedKeys.length > 0) {
         body.api_keys = collectedKeys;
@@ -4953,6 +5196,11 @@ class AdminApp {
     const useSystem = document.getElementById('providerProxyUseSystem')?.checked || false;
     const urlGroup = document.getElementById('providerProxyUrlGroup');
     if (urlGroup) urlGroup.style.display = useSystem ? 'none' : 'block';
+  }
+
+  // 主端点行随顶部 Base URL / 格式同步
+  onProviderPrimaryEndpointFieldChange() {
+    this._syncProviderEndpointPrimaryRow();
   }
 
   // 列表/卡片：代理状态展示
