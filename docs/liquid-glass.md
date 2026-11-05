@@ -113,7 +113,9 @@
 9. 提示词 `#promptsPage`：注入条目卡、筛选条、提示词表格、详情 / 编辑弹窗（lg-scope） — 已完成
 10. 会话 `#sessionsPage`：会话面板、筛选条、会话卡、详情时间线与事件卡、内联总结、
     总结弹窗（lg-scope） — 已完成
-11. 下一步：Blora Agent `#bloraAgentPage`，之后按侧栏顺序继续。
+11. Blora Agent `#bloraAgentPage`：模式分段控件、历史侧栏（移动端抽屉）、对话气泡、
+    推理块、工具卡、参数区与输入区、模型库弹窗 — 已完成
+12. 下一步：用户设置 `#settingsPage`，之后是管理后台各页。
 
 `.stats-filters` 筛选条的玻璃皮肤已提到 `liquid-glass.css`，统计信息、项目工作、
 排行榜等页面直接复用，页面 CSS 只调下拉宽度与排布。
@@ -153,6 +155,9 @@ node scripts/test-unified-provider-browser.js
 `test-provider-editor-pages-browser.js`、`test-unified-provider-browser.js`、
 `test-api-key-card-controls-browser.js`、`test-session-attachments-browser.js`、
 `test-session-summary-dialog-browser.js`。
+
+`test-blora-agent-registration.js` 期望 `bind()` 返回 Promise；`ee48d517` 把
+`bind()` 改成同步后该断言已失效，与本次迁移无关。
 
 `test-library-sticky-alignment-browser.js`、`test-model-card-badges-browser.js`、
 `test-inject-uptime-menu-browser.js`、`test-library-closed-keys-browser.js`、

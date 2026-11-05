@@ -262,3 +262,253 @@
   #baChatOptions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   #baChatOptions .ba-option--system { grid-column: 1 / -1; }
 }
+
+/* =========================================================================
+   Liquid Glass（第十一个迁移页）
+   通用皮肤见 liquid-glass.css（按钮、输入框、分段控件、blora-card、空状态）；
+   本文件只做本页布局：顶栏、历史侧栏、对话区、参数区、输入区与消息气泡。
+   ========================================================================= */
+
+/* ---------- 顶栏：模式分段控件 + 模型按钮 + 余额 ---------- */
+.lg-page.blora-agent-page .ba-top { gap: 10px; margin-block-end: 14px; }
+.lg-page.blora-agent-page .ba-top blora-segmented { display: inline-block; }
+.lg-page.blora-agent-page .ba-top .blora-segmented__item { padding-inline: 14px; }
+.lg-page.blora-agent-page #baModelPicker {
+  --blora-button-height: 34px;
+  min-height: 34px;
+  max-inline-size: min(22rem, 48vw);
+  padding-inline: 14px;
+  border-radius: var(--lg-radius-pill);
+  font-size: 13px;
+}
+.lg-page.blora-agent-page .ba-balance { color: var(--lg-fg-secondary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- 两栏：历史玻璃卡 + 对话玻璃卡 ---------- */
+.lg-page.blora-agent-page .ba-history,
+.lg-page.blora-agent-page .ba-main {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 20px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page.blora-agent-page .ba-history { padding: 14px; }
+.lg-page.blora-agent-page .ba-history__bar { margin-block-end: 10px; }
+.lg-page.blora-agent-page .ba-history__bar strong {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.lg-page.blora-agent-page .ba-history__bar .blora-button { --blora-button-height: 30px; min-height: 30px; }
+.lg-page.blora-agent-page .ba-history__list { gap: 4px; }
+.lg-page.blora-agent-page .ba-history__item {
+  padding: 9px 10px;
+  border-radius: 12px;
+  color: var(--lg-fg);
+  font-size: 13px;
+  line-height: 1.4;
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease);
+}
+.lg-page.blora-agent-page .ba-history__item:hover { background: var(--lg-chip-bg); }
+.lg-page.blora-agent-page .ba-history__item.is-active { background: var(--lg-accent-tint); color: var(--lg-accent-ink); }
+.lg-page.blora-agent-page .ba-history__item small {
+  margin-block-start: 2px;
+  color: var(--lg-fg-tertiary);
+  font-family: var(--lg-font-mono);
+  font-size: 11px;
+}
+.lg-page.blora-agent-page .ba-history__item.is-active small { color: var(--lg-accent-ink); opacity: 0.72; }
+
+/* ---------- 对话区：内嵌滚动，透明底让对话卡承载材质 ---------- */
+.lg-page.blora-agent-page .ba-thread { padding: 20px; gap: 14px; }
+.lg-page.blora-agent-page .ba-thread::after { content: ""; display: block; block-size: 2px; }
+.lg-page.blora-agent-page .ba-bubble {
+  max-inline-size: min(680px, 88%);
+  padding: 11px 14px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 18px;
+  color: var(--lg-fg);
+  font-size: 13.5px;
+  line-height: 1.6;
+  box-shadow: var(--lg-rim), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.lg-page.blora-agent-page .ba-bubble--user {
+  align-self: flex-end;
+  border-color: color-mix(in srgb, var(--lg-accent) 26%, transparent);
+  border-end-end-radius: 6px;
+  background: color-mix(in srgb, var(--lg-accent) 14%, var(--lg-surface));
+  color: var(--lg-fg);
+}
+.lg-page.blora-agent-page .ba-bubble--assistant {
+  align-self: flex-start;
+  border-end-start-radius: 6px;
+  background: var(--lg-surface);
+}
+.lg-page.blora-agent-page .ba-bubble code {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+}
+.lg-page.blora-agent-page .ba-bubble pre {
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 12px;
+  background: var(--lg-group-bg);
+  color: var(--lg-fg);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.lg-page.blora-agent-page .ba-bubble pre code { padding: 0; background: transparent; font-size: inherit; }
+.lg-page.blora-agent-page .ba-thinking {
+  margin-block-end: 8px;
+  padding: 8px 10px;
+  border-inline-start: 2px solid var(--lg-divider);
+  border-radius: 0 8px 8px 0;
+  color: var(--lg-fg-secondary);
+  font-size: 12.5px;
+}
+
+/* 工具调用卡：分组底 + 等宽正文 */
+.lg-page.blora-agent-page .ba-card {
+  align-self: flex-start;
+  inline-size: min(640px, 100%);
+  padding: 12px 14px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 16px;
+  background: var(--lg-card-bg);
+  color: var(--lg-fg);
+  box-shadow: var(--lg-rim);
+}
+.lg-page.blora-agent-page .ba-card header {
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+.lg-page.blora-agent-page .ba-card pre {
+  padding: 10px 12px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 10px;
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.lg-page.blora-agent-page .ba-card__actions { gap: 8px; margin-block-start: 10px; }
+.lg-page.blora-agent-page .ba-image {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 16px;
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.lg-page.blora-agent-page .ba-thread blora-empty { margin: auto; }
+
+/* ---------- 参数区：分隔线 + 字段标签 ---------- */
+.lg-page.blora-agent-page .ba-options {
+  gap: 16px;
+  padding: 16px 20px;
+  border-block-start: 1px solid var(--lg-divider);
+  background: color-mix(in srgb, var(--lg-group-bg) 55%, transparent);
+}
+.lg-page.blora-agent-page .ba-option {
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.lg-page.blora-agent-page .ba-option--inline { gap: 8px; font-size: 12.5px; }
+.lg-page.blora-agent-page #baSystem { border-radius: 12px; font-size: 13px; }
+.lg-page.blora-agent-page #baMaxTokens { border-radius: var(--lg-radius-pill); font-size: 13px; text-align: center; }
+.lg-page.blora-agent-page #baReasoning { min-inline-size: 8rem; }
+.lg-page.blora-agent-page #baTemperature {
+  appearance: none;
+  block-size: 4px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  accent-color: var(--lg-accent);
+}
+.lg-page.blora-agent-page #baTemperature::-webkit-slider-thumb {
+  inline-size: 18px;
+  block-size: 18px;
+  border: 3px solid var(--lg-surface);
+  border-radius: 50%;
+  background: var(--lg-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+}
+.lg-page.blora-agent-page #baTemperature::-moz-range-thumb {
+  inline-size: 18px;
+  block-size: 18px;
+  border: 3px solid var(--lg-surface);
+  border-radius: 50%;
+  background: var(--lg-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+}
+.lg-page.blora-agent-page #baTempVal { color: var(--lg-fg); font-variant-numeric: tabular-nums; }
+
+/* ---------- 输入区 ---------- */
+.lg-page.blora-agent-page .ba-composer {
+  gap: 10px;
+  padding: 14px 20px 18px;
+  border-block-start: 1px solid var(--lg-divider);
+}
+.lg-page.blora-agent-page .ba-composer textarea {
+  min-block-size: 44px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.lg-page.blora-agent-page .ba-composer .blora-button { --blora-button-height: 40px; min-height: 40px; padding-inline: 20px; }
+.lg-page.blora-agent-page .ba-composer blora-select { min-inline-size: 8.5rem; }
+
+/* 模型库弹窗列表：玻璃卡，选中为强调色描边 */
+.lg-page.blora-agent-page .ba-model-card {
+  border-radius: 16px;
+  color: var(--lg-fg);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease);
+}
+.lg-page.blora-agent-page .ba-model-card:hover { background-color: var(--lg-card-bg-hover); }
+.lg-page.blora-agent-page .ba-model-card[aria-pressed="true"] {
+  border-color: var(--lg-accent);
+  background: var(--lg-accent-tint);
+}
+.lg-page.blora-agent-page .ba-model-card span { color: var(--lg-fg-secondary); font-size: 12.5px; }
+
+/* ---------- 移动端：历史抽屉玻璃面板 ---------- */
+@media (max-width: 800px) {
+  .lg-page.blora-agent-page .ba-history {
+    padding: 14px;
+    border-radius: 0 20px 20px 0;
+    border-inline-start: 0;
+    background-color: var(--lg-sheet-bg);
+    -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+    backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+    box-shadow: var(--lg-rim), 0 24px 60px var(--lg-sheet-shadow);
+  }
+  .lg-page.blora-agent-page .ba-overlay {
+    background: var(--lg-scrim);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    transition: opacity var(--lg-dur) var(--lg-ease);
+  }
+  .lg-page.blora-agent-page .ba-thread { padding: 14px; }
+  .lg-page.blora-agent-page .ba-bubble { max-inline-size: 92%; }
+  .lg-page.blora-agent-page .ba-options { padding: 14px; }
+  .lg-page.blora-agent-page .ba-composer { padding: 12px 14px 14px; }
+  .lg-page.blora-agent-page .ba-composer textarea { min-inline-size: 0; }
+}
+/* 移动顶栏可见时，抽屉从顶栏下方展开（否则历史标题被顶栏盖住）。
+   分段控件的选项带 z-index 100，抽屉与遮罩需高于它 */
+@media (max-width: 640px) {
+  .lg-page.blora-agent-page .ba-history {
+    z-index: 120;
+    inset-block-start: 56px;
+    block-size: calc(100dvh - 56px);
+  }
+  .lg-page.blora-agent-page .ba-overlay { z-index: 119; inset-block-start: 56px; }
+}
