@@ -1,83 +1,96 @@
-/* Blora surface migration for the balance page. */
-.blora-balance-page {
-  --balance-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --balance-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+/* =========================================================================
+   积分 · Liquid Glass（第七个迁移页）
+   通用皮肤见 liquid-glass.css（.content-section 玻璃面板）；
+   本文件只做本页布局：余额大数字、Team 标题、限额卡与进度条。
+   ========================================================================= */
+
+/* 页内标题：与 .section-header h2 同级 */
+#balancePage > .content-section > h2 {
+  margin: 0 0 16px;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+#balancePage #balanceTeamName { color: var(--lg-fg-secondary); font-size: 14px; font-weight: 500; }
+
+/* ---------- 余额：分组底卡片 + 大号展示数字 ---------- */
+#balancePage .balance-info {
+  padding: 8px 22px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--lg-group-bg);
+}
+#balancePage .balance-current { padding: 26px 0 30px; text-align: start; }
+#balancePage .balance-current .label {
+  display: block;
+  margin-block-end: 6px;
+  color: var(--lg-fg-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+#balancePage .balance-current .amount {
+  display: block;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
 }
 
-.blora-balance-page > .content-section {
-  border: var(--balance-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
-}
-
-.blora-balance-page > .content-section > h2 {
-  margin-top: 0;
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-balance-page .balance-info {
-  border: var(--balance-border-soft);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-raised);
-  padding: var(--blora-space-5);
-}
-
-.blora-balance-page .balance-current {
-  padding: var(--blora-space-5) 0;
-}
-
-.blora-balance-page .balance-current .label {
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-balance-page .balance-current .amount {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-balance-page .group-info-card,
-.blora-balance-page .limits-grid {
-  border: var(--balance-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-balance-page .group-info-card {
-  padding: var(--blora-space-5);
-}
-
-.blora-balance-page .group-header {
-  border-bottom: var(--balance-border-soft);
-  padding-bottom: var(--blora-space-4);
-}
-
-.blora-balance-page .group-name,
-.blora-balance-page .group-desc {
-  color: var(--blora-color-text-primary);
-}
-
-.blora-balance-page .group-rules {
-  padding-top: var(--blora-space-4);
-}
-
-.blora-balance-page .limits-grid {
+/* ---------- Team 与限额 ---------- */
+#balancePage #personalLimitsSection { margin-block-start: 20px; }
+#balancePage .limits-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
+#balancePage .limit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 18px;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#balancePage .limit-label { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 500; }
+#balancePage .limit-value {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+#balancePage .limit-card > .limit-label:last-child { margin-block-start: 2px; color: var(--lg-fg-tertiary); font-weight: 400; }
 
-.blora-balance-page .limits-grid > * {
-  border: var(--balance-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
+/* 进度条：胶囊轨道 + 强调色填充（Blora 组件是 light DOM，可直接换皮） */
+#balancePage .blora-progress { gap: 0; }
+#balancePage .blora-progress__bar { height: 8px; border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); }
+#balancePage .blora-progress__fill {
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-accent);
+  transition: width var(--lg-dur) var(--lg-ease-out);
 }
 
 @media (max-width: 640px) {
-  .blora-balance-page > .content-section {
-    padding: var(--blora-space-4);
-  }
+  #balancePage > .content-section { padding: 18px; }
+  #balancePage .balance-info { padding: 4px 16px; }
+  #balancePage .balance-current .amount { font-size: 44px; }
+  #balancePage .limits-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #balancePage .blora-progress__fill { transition: none; }
 }
