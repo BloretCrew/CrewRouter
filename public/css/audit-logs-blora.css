@@ -1,87 +1,75 @@
-/* Blora surface migration for the audit log page. */
-.blora-audit-page {
-  --audit-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --audit-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+/* =========================================================================
+   操作日志 · Liquid Glass（第八个迁移页）
+   通用皮肤见 liquid-glass.css（.content-section 玻璃面板）；
+   本文件只做本页布局：顶部动作筛选、日志行玻璃卡、详情展开区与分页。
+   ========================================================================= */
+
+/* 顶栏筛选：分组底胶囊容器，与统计页筛选保持一致 */
+#auditLogsPage .section-header { gap: 12px; align-items: center; flex-wrap: wrap; }
+#auditLogsPage .section-header > div:last-child {
+  gap: 8px !important;
+  padding: 6px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-group-bg);
+}
+#auditLogsPage #auditLogActionFilter { display: block; min-inline-size: 9rem; }
+#auditLogsPage #auditLogActionFilter::part(trigger) {
+  box-sizing: border-box;
+  min-height: 36px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-surface);
+  line-height: 36px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+}
+#auditLogsPage #auditLogActionFilter::part(trigger):hover { background: var(--lg-card-bg-hover); }
+#auditLogsPage .section-header .blora-button { --blora-button-height: 36px; min-height: 36px; }
+
+/* ---------- 日志行：玻璃卡，悬停提亮 ---------- */
+#auditLogsPage .audit-log-row {
+  gap: 16px !important;
+  padding: 14px 16px !important;
+  border: 1px solid var(--lg-glass-border) !important;
+  border-radius: 16px !important;
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
+}
+#auditLogsPage .audit-log-row:hover {
+  border-color: var(--lg-glass-border-strong) !important;
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+#auditLogsPage .audit-log-row .blora-badge.audit-log-action { font-family: var(--lg-font-mono); font-size: 11px; }
+#auditLogsPage .audit-log-row time,
+#auditLogsPage .audit-log-row > div:last-child { color: var(--lg-fg-tertiary); font-size: 12px; }
+
+/* 元信息行与详情 */
+#auditLogsPage .audit-log-row .api-key-sub-muted { color: var(--lg-fg-secondary); font-size: 12px; }
+#auditLogsPage .audit-log-row details { margin-block-start: 6px !important; }
+#auditLogsPage .audit-log-row summary { color: var(--lg-fg-tertiary) !important; font-size: 12px; cursor: pointer; }
+#auditLogsPage .audit-log-row summary:hover { color: var(--lg-accent-ink); }
+#auditLogsPage .audit-log-row pre {
+  margin: 8px 0 0 !important;
+  padding: 12px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 12px;
+  background: var(--lg-group-bg);
+  color: var(--lg-fg);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
-.blora-audit-page > .content-section {
-  border: var(--audit-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-6);
-}
-
-.blora-audit-page .section-header {
-  gap: var(--blora-space-4);
-  margin-bottom: var(--blora-space-5);
-}
-
-.blora-audit-page .section-header h2 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-audit-page .section-header > div:last-child {
-  gap: var(--blora-space-2) !important;
-}
-
-.blora-audit-page #auditLogActionFilter { display: block; min-width: 9rem; }
-.blora-audit-page #auditLogActionFilter::part(trigger) { box-sizing: border-box; min-height: 2.25rem; }
-
-.blora-audit-page .audit-log-row {
-  gap: var(--blora-space-4) !important;
-  padding: var(--blora-space-4) !important;
-  border: var(--audit-border-soft) !important;
-  border-radius: var(--blora-radius-lg) !important;
-  background: var(--blora-color-surface-default);
-  transition: background var(--blora-duration-fast) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard);
-}
-
-.blora-audit-page .audit-log-row:hover {
-  border-color: color-mix(in srgb, var(--primary) 42%, var(--border)) !important;
-  background: var(--blora-color-surface-raised);
-}
-
-
-.blora-audit-page .audit-log-row details {
-  margin-top: var(--blora-space-2) !important;
-}
-
-.blora-audit-page .audit-log-row summary {
-  color: var(--blora-color-text-subtle) !important;
-}
-
-.blora-audit-page .audit-log-row pre {
-  margin: var(--blora-space-2) 0 0 !important;
-  padding: var(--blora-space-3);
-  border: var(--audit-border-soft);
-  border-radius: var(--blora-radius-md);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
-}
-
-.blora-audit-page #auditLogsPagination {
-  align-items: center;
-  gap: var(--blora-space-2) !important;
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-audit-page #auditLogsPagination .blora-button {
-  min-height: 2.25rem;
-}
+/* ---------- 分页 ---------- */
+#auditLogsPage #auditLogsPagination { align-items: center; gap: 8px !important; margin-block-start: 16px !important; }
+#auditLogsPage #auditLogsPagination span { color: var(--lg-fg-secondary); font-size: 12.5px; }
+#auditLogsPage #auditLogsPagination .blora-button { --blora-button-height: 34px; min-height: 34px; }
 
 @media (max-width: 640px) {
-  .blora-audit-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .blora-audit-page .section-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .blora-audit-page .section-header > div:last-child {
-    width: 100%;
-  }
+  #auditLogsPage > .content-section { padding: 18px; }
+  #auditLogsPage .section-header { align-items: flex-start; flex-direction: column; }
+  #auditLogsPage .section-header > div:last-child { inline-size: 100%; flex-wrap: wrap; }
+  #auditLogsPage #auditLogActionFilter { flex: 1 1 9rem; }
+  #auditLogsPage .audit-log-row { gap: 10px !important; padding: 12px 14px !important; }
 }
