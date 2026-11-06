@@ -761,6 +761,17 @@ async function ensureNotificationSettings() {
   }
 }
 
+// ========== 自动迁移：管理后台弹窗通知 ==========
+async function ensurePopupNotices() {
+  try {
+    await require('./utils/popup-notices').ensurePopupNoticeSchema(pool);
+    Logger.info('[迁移] 弹窗通知表已就绪');
+  } catch (err) {
+    Logger.error(`[迁移] 弹窗通知迁移跳过: ${err.message}`);
+    throw err;
+  }
+}
+
 // ========== 自动迁移：hook 事件通知订阅规则 ==========
 async function ensureHookNotifyRules() {
   try {
@@ -2783,6 +2794,7 @@ if (isDemo) {
   app.use('/api', require('./routes/auth-invites'));
   app.use('/api', require('./routes/api'));
   app.use('/api/admin', require('./routes/admin'));
+  app.use('/api/admin', require('./routes/admin-popup-notices'));
   app.use('/api/admin', require('./routes/admin-custom-instructions'));
   app.use('/api/admin/update', require('./routes/update'));
   app.use('/api/admin', require('./routes/teams'));
@@ -2790,6 +2802,7 @@ if (isDemo) {
   app.use('/api/user', require('./routes/user'));
   app.use('/api/user', require('./routes/balance-alert'));
   app.use('/api/user', require('./routes/notifications'));
+  app.use('/api/user', require('./routes/popup-notices'));
   app.use('/api/user', require('./routes/plugin-pref-optin'));
   app.use('/api/user', require('./routes/hook-notify-rules'));
   // 用户级自定义提示词（每人仅见自己的；admin 全站视图走 /api/admin/custom-instructions）
@@ -2978,6 +2991,7 @@ async function runPendingMigrations() {
     ensureBalanceAlertSettings,
     ensureHookNotifyRules,
     ensureNotificationSettings,
+    ensurePopupNotices,
     ensureProductsTable,
     ensureQuotaDataTable,
     ensureTeamsTables,

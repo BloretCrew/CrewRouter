@@ -9,6 +9,8 @@
 | 文件 | 作用 |
 | --- | --- |
 | `public/css/liquid-glass.css` | 令牌、可复用材质、Blora 令牌桥接、组件皮肤、控制台壳层、无障碍降级 |
+| `public/css/popup-notices.css` | 管理后台弹窗通知：叠放卡片、气泡列表、Blora 配色 hero、管理端列表 |
+| `public/js/popup-notices.js` | 弹窗通知渲染器（`window.CrewRouterPopupNotices`），控制台与管理后台预览共用 |
 | `public/css/model-library-console.css` | 模型库页面布局与材质层级 |
 | `public/css/my-upstream.css` | 我的上游页面布局，以及其 6 个弹窗内部的布局 |
 | `public/css/api-keys.css` | API Key 页布局、Key 卡片、标签 / 路由浮层、本页弹窗与 Key picker 列表 |
@@ -63,8 +65,28 @@
   模糊取不到工具栏以外的内容，必须不依赖模糊也可读。
 - 菜单打开时提升所在卡片 / 分组的 `z-index`，避免被后面的元素盖住。
 
-## 已有的组件皮肤
+## 弹窗通知（管理后台广播）
 
+`public/js/popup-notices.js` + `public/css/popup-notices.css`，控制台启动时由
+`app.js#init` 的 `_maybeShowPopupNotices()` 拉取未读并展示，管理后台「系统设置 →
+弹窗通知」创建/预览。
+
+- 浮层是原生 `<dialog class="cr-pn-overlay lg-scope">`，`showModal()` 后与
+  `blora-dialog` 同在 top layer，预览可以盖住仍打开的编辑弹窗；不支持 `<dialog>`
+  时回退为 fixed 浮层。
+- 卡片是玻璃面板（`--lg-sheet-bg` + `--lg-sheen` + `--lg-rim`），仅当前激活卡片
+  使用背景模糊与 hero 渐变，后层卡片只做位移/缩放/透明度，避免多张卡片持续重绘模糊。
+- hero 是 Blora coral 调色板的径向光斑（浅色 `#9F5964` 等，深色取
+  `tokens.dark.css` 对应值），因为 `.lg-scope` 会把 `--blora-color-*` 桥接成 LG
+  值，所以配色单独定义为 `--cr-pn-*`，深色用 `:root[data-blora-color-scheme="dark"]`。
+  "CrewRouter" 每 350ms 换一种已安装系统字体（canvas 度量检测，检测不足 6 种时回退
+  为完整候选清单），`prefers-reduced-motion` 下固定为 `--lg-font-display`。
+- 多条通知叠放，左侧（≤900px 时卡片下方）显示气泡列表；只剩一条时不显示列表，
+  窄屏只显示当前卡片。
+- 已读按服务端记录（`popup_notice_views`），激活/关闭时批量上报，失败保留重试。
+- 客户端拉取、上报失败均静默，不阻塞控制台；内容全部 `textContent` 写入。
+
+## 已有的组件皮肤
 作用域内统一生效，后续页面直接复用：
 
 - 按钮：primary 实心强调色 + 光晕；secondary 灰色胶囊；outline 玻璃胶囊；ghost 透明；danger 红色。

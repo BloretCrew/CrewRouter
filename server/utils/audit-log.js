@@ -93,6 +93,7 @@ const ACTIONS = {
   ADMIN_FEISHU: 'admin.feishu',
   ADMIN_FUSION_CONFIG: 'admin.fusion_config',
   ADMIN_PROVIDER_TAG: 'admin.provider_tag',
+  ADMIN_POPUP_NOTICE: 'admin.popup_notice',
 
   // 插件
   PLUGIN_INSTALL: 'plugin.install',
