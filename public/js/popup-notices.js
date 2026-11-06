@@ -368,14 +368,13 @@
 
     var hero = createEl('div', 'cr-pn-hero');
     hero.setAttribute('aria-hidden', 'true');
-    hero.appendChild(createEl('div', 'cr-pn-hero-base'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--a'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--b'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--c'));
+    hero.appendChild(createEl('div', 'cr-pn-hero-sheen'));
     var wordmark = createEl('div', 'cr-pn-wordmark');
     wordmark.appendChild(createEl('span', null, 'CrewRouter'));
     hero.appendChild(wordmark);
-    hero.appendChild(createEl('div', 'cr-pn-hero-sheen'));
 
     var body = createEl('div', 'cr-pn-card-body');
     var title = createEl('h2', 'cr-pn-title', item.title);
@@ -386,9 +385,8 @@
     var footer = createEl('div', 'cr-pn-card-footer');
     var counter = createEl('span', 'cr-pn-counter');
     footer.appendChild(counter);
-    var closeBtn = createEl('button', 'blora-button cr-pn-close');
+    var closeBtn = createEl('button', 'cr-pn-close');
     closeBtn.type = 'button';
-    closeBtn.dataset.variant = 'primary';
     closeBtn.textContent = item.closeText;
     closeBtn.addEventListener('click', function () { closeCard(item.id); });
     footer.appendChild(closeBtn);
