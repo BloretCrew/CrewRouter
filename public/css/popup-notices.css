@@ -252,10 +252,10 @@ html.cr-pn-lock { overflow: hidden; }
   animation: cr-pn-stage-in 0.5s var(--lg-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
-/* ---------- Hero：动态渐变色彩区 ----------
-   核心效果：整个 hero 区域有持续流转的彩色渐变动画。
-   实现：一个超大的 conic-gradient 做旋转动画 + blur 柔化，
-   颜色取 Apple 系统色 (blue/purple/teal/indigo/pink)。
+/* ---------- Hero：Blora 配色极光流动 ----------
+   设计：luminous aurora mesh — 4 枚独立漂移的 Blora 品牌色光斑
+   在明亮底色上交融，产生有机流动的极光效果。
+   毛玻璃层柔化色彩交界，呈现 Apple 级材质质感。
    ------------------------------------------------------------ */
 .cr-pn-hero {
   position: relative;
@@ -264,31 +264,27 @@ html.cr-pn-lock { overflow: hidden; }
   overflow: hidden;
   isolation: isolate;
   contain: paint;
-  background: #1a1a2e;
+  /* 明亮底色：让色彩光斑在浅色基底上透出，不再是粗糙的深色 */
+  background:
+    linear-gradient(135deg, #eef2ff 0%, #faf5ff 35%, #fdf2f8 65%, #ecfeff 100%);
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-hero {
-  background: #0a0a14;
+  background:
+    linear-gradient(135deg, #0c1029 0%, #150d24 35%, #1a0c1a 65%, #0a1518 100%);
 }
 
-/* 动态渐变底层：旋转的锥形渐变产生持续变色 */
+/* 渐变底层：柔和的 mesh gradient 用 background-size 动画缓慢呼吸 */
 .cr-pn-hero-gradient {
   position: absolute;
-  inset: -60%;
-  background: conic-gradient(
-    from 0deg,
-    #007aff,
-    #5856d6,
-    #af52de,
-    #ff2d55,
-    #ff9500,
-    #30b0c7,
-    #34c759,
-    #007aff
-  );
-  filter: blur(40px);
-  opacity: 0.85;
-  animation: cr-pn-gradient-rotate 8s linear infinite;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 80% at 20% 30%, rgba(20, 86, 240, 0.55) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 70% at 80% 20%, rgba(139, 92, 246, 0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 75% 75% at 70% 80%, rgba(236, 72, 153, 0.40) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 65% at 15% 75%, rgba(6, 182, 212, 0.45) 0%, transparent 55%);
+  background-size: 200% 200%;
+  animation: cr-pn-mesh-drift 12s ease-in-out infinite alternate;
   animation-play-state: paused;
 }
 
@@ -297,24 +293,27 @@ html.cr-pn-lock { overflow: hidden; }
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-gradient {
-  opacity: 0.75;
+  background:
+    radial-gradient(ellipse 80% 80% at 20% 30%, rgba(20, 86, 240, 0.65) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 70% at 80% 20%, rgba(139, 92, 246, 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 75% 75% at 70% 80%, rgba(236, 72, 153, 0.50) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 65% at 15% 75%, rgba(6, 182, 212, 0.55) 0%, transparent 55%);
 }
 
-@keyframes cr-pn-gradient-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes cr-pn-mesh-drift {
+  0%   { background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%; }
+  25%  { background-position: 30% 20%, 70% 30%, 80% 60%, 20% 80%; }
+  50%  { background-position: 50% 50%, 50% 50%, 50% 50%, 50% 50%; }
+  75%  { background-position: 70% 80%, 30% 70%, 20% 40%, 80% 20%; }
+  100% { background-position: 100% 100%, 0% 100%, 0% 0%, 100% 0%; }
 }
 
-/* 3 枚流动光斑叠加：增加色彩层次感 */
+/* 3 枚独立漂移的色彩光斑：Blora 品牌四色中取三个做叠加 */
 .cr-pn-hero-blob {
   position: absolute;
-  inline-size: 120%;
-  block-size: 120%;
   border-radius: 50%;
-  filter: blur(30px);
-  opacity: 0.6;
-  mix-blend-mode: overlay;
-  animation-duration: var(--cr-pn-blob-dur, 6s);
+  filter: blur(40px);
+  mix-blend-mode: normal;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   animation-direction: alternate;
@@ -327,62 +326,83 @@ html.cr-pn-lock { overflow: hidden; }
 }
 
 .cr-pn-hero-blob--a {
-  left: -30%;
-  top: -40%;
-  background: radial-gradient(circle, rgba(0, 122, 255, 0.8) 0%, transparent 60%);
-  animation-name: cr-pn-blob-a;
-  --cr-pn-blob-dur: 5s;
+  inline-size: 160px;
+  block-size: 160px;
+  left: -10%;
+  top: -20%;
+  background: radial-gradient(circle, rgba(20, 86, 240, 0.7) 0%, rgba(20, 86, 240, 0) 70%);
+  animation-name: cr-pn-orb-a;
+  animation-duration: 8s;
 }
 
 .cr-pn-hero-blob--b {
-  right: -35%;
-  top: -30%;
-  background: radial-gradient(circle, rgba(175, 82, 222, 0.7) 0%, transparent 58%);
-  animation-name: cr-pn-blob-b;
-  --cr-pn-blob-dur: 7s;
+  inline-size: 140px;
+  block-size: 140px;
+  right: -5%;
+  top: -10%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.65) 0%, rgba(139, 92, 246, 0) 70%);
+  animation-name: cr-pn-orb-b;
+  animation-duration: 10s;
 }
 
 .cr-pn-hero-blob--c {
-  left: 10%;
-  bottom: -50%;
-  background: radial-gradient(circle, rgba(48, 176, 199, 0.7) 0%, transparent 60%);
-  animation-name: cr-pn-blob-c;
-  --cr-pn-blob-dur: 6s;
+  inline-size: 180px;
+  block-size: 180px;
+  left: 20%;
+  bottom: -30%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.55) 0%, rgba(236, 72, 153, 0) 70%);
+  animation-name: cr-pn-orb-c;
+  animation-duration: 9s;
 }
 
-@keyframes cr-pn-blob-a {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(25%, 20%) scale(1.15); }
+:root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--a {
+  background: radial-gradient(circle, rgba(60, 120, 255, 0.8) 0%, transparent 70%);
+}
+:root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--b {
+  background: radial-gradient(circle, rgba(160, 110, 255, 0.7) 0%, transparent 70%);
+}
+:root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--c {
+  background: radial-gradient(circle, rgba(255, 90, 170, 0.6) 0%, transparent 70%);
 }
 
-@keyframes cr-pn-blob-b {
-  0% { transform: translate(0, 0) scale(1.05); }
-  100% { transform: translate(-20%, 15%) scale(0.9); }
+@keyframes cr-pn-orb-a {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(80%, 60%) scale(1.2); }
+  100% { transform: translate(40%, 30%) scale(0.9); }
 }
 
-@keyframes cr-pn-blob-c {
-  0% { transform: translate(0, 0) scale(0.95); }
-  100% { transform: translate(15%, -20%) scale(1.1); }
+@keyframes cr-pn-orb-b {
+  0%   { transform: translate(0, 0) scale(1.1); }
+  50%  { transform: translate(-60%, 50%) scale(0.85); }
+  100% { transform: translate(-30%, 80%) scale(1.15); }
 }
 
-/* 顶部光泽层：模拟玻璃顶部反光 */
+@keyframes cr-pn-orb-c {
+  0%   { transform: translate(0, 0) scale(0.95); }
+  50%  { transform: translate(30%, -40%) scale(1.1); }
+  100% { transform: translate(-20%, -20%) scale(1); }
+}
+
+/* 毛玻璃覆盖层：柔化色彩交界，增加玻璃质感深度 */
 .cr-pn-hero-sheen {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(140% 90% at 22% 0%, rgba(255, 255, 255, 0.22) 0%, transparent 48%),
-    linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.06) 100%);
+    radial-gradient(120% 80% at 25% 0%, rgba(255, 255, 255, 0.35) 0%, transparent 50%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 0%, transparent 40%, rgba(255, 255, 255, 0.05) 100%);
+  -webkit-backdrop-filter: blur(1px) saturate(120%);
+  backdrop-filter: blur(1px) saturate(120%);
   pointer-events: none;
   z-index: 2;
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-sheen {
   background:
-    radial-gradient(140% 90% at 22% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 48%),
-    linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.12) 100%);
+    radial-gradient(120% 80% at 25% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 0%, transparent 40%, rgba(0, 0, 0, 0.1) 100%);
 }
 
-/* hero 与 body 之间的分隔 */
+/* hero 底部分隔线 */
 .cr-pn-hero::after {
   content: "";
   position: absolute;
@@ -391,8 +411,10 @@ html.cr-pn-lock { overflow: hidden; }
   right: 0;
   height: 1px;
   background: var(--lg-divider, rgba(0, 0, 0, 0.08));
+  z-index: 4;
 }
 
+/* wordmark 文字层 */
 .cr-pn-wordmark {
   position: absolute;
   inset: 0;
@@ -406,15 +428,25 @@ html.cr-pn-lock { overflow: hidden; }
 .cr-pn-wordmark span {
   display: inline-block;
   max-inline-size: 100%;
-  color: rgba(255, 255, 255, 0.96);
+  /* 深色文字 + 微妙投影：在明亮极光背景上清晰可读 */
+  color: rgba(15, 15, 35, 0.88);
   font-family: var(--lg-font-display, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   font-size: clamp(28px, 6vw, 40px);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
   white-space: nowrap;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.35);
+  text-shadow:
+    0 1px 2px rgba(255, 255, 255, 0.6),
+    0 0 40px rgba(20, 86, 240, 0.15);
   transition: font-family 0.08s ease, filter 0.12s ease, opacity 0.12s ease;
+}
+
+:root[data-blora-color-scheme="dark"] .cr-pn-wordmark span {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(100, 140, 255, 0.3);
 }
 
 .cr-pn-wordmark span.is-swapping {
@@ -584,7 +616,7 @@ html.cr-pn-lock { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .cr-pn-stage { animation: none; }
   .cr-pn-card { transition: none; }
-  .cr-pn-hero-gradient { animation: none !important; }
+  .cr-pn-hero-gradient { animation: none !important; background-size: 100% 100% !important; }
   .cr-pn-hero-blob { animation: none !important; }
   .cr-pn-wordmark span.is-swapping { filter: none; opacity: 1; }
   .cr-pn-bubble { transition: none; }
