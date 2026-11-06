@@ -6,6 +6,15 @@
   <meta name="color-scheme" content="light dark">
   <title>简洁登录 · CrewRouter</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
+  <script>
+    (function () {
+      var mode = localStorage.getItem('theme') || 'system';
+      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.classList.toggle('light', !dark);
+      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');
+    }());
+  </script>
   <style>
     :root { color-scheme: light dark; font-family: var(--lg-font); }
     * { box-sizing: border-box; }
@@ -69,7 +78,7 @@
   </style>
   <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-13">
 </head>
-<body>
+<body class="blora-page lg-scope">
   <main class="plain-card">
     <h1>CrewRouter</h1>
     <p class="subtitle">简洁登录页</p>
