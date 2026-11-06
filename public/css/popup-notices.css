@@ -21,6 +21,10 @@
   overflow: visible;
   color: var(--lg-fg, #1d1d1f);
   font-family: var(--lg-font, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif);
+  /* 关键：dialog 自身作为全屏居中容器 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cr-pn-overlay::backdrop {
@@ -248,10 +252,10 @@ html.cr-pn-lock { overflow: hidden; }
   animation: cr-pn-stage-in 0.5s var(--lg-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
-/* ---------- Hero：Liquid Glass 彩色折射区 ----------
-   设计：半透明深色底 + 3 枚柔和彩色光斑，整体透过 backdrop-filter
-   模糊呈现 Apple Liquid Glass 特有的折射光泽。光斑颜色取自项目
-   的 --lg-accent / --lg-purple / --lg-teal / --lg-indigo 系统色。
+/* ---------- Hero：动态渐变色彩区 ----------
+   核心效果：整个 hero 区域有持续流转的彩色渐变动画。
+   实现：一个超大的 conic-gradient 做旋转动画 + blur 柔化，
+   颜色取 Apple 系统色 (blue/purple/teal/indigo/pink)。
    ------------------------------------------------------------ */
 .cr-pn-hero {
   position: relative;
@@ -260,37 +264,57 @@ html.cr-pn-lock { overflow: hidden; }
   overflow: hidden;
   isolation: isolate;
   contain: paint;
-  /* 半透明底色 + 彩色渐变——透过 backdrop-filter blur 产生 Liquid Glass 折射 */
-  background:
-    radial-gradient(ellipse 140% 100% at 18% 0%, rgba(255, 255, 255, 0.16) 0%, transparent 48%),
-    linear-gradient(160deg,
-      rgba(0, 122, 255, 0.28) 0%,
-      rgba(175, 82, 222, 0.24) 30%,
-      rgba(48, 209, 88, 0.12) 50%,
-      rgba(48, 176, 199, 0.22) 70%,
-      rgba(88, 86, 214, 0.28) 100%);
+  background: #1a1a2e;
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-hero {
-  background:
-    radial-gradient(ellipse 140% 100% at 18% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 48%),
-    linear-gradient(160deg,
-      rgba(10, 132, 255, 0.35) 0%,
-      rgba(191, 90, 242, 0.3) 30%,
-      rgba(48, 209, 88, 0.14) 50%,
-      rgba(64, 200, 224, 0.25) 70%,
-      rgba(94, 92, 230, 0.35) 100%);
+  background: #0a0a14;
 }
 
+/* 动态渐变底层：旋转的锥形渐变产生持续变色 */
+.cr-pn-hero-gradient {
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    from 0deg,
+    #007aff,
+    #5856d6,
+    #af52de,
+    #ff2d55,
+    #ff9500,
+    #30b0c7,
+    #34c759,
+    #007aff
+  );
+  filter: blur(40px);
+  opacity: 0.85;
+  animation: cr-pn-gradient-rotate 8s linear infinite;
+  animation-play-state: paused;
+}
+
+.cr-pn-card.is-active .cr-pn-hero-gradient {
+  animation-play-state: running;
+}
+
+:root[data-blora-color-scheme="dark"] .cr-pn-hero-gradient {
+  opacity: 0.75;
+}
+
+@keyframes cr-pn-gradient-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 3 枚流动光斑叠加：增加色彩层次感 */
 .cr-pn-hero-blob {
   position: absolute;
-  inline-size: 160%;
-  block-size: 160%;
+  inline-size: 120%;
+  block-size: 120%;
   border-radius: 50%;
-  filter: blur(36px);
-  opacity: 0.8;
-  mix-blend-mode: screen;
-  animation-duration: var(--cr-pn-blob-dur, 24s);
+  filter: blur(30px);
+  opacity: 0.6;
+  mix-blend-mode: overlay;
+  animation-duration: var(--cr-pn-blob-dur, 6s);
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   animation-direction: alternate;
@@ -303,48 +327,42 @@ html.cr-pn-lock { overflow: hidden; }
 }
 
 .cr-pn-hero-blob--a {
-  left: -50%;
-  top: -60%;
-  background: radial-gradient(circle, rgba(0, 122, 255, 0.6) 0%, transparent 58%);
+  left: -30%;
+  top: -40%;
+  background: radial-gradient(circle, rgba(0, 122, 255, 0.8) 0%, transparent 60%);
   animation-name: cr-pn-blob-a;
-  --cr-pn-blob-dur: 25s;
-  animation-delay: calc(var(--i, 0) * -3s);
+  --cr-pn-blob-dur: 5s;
 }
 
 .cr-pn-hero-blob--b {
-  right: -55%;
-  top: -40%;
-  background: radial-gradient(circle, rgba(175, 82, 222, 0.55) 0%, transparent 56%);
+  right: -35%;
+  top: -30%;
+  background: radial-gradient(circle, rgba(175, 82, 222, 0.7) 0%, transparent 58%);
   animation-name: cr-pn-blob-b;
-  --cr-pn-blob-dur: 29s;
-  animation-delay: calc(var(--i, 0) * -5s);
+  --cr-pn-blob-dur: 7s;
 }
 
 .cr-pn-hero-blob--c {
-  left: 5%;
-  bottom: -65%;
-  background: radial-gradient(circle, rgba(48, 176, 199, 0.5) 0%, transparent 60%);
+  left: 10%;
+  bottom: -50%;
+  background: radial-gradient(circle, rgba(48, 176, 199, 0.7) 0%, transparent 60%);
   animation-name: cr-pn-blob-c;
-  --cr-pn-blob-dur: 33s;
-  animation-delay: calc(var(--i, 0) * -7s);
+  --cr-pn-blob-dur: 6s;
 }
 
 @keyframes cr-pn-blob-a {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  50% { transform: translate3d(14%, 12%, 0) rotate(22deg) scale(1.1); }
-  100% { transform: translate3d(-8%, 18%, 0) rotate(-14deg) scale(0.95); }
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(25%, 20%) scale(1.15); }
 }
 
 @keyframes cr-pn-blob-b {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1.04); }
-  50% { transform: translate3d(-16%, 10%, 0) rotate(-18deg) scale(0.92); }
-  100% { transform: translate3d(10%, -10%, 0) rotate(16deg) scale(1.08); }
+  0% { transform: translate(0, 0) scale(1.05); }
+  100% { transform: translate(-20%, 15%) scale(0.9); }
 }
 
 @keyframes cr-pn-blob-c {
-  0% { transform: translate3d(0, 0, 0) scale(0.98); }
-  50% { transform: translate3d(-12%, -16%, 0) scale(1.06); }
-  100% { transform: translate3d(16%, 8%, 0) scale(1); }
+  0% { transform: translate(0, 0) scale(0.95); }
+  100% { transform: translate(15%, -20%) scale(1.1); }
 }
 
 /* 顶部光泽层：模拟玻璃顶部反光 */
@@ -388,26 +406,20 @@ html.cr-pn-lock { overflow: hidden; }
 .cr-pn-wordmark span {
   display: inline-block;
   max-inline-size: 100%;
-  color: var(--lg-fg, #1d1d1f);
+  color: rgba(255, 255, 255, 0.96);
   font-family: var(--lg-font-display, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   font-size: clamp(28px, 6vw, 40px);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
   white-space: nowrap;
-  /* 柔和文字阴影：适应半透明背景 */
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.08);
-  transition: filter 0.12s ease, opacity 0.12s ease;
-}
-
-:root[data-blora-color-scheme="dark"] .cr-pn-wordmark span {
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.35);
+  transition: font-family 0.08s ease, filter 0.12s ease, opacity 0.12s ease;
 }
 
 .cr-pn-wordmark span.is-swapping {
   filter: blur(0.5px);
-  opacity: 0.85;
+  opacity: 0.88;
 }
 
 /* ---------- 下半部 ---------- */
@@ -572,6 +584,7 @@ html.cr-pn-lock { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .cr-pn-stage { animation: none; }
   .cr-pn-card { transition: none; }
+  .cr-pn-hero-gradient { animation: none !important; }
   .cr-pn-hero-blob { animation: none !important; }
   .cr-pn-wordmark span.is-swapping { filter: none; opacity: 1; }
   .cr-pn-bubble { transition: none; }
@@ -593,14 +606,6 @@ html.cr-pn-lock { overflow: hidden; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .cr-pn-card {
     background-color: var(--lg-surface, rgba(255, 255, 255, 0.92));
-  }
-  .cr-pn-hero {
-    background:
-      linear-gradient(165deg,
-        rgba(0, 122, 255, 0.3) 0%,
-        rgba(175, 82, 222, 0.28) 35%,
-        rgba(48, 176, 199, 0.24) 65%,
-        rgba(88, 86, 214, 0.3) 100%);
   }
 }
 

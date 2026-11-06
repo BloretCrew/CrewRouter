@@ -69,10 +69,12 @@
   function detectFontFamilies() {
     if (detectedFamilies) return detectedFamilies;
     var families = [];
+    // 兜底清单：当检测完全失败时仍有字体可用
+    var fallbackList = FONT_CANDIDATES.map(function (entry) { return entry[0]; }).concat(FALLBACK_FAMILIES);
     try {
       var canvas = document.createElement('canvas');
       var ctx = canvas.getContext('2d');
-      if (!ctx) return (detectedFamilies = []);
+      if (!ctx) return (detectedFamilies = fallbackList);
       var sample = 'CrewRouter 0123456789 AGMW';
       ctx.font = '72px monospace';
       var baseline = ctx.measureText(sample).width;
@@ -91,7 +93,7 @@
       });
     } catch (error) {
       warn('字体检测失败，使用完整候选清单', error);
-      return (detectedFamilies = []);
+      return (detectedFamilies = fallbackList);
     }
     // 通用族本身也是「字体」：追加为轮播项，保证至少能切换出差异
     var list = families.length >= 6 ? families : FONT_CANDIDATES.map(function (entry) { return entry[0]; });
@@ -368,6 +370,7 @@
 
     var hero = createEl('div', 'cr-pn-hero');
     hero.setAttribute('aria-hidden', 'true');
+    hero.appendChild(createEl('div', 'cr-pn-hero-gradient'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--a'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--b'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--c'));
