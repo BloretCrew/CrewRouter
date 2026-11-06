@@ -258,7 +258,27 @@ class ConsoleApp {
       });
     }
     this.checkAdminStatus();
-    this._maybeShowStatsConsent();
+    await this._maybeShowStatsConsent();
+    this._maybeShowPopupNotices();
+  }
+
+  /**
+   * 管理后台广播的一次性弹窗通知。
+   * 等其它弹窗（统计授权等）关闭后再展示，最多等待 30s；任何失败都静默跳过。
+   */
+  async _maybeShowPopupNotices() {
+    if (!window.CrewRouterPopupNotices) return;
+    const idle = () => !document.querySelector('blora-dialog[open]');
+    for (let i = 0; i < 60; i += 1) {
+      if (idle()) break;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    if (!idle()) return;
+    try {
+      await window.CrewRouterPopupNotices.mount();
+    } catch (error) {
+      console.warn(t('加载弹窗通知失败:'), error);
+    }
   }
 
   async loadUserInfo() {

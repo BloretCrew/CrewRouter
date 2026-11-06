@@ -9431,7 +9431,240 @@ async function(ctx) {
     if (title) title.textContent = document.querySelector(`[data-admin-settings-category="${category}"] strong`)?.textContent || '';
     document.querySelectorAll('.admin-settings-section').forEach(item => { item.hidden = !sections.includes(item); });
     if (category === 'auth') this.loadInvites();
+    if (category === 'popups') this.loadPopupNotices();
     sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ========== 弹窗通知 ==========
+
+  /** 带 CSRF 的请求封装（同 _inviteRequest） */
+  async _popupNoticeRequest(url, options = {}) {
+    const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    const headers = { ...(options.headers || {}) };
+    if (csrf.token) headers['X-CSRF-Token'] = csrf.token;
+    const response = await fetch(url, { credentials: 'same-origin', ...options, headers });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
+    return data;
+  }
+
+  async loadPopupNotices() {
+    const listEl = document.getElementById('adminPopupNoticesList');
+    if (listEl && !this._popupNoticesData) {
+      setHTML(listEl, pageLoadingHtml(t('加载中...'), { compact: true }));
+    }
+    try {
+      const data = await this._popupNoticeRequest('/api/admin/popup-notices');
+      this._popupNoticesData = Array.isArray(data.items) ? data.items : [];
+      this.renderPopupNotices();
+    } catch (error) {
+      this._popupNoticesData = [];
+      if (listEl) setHTML(listEl, `<div class="cr-admin-pn-empty">${escapeHtml(error.message || t('弹窗通知加载失败'))}</div>`);
+    }
+  }
+
+  renderPopupNotices() {
+    const listEl = document.getElementById('adminPopupNoticesList');
+    if (!listEl) return;
+    const items = this._popupNoticesData || [];
+    if (!items.length) {
+      setHTML(listEl, `<div class="cr-admin-pn-empty">${escapeHtml(t('暂无弹窗通知'))}</div>`);
+      return;
+    }
+    listEl.textContent = '';
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'cr-admin-pn-row';
+      row.dataset.id = String(item.id);
+
+      const main = document.createElement('div');
+      main.className = 'cr-admin-pn-main';
+
+      const head = document.createElement('div');
+      head.className = 'cr-admin-pn-head';
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+      head.appendChild(title);
+      const badge = document.createElement('span');
+      badge.className = 'blora-badge';
+      badge.dataset.variant = item.enabled ? 'success' : 'neutral';
+      badge.textContent = item.enabled ? t('已启用') : t('已停用');
+      head.appendChild(badge);
+      main.appendChild(head);
+
+      if (item.body) {
+        const excerpt = document.createElement('p');
+        excerpt.className = 'cr-admin-pn-excerpt';
+        excerpt.textContent = item.body;
+        main.appendChild(excerpt);
+      }
+
+      const meta = document.createElement('p');
+      meta.className = 'cr-admin-pn-meta';
+      meta.textContent = `${t('已读 {n} 人', { n: Number(item.seenCount || 0) })} · ${t('关闭按钮：')}${item.closeText || t('知道了')}`;
+      main.appendChild(meta);
+      row.appendChild(main);
+
+      const actions = document.createElement('div');
+      actions.className = 'cr-admin-pn-actions';
+      const addButton = (label, variant, handler, disabled) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'blora-button';
+        btn.dataset.variant = variant;
+        btn.dataset.size = 'sm';
+        btn.textContent = label;
+        if (disabled) btn.disabled = true;
+        btn.addEventListener('click', handler);
+        actions.appendChild(btn);
+        return btn;
+      };
+      addButton(t('预览'), 'secondary', () => this.previewPopupNotice(item));
+      addButton(t('编辑'), 'outline', () => this.openPopupNoticeEditor(item.id));
+      addButton(item.enabled ? t('停用') : t('启用'), 'outline', (event) => this.setPopupNoticeEnabled(item.id, !item.enabled, event.currentTarget));
+      addButton(t('重置已读'), 'outline', (event) => this.resetPopupNoticeSeen(item.id, event.currentTarget));
+      addButton(t('删除'), 'danger', (event) => this.deletePopupNotice(item.id, event.currentTarget));
+      row.appendChild(actions);
+
+      listEl.appendChild(row);
+    });
+  }
+
+  openPopupNoticeEditor(id) {
+    const item = id != null
+      ? (this._popupNoticesData || []).find(entry => Number(entry.id) === Number(id))
+      : null;
+    this._popupNoticeEditingId = item ? item.id : null;
+    document.getElementById('popupNoticeId').value = item ? String(item.id) : '';
+    document.getElementById('popupNoticeTitle').value = item ? item.title : '';
+    document.getElementById('popupNoticeBody').value = item ? item.body : '';
+    document.getElementById('popupNoticeCloseText').value = item ? item.closeText : '';
+    document.getElementById('popupNoticeEnabled').checked = item ? item.enabled !== false : true;
+    const heading = document.getElementById('popupNoticeEditorTitle');
+    if (heading) heading.textContent = item ? t('编辑弹窗通知') : t('新建弹窗通知');
+    this.showModal('popupNoticeEditorModal');
+  }
+
+  closePopupNoticeEditor() {
+    const modal = document.getElementById('popupNoticeEditorModal');
+    if (modal && typeof modal.close === 'function') modal.close('api');
+    else modal?.removeAttribute('open');
+    this._popupNoticeEditingId = null;
+  }
+
+  _readPopupNoticeDraft() {
+    return {
+      title: (document.getElementById('popupNoticeTitle')?.value || '').trim(),
+      body: (document.getElementById('popupNoticeBody')?.value || '').trim(),
+      closeText: (document.getElementById('popupNoticeCloseText')?.value || '').trim(),
+      enabled: document.getElementById('popupNoticeEnabled')?.checked !== false,
+    };
+  }
+
+  async savePopupNotice() {
+    const draft = this._readPopupNoticeDraft();
+    if (!draft.title) {
+      Dialog.alert(t('标题不能为空'));
+      document.getElementById('popupNoticeTitle')?.focus();
+      return;
+    }
+    const btn = document.getElementById('popupNoticeSaveBtn');
+    if (btn) btn.disabled = true;
+    try {
+      const id = this._popupNoticeEditingId;
+      if (id != null) {
+        await this._popupNoticeRequest(`/api/admin/popup-notices/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(draft),
+        });
+      } else {
+        await this._popupNoticeRequest('/api/admin/popup-notices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(draft),
+        });
+      }
+      this.closePopupNoticeEditor();
+      this.showToast(t('保存成功'), 'success');
+      await this.loadPopupNotices();
+    } catch (error) {
+      Dialog.alert(error.message || t('保存失败'));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async setPopupNoticeEnabled(id, enabled, button) {
+    if (button) button.disabled = true;
+    try {
+      await this._popupNoticeRequest(`/api/admin/popup-notices/${encodeURIComponent(id)}/enabled`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !!enabled }),
+      });
+      await this.loadPopupNotices();
+    } catch (error) {
+      Dialog.alert(error.message || t('保存失败'));
+      if (button) button.disabled = false;
+    }
+  }
+
+  async resetPopupNoticeSeen(id, button) {
+    if (button) button.disabled = true;
+    try {
+      await this._popupNoticeRequest(`/api/admin/popup-notices/${encodeURIComponent(id)}/reset`, { method: 'POST' });
+      this.showToast(t('已重置该通知的已读记录'), 'success');
+      await this.loadPopupNotices();
+    } catch (error) {
+      Dialog.alert(error.message || t('操作失败'));
+      if (button) button.disabled = false;
+    }
+  }
+
+  async deletePopupNotice(id, button) {
+    const item = (this._popupNoticesData || []).find(entry => Number(entry.id) === Number(id));
+    const ok = await Dialog.confirm(
+      t('删除弹窗通知'),
+      `${t('确定删除')}「${escapeHtml(item?.title || '')}」？${t('已读记录会一并清除。')}`,
+      { confirmText: t('确认删除'), danger: true }
+    );
+    if (!ok) return;
+    if (button) button.disabled = true;
+    try {
+      await this._popupNoticeRequest(`/api/admin/popup-notices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      this.showToast(t('删除成功'), 'success');
+      await this.loadPopupNotices();
+    } catch (error) {
+      Dialog.alert(error.message || t('删除失败'));
+      if (button) button.disabled = false;
+    }
+  }
+
+  previewPopupNotice(item) {
+    if (!window.CrewRouterPopupNotices) return;
+    window.CrewRouterPopupNotices.preview([{
+      id: item.id,
+      title: item.title,
+      body: item.body,
+      closeText: item.closeText || t('知道了'),
+    }]);
+  }
+
+  previewPopupNoticeDraft() {
+    if (!window.CrewRouterPopupNotices) return;
+    const draft = this._readPopupNoticeDraft();
+    if (!draft.title) {
+      Dialog.alert(t('标题不能为空'));
+      document.getElementById('popupNoticeTitle')?.focus();
+      return;
+    }
+    window.CrewRouterPopupNotices.preview([{
+      id: 'draft',
+      title: draft.title,
+      body: draft.body,
+      closeText: draft.closeText || t('知道了'),
+    }]);
   }
 
   async loadSettings() {

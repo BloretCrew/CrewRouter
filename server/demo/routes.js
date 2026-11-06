@@ -775,6 +775,76 @@ router.get('/usage-logs/:id', (req, res) => {
   res.json({ log });
 });
 
+// 管理端弹窗通知：演示数据（必须放在通配 router.all('*') 之前）
+// 内存态：启停 / 编辑 / 删除在本次进程内反映到列表，便于手动演示与截图。
+const DEMO_ADMIN_POPUP_NOTICES = [
+  {
+    id: 1,
+    title: '欢迎使用 CrewRouter',
+    body: '这是演示环境里的第一条弹窗通知。\n它支持多行文本，也会按用户记录已读状态。',
+    closeText: '知道了',
+    enabled: true,
+    seenCount: 128,
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 2,
+    title: '多弹窗叠放演示',
+    body: '存在多条通知时，左侧会出现气泡列表；点击气泡可以切换当前卡片。',
+    closeText: '好的',
+    enabled: true,
+    seenCount: 32,
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    updatedAt: new Date(Date.now() - 1800000).toISOString(),
+  },
+];
+let demoPopupNoticeSeq = 100;
+router.get('/popup-notices', (req, res) => res.json({ items: DEMO_ADMIN_POPUP_NOTICES }));
+router.post('/popup-notices', (req, res) => {
+  const item = {
+    id: ++demoPopupNoticeSeq,
+    title: String(req.body?.title || '演示弹窗'),
+    body: String(req.body?.body || ''),
+    closeText: String(req.body?.closeText || '知道了'),
+    enabled: req.body?.enabled !== false,
+    seenCount: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  DEMO_ADMIN_POPUP_NOTICES.push(item);
+  res.json({ success: true, item });
+});
+router.put('/popup-notices/:id/enabled', (req, res) => {
+  const item = DEMO_ADMIN_POPUP_NOTICES.find(entry => String(entry.id) === String(req.params.id));
+  if (!item) return res.status(404).json({ error: '弹窗通知不存在' });
+  item.enabled = req.body?.enabled === true;
+  item.updatedAt = new Date().toISOString();
+  res.json({ success: true, item });
+});
+router.post('/popup-notices/:id/reset', (req, res) => {
+  const item = DEMO_ADMIN_POPUP_NOTICES.find(entry => String(entry.id) === String(req.params.id));
+  if (item) item.seenCount = 0;
+  res.json({ success: true, cleared: 0 });
+});
+router.put('/popup-notices/:id', (req, res) => {
+  const item = DEMO_ADMIN_POPUP_NOTICES.find(entry => String(entry.id) === String(req.params.id));
+  if (!item) return res.status(404).json({ error: '弹窗通知不存在' });
+  Object.assign(item, {
+    title: String(req.body?.title ?? item.title),
+    body: String(req.body?.body ?? item.body),
+    closeText: String(req.body?.closeText || '知道了'),
+    enabled: req.body?.enabled !== false,
+    updatedAt: new Date().toISOString(),
+  });
+  res.json({ success: true, item });
+});
+router.delete('/popup-notices/:id', (req, res) => {
+  const index = DEMO_ADMIN_POPUP_NOTICES.findIndex(entry => String(entry.id) === String(req.params.id));
+  if (index >= 0) DEMO_ADMIN_POPUP_NOTICES.splice(index, 1);
+  res.json({ success: true });
+});
+
 // 通配：所有未匹配的 GET/POST/PUT/DELETE 返回成功
 router.all('*', (req, res) => {
   if (req.method === 'GET') {

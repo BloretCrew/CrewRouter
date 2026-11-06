@@ -53,6 +53,7 @@
   <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=lg-1">
   <link rel="stylesheet" href="/css/admin-dialogs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-13">
+  <link rel="stylesheet" href="/css/popup-notices.css?v=lg-1">
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -1299,6 +1300,7 @@
             <button type="button" class="settings-category-card" data-admin-settings-category="retention"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/archivebox?color=black" alt="" data-sf-name="archivebox"><span><strong><span data-i18n="数据保留">数据保留</span></strong><small><span data-i18n="压缩、清理与聚合策略">压缩、清理与聚合策略</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="auth"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/person.badge.key?color=black" alt="" data-sf-name="person.badge.key"><span><strong><span data-i18n="登录与认证">登录与认证</span></strong><small><span data-i18n="飞书登录与邀请链接">飞书登录与邀请链接</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="network"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/globe?color=black" alt="" data-sf-name="globe"><span><strong><span data-i18n="网络">网络</span></strong><small><span data-i18n="代理地址与代理池">代理地址与代理池</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="popups"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/bell?color=black" alt="" data-sf-name="bell"><span><strong><span data-i18n="弹窗通知">弹窗通知</span></strong><small><span data-i18n="向用户广播一次性弹窗">向用户广播一次性弹窗</span></small></span><span class="settings-category-arrow">›</span></button>
           </div>
         </div>
         <div id="adminSettingsDetail" class="settings-detail" hidden>
@@ -1598,6 +1600,19 @@
               <button type="submit" class="blora-button" data-variant="primary"><span data-i18n="保存代理池设置">保存代理池设置</span></button>
             </div>
           </form>
+        </div>
+
+        <div class="content-section admin-settings-section admin-settings-category-popups">
+          <div class="section-header">
+            <div>
+              <h2><span data-i18n="弹窗通知">弹窗通知</span></h2>
+              <p style="color:var(--muted-foreground);font-size:13px;margin:0;"><span data-i18n="用户打开控制台时展示一次；多条通知会叠放呈现，并在左侧显示切换列表。">用户打开控制台时展示一次；多条通知会叠放呈现，并在左侧显示切换列表。</span></p>
+            </div>
+            <button type="button" class="blora-button" data-variant="primary" onclick="adminApp.openPopupNoticeEditor()"><span data-i18n="新建弹窗">新建弹窗</span></button>
+          </div>
+          <div id="adminPopupNoticesList" class="cr-admin-pn-list">
+            <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
+          </div>
         </div>
       </div>
 
@@ -2619,6 +2634,7 @@
 
   <script src="/js/theme.js?v=restore-0930-20261003"></script>
   <script src="/js/dom.js?v=restore-0930-20261003"></script>
+  <script src="/js/popup-notices.js?v=lg-1"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <script src="/js/request-quota-config.js?v=request-cycles-20261012"></script>
   <script src="/js/quota-cycle-report.js?v=request-cycles-20261012"></script>
@@ -2816,6 +2832,38 @@
         <button class="modal-close" onclick="adminApp.closeModals()">&times;</button>
       </div>
       <div class="modal-body" id="adminPromptDetailBody"></div>
+    </div>
+  </blora-dialog>
+
+  <!-- 弹窗通知编辑 -->
+  <blora-dialog id="popupNoticeEditorModal" class="lg-scope" role="dialog" aria-modal="true">
+    <div class="modal-content" style="max-width:560px;">
+      <div class="modal-header">
+        <h3 id="popupNoticeEditorTitle"><span data-i18n="新建弹窗通知">新建弹窗通知</span></h3>
+        <button type="button" class="modal-close" onclick="adminApp.closePopupNoticeEditor()" aria-label="关闭" data-i18n-aria-label="关闭">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="popupNoticeId">
+        <div class="form-group">
+          <label for="popupNoticeTitle"><span data-i18n="标题">标题</span></label>
+          <input type="text" id="popupNoticeTitle" class="input blora-input" maxlength="200" placeholder="例如：服务升级通知" data-i18n-placeholder="例如：服务升级通知">
+        </div>
+        <div class="form-group">
+          <label for="popupNoticeBody"><span data-i18n="正文">正文</span></label>
+          <textarea id="popupNoticeBody" class="textarea" rows="6" maxlength="4000" placeholder="支持多行文本" data-i18n-placeholder="支持多行文本"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="popupNoticeCloseText"><span data-i18n="关闭按钮文字">关闭按钮文字</span></label>
+          <input type="text" id="popupNoticeCloseText" class="input blora-input" maxlength="40" placeholder="知道了" data-i18n-placeholder="知道了">
+        </div>
+        <label class="cr-admin-pn-enable"><blora-switch id="popupNoticeEnabled" aria-label="启用弹窗通知" data-i18n-aria-label="启用弹窗通知"></blora-switch><span data-i18n="启用">启用</span></label>
+        <p class="cr-admin-pn-hint"><span data-i18n="用户看过即记为已读；修改文案不会让已读用户重新看到，可点列表中的「重置已读」重新触达。">用户看过即记为已读；修改文案不会让已读用户重新看到，可点列表中的「重置已读」重新触达。</span></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="blora-button" data-variant="secondary" onclick="adminApp.previewPopupNoticeDraft()"><span data-i18n="预览">预览</span></button>
+        <button type="button" class="blora-button" data-variant="outline" onclick="adminApp.closePopupNoticeEditor()"><span data-i18n="取消">取消</span></button>
+        <button type="button" class="blora-button" data-variant="primary" id="popupNoticeSaveBtn" onclick="adminApp.savePopupNotice()"><span data-i18n="保存">保存</span></button>
+      </div>
     </div>
   </blora-dialog>
 <script>

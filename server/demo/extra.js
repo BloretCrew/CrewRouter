@@ -14,4 +14,24 @@ router.get('/inject-prompts/my-keys', (req, res) => res.json({ items: [{ id: 1, 
 router.get('/notifications', (req, res) => res.json([{ id: 1, type: 'usage', title: '演示通知', message: '今日已完成 128 次模型调用。', is_read: false, created_at: new Date(Date.now() - 3600000).toISOString() }]));
 router.get('/notification-settings', (req, res) => res.json({ barkEnabled: false, barkServerKey: '', emailEnabled: true }));
 router.get('/audit-logs', (req, res) => res.json({ logs: [{ id: 1, action: 'demo.view', description: '打开演示控制台', created_at: new Date().toISOString(), username: 'Demo User' }], total: 1, page: 1, limit: 50 }));
+
+// 弹窗通知：默认返回空，避免污染既有截图；浏览器测试通过 sessionStorage.crPopupDemo=1
+// 让渲染器附加 ?popupDemo=1 才返回演示数据。
+const DEMO_POPUP_NOTICES = [
+  {
+    id: 1,
+    title: '欢迎使用 CrewRouter',
+    body: '这是演示环境里的第一条弹窗通知。\n它支持多行文本，也会按用户记录已读状态。',
+    closeText: '知道了',
+  },
+  {
+    id: 2,
+    title: '多弹窗叠放演示',
+    body: '存在多条通知时，左侧会出现气泡列表；点击气泡可以切换当前卡片。',
+    closeText: '好的',
+  },
+];
+router.get('/popup-notices', (req, res) => res.json(req.query.popupDemo === '1' ? DEMO_POPUP_NOTICES : []));
+router.post('/popup-notices/seen', (req, res) => res.json({ success: true, marked: 0 }));
+
 module.exports = router;
