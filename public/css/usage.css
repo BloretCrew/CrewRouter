@@ -120,3 +120,89 @@
   .usage-title-row { align-items: flex-start; }
   .usage-detail-table th, .usage-detail-table td { padding: 11px 8px; }
 }
+
+/* =========================================================================
+   密钥用量页 · Liquid Glass（独立页面 /usage）
+   body 加 lg-scope 取得令牌与组件皮肤；本文件负责页面材质。
+   ========================================================================= */
+
+body.blora-page.lg-scope.usage-page { background: var(--lg-bg); }
+body.blora-page.lg-scope.usage-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--lg-wallpaper);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.usage-shell { width: min(100% - 32px, 960px); padding: 28px 0 48px; }
+
+/* 返回链接：强调色文字 + 小箭头 */
+.usage-back-link { gap: 4px; color: var(--lg-accent-ink); font-size: 13px; font-weight: 500; }
+.usage-back-link:hover { color: var(--lg-accent); }
+.usage-back-link > span:first-child { font-size: 20px; }
+
+/* 语言选择：胶囊 */
+.usage-language-select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background-color: var(--lg-surface);
+  color: var(--lg-fg);
+  font-family: var(--lg-font);
+  font-size: 12px;
+  box-shadow: 0 0 0 1px var(--lg-glass-edge);
+  cursor: pointer;
+}
+
+/* 主卡：玻璃面板 */
+.usage-card {
+  padding: 26px 28px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  color: var(--lg-fg);
+}
+.usage-eyebrow { color: var(--lg-fg-secondary); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.usage-title-row { gap: 12px; }
+.usage-title-row h1 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* 卡内表格 / 统计块与全局玻璃表格保持一致 */
+.usage-card :is(.stats-table, table) { border-collapse: separate; border-spacing: 0; }
+.usage-card :is(.stats-table, table) th {
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.usage-card :is(.stats-table, table) td { border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); }
+.usage-card :is(.stats-table, table) tr:last-child td { border-bottom: 0; }
+.usage-card code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+}
+.usage-state { color: var(--lg-fg-secondary); }
+
+@media (max-width: 640px) {
+  .usage-shell { width: min(100% - 20px, 960px); padding-top: 16px; }
+  .usage-card { padding: 20px 16px; border-radius: 22px; }
+  .usage-header { margin-bottom: 14px; }
+}

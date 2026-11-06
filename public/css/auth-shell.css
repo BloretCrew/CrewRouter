@@ -169,3 +169,221 @@
 .oc-hint { margin-top: var(--blora-space-2); color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); line-height: 1.5; }
 .oc-actions { display: flex; gap: var(--blora-space-3); margin-top: var(--blora-space-6); }
 .oc-actions .blora-button { flex: 1; }
+
+/* =========================================================================
+   公共认证壳层 · Liquid Glass
+   登录 / 设置密码 / OAuth 授权 / 初始化 / 飞书绑定 / 简洁登录共用。
+   这些页面没有 .lg-page，在 <body> 上加 lg-scope 取得令牌与组件皮肤；
+   本文件只负责卡片与容器的材质层级。
+   ========================================================================= */
+
+/* 登录页：背景光斑 + 居中玻璃卡片 */
+/* 背景光斑：liquid-glass.css 里 body.blora-page::before 默认 opacity:0，
+   这里用同特异性但更高优先级的写法覆盖（含 ::before 本身） */
+body.blora-page.lg-scope { background: var(--lg-bg); }
+body.blora-page.lg-scope::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--lg-wallpaper);
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 0.45s var(--lg-ease);
+}
+
+.login-container { padding: 32px 20px; }
+
+.auth-card.login-card,
+.setup-card,
+.oc-card {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+}
+.auth-card.login-card { padding: 32px 28px; }
+
+.auth-card__logo {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: 14px;
+  background: var(--lg-surface);
+  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+}
+.auth-card__header h1 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.auth-card__header p { color: var(--lg-fg-secondary); font-size: 13px; }
+
+.auth-actions { gap: 10px; }
+.auth-actions .blora-button { --blora-button-height: 42px; min-height: 42px; }
+.auth-oauth .blora-button { --blora-button-height: 40px; min-height: 40px; }
+.auth-card__footer { border-top-color: var(--lg-divider); }
+.auth-card__footer .blora-button { color: var(--lg-fg-secondary); }
+.auth-card__footer .blora-button:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+.auth-simple-link { color: var(--lg-fg-tertiary); }
+.auth-simple-link a { color: var(--lg-fg-secondary); text-decoration-color: var(--lg-divider); }
+.auth-simple-link a:hover { color: var(--lg-accent-ink); }
+.auth-2fa-form .auth-actions { flex-direction: row; }
+
+/* 设置密码 / OAuth 授权页的圆底图标 */
+.auth-intro__icon {
+  border: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+}
+.auth-intro__title { color: var(--lg-fg); font-size: 14px; font-weight: 600; }
+.auth-intro__desc { color: var(--lg-fg-secondary); }
+
+/* OAuth 权限列表 */
+.oc-sub { color: var(--lg-fg-secondary); }
+.oc-sub strong { color: var(--lg-fg); }
+.oc-section-label { color: var(--lg-fg); }
+.oc-scopes {
+  border: 1px solid var(--lg-divider);
+  border-radius: var(--lg-radius-group);
+  background: var(--lg-group-bg);
+}
+.oc-scopes .blora-list__meta { color: var(--lg-fg); }
+.oc-scopes code { background: var(--lg-chip-bg); color: var(--lg-fg-secondary); font-family: var(--lg-font-mono); }
+.oc-hint { color: var(--lg-fg-tertiary); }
+.oc-actions .blora-button { min-height: 42px; }
+.oc-loading { color: var(--lg-fg-secondary); }
+
+/* 初始化 / 飞书绑定 */
+.setup-header h1 { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.025em; }
+.setup-header p, .setup-card .step-desc, .setup-loading, .setup-success p { color: var(--lg-fg-secondary); }
+.setup-card { padding: 24px 26px; }
+.setup-success h2 { color: var(--lg-green-ink); }
+.setup-error, .step-warning { color: var(--lg-red-ink); }
+.setup-choice-list .blora-button, .setup-actions .blora-button { min-height: 40px; }
+
+body.lg-scope .blora-fieldset { background: var(--lg-group-bg); }
+body.lg-scope .auth-lang-select::part(trigger) {
+  box-sizing: border-box;
+  min-height: 32px;
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  line-height: 32px;
+}
+
+@media (max-width: 480px) {
+  .login-container { padding: 20px 14px; }
+  .auth-card.login-card { padding: 26px 20px; border-radius: 26px; }
+  .setup-container { padding-block: 24px; }
+  .setup-card { padding: 20px; }
+  .auth-card__header h1 { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-simple-link a { transition: none; }
+}
+
+/* ---------- 插件安装确认页（plugin-install.html，内联布局 + 本文件材质） ---------- */
+body.blora-page.lg-scope .pi-wrap { max-inline-size: 640px; padding: 64px 20px 40px; }
+body.blora-page.lg-scope .pi-brand {
+  margin-block-end: 14px;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+body.blora-page.lg-scope .pi-card {
+  padding: 26px 28px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  color: var(--lg-fg);
+}
+body.blora-page.lg-scope .pi-loading { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .pi-card h1,
+body.blora-page.lg-scope .pi-card h2,
+body.blora-page.lg-scope .pi-card h3 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  letter-spacing: -0.02em;
+}
+body.blora-page.lg-scope .pi-card :is(p, li, small, .pi-desc) { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .pi-card code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+}
+body.blora-page.lg-scope .pi-card :is(ul, ol) { padding-inline-start: 20px; }
+body.blora-page.lg-scope .pi-card .blora-button { min-height: 38px; }
+body.blora-page.lg-scope .pi-card hr,
+body.blora-page.lg-scope .pi-card [style*="border-top"] { border-color: var(--lg-divider) !important; }
+
+/* ---------- 购买商品页（purchase.html，复用控制台壳层 + 内联卡片） ---------- */
+body.blora-page.lg-scope .purchase-container { max-inline-size: 480px; padding: 0 20px; }
+body.blora-page.lg-scope .purchase-card {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  overflow: hidden;
+}
+body.blora-page.lg-scope .purchase-image,
+body.blora-page.lg-scope .purchase-image-placeholder {
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-tertiary);
+}
+body.blora-page.lg-scope .purchase-name { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.02em; }
+body.blora-page.lg-scope .purchase-desc { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .purchase-btn {
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-accent);
+  color: var(--lg-on-accent);
+  font-family: var(--lg-font);
+  box-shadow: 0 4px 14px var(--lg-accent-glow);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+}
+body.blora-page.lg-scope .purchase-btn:hover { background: var(--lg-accent-strong); opacity: 1; }
+body.blora-page.lg-scope .purchase-btn:active:not(:disabled) { transform: scale(0.97); }
+body.blora-page.lg-scope .purchase-btn:disabled { opacity: 0.45; }
+body.blora-page.lg-scope .back-link { color: var(--lg-accent-ink); }
+body.blora-page.lg-scope .error-text { color: var(--lg-red-ink); }
+/* 语言选择（页面顶部的绝对定位控件）改为玻璃胶囊 */
+body.blora-page.lg-scope #langToggle {
+  height: 32px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--lg-glass-border) !important;
+  border-radius: var(--lg-radius-pill) !important;
+  background: var(--lg-surface) !important;
+  color: var(--lg-fg) !important;
+  font-family: var(--lg-font);
+  font-size: 12px !important;
+}
+
+/* 使用控制台壳层的独立页（purchase）：补背景光斑。
+   themes.css 给 body 画了点阵 + 渐变 background-image，会盖住 ::before，必须显式清掉 */
+body.blora-page.lg-scope:has(.app-container) {
+  background-color: var(--lg-bg) !important;
+  background-image: none !important;
+}
+body.blora-page.lg-scope:has(.app-container)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--lg-wallpaper) !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+body.blora-page.lg-scope:has(.app-container) .main-content { padding-block-start: 24px; }

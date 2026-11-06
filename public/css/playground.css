@@ -1460,3 +1460,113 @@
   color: var(--muted-foreground);
 }
 
+
+/* =========================================================================
+   Playground · Liquid Glass（独立页面 /playground）
+   body 加 lg-scope 取得令牌与组件皮肤；本文件负责三栏的玻璃材质。
+   ========================================================================= */
+
+/* .pg-container 自带不透明底色会盖住光斑：改为透明，把光斑放在它自己的 ::before 上 */
+body.blora-page.lg-scope .pg-container {
+  position: relative;
+  background: transparent;
+  isolation: isolate;
+}
+body.blora-page.lg-scope .pg-container::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--lg-wallpaper);
+  opacity: 1;
+  pointer-events: none;
+}
+body.blora-page.lg-scope { background: var(--lg-bg); }
+
+/* 左右两栏：半透明玻璃，随背后光斑变化 */
+body.blora-page.lg-scope .pg-history-panel,
+body.blora-page.lg-scope .pg-settings-panel {
+  border-color: var(--lg-divider);
+  background-color: var(--lg-sidebar-bg);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  color: var(--lg-fg);
+}
+body.blora-page.lg-scope .pg-history-panel { border-inline-end: 1px solid var(--lg-divider); }
+body.blora-page.lg-scope .pg-settings-panel { border-inline-start: 1px solid var(--lg-divider); }
+body.blora-page.lg-scope .pg-history-header { border-bottom-color: var(--lg-divider); }
+body.blora-page.lg-scope .pg-back-link { color: var(--lg-accent-ink); font-size: 13px; font-weight: 500; }
+body.blora-page.lg-scope .pg-back-link:hover { color: var(--lg-accent); }
+body.blora-page.lg-scope .pg-history-header h2,
+body.blora-page.lg-scope .pg-history-header :is(strong, b) { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.02em; }
+body.blora-page.lg-scope .pg-history-panel :is(p, small, .pg-history-empty, .pg-muted) { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .pg-history-list :is(button, li, a) { border-radius: var(--lg-radius-item); color: var(--lg-fg); }
+body.blora-page.lg-scope .pg-history-list :is(button, li, a):hover { background: var(--lg-chip-bg); }
+
+/* 中央对话区：透明，让光斑透出 */
+body.blora-page.lg-scope .pg-main { background: transparent; }
+body.blora-page.lg-scope .pg-welcome :is(h1, h2, .pg-welcome-title) { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.03em; }
+body.blora-page.lg-scope .pg-welcome :is(p, span, .pg-welcome-desc) { color: var(--lg-fg-secondary); }
+
+/* 消息气泡 */
+body.blora-page.lg-scope .pg-message :is(.pg-bubble, .pg-message-content) { border-radius: 18px; }
+body.blora-page.lg-scope .pg-message * { color: inherit; }
+
+/* 输入区：玻璃条 */
+body.blora-page.lg-scope .pg-composer,
+body.blora-page.lg-scope .pg-input-area { border-top-color: var(--lg-divider); background: transparent; }
+body.blora-page.lg-scope .pg-composer-input,
+body.blora-page.lg-scope .pg-input-row {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background-color: var(--lg-glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+}
+body.blora-page.lg-scope .pg-composer textarea,
+body.blora-page.lg-scope .pg-input-row textarea {
+  background: transparent;
+  color: var(--lg-fg);
+  font-family: var(--lg-font);
+}
+body.blora-page.lg-scope .pg-composer textarea::placeholder,
+body.blora-page.lg-scope .pg-input-row textarea::placeholder { color: var(--lg-fg-tertiary); }
+
+/* 右侧设置：字段标签与分组 */
+body.blora-page.lg-scope .pg-setting-group label { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 600; }
+body.blora-page.lg-scope .pg-settings-footer { border-top: 1px solid var(--lg-divider); color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .pg-settings-footer :is(strong, b) { color: var(--lg-fg); }
+body.blora-page.lg-scope .pg-setting-help,
+body.blora-page.lg-scope .pg-settings-panel small { color: var(--lg-fg-tertiary); }
+
+/* 历史详情弹窗 */
+body.blora-page.lg-scope .pg-history-modal::part(panel) {
+  border: 1px solid var(--lg-glass-border-strong);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-sheet-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow);
+  color: var(--lg-fg);
+}
+body.blora-page.lg-scope .pg-history-modal-header h3 { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.02em; }
+
+/* 移动端顶栏与抽屉 */
+body.blora-page.lg-scope .pg-mobile-bar {
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-panel-bg);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+}
+body.blora-page.lg-scope .pg-mobile-title { color: var(--lg-fg); }
+body.blora-page.lg-scope .pg-overlay { background: var(--lg-scrim); }
+body.blora-page.lg-scope .pg-settings-panel { border-inline-start-color: var(--lg-divider); }
+
+@media (max-width: 820px) {
+  body.blora-page.lg-scope .pg-history-panel,
+  body.blora-page.lg-scope .pg-settings-panel {
+    box-shadow: var(--lg-rim), 0 24px 60px var(--lg-sheet-shadow);
+  }
+}

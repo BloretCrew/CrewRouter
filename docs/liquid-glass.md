@@ -136,9 +136,16 @@
     调用错误、操作日志、提示词（含详情弹窗）、插件管理（内联样式用更高特异性覆盖）、
     系统设置、配置抽屉（`.lg-scope`）与 Team / 模型 / 供应商页 — 已完成
 14. 下一步：管理后台已全部启用 `lg-page`；后续按新页面或视觉回归补充细节。
-15. 独立页面（不在控制台侧栏）：插件商店 `/store` — 已完成（头部悬浮玻璃条、
-    工具栏分组底、插件卡玻璃卡、详情页、表单、实例选择弹窗；语言选择并入头部）。
-    其余独立页（`usage`、`playground`、`index` 等）尚未迁移。
+15. 独立页面（不在控制台侧栏）：
+    - 插件商店 `/store`（仅 demo 实例提供）：头部悬浮玻璃条、工具栏、插件卡、
+      详情页、表单、实例选择弹窗；语言选择并入头部 — 已完成
+    - 登录 `index`、设置密码、OAuth 授权、初始化、飞书绑定、简洁登录：
+      `auth-shell.css` 追加玻璃材质，body 加 `lg-scope` — 已完成
+    - 用量 `usage`、Playground、购买 `purchase`、插件安装 `plugin-install`：
+      各自的页面样式补玻璃材质 — 已完成
+    - `themes.css` 给 body 画的点阵背景会盖住光斑，独立页统一在
+      `liquid-glass-pages.css` 里清掉 `background-image` 并补 `::before` 光斑。
+16. 仍未迁移：`data.html`（仅 demo）、`showcase.html`（demo 首页，营销页）。
 
 `.stats-filters` 筛选条的玻璃皮肤已提到 `liquid-glass.css`，统计信息、项目工作、
 排行榜等页面直接复用，页面 CSS 只调下拉宽度与排布。

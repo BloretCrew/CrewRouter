@@ -1,0 +1,87 @@
+/* =========================================================================
+   独立页面补充层（不属于 console / admin / store 的页面）
+   这些页面大多复用 themes.css + main.css，并在 body 上带 lg-scope。
+   themes.css 会给 body 画点阵 + 渐变 background-image，会盖住
+   liquid-glass.css 的 body::before 光斑，因此这里统一清掉并补光斑。
+   ========================================================================= */
+
+/* ---------- 通用：独立页背景 ---------- */
+body.blora-page.lg-scope:not(:has(.pg-container)):not(:has(.store-shell)) {
+  background-color: var(--lg-bg) !important;
+  background-image: none !important;
+  color: var(--lg-fg);
+}
+body.blora-page.lg-scope:not(:has(.pg-container)):not(:has(.store-shell))::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--lg-wallpaper) !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+
+/* ---------- 插件安装确认页（plugin-install.html） ---------- */
+body.blora-page.lg-scope .pi-wrap { max-inline-size: 640px; padding: 64px 20px 40px; }
+body.blora-page.lg-scope .pi-brand {
+  margin-block-end: 14px;
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+body.blora-page.lg-scope .pi-card {
+  padding: 26px 28px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-panel);
+  background-color: var(--lg-panel-bg);
+  background-image: var(--lg-sheen);
+  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  color: var(--lg-fg);
+}
+body.blora-page.lg-scope .pi-loading { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .pi-card h1,
+body.blora-page.lg-scope .pi-card h2,
+body.blora-page.lg-scope .pi-card h3 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  letter-spacing: -0.02em;
+}
+body.blora-page.lg-scope .pi-card :is(p, li, small, .pi-desc) { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .pi-card code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+  font-family: var(--lg-font-mono);
+  font-size: 12px;
+}
+body.blora-page.lg-scope .pi-card :is(ul, ol) { padding-inline-start: 20px; }
+body.blora-page.lg-scope .pi-card .blora-button { min-height: 38px; }
+
+@media (max-width: 640px) {
+  body.blora-page.lg-scope .pi-wrap { padding: 32px 16px 24px; }
+  body.blora-page.lg-scope .pi-card { padding: 20px; border-radius: 22px; }
+}
+
+/* ---------- OAuth 授权页的提示条 ---------- */
+body.blora-page.lg-scope .oc-card .blora-message {
+  border: 1px solid color-mix(in srgb, var(--lg-red) 32%, transparent);
+  border-radius: var(--lg-radius-card);
+  background: color-mix(in srgb, var(--lg-red) 10%, transparent);
+  color: var(--lg-red-ink);
+  box-shadow: none;
+}
+body.blora-page.lg-scope .oc-card .blora-message[data-variant="warning"] {
+  border-color: color-mix(in srgb, var(--lg-orange) 32%, transparent);
+  background: color-mix(in srgb, var(--lg-orange) 12%, transparent);
+  color: var(--lg-orange-ink);
+}
+body.blora-page.lg-scope .oc-card .blora-message[data-variant="success"] {
+  border-color: color-mix(in srgb, var(--lg-green) 32%, transparent);
+  background: color-mix(in srgb, var(--lg-green) 12%, transparent);
+  color: var(--lg-green-ink);
+}

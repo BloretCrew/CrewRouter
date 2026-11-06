@@ -7,34 +7,67 @@
   <title>简洁登录 · CrewRouter</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <style>
-    :root { color-scheme: light dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    :root { color-scheme: light dark; font-family: var(--lg-font); }
     * { box-sizing: border-box; }
-    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; background: #f4f6fa; color: #202534; }
-    .plain-card { width: min(100%, 400px); padding: 32px; border: 1px solid #dce1e9; border-radius: 12px; background: #fff; box-shadow: 0 12px 36px #18233a14; }
-    h1 { margin: 0 0 8px; font-size: 24px; }
-    .subtitle { margin: 0 0 24px; color: #667085; }
-    .field { display: block; margin: 16px 0; font-size: 14px; font-weight: 600; }
-    input { display: block; width: 100%; min-height: 44px; margin-top: 7px; padding: 10px 12px; border: 1px solid #c8ced8; border-radius: 6px; background: transparent; color: inherit; font: inherit; }
-    input:focus { outline: 2px solid #3977dc; outline-offset: 1px; }
-    button, .link-button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; padding: 9px 14px; border: 1px solid #c8ced8; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
-    button[type="submit"] { width: 100%; border-color: #245ec7; background: #245ec7; color: #fff; }
-    button:disabled { opacity: .65; cursor: wait; }
+    body {
+      min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px;
+      background: var(--lg-wallpaper); color: var(--lg-fg);
+      -webkit-font-smoothing: antialiased;
+    }
+    .plain-card {
+      width: min(100%, 400px); padding: 32px;
+      border: 1px solid var(--lg-glass-border);
+      border-radius: var(--lg-radius-panel);
+      background-color: var(--lg-panel-bg);
+      background-image: var(--lg-sheen);
+      -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+      backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
+      box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+    }
+    h1 { margin: 0 0 8px; color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { margin: 0 0 24px; color: var(--lg-fg-secondary); font-size: 13px; }
+    .field { display: block; margin: 16px 0; color: var(--lg-fg); font-size: 12.5px; font-weight: 600; }
+    input {
+      display: block; width: 100%; min-height: 44px; margin-top: 7px; padding: 10px 14px;
+      border: 1px solid transparent; border-radius: var(--lg-radius-field);
+      background: var(--lg-chip-bg); color: var(--lg-fg); font: inherit;
+      transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
+    }
+    input::placeholder { color: var(--lg-fg-tertiary); }
+    input:hover { background: var(--lg-chip-hover); }
+    input:focus { outline: none; border-color: var(--lg-accent); background: var(--lg-surface); box-shadow: 0 0 0 3px var(--lg-accent-glow); }
+    button, .link-button {
+      display: inline-flex; min-height: 42px; align-items: center; justify-content: center;
+      padding: 9px 16px; border: 1px solid var(--lg-glass-border);
+      border-radius: var(--lg-radius-pill); background: var(--lg-glass-bg-strong);
+      color: var(--lg-fg); font: inherit; font-size: 13px; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+      transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+    }
+    button:hover, .link-button:hover { border-color: var(--lg-glass-border-strong); background: var(--lg-card-bg-hover); }
+    button:active:not(:disabled), .link-button:active { transform: scale(0.96); }
+    button[type="submit"] {
+      width: 100%; border-color: transparent; background: var(--lg-accent);
+      color: var(--lg-on-accent); box-shadow: 0 4px 14px var(--lg-accent-glow);
+    }
+    button[type="submit"]:hover { background: var(--lg-accent-strong); }
+    button:disabled { opacity: .55; cursor: wait; transform: none; }
     .actions { display: grid; gap: 10px; margin-top: 20px; }
     .other-login { display: grid; gap: 10px; margin-top: 18px; }
     .other-login[hidden], [hidden] { display: none !important; }
-    .error { margin: 0 0 16px; padding: 10px 12px; border: 1px solid #e9a6a6; border-radius: 6px; background: #fff2f2; color: #9f2525; }
-    .footer { margin: 20px 0 0; text-align: center; font-size: 14px; }
-    .footer a { color: #245ec7; }
-    @media (prefers-color-scheme: dark) {
-      body { background: #11151d; color: #eef1f6; }
-      .plain-card { border-color: #343b49; background: #1b202b; box-shadow: 0 12px 36px #0004; }
-      .subtitle { color: #aab3c2; }
-      input, button, .link-button { border-color: #555e70; }
-      button[type="submit"] { border-color: #578bea; background: #3977dc; }
-      .error { border-color: #754343; background: #392626; color: #ffbaba; }
-      .footer a { color: #91b8ff; }
+    .error {
+      margin: 0 0 16px; padding: 11px 14px; border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--lg-red) 32%, transparent);
+      background: color-mix(in srgb, var(--lg-red) 10%, transparent);
+      color: var(--lg-red-ink); font-size: 13px;
     }
+    .footer { margin: 22px 0 0; padding-top: 16px; border-top: 1px solid var(--lg-divider); text-align: center; font-size: 13px; color: var(--lg-fg-secondary); }
+    .footer a { color: var(--lg-accent-ink); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+    @media (max-width: 480px) { .plain-card { padding: 24px 20px; border-radius: 26px; } }
+    @media (prefers-reduced-motion: reduce) { input, button, .link-button { transition: none; } }
   </style>
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-13">
 </head>
 <body>
   <main class="plain-card">
