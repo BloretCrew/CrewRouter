@@ -85,3 +85,136 @@ body.blora-page.lg-scope .oc-card .blora-message[data-variant="success"] {
   background: color-mix(in srgb, var(--lg-green) 12%, transparent);
   color: var(--lg-green-ink);
 }
+
+/* =========================================================================
+   demo 营销首页（showcase.html）与统计页（data.html）
+   两页都是大段内联样式、只用旧变量（--background / --card / --border 等）。
+   这里不重写它们的布局，只在页面作用域内把这些变量桥接到玻璃令牌，
+   再把少数写死的色值块换成玻璃面板。
+   ========================================================================= */
+
+/* ---------- 变量桥接：内联样式里的旧变量直接用玻璃令牌 ---------- */
+body.blora-page.lg-scope {
+  --background: var(--lg-bg);
+  --foreground: var(--lg-fg);
+  --card: var(--lg-card-bg);
+  --card-foreground: var(--lg-fg);
+  --popover: var(--lg-menu-bg);
+  --secondary: var(--lg-chip-bg);
+  --secondary-foreground: var(--lg-fg);
+  --muted: var(--lg-chip-bg);
+  --muted-foreground: var(--lg-fg-secondary);
+  --accent: var(--lg-chip-hover);
+  --accent-foreground: var(--lg-fg);
+  --border: var(--lg-divider);
+  --input: var(--lg-divider);
+  --ring: var(--lg-accent);
+  --primary: var(--lg-accent);
+  --primary-foreground: var(--lg-on-accent);
+  --brand-blue: var(--lg-accent);
+  --shadow-card: var(--lg-shadow-card);
+  --shadow-dialog: var(--lg-shadow-float);
+}
+
+/* showcase：顶部导航为悬浮玻璃条 */
+body.blora-page.lg-scope .showcase-nav {
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-panel-bg);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  box-shadow: 0 1px 0 var(--lg-glass-highlight) inset;
+}
+body.blora-page.lg-scope .showcase-nav.scrolled { box-shadow: var(--lg-rim), var(--lg-shadow-glass); }
+body.blora-page.lg-scope .nav-brand { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.01em; }
+body.blora-page.lg-scope .nav-links a { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .nav-links a:hover { color: var(--lg-fg); }
+
+/* 主视觉：标题字号与字距对齐 Apple 排版，按钮改胶囊 */
+body.blora-page.lg-scope .hero h1 {
+  color: var(--lg-fg);
+  font-family: var(--lg-font-display);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+body.blora-page.lg-scope .hero p { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .hero-badge {
+  border: 1px solid color-mix(in srgb, var(--lg-accent) 30%, transparent);
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-accent-tint);
+  color: var(--lg-accent-ink);
+}
+body.blora-page.lg-scope .nav-cta,
+body.blora-page.lg-scope .hero-buttons .btn-primary,
+body.blora-page.lg-scope .hero-buttons .btn-secondary {
+  border-radius: var(--lg-radius-pill);
+}
+body.blora-page.lg-scope .nav-cta {
+  background: var(--lg-accent);
+  color: var(--lg-on-accent);
+  box-shadow: 0 4px 14px var(--lg-accent-glow);
+}
+
+/* 特性 / 亮点卡片：玻璃卡 */
+body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card, .mock-window) {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-group);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card):hover {
+  border-color: var(--lg-glass-border-strong);
+  background-color: var(--lg-card-bg-hover);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
+}
+body.blora-page.lg-scope .feature-icon {
+  border-radius: 12px;
+  background: var(--lg-accent-tint);
+  color: var(--lg-accent-ink);
+}
+body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card) :is(h3, h4, strong) { color: var(--lg-fg); }
+body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card) :is(p, span, small) { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .arch-pill {
+  border: 1px solid var(--lg-divider);
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg-secondary);
+}
+
+/* 主题切换按钮：圆形玻璃按钮 */
+body.blora-page.lg-scope .theme-toggle button {
+  border-radius: 50%;
+  border: 1px solid var(--lg-glass-border);
+  background: var(--lg-glass-bg-strong);
+  color: var(--lg-fg);
+  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+}
+body.blora-page.lg-scope .theme-toggle button:hover { background: var(--lg-card-bg-hover); }
+
+/* data 页：指标卡与表格 */
+body.blora-page.lg-scope .metric-card {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+body.blora-page.lg-scope .metric-value { color: var(--lg-fg); font-family: var(--lg-font-display); font-variant-numeric: tabular-nums; }
+body.blora-page.lg-scope .metric-label { color: var(--lg-fg-secondary); }
+body.blora-page.lg-scope .table-wrap {
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-group);
+  background: var(--lg-card-bg);
+  overflow: auto;
+}
+body.blora-page.lg-scope .table-wrap th {
+  border-bottom: 1px solid var(--lg-divider);
+  background: var(--lg-group-bg);
+  color: var(--lg-fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+body.blora-page.lg-scope .table-wrap td { border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); }
+body.blora-page.lg-scope .table-wrap tr:last-child td { border-bottom: 0; }
+body.blora-page.lg-scope .section-title { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.02em; }
+body.blora-page.lg-scope .muted, body.blora-page.lg-scope .empty { color: var(--lg-fg-secondary); }

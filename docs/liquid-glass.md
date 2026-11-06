@@ -145,7 +145,10 @@
       各自的页面样式补玻璃材质 — 已完成
     - `themes.css` 给 body 画的点阵背景会盖住光斑，独立页统一在
       `liquid-glass-pages.css` 里清掉 `background-image` 并补 `::before` 光斑。
-16. 仍未迁移：`data.html`（仅 demo）、`showcase.html`（demo 首页，营销页）。
+16. demo 专属页面：`showcase.html`（营销首页）、`data.html`（实例统计） —
+    已完成。两页是大段内联样式，只在页面作用域内把旧变量桥接到玻璃令牌，
+    再替换导航、卡片、指标卡与表格的材质。
+17. 至此 `public/pages/` 下所有 HTML 页面均已迁移（`admin.html.bak` 未被路由使用）。
 
 `.stats-filters` 筛选条的玻璃皮肤已提到 `liquid-glass.css`，统计信息、项目工作、
 排行榜等页面直接复用，页面 CSS 只调下拉宽度与排布。
