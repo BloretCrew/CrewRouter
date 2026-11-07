@@ -20,7 +20,8 @@
 | 文件 | 作用 |
 | --- | --- |
 | `public/css/liquid-glass.css` | 晶液令牌、玻璃配方、水滴、Blora 令牌桥接、组件皮肤、壳层、无障碍降级 |
-| `public/js/liquid-glass.js` | 壁纸 SVG、透镜引擎、水滴几何与拖拽（抄自 `liquid.js` + `scaffold.js`） |
+| `public/js/liquid-glass.js` | 壁纸 SVG、透镜引擎、水滴几何与拖拽、壁纸选择器（抄自 `liquid.js` + `scaffold.js`） |
+| `public/assets/wallpapers/` | 晶液原壁纸 12 张 SVG（青灰 / 冰蓝 / 暖砂 / 苔绿 / 雾紫 / 烟粉 × 明暗） |
 | `public/css/liquid-glass-pages.css` | 独立页（登录、商店、Playground 等）共用的壁纸与卡片层级 |
 | `public/css/popup-notices.css` | 管理后台弹窗通知：叠放卡片、气泡列表、管理端列表 |
 | `public/js/popup-notices.js` | 弹窗通知渲染器（`window.CrewRouterPopupNotices`） |
@@ -58,8 +59,15 @@
 控件层 CSS 必须写成 `backdrop-filter: var(--lens, var(--g-fallback))`，
 页面自己写 `blur(...)` 会盖掉透镜。
 
-壁纸是晶液青灰构图的内联 SVG（`#lg-wallpaper`），颜色走 `--wp-*`。
-`body::before` 的旧径向光斑已关掉。
+壁纸默认是晶液青灰构图的内联 SVG（`#lg-wallpaper`），颜色走 `--wp-*`。
+用户可在「用户设置 → 界面背景」或「管理后台 → 外观」切换：
+
+- **主题壁纸**：内联青灰 SVG，随明暗变色。
+- **原壁纸**：抄自晶液 `assets/wallpapers/` 的 6 套产品插画，明暗各一张。
+- **自定义**：本机上传图片或填写 `https` 地址，存在 `localStorage`（`crewrouter-liquid-appearance`），不超过 1.8MB。
+
+UI 色盘仍固定青灰。`data-wallpaper` 为 `theme` / `product` / `custom`。
+`body::before` 的旧径向光斑已关掉。遮罩（dialog / drawer / overlay）只有淡色，没有 blur。
 
 ## 水滴
 
@@ -185,3 +193,7 @@ node scripts/verify-blora-correction-browser.js --chrome
 
 对照基准：`BloraDesign3-ARCHIVE/themes/index.html?skin=liquid`。
 需要看透镜时用 Chromium（`google-chrome`）；Firefox 只会看到模糊回退。
+
+```sh
+node scripts/test-liquid-wallpaper-browser.js
+```

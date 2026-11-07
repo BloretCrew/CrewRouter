@@ -13,11 +13,10 @@
 .lg-page.blora-settings-page .settings-overview {
   max-inline-size: none;
   padding: 24px;
-  border: 1px solid var(--lg-glass-border);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+  border: 0;
+  border-radius: 20px;
+  background: var(--sheet);
+  box-shadow: var(--lg-shadow-card);
 }
 
 /* 版本卡：分组底，品牌图标圆角与玻璃描边 */
@@ -76,12 +75,11 @@
 .lg-page.blora-settings-page .settings-category-card {
   min-block-size: 82px;
   padding: 16px 18px;
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: var(--lg-radius-card);
-  background-color: var(--lg-card-bg);
-  background-image: var(--lg-sheen);
+  background: var(--sheet-2);
   color: var(--lg-fg);
-  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  box-shadow: var(--lg-shadow-card);
   transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
 }
 .lg-page.blora-settings-page .settings-category-card:hover {

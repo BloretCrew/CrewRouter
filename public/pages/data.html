@@ -45,9 +45,9 @@
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; gap: 14px;
       padding: 0 24px; height: 56px;
-      background: color-mix(in srgb, var(--background) 80%, transparent);
-      backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
-      border-bottom: 1px solid var(--border);
+      background: var(--g-tint-bar);
+      backdrop-filter: var(--lens, var(--g-fallback)); -webkit-backdrop-filter: var(--g-fallback);
+      border-bottom: 0;
     }
     .data-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; color: var(--foreground); }
     .data-brand img { width: 26px; height: 26px; border-radius: 7px; }
@@ -74,13 +74,13 @@
       gap: 14px; margin-bottom: 26px;
     }
     .metric-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+      background: var(--sheet); border: 0; border-radius: 16px; padding: 16px 18px;
     }
     .metric-label { font-size: 12px; color: var(--muted-foreground); margin-bottom: 6px; }
     .metric-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
     .section-title { font-size: 15px; font-weight: 600; margin: 26px 0 12px; }
-    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
+    .table-wrap { background: var(--sheet); border: 0; border-radius: 16px; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     thead th {
       text-align: left; padding: 10px 14px; font-weight: 600; color: var(--muted-foreground);
@@ -104,8 +104,8 @@
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-16">
-  <script src="/js/liquid-glass.js?v=lg-15" defer></script>
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-18">
+  <script src="/js/liquid-glass.js?v=lg-20" defer></script>
   <link rel="stylesheet" href="/css/liquid-glass-pages.css?v=lg-4">
 </head>
 <body class="blora-page lg-scope">

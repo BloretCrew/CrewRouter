@@ -57,9 +57,9 @@
     .theme-toggle button {
       width: 34px; height: 34px; border-radius: 9px;
       display: flex; align-items: center; justify-content: center;
-      background: color-mix(in srgb, var(--secondary) 80%, transparent);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1px solid var(--border); color: var(--foreground);
+      background: var(--field);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      border: 0; color: var(--foreground);
       cursor: pointer; transition: background 0.2s, transform 0.15s;
     }
     .theme-toggle button:hover { background: var(--accent); transform: scale(1.05); }
@@ -72,9 +72,9 @@
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       padding: 0 40px; height: 56px;
       display: flex; align-items: center; justify-content: space-between;
-      background: color-mix(in srgb, var(--background) 75%, transparent);
-      backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-bottom: 1px solid var(--border);
+      background: var(--g-tint-bar);
+      backdrop-filter: var(--lens, var(--g-fallback)); -webkit-backdrop-filter: var(--g-fallback);
+      border-bottom: 0;
       transition: box-shadow 0.3s;
     }
     .showcase-nav.scrolled { box-shadow: 0 1px 24px rgba(0,0,0,0.12); }
@@ -228,9 +228,9 @@
     }
     .feature-card {
       position: relative; padding: 32px 28px; border-radius: 14px;
-      background: color-mix(in srgb, var(--background) 50%, transparent);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
+      background: var(--sheet);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      border: 0;
       transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
     }
     .feature-card:hover {
@@ -302,9 +302,9 @@
     .highlight-item:nth-child(even) { flex-direction: row-reverse; }
     .highlight-visual {
       flex: 0 0 380px; min-height: 220px; border-radius: 14px;
-      background: color-mix(in srgb, var(--background) 50%, transparent);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
+      background: var(--sheet);
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      border: 0;
       display: flex; flex-direction: column; overflow: hidden;
     }
     .highlight-visual-bar {
@@ -390,8 +390,8 @@
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-16">
-  <script src="/js/liquid-glass.js?v=lg-15" defer></script>
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-18">
+  <script src="/js/liquid-glass.js?v=lg-20" defer></script>
   <link rel="stylesheet" href="/css/liquid-glass-pages.css?v=lg-4">
 </head>
 <body class="blora-page lg-scope">

@@ -493,8 +493,8 @@
   }
   .lg-page.blora-agent-page .ba-overlay {
     background: var(--lg-scrim);
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     transition: opacity var(--lg-dur) var(--lg-ease);
   }
   .lg-page.blora-agent-page .ba-thread { padding: 14px; }

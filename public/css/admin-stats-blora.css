@@ -22,10 +22,10 @@
 }
 
 .blora-admin-page .mobile-topbar {
-  border-bottom: var(--blora-border-subtle);
-  background: color-mix(in srgb, var(--blora-color-surface-default) 92%, transparent);
-  box-shadow: var(--blora-shadow-1);
-  backdrop-filter: blur(16px);
+  border-bottom: 0;
+  background: var(--g-tint-bar);
+  box-shadow: var(--g-depth), var(--shadow-float);
+  backdrop-filter: var(--lens, var(--g-fallback));
 }
 
 .blora-admin-page .sidebar {

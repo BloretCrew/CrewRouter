@@ -46,7 +46,7 @@
   letter-spacing: 0;
   text-transform: none;
   white-space: nowrap;
-  backdrop-filter: blur(16px);
+  backdrop-filter: none;
 }
 #leaderboardPage .leaderboard-table td {
   padding: 12px 16px;

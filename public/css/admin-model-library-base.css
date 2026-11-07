@@ -35,10 +35,10 @@
   z-index: 45;
   padding: 10px 32px;
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  background: var(--g-tint-bar);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  -webkit-backdrop-filter: var(--g-fallback);
+  border-bottom: 0;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   /* 进出场过渡：勿用 display，否则无法动画 */
   opacity: 0;

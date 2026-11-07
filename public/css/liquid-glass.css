@@ -225,11 +225,56 @@
   transition: opacity .45s var(--ease-out);
 }
 .lg-wallpaper svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+:root[data-wallpaper="product"] .lg-wallpaper,
+:root[data-wallpaper="custom"] .lg-wallpaper,
+.lg-wallpaper[data-mode="product"],
+.lg-wallpaper[data-mode="custom"] {
+  background: var(--wp-bg) var(--lg-wall-image, var(--product-wallpaper, none)) center / cover no-repeat;
+}
+:root[data-wallpaper="product"] .lg-wallpaper svg,
+:root[data-wallpaper="custom"] .lg-wallpaper svg,
+.lg-wallpaper[data-mode="product"] svg,
+.lg-wallpaper[data-mode="custom"] svg { display: none; }
 body.blora-page:has(.page.active.lg-page),
 body.blora-page.lg-scope { background: var(--wp-bg); }
 body.blora-page:has(.page.active.lg-page) > .lg-wallpaper,
 body.blora-page.lg-scope > .lg-wallpaper { opacity: 1; }
 body.blora-page::before { content: none; }
+
+/* 壁纸选择器：晶液 segmented + 原壁纸缩略图 + 自定义 */
+.lg-wall-picker { display: grid; gap: 14px; }
+.lg-wall-seg {
+  display: flex; gap: 2px; padding: 3px; width: max-content; max-width: 100%;
+  border-radius: 999px; background: oklch(.3 .04 var(--hue) / .07);
+  box-shadow: inset 0 1px 2px oklch(.3 .04 var(--hue) / .08);
+}
+:root.dark .lg-wall-seg, :root[data-theme="dark"] .lg-wall-seg, :root[data-blora-color-scheme="dark"] .lg-wall-seg {
+  background: oklch(0 0 0 / .22); box-shadow: inset 0 1px 2px oklch(0 0 0 / .3);
+}
+.lg-wall-seg > button {
+  position: relative; z-index: 1; height: 32px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: none; color: var(--text-2); font: 500 13px var(--font-sans); cursor: pointer;
+}
+.lg-wall-seg > button[aria-pressed="true"] { color: var(--text); font-weight: 600; }
+.lg-wall-products { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.lg-wall-thumb {
+  position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 0; border-radius: 18px;
+  background: var(--sheet-2) center / cover no-repeat; box-shadow: inset 0 0 0 .5px var(--line);
+  cursor: pointer; color: var(--text);
+}
+.lg-wall-thumb span {
+  position: absolute; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: 999px;
+  background: oklch(1 0 0 / .72); font: 600 11.5px var(--font-sans);
+}
+:root.dark .lg-wall-thumb span, :root[data-theme="dark"] .lg-wall-thumb span, :root[data-blora-color-scheme="dark"] .lg-wall-thumb span {
+  background: oklch(0 0 0 / .55); color: var(--text);
+}
+.lg-wall-thumb[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.lg-wall-custom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lg-wall-custom .lg-wall-url { flex: 1 1 16rem; min-width: 12rem; }
+.lg-wall-file { cursor: pointer; }
+.lg-wall-hint { flex: 1 0 100%; margin: 0; color: var(--text-2); font-size: 12.5px; }
+.lg-wall-error { flex: 1 0 100%; margin: 0; color: var(--danger); font-size: 12.5px; }
 
 /* ---------- 3. 可复用材质：透镜优先，模糊只是回退 ---------- */
 .lg-glass {
@@ -757,9 +802,9 @@ body.blora-page::before { content: none; }
 :is(.lg-page, .lg-scope) .blora-table :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right),
 :is(.lg-page, .lg-scope) .blora-table tbody tr:hover :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right),
 :is(.lg-page, .lg-scope) .blora-table thead :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right) {
-  background: transparent;
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  background: var(--sheet);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 /* 固定列不画竖向分隔线：横向滚动时，内容在模糊层下滑过即可看出边界 */
 :is(.lg-page, .lg-scope) .blora-table :is([data-blora-fixed], .blora-table-col--fixed-left, .blora-table-col--fixed-right) { box-shadow: none; }
@@ -1281,6 +1326,120 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 @media (prefers-reduced-motion: reduce) {
   .lg-wallpaper { transition: none; }
   :is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: none; }
+}
+
+/* 日期选择面板、移动端抽屉：晶液菜单/面板 */
+:is(.lg-page, .lg-scope) .blora-datepicker__panel,
+.blora-datepicker__panel {
+  isolation: isolate;
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+blora-drawer.lg-scope::part(panel),
+blora-drawer.mobile-sidebar-drawer::part(panel) {
+  isolation: isolate;
+  border: 0;
+  border-radius: 0 28px 28px 0;
+  background: var(--g-tint);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+blora-drawer.lg-scope::part(backdrop),
+blora-drawer.mobile-sidebar-drawer::part(backdrop) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--lg-scrim);
+}
+
+/* 弹出层、命令面板、旧 modal：玻璃给面板，遮罩不磨砂 */
+:is(.lg-page, .lg-scope) .blora-popover__panel,
+.blora-popover__panel {
+  isolation: isolate;
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+blora-command[data-overlay],
+blora-command[open] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--lg-scrim);
+}
+:is(.lg-page, .lg-scope) :is(.blora-command, .blora-cmdk),
+.blora-command, .blora-cmdk {
+  isolation: isolate;
+  border: 0;
+  border-radius: 28px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+:is(.lg-page, .lg-scope) .blora-table-loading,
+:is(.lg-page, .lg-scope) .blora-table [data-frozen],
+:is(.lg-page, .lg-scope) .blora-table th[data-sticky],
+:is(.lg-page, .lg-scope) .blora-table td[data-sticky] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--sheet);
+}
+.blora-page .sidebar-overlay.active,
+:is(.lg-page, .lg-scope) :is(.modal, .sidebar-overlay, .store-modal-mask, .pg-overlay) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:is(.lg-page, .lg-scope) .topnav,
+.lg-scope .topnav {
+  isolation: isolate;
+  border: 0;
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+.lg-scope .data-nav,
+.lg-scope .showcase-nav {
+  isolation: isolate;
+  border: 0;
+  border-bottom: 0;
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+.lg-scope .plain-card {
+  isolation: isolate;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  background-image: none;
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+.lg-scope .feature-card,
+.lg-scope .highlight-visual,
+.lg-scope .metric-card,
+.lg-scope .table-wrap {
+  background: var(--sheet);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--lg-shadow-card);
+}
+.lg-scope .theme-toggle button {
+  background: var(--field);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0;
+  box-shadow: var(--lg-shadow-control);
 }
 
 /* ---------- 8. 挂在 body 下的浮层（不在 .lg-page 内，按类名直接换皮） ---------- */

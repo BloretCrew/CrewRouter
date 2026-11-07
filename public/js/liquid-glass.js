@@ -39,6 +39,69 @@
     <path d="M1800 1200H885C1027 1098 1168 992 1311 909C1477 813 1644 774 1800 779Z" ${paint('--wp-6')}/>
   </svg>`;
 
+  /* Wallpaper choice copied from scaffold.js: 主题壁纸 (inline 青灰 SVG) / 原壁纸
+   * (product SVGs) plus CrewRouter 自定义图片。UI 色盘仍固定青灰。 */
+  const PRODUCT_WALLS = {
+    mineral: ['c5b10ba57cdd-wallpaper', '5b4706a8a2f2-wallpaper-dark'],
+    ice: ['58170f443f90-ice-wallpaper', '01a5888505fe-ice-wallpaper-dark'],
+    sand: ['01c847f8d686-sand', '676e966140f9-sand-dark'],
+    sage: ['bb8350728fcc-sage', '60dab627c474-sage-dark'],
+    iris: ['8186c09057b9-iris', '19d759680e38-iris-dark'],
+    rose: ['1923fad5f421-rose', 'df53c84f18aa-rose-dark'],
+  };
+  const PRODUCT_LABELS = { mineral: '青灰', ice: '冰蓝', sand: '暖砂', sage: '苔绿', iris: '雾紫', rose: '烟粉' };
+  const APPEAR_KEY = 'crewrouter-liquid-appearance';
+  const appearance = loadAppearance();
+
+  function loadAppearance() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(APPEAR_KEY) || '{}'); } catch { /* ignore */ }
+    const wallpaper = ['theme', 'product', 'custom'].includes(saved.wallpaper) ? saved.wallpaper : 'theme';
+    const product = Object.prototype.hasOwnProperty.call(PRODUCT_WALLS, saved.product) ? saved.product : 'mineral';
+    const custom = safeWallUrl(saved.custom);
+    return { wallpaper: wallpaper === 'custom' && !custom ? 'theme' : wallpaper, product, custom };
+  }
+  function saveAppearance() {
+    try { localStorage.setItem(APPEAR_KEY, JSON.stringify({ v: 1, ...appearance })); } catch { /* quota */ }
+  }
+  function safeWallUrl(s) {
+    if (!s || typeof s !== 'string') return '';
+    const v = s.trim();
+    if (v.length > 2_000_000) return '';
+    if (/^https?:\/\//i.test(v) || /^data:image\//i.test(v) || /^blob:/i.test(v) || v.startsWith('/assets/wallpapers/')) return v;
+    return '';
+  }
+  function productUrl() {
+    const pair = PRODUCT_WALLS[appearance.product] || PRODUCT_WALLS.mineral;
+    return `/assets/wallpapers/${pair[isDark() ? 1 : 0]}.svg`;
+  }
+  function applyWallpaper() {
+    const host = $('#lg-wallpaper');
+    const mode = appearance.wallpaper === 'custom' && appearance.custom
+      ? 'custom'
+      : appearance.wallpaper === 'product' ? 'product' : 'theme';
+    ROOT.dataset.wallpaper = mode;
+    ROOT.dataset.wallProduct = appearance.product;
+    if (mode === 'product' || mode === 'custom') {
+      const src = mode === 'product' ? productUrl() : appearance.custom.replace(/"/g, '');
+      const css = `url("${src}")`;
+      ROOT.style.setProperty('--lg-wall-image', css);
+      ROOT.style.setProperty('--product-wallpaper', css);
+    } else {
+      ROOT.style.removeProperty('--lg-wall-image');
+      ROOT.style.removeProperty('--product-wallpaper');
+    }
+    if (host) host.dataset.mode = mode;
+    syncPickers();
+  }
+  function setAppearance(patch) {
+    if (patch.wallpaper) appearance.wallpaper = patch.wallpaper;
+    if (patch.product && PRODUCT_WALLS[patch.product]) appearance.product = patch.product;
+    if (Object.prototype.hasOwnProperty.call(patch, 'custom')) appearance.custom = safeWallUrl(patch.custom);
+    saveAppearance();
+    applyWallpaper();
+  }
+
   /* ---------- Lens engine — copied from liquid.js ----------
    * bezel = width of the refracting rim; depth = how far (px) the rim samples inward at the
    * very edge, so that much of whatever sits under the edge is pushed out of view — kept
@@ -69,7 +132,7 @@
     ['.trace-report-dialog', 'panel'],
     ['#scriptAiModelPickerOverlay > [role="dialog"]', 'panel'],
     ['.cr-pn-card, .cr-pn-overlay .cr-pn-sheet, .cr-pn-bubble', 'toast'],
-    ['.auth-card, .login-card, .pi-card, .oc-card, .setup-card, .purchase-card', 'panel'],
+    ['.auth-card, .login-card, .pi-card, .oc-card, .setup-card, .purchase-card, .plain-card', 'panel'],
     ['.up-toolbar-slot', 'capsule'],
     ['#modelLibraryPage .model-library-binding-bar', 'panel'],
     ['#modelLibraryPage .ml-model-filter-bar', 'capsule'],
@@ -87,6 +150,12 @@
     ['.pg-history-panel, .pg-settings-panel', 'capsule'],
     ['.pg-composer-input, .pg-input-row', 'capsule'],
     ['.pg-mobile-bar', 'capsule'],
+    ['blora-drawer.mobile-sidebar-drawer[open], blora-drawer.lg-scope[open]', 'panel'],
+    ['.blora-datepicker__panel[data-open]', 'menu'],
+    ['.blora-popover[data-open] .blora-popover__panel, .blora-popover__panel', 'menu'],
+    ['blora-command[open]', 'panel'],
+    ['blora-dialog.pg-history-modal[open], #pgHistoryModal[open]', 'panel'],
+    ['.data-nav, .showcase-nav', 'capsule'],
   ];
   const maps = new Map();
   let serial = 0;
@@ -163,22 +232,31 @@
     return defs;
   }
 
-  // blora-dialog's host fills the viewport; the glass is the inner panel.
+  // blora-dialog / drawer / command hosts fill the viewport; the glass is the inner panel.
   function lensBox(el) {
-    if (el.matches && el.matches('blora-dialog')) {
+    if (el.matches && el.matches('blora-dialog, blora-drawer')) {
       const inner = el.querySelector(':scope > .modal-content')
         || (el.shadowRoot && el.shadowRoot.querySelector('[part="panel"]'));
+      if (inner && inner.offsetWidth && inner.offsetHeight) return inner;
+    }
+    if (el.matches && el.matches('blora-command')) {
+      const inner = el.querySelector('.blora-command, .blora-cmdk')
+        || (el.shadowRoot && el.shadowRoot.querySelector('.blora-command, .blora-cmdk, [part="panel"]'));
       if (inner && inner.offsetWidth && inner.offsetHeight) return inner;
     }
     return el;
   }
 
   function clearDialogMaskBlur(el) {
-    if (!el.matches || !el.matches('blora-dialog') || !el.shadowRoot) return;
-    const mask = el.shadowRoot.querySelector('.blora-dialog__mask');
-    if (!mask) return;
-    mask.style.backdropFilter = 'none';
-    mask.style.webkitBackdropFilter = 'none';
+    if (!el.matches || !el.matches('blora-dialog, blora-drawer, blora-command')) return;
+    el.style.backdropFilter = 'none';
+    el.style.webkitBackdropFilter = 'none';
+    const root = el.shadowRoot;
+    if (!root) return;
+    root.querySelectorAll('.blora-dialog__mask, .blora-dialog__backdrop, .blora-drawer__mask, .blora-drawer__backdrop, .blora-command__mask, .blora-command__backdrop').forEach(mask => {
+      mask.style.backdropFilter = 'none';
+      mask.style.webkitBackdropFilter = 'none';
+    });
   }
 
   function updateLens(el) {
@@ -219,7 +297,11 @@
   function isVisibleGlass(el) {
     if (!el || !el.isConnected) return false;
     if (el.hidden || el.getAttribute('aria-hidden') === 'true') return false;
-    if (el.matches && el.matches('blora-dialog') && !el.hasAttribute('open')) return false;
+    if (el.matches && el.matches('blora-dialog, blora-drawer, blora-command')) {
+      let popoverOpen = false;
+      try { popoverOpen = el.matches(':popover-open'); } catch { /* old engine */ }
+      if (!el.hasAttribute('open') && !popoverOpen) return false;
+    }
     if (!el.offsetWidth || !el.offsetHeight) return false;
     return el.getClientRects().length > 0;
   }
@@ -257,22 +339,42 @@
 
   let scanQueue = [];
   let scanning = false;
+  function registerQueued(el, profile) {
+    try { register(el, profile); } catch { /* skip hosts that fail to lens */ }
+  }
   function pumpScan() {
     scanning = true;
-    const start = performance.now();
-    while (scanQueue.length && performance.now() - start < 8) {
-      const [el, profile] = scanQueue.shift();
-      register(el, profile);
+    try {
+      const start = performance.now();
+      while (scanQueue.length && performance.now() - start < 8) {
+        const [el, profile] = scanQueue.shift();
+        registerQueued(el, profile);
+      }
+    } finally {
+      if (scanQueue.length) requestAnimationFrame(pumpScan);
+      else scanning = false;
     }
-    if (scanQueue.length) requestAnimationFrame(pumpScan);
-    else scanning = false;
+  }
+  function flushScan() {
+    scanning = true;
+    try {
+      scanLenses();
+      while (scanQueue.length) {
+        const [el, profile] = scanQueue.shift();
+        registerQueued(el, profile);
+      }
+    } finally {
+      scanning = false;
+    }
+    scanDroplets();
+    updateIndicators();
   }
   function shadowPopups() {
     const out = [];
-    $$('blora-select, blora-dropdown, blora-timepicker').forEach(host => {
+    $$('blora-select, blora-dropdown, blora-timepicker, blora-datepicker, blora-popover, blora-tooltip').forEach(host => {
       const root = host.shadowRoot;
       if (!root) return;
-      const popup = root.querySelector('.blora-select__popup, .blora-dropdown__menu, .blora-timepicker__panel, [part="popup"]');
+      const popup = root.querySelector('.blora-select__popup, .blora-dropdown__menu, .blora-timepicker__panel, .blora-datepicker__panel, .blora-popover__panel, .blora-tooltip__bubble, [part="popup"], [part="panel"]');
       if (popup) out.push([popup, 'menu']);
     });
     return out;
@@ -391,7 +493,7 @@
     $$('.business-sidebar-navigation .blora-sidebar-nav__group, .mobile-sidebar-drawer-content .blora-sidebar-nav__group').forEach(group => {
       mountBox(group, true);
     });
-    $$('.blora-segmented').forEach(el => mountBox(el, false));
+    $$('.blora-segmented, .lg-wall-seg').forEach(el => mountBox(el, false));
     $$('.blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav').forEach(el => mountBox(el, false));
     $$('.blora-tabs[data-orientation="vertical"] > .blora-tabs__nav').forEach(el => mountBox(el, true));
     // Drop disconnected boxes so we don't keep updating ghosts.
@@ -472,13 +574,102 @@
 
   /* ---------- Wallpaper host ---------- */
   function mountWallpaper() {
-    if ($('#lg-wallpaper')) return;
-    const host = document.createElement('div');
-    host.id = 'lg-wallpaper';
-    host.className = 'lg-wallpaper';
-    host.setAttribute('aria-hidden', 'true');
-    host.innerHTML = WALLPAPER;
-    document.body.prepend(host);
+    let host = $('#lg-wallpaper');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'lg-wallpaper';
+      host.className = 'lg-wallpaper';
+      host.setAttribute('aria-hidden', 'true');
+      host.innerHTML = WALLPAPER;
+      document.body.prepend(host);
+    }
+    applyWallpaper();
+  }
+
+  function pickerMarkup() {
+    const thumbs = Object.entries(PRODUCT_LABELS).map(([id, label]) => {
+      const file = PRODUCT_WALLS[id][0];
+      return `<button type="button" class="lg-wall-thumb" data-product="${id}" aria-pressed="${appearance.product === id}" title="${label}" aria-label="${label}" style="background-image:url('/assets/wallpapers/${file}.svg')"><span>${label}</span></button>`;
+    }).join('');
+    return `
+      <div class="lg-wall-seg" role="group" aria-label="壁纸" data-indicator>
+        <span class="indicator" aria-hidden="true"></span>
+        <button type="button" data-wall="theme">主题壁纸</button>
+        <button type="button" data-wall="product">原壁纸</button>
+        <button type="button" data-wall="custom">自定义</button>
+      </div>
+      <div class="lg-wall-products" ${appearance.wallpaper === 'product' ? '' : 'hidden'}>${thumbs}</div>
+      <div class="lg-wall-custom" ${appearance.wallpaper === 'custom' ? '' : 'hidden'}>
+        <label class="lg-wall-file blora-button" data-variant="secondary" data-size="sm">
+          <input type="file" accept="image/*" hidden>
+          <span>选择图片</span>
+        </label>
+        <input type="url" class="blora-input lg-wall-url" placeholder="https:// 图片地址" value="${appearance.custom && !appearance.custom.startsWith('data:') && !appearance.custom.startsWith('blob:') ? appearance.custom : ''}">
+        <button type="button" class="blora-button lg-wall-apply" data-variant="primary" data-size="sm">应用</button>
+        <p class="lg-wall-hint">图片保存在本机浏览器，不超过 1.8MB。界面色盘仍是青灰。</p>
+        <p class="lg-wall-error" hidden></p>
+      </div>`;
+  }
+  function bindPicker(host) {
+    if (!host || host.dataset.lgBound) return;
+    host.dataset.lgBound = '1';
+    host.classList.add('lg-wall-picker');
+    host.innerHTML = pickerMarkup();
+    host.addEventListener('click', e => {
+      const wall = e.target.closest('[data-wall]');
+      if (wall) {
+        setAppearance({ wallpaper: wall.dataset.wall });
+        scanDroplets();
+        updateIndicators();
+        return;
+      }
+      const product = e.target.closest('[data-product]');
+      if (product) setAppearance({ wallpaper: 'product', product: product.dataset.product });
+    });
+    const file = host.querySelector('input[type="file"]');
+    const url = host.querySelector('.lg-wall-url');
+    const apply = host.querySelector('.lg-wall-apply');
+    const err = host.querySelector('.lg-wall-error');
+    const showErr = msg => { if (!err) return; err.hidden = !msg; err.textContent = msg || ''; };
+    if (file) file.addEventListener('change', () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      if (!/^image\//.test(f.type)) { showErr('请选择图片文件'); file.value = ''; return; }
+      if (f.size > 1_800_000) { showErr('图片超过 1.8MB'); file.value = ''; return; }
+      showErr('');
+      const reader = new FileReader();
+      reader.onload = () => setAppearance({ wallpaper: 'custom', custom: String(reader.result || '') });
+      reader.readAsDataURL(f);
+    });
+    const applyUrl = () => {
+      const v = (url && url.value || '').trim();
+      if (!v) { showErr('请填写图片地址'); return; }
+      if (!safeWallUrl(v)) { showErr('只支持 https / http 图片地址'); return; }
+      showErr('');
+      setAppearance({ wallpaper: 'custom', custom: v });
+    };
+    if (apply && url) apply.addEventListener('click', applyUrl);
+    if (url) url.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyUrl(); } });
+    mountBox(host.querySelector('[data-indicator]'), false);
+  }
+  function syncPickers() {
+    $$('.lg-wall-picker').forEach(host => {
+      host.querySelectorAll('[data-wall]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.wall === appearance.wallpaper)));
+      host.querySelectorAll('[data-product]').forEach(b => {
+        b.setAttribute('aria-pressed', String(b.dataset.product === appearance.product));
+        const pair = PRODUCT_WALLS[b.dataset.product];
+        if (pair) b.style.backgroundImage = `url('/assets/wallpapers/${pair[isDark() ? 1 : 0]}.svg')`;
+      });
+      const products = host.querySelector('.lg-wall-products');
+      const custom = host.querySelector('.lg-wall-custom');
+      if (products) products.hidden = appearance.wallpaper !== 'product';
+      if (custom) custom.hidden = appearance.wallpaper !== 'custom';
+      const box = host.querySelector('[data-indicator]');
+      if (box) updateIndicator(box);
+    });
+  }
+  function mountPickers() {
+    $$('#lgWallpaperPicker, .lg-wallpaper-picker-host').forEach(bindPicker);
   }
 
   /* ---------- Boot ---------- */
@@ -516,6 +707,7 @@
       const dark = isDark();
       if (dark === lastDark) return;
       lastDark = dark;
+      applyWallpaper();
       invalidateLenses();
     };
     new MutationObserver(onTheme).observe(ROOT, {
@@ -536,12 +728,21 @@
       });
     };
     watchNav();
-    [400, 1500].forEach(ms => setTimeout(() => { watchNav(); scheduleScan(); }, ms));
-    window.addEventListener('hashchange', scheduleScan);
+    mountPickers();
+    requestAnimationFrame(() => requestAnimationFrame(scheduleScan));
+    [400, 1500].forEach(ms => setTimeout(() => { watchNav(); mountPickers(); scheduleScan(); }, ms));
+    window.addEventListener('hashchange', () => { scheduleScan(); mountPickers(); });
     window.addEventListener('popstate', scheduleScan);
+    document.addEventListener('blora-open', scheduleScan, true);
+    document.addEventListener('toggle', scheduleScan, true);
+    window.addEventListener('storage', e => {
+      if (e.key !== APPEAR_KEY) return;
+      Object.assign(appearance, loadAppearance());
+      applyWallpaper();
+    });
   }
 
-  window.CrewRouterLiquid = { mount, updateIndicators, updateLens, register, scan: scheduleScan };
+  window.CrewRouterLiquid = { mount, updateIndicators, updateLens, register, scan: flushScan, setAppearance, appearance };
 
   const boot = () => setTimeout(mount, 0);
   if (document.readyState === 'loading') {

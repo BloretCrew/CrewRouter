@@ -109,7 +109,9 @@ const Dialog = (() => {
     const dialog = document.createElement('blora-dialog');
     dialog.id = `blora-dialog-${Date.now()}-${++sequence}`;
     // 从已迁移到 Liquid Glass 的页面打开时，确认框等临时弹窗同样使用玻璃外观
-    if (document.querySelector?.('.page.active.lg-page')) dialog.classList?.add('lg-scope');
+    if (document.querySelector?.('.page.active.lg-page') || document.body?.classList?.contains('lg-scope')) {
+      dialog.classList?.add('lg-scope');
+    }
     dialog.setAttribute('close-on-outside-click', closeOnOutsideClick ? 'true' : 'false');
     if (size) dialog.setAttribute('size', size);
     if (width) dialog.style.setProperty('--blora-dialog-max-width', typeof width === 'number' ? `${width}px` : width);

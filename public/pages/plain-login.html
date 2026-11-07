@@ -20,18 +20,18 @@
     * { box-sizing: border-box; }
     body {
       min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px;
-      background: var(--lg-wallpaper); color: var(--lg-fg);
+      background: var(--wp-bg); color: var(--lg-fg);
       -webkit-font-smoothing: antialiased;
     }
     .plain-card {
       width: min(100%, 400px); padding: 32px;
-      border: 1px solid var(--lg-glass-border);
-      border-radius: var(--lg-radius-panel);
-      background-color: var(--lg-panel-bg);
-      background-image: var(--lg-sheen);
-      -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-      backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-      box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+      border: 0;
+      border-radius: 32px;
+      background: var(--g-tint-menu);
+      background-image: none;
+      -webkit-backdrop-filter: var(--g-fallback-menu);
+      backdrop-filter: var(--lens, var(--g-fallback-menu));
+      box-shadow: var(--g-depth), var(--shadow-float);
     }
     h1 { margin: 0 0 8px; color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
     .subtitle { margin: 0 0 24px; color: var(--lg-fg-secondary); font-size: 13px; }
@@ -76,8 +76,8 @@
     @media (max-width: 480px) { .plain-card { padding: 24px 20px; border-radius: 26px; } }
     @media (prefers-reduced-motion: reduce) { input, button, .link-button { transition: none; } }
   </style>
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-16">
-  <script src="/js/liquid-glass.js?v=lg-15" defer></script>
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-18">
+  <script src="/js/liquid-glass.js?v=lg-20" defer></script>
 </head>
 <body class="blora-page lg-scope">
   <main class="plain-card">

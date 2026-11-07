@@ -779,9 +779,9 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--lg-scrim, rgba(0, 0, 0, 0.4));
     z-index: 200;
-    backdrop-filter: blur(2px);
+    backdrop-filter: none;
   }
 
   .pg-overlay.active {

@@ -308,7 +308,7 @@
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0;
-  backdrop-filter: blur(16px);
+  backdrop-filter: none;
 }
 #statsPage #usageLogsList td { border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); }
 #statsPage #usageLogsList tbody tr:last-child td { border-bottom: 0; }

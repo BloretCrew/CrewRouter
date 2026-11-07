@@ -175,10 +175,10 @@
 }
 
 .blora-page .mobile-topbar {
-  border-bottom: var(--blora-border-subtle);
-  background: color-mix(in srgb, var(--blora-color-surface-default) 92%, transparent);
-  box-shadow: var(--blora-shadow-1);
-  backdrop-filter: blur(16px);
+  border-bottom: 0;
+  background: var(--g-tint-bar);
+  box-shadow: var(--g-depth), var(--shadow-float);
+  backdrop-filter: var(--lens, var(--g-fallback));
 }
 
 .blora-page .mobile-hamburger,
@@ -362,7 +362,7 @@
 .blora-page table { border-color: var(--blora-color-border-subtle); }
 .blora-page th { background: var(--blora-color-surface-raised); color: var(--blora-color-text-secondary); }
 .blora-page td, .blora-page th { border-bottom-color: var(--blora-color-border-subtle); }
-.blora-page .sidebar-overlay.active { background: color-mix(in srgb, var(--blora-color-text-primary) 25%, transparent); backdrop-filter: blur(3px); }
+.blora-page .sidebar-overlay.active { background: color-mix(in srgb, var(--blora-color-text-primary) 25%, transparent); backdrop-filter: none; }
 
 /* The key binding popover is a Blora surface, including its menu states. */
 .blora-page #libraryKeyBubbleMenu {

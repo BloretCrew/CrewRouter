@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=console-design-20261018b">
   <script type="module" src="/vendor/blora-2.0.8/auto.js?v=restore-0930-20261003"></script>
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
-  <script src="/js/blora-dialog.js?v=lg-3"></script>
+  <script src="/js/blora-dialog.js?v=lg-4"></script>
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/model-library-blora.css?v=admin-library-20261014">
@@ -52,8 +52,8 @@
   <link rel="stylesheet" href="/css/admin-settings-blora.css?v=lg-1">
   <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=lg-1">
   <link rel="stylesheet" href="/css/admin-dialogs-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-16">
-  <script src="/js/liquid-glass.js?v=lg-15" defer></script>
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-18">
+  <script src="/js/liquid-glass.js?v=lg-20" defer></script>
   <link rel="stylesheet" href="/css/popup-notices.css?v=lg-3">
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -96,7 +96,7 @@
       </svg>
     </button>
   </div>
-  <blora-drawer id="mobileSidebarDrawer" class="mobile-sidebar-drawer" position="left" title="管理后台导航">
+  <blora-drawer id="mobileSidebarDrawer" class="mobile-sidebar-drawer lg-scope" position="left" title="管理后台导航">
     <div class="mobile-sidebar-drawer-content"></div>
   </blora-drawer>
 
@@ -1320,11 +1320,14 @@
         </div>
         <!-- 默认主题（插件主题，plugin-runtime.js 渲染选择器） -->
         <div class="content-section admin-settings-section admin-settings-category-appearance" style="margin-bottom:24px;">
+          <h2><span data-i18n="界面背景">界面背景</span></h2>
+          <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="本机壁纸：主题壁纸、原壁纸或自定义图片。保存在浏览器里，立即生效。">本机壁纸：主题壁纸、原壁纸或自定义图片。保存在浏览器里，立即生效。</span></p>
+          <div id="lgWallpaperPicker" class="lg-wallpaper-picker-host"></div>
+        </div>
+        <div class="content-section admin-settings-section admin-settings-category-appearance" style="margin-bottom:24px;">
           <h2><span data-i18n="默认主题">默认主题</span></h2>
           <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。">为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。</span></p>
-          <div style="padding:16px;border:1px solid var(--border);border-radius:12px;">
-            <div id="pluginDefaultThemePicker"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="暂无可选主题">暂无可选主题</span></div></div>
-          </div>
+          <div id="pluginDefaultThemePicker"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="暂无可选主题">暂无可选主题</span></div></div>
         </div>
         <!-- 版本与自动更新 -->
         <div class="content-section admin-settings-section admin-settings-category-updates" id="updateSection">

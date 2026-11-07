@@ -340,7 +340,7 @@ body.blora-page:has(.store-shell)::before { content: none; }
 .store-form .form-help { color: var(--lg-fg-tertiary); font-size: 11.5px; }
 
 /* ---------- 实例选择弹窗 ---------- */
-.store-modal-mask { background: var(--lg-scrim); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.store-modal-mask { background: var(--lg-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .store-modal {
   isolation: isolate;
   border: 0;

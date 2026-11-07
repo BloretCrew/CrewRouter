@@ -21,7 +21,7 @@
   <script type="module" src="/vendor/blora-2.1.0/auto.js?v=blora-2.1.0"></script>
   <script type="module">import { hydrateIcons } from "/vendor/blora-2.1.0/index.js?v=blora-2.1.0"; import "/vendor/blora-2.1.0/icons-full.js?v=blora-2.1.0"; window.bloraHydrateIcons = hydrateIcons; const mlPage = document.getElementById("modelLibraryPage"); if (mlPage) { hydrateIcons(mlPage); new MutationObserver(() => hydrateIcons(mlPage)).observe(mlPage, { childList: true, subtree: true }); }</script>
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
-  <script src="/js/blora-dialog.js?v=lg-3"></script>
+  <script src="/js/blora-dialog.js?v=lg-4"></script>
   <link rel="stylesheet" href="/css/themes.css?v=page3-step2b-r2">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
@@ -34,8 +34,8 @@
   <link rel="stylesheet" href="/css/sliders-blora.css?v=page3-step2b">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/my-upstream.css?v=lg-3">
-  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-16">
-  <script src="/js/liquid-glass.js?v=lg-15" defer></script>
+  <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-18">
+  <script src="/js/liquid-glass.js?v=lg-20" defer></script>
   <link rel="stylesheet" href="/css/popup-notices.css?v=lg-3">
   <link rel="stylesheet" href="/css/model-library-console.css?v=lg-2">
   <link rel="stylesheet" href="/css/api-keys.css?v=lg-4">
@@ -93,7 +93,7 @@
       </svg>
     </button>
   </div>
-  <blora-drawer id="mobileSidebarDrawer" class="mobile-sidebar-drawer" position="left" title="主导航">
+  <blora-drawer id="mobileSidebarDrawer" class="mobile-sidebar-drawer lg-scope" position="left" title="主导航">
     <div class="mobile-sidebar-drawer-content"></div>
   </blora-drawer>
 
@@ -1458,6 +1458,16 @@
           </form>
         </div>
 
+        <div class="content-section settings-section settings-category-profile" style="margin-top:24px;">
+          <div class="section-header">
+            <div>
+              <h2><span data-i18n="界面背景">界面背景</span></h2>
+              <p style="margin:4px 0 0;color:var(--muted-foreground);font-size:13px;"><span data-i18n="主题壁纸是晶液青灰构图；原壁纸是产品插画；自定义可上传或填写图片地址。">主题壁纸是晶液青灰构图；原壁纸是产品插画；自定义可上传或填写图片地址。</span></p>
+            </div>
+          </div>
+          <div id="lgWallpaperPicker" class="lg-wallpaper-picker-host"></div>
+        </div>
+
         <!-- 界面主题（插件主题，plugin-runtime.js 渲染选择器） -->
         <div class="content-section settings-section settings-category-profile" style="margin-top:24px;">
           <div class="section-header">
@@ -1466,9 +1476,7 @@
               <p style="margin:4px 0 0;color:var(--muted-foreground);font-size:13px;"><span data-i18n="选择管理员安装的主题插件提供的外观；仅改变界面样式。">选择管理员安装的主题插件提供的外观；仅改变界面样式。</span></p>
             </div>
           </div>
-          <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
-            <div id="pluginThemePicker"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="暂无可选主题">暂无可选主题</span></div></div>
-          </div>
+          <div id="pluginThemePicker"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="暂无可选主题">暂无可选主题</span></div></div>
         </div>
 
         <!-- 通知设置 -->
