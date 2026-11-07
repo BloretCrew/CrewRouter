@@ -132,13 +132,21 @@ SidebarNav / foundation 互刷，卡死主线程）。晚到的导航用 400ms /
 - 页签（`blora-tabs`）：轨道是浅凹槽，选中由水滴来画。
 - 表格（`blora-table`）：`--sheet` 分组列表；右侧固定列为透明 + 轻模糊，
   横向滚动时内容从下方滑过；批量操作条为强调色胶囊。
-- 复选框：圆角方框，选中为强调色实心 + 白色对勾（开关里的隐藏 input 除外）。
+- 复选框：圆角方框，选中为强调色实心 + 白色对勾。原生 `input[type=checkbox]`
+  与 `blora-checkbox` 的 `.blora-checkbox__box` 用同一套配方（开关里的隐藏 input 除外）。
+- 单选：`blora-radio` 的圆点边框与内芯用强调色。
+- 分页：当前页强调色方块，其它项悬停用芯片底。
+- 滑块 / 进度条：轨道填充与拇指 / 填充条用强调色。
+- 日期 / 时间选择：面板是菜单玻璃；触发按钮悬停用芯片底；选中日期强调色。
 - 表单：字段标签次级小字；`blora-fieldset` 为分组底。
 - 对话框：菜单玻璃 + 透镜，圆角 32px，圆形关闭按钮悬停旋转。
   由 `blora-dialog.js` 托管的旧版 `.modal-content` 弹窗同样改为玻璃面板。
   面板用 `box-sizing: border-box`，并把组件的回弹曲线换成 `--ease-out`。
   旧版弹窗的宽度上限取 HTML 声明值（行内 `max-width` 或 `.modal-wide`）。
   控制台与 `admin.html` 的静态弹窗全部加了 `lg-scope`。
+  JS 动态 `createElement('blora-dialog')`（模型归因、额度周期、额度历史）
+  在创建时加 `lg-scope`；`liquid-glass.js` 扫描时也会给当前玻璃页上的
+  `blora-dialog` / `blora-drawer` 补上这个类。
 - 挂在 `body` 下、由 JS 动态创建的浮层同样需要作用域：模型库 Key 气泡菜单、
   跟踪报告浮层、脚本「AI 辅助模型」选择器、供应商标签分配下拉。
 - 旧版内容区 `.content-section` / `.section-header`：`--sheet` + 页内标题。
@@ -161,6 +169,8 @@ SidebarNav / foundation 互刷，卡死主线程）。晚到的导航用 400ms /
 靠加载顺序胜出。迁移新页面时如果组件颜色没变，先检查是否被
 `console-blora.css` 的同名规则覆盖。复选框同理：`toggles-blora.css` 用
 `:not()` 链给所有复选框定了尺寸与圆角，玻璃皮肤沿用同样的 `:not()` 链。
+`.blora-page` 把 `--accent` 映射成 shadcn 的 soft 底；`:is(.lg-page, .lg-scope)`
+会重新写成晶液品牌色，控件填充才是青灰而不是 vendor 的浅强调色。
 
 页面 CSS 若再写 `backdrop-filter: blur(...)`，会盖掉 `--lens`。控件层一律写
 `var(--lens, var(--g-fallback))`。
@@ -196,4 +206,5 @@ node scripts/verify-blora-correction-browser.js --chrome
 
 ```sh
 node scripts/test-liquid-wallpaper-browser.js
+node scripts/test-liquid-controls-browser.js
 ```

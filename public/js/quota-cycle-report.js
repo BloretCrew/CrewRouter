@@ -198,7 +198,7 @@
   function open(scope, initial = {}, accounts = []) {
     let dialog = document.getElementById('quotaCycleDialog');
     if (!dialog) {
-      dialog = document.createElement('blora-dialog'); dialog.id = 'quotaCycleDialog'; document.body.append(dialog);
+      dialog = document.createElement('blora-dialog'); dialog.id = 'quotaCycleDialog'; dialog.classList.add('lg-scope'); document.body.append(dialog);
       dialog.addEventListener('click', event => {
         const el = event.target.closest('[data-cycle-action]'); if (!el || !active) return;
         const state = active, action = el.dataset.cycleAction;

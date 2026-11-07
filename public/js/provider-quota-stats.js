@@ -401,7 +401,7 @@
   function open(scope, providerId = '', accountId = '') {
     let dialog = document.getElementById('quotaHistoryDialog');
     if (!dialog) {
-      dialog = document.createElement('blora-dialog'); dialog.id = 'quotaHistoryDialog';
+      dialog = document.createElement('blora-dialog'); dialog.id = 'quotaHistoryDialog'; dialog.classList.add('lg-scope');
       dialog.innerHTML = `<div class="modal-content"><div class="modal-header"><h3>${esc(tr('额度历史'))}</h3><button type="button" class="modal-close" aria-label="${esc(tr('关闭'))}">&times;</button></div><div class="modal-body"><section></section></div></div>`;
       document.body.append(dialog);
       dialog.querySelector('button').addEventListener('click', () => dialog.close ? dialog.close() : dialog.removeAttribute('open'));

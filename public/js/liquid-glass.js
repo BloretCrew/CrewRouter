@@ -128,7 +128,7 @@
     ['.provider-tag-assign-dropdown, .api-key-tag-assign-dropdown, .api-key-tags-overflow-popover, .api-key-route-queue-tip', 'menu'],
     ['.blora-timepicker__panel', 'menu'],
     ['.blora-tooltip__bubble', 'toast'],
-    ['blora-dialog.lg-scope[open]', 'panel'],
+    ['blora-dialog.lg-scope[open], blora-dialog[open]', 'panel'],
     ['.trace-report-dialog', 'panel'],
     ['#scriptAiModelPickerOverlay > [role="dialog"]', 'panel'],
     ['.cr-pn-card, .cr-pn-overlay .cr-pn-sheet, .cr-pn-bubble', 'toast'],
@@ -380,8 +380,18 @@
     return out;
   }
 
+  function pageWantsGlass() {
+    return !!(document.querySelector('.page.active.lg-page, .lg-page, body.lg-scope') || document.body?.classList.contains('lg-scope'));
+  }
+  // JS 动态 createElement('blora-dialog') 不会带 lg-scope，透镜和面板皮肤都对不上。
+  function adoptGlassHosts() {
+    if (!pageWantsGlass()) return;
+    $$('blora-dialog, blora-drawer').forEach(el => el.classList.add('lg-scope'));
+  }
+
   function scanLenses() {
     if (!LENS || reduceTransparency()) return;
+    adoptGlassHosts();
     TARGETS.forEach(([sel, profile]) => $$(sel).forEach(el => {
       if (!lenses.has(el) && isVisibleGlass(el)) scanQueue.push([el, profile]);
     }));

@@ -135,6 +135,7 @@ function makeDialog() {
   epoch++;
   dialog?.remove();
   dialog = document.createElement('blora-dialog');
+  dialog.classList.add('lg-scope');
   dialog.style.setProperty('--blora-dialog-max-width', '760px');
   dialog.setAttribute('close-on-outside-click', 'true');
   const title = document.createElement('span');
