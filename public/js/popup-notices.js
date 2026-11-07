@@ -8,16 +8,22 @@
  *  - 使用原生 <dialog>.showModal() 进入 top layer：与 Blora 弹窗同层，
  *    后打开者在上，避免被 blora-dialog 的 popover 覆盖；不支持时回落 fixed。
  *  - 通知内容全部通过 textContent 写入（不拼 HTML）。
- *  - 上半部分：Blora 配色的动态渐变 + "CrewRouter" 每 350ms 切换系统字体。
+ *  - 上半部分：暖色调动态渐变 + "CrewRouter" 每 50～70ms（随机）切换系统字体。
  *  - 已读按服务端记录：每条在激活/关闭时批量上报，幂等。
  *  - 任何异常都不阻塞控制台（静默 console.warn）。
  */
 (function (global) {
   'use strict';
 
-  var FONT_SWAP_MS = 350;
+  var FONT_SWAP_MS_MIN = 50;
+  var FONT_SWAP_MS_MAX = 70;
+  var FONT_SWAP_FLASH_MS = 40;
   var SEEN_FLUSH_DELAY_MS = 250;
   var DEFAULT_CLOSE_TEXT = '知道了';
+
+  function nextFontDelay() {
+    return FONT_SWAP_MS_MIN + Math.floor(Math.random() * (FONT_SWAP_MS_MAX - FONT_SWAP_MS_MIN + 1));
+  }
 
   function t(key) {
     if (typeof global.t === 'function') {
@@ -326,8 +332,18 @@
     state.fontIndex = (state.fontIndex + 1) % state.fontList.length;
     node.style.fontFamily = familyStackFor(state.fontList[state.fontIndex]);
     node.classList.add('is-swapping');
-    global.setTimeout(function () { node.classList.remove('is-swapping'); }, 120);
+    global.setTimeout(function () { node.classList.remove('is-swapping'); }, FONT_SWAP_FLASH_MS);
     debug('字体切换 →', state.fontList[state.fontIndex]);
+  }
+
+  function scheduleFontTick() {
+    stopFontCycle();
+    state.fontTimer = global.setTimeout(function () {
+      state.fontTimer = null;
+      if (!state.dialog || !state.dialog.open) return;
+      if (!global.document.hidden) tickFont();
+      scheduleFontTick();
+    }, nextFontDelay());
   }
 
   function restartFontCycle() {
@@ -337,15 +353,12 @@
     if (!node) return;
     if (!state.fontList) state.fontList = detectFontFamilies();
     node.style.fontFamily = 'var(--lg-font-display)';
-    state.fontTimer = global.setInterval(function () {
-      if (global.document.hidden) return;
-      tickFont();
-    }, FONT_SWAP_MS);
+    scheduleFontTick();
   }
 
   function stopFontCycle() {
     if (state.fontTimer) {
-      global.clearInterval(state.fontTimer);
+      global.clearTimeout(state.fontTimer);
       state.fontTimer = null;
     }
   }

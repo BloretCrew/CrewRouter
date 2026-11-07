@@ -45,16 +45,23 @@ class CDP {
     };
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 20000) {
     return this.ready.then(() => new Promise((resolve, reject) => {
       const id = ++this.id;
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP timeout: ${method}`));
-      }, 20000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.ws.send(JSON.stringify({ id, method, params }));
     }));
+  }
+
+  fire(method, params = {}) {
+    return this.ready.then(() => {
+      const id = ++this.id;
+      this.ws.send(JSON.stringify({ id, method, params }));
+    });
   }
 
   async evaluate(expression) {
@@ -151,13 +158,17 @@ async function getTarget() {
 }
 
 async function newPage(cdp, url) {
-  await cdp.send('Page.navigate', { url: 'about:blank' });
+  // Chrome 152 偶发不回 Page.navigate 结果；发完后轮询 readyState
+  await cdp.fire('Page.navigate', { url: 'about:blank' });
   await sleep(80);
-  await cdp.send('Page.navigate', { url });
+  await cdp.fire('Page.navigate', { url });
   // 页面可能被 CDN 资源（Chart.js / SF 图标）拖住 load 事件；interactive 即可
   for (let i = 0; i < 120; i += 1) {
     const state = await cdp.evaluate('document.readyState').catch(() => null);
-    if (state === 'interactive' || state === 'complete') return;
+    if ((state === 'interactive' || state === 'complete')) {
+      const href = await cdp.evaluate('location.href').catch(() => '');
+      if (href && href !== 'about:blank') return;
+    }
     await sleep(100);
   }
   throw new Error(`page did not become interactive: ${url}`);
@@ -240,13 +251,49 @@ async function main() {
     await sleep(700);
     await cdp.screenshot('console-1440-light');
 
-    // ---------- 2. 字体轮播 ----------
-    const samples = new Set();
-    for (let i = 0; i < 8; i += 1) {
-      samples.add(await cdp.evaluate(`getComputedStyle(document.querySelector('.cr-pn-card.is-active .cr-pn-wordmark span')).fontFamily`));
-      await sleep(180);
-    }
-    assert.ok(samples.size >= 2, `字体应在 350ms 周期内切换，实际采样：${JSON.stringify([...samples])}`);
+    // ---------- 2. 字体轮播（50～70ms 随机）+ 暖色背景 ----------
+    const swapTiming = await cdp.evaluate(`(() => new Promise((resolve) => {
+      const node = document.querySelector('.cr-pn-card.is-active .cr-pn-wordmark span');
+      if (!node) return resolve({ ok: false, reason: 'missing-wordmark' });
+      const stamps = [];
+      let last = '';
+      const start = performance.now();
+      const timer = setInterval(() => {
+        const family = node.style.fontFamily || getComputedStyle(node).fontFamily;
+        if (family && family !== last) {
+          stamps.push(performance.now());
+          last = family;
+        }
+        if (stamps.length >= 8 || performance.now() - start > 900) {
+          clearInterval(timer);
+          const intervals = [];
+          for (let i = 1; i < stamps.length; i += 1) intervals.push(stamps[i] - stamps[i - 1]);
+          resolve({ ok: true, count: stamps.length, intervals, families: stamps.length });
+        }
+      }, 8);
+    }))()`);
+    assert.ok(swapTiming && swapTiming.ok, `字体轮播采样失败：${JSON.stringify(swapTiming)}`);
+    assert.ok(swapTiming.count >= 5, `50～70ms 周期内应多次切换字体，实际 ${swapTiming.count} 次：${JSON.stringify(swapTiming)}`);
+    const inRange = (swapTiming.intervals || []).filter((ms) => ms >= 40 && ms <= 95);
+    assert.ok(inRange.length >= Math.min(3, swapTiming.intervals.length),
+      `切换间隔应落在约 50～70ms（允许采样抖动），实际：${JSON.stringify(swapTiming.intervals)}`);
+
+    const warmPalette = await cdp.evaluate(`(() => {
+      const hero = document.querySelector('.cr-pn-card.is-active .cr-pn-hero');
+      const gradient = document.querySelector('.cr-pn-card.is-active .cr-pn-hero-gradient');
+      const blobs = [...document.querySelectorAll('.cr-pn-card.is-active .cr-pn-hero-blob')]
+        .map((el) => getComputedStyle(el).backgroundImage);
+      return {
+        heroBg: getComputedStyle(hero).backgroundImage,
+        gradientBg: getComputedStyle(gradient).backgroundImage,
+        blobs,
+      };
+    })()`);
+    const warmJoined = JSON.stringify(warmPalette);
+    assert.match(warmJoined, /249,\s*115,\s*22|245,\s*158,\s*11|244,\s*63,\s*94|234,\s*88,\s*12/,
+      `动态背景应使用暖色 RGB，实际：${warmJoined.slice(0, 400)}`);
+    assert.doesNotMatch(warmJoined, /20,\s*86,\s*240|6,\s*182,\s*212/,
+      `动态背景不应再使用冷蓝/青色，实际：${warmJoined.slice(0, 400)}`);
 
     // ---------- 3. 切换到第二条 ----------
     assert.ok(await cdp.click('.cr-pn-bubble[data-id="2"]'), '应能点击第二个气泡');

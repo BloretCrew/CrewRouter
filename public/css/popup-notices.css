@@ -227,9 +227,10 @@ html.cr-pn-lock { overflow: hidden; }
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- Hero：Blora 配色极光流动 ----------
-   设计：4 枚大尺寸品牌色光斑各自沿关键帧路径漂移（transform 动画，
+/* ---------- Hero：暖色调极光流动 ----------
+   设计：4 枚大尺寸暖色光斑各自沿关键帧路径漂移（transform 动画，
    GPU 合成，任何浏览器都流畅可见），叠加一层缓慢旋转的柔性色盘。
+   配色：琥珀 / 珊瑚 / 玫瑰 / 赤陶。
    ------------------------------------------------------------ */
 .cr-pn-hero {
   position: relative;
@@ -238,27 +239,27 @@ html.cr-pn-lock { overflow: hidden; }
   overflow: hidden;
   isolation: isolate;
   contain: paint;
-  /* 明亮底色：让色彩光斑在浅色基底上透出，不再是粗糙的深色 */
+  /* 明亮暖底：杏桃 / 玫瑰 / 琥珀 / 蜜桃 */
   background:
-    linear-gradient(135deg, #eef2ff 0%, #faf5ff 35%, #fdf2f8 65%, #ecfeff 100%);
+    linear-gradient(135deg, #fff7ed 0%, #fff1f2 35%, #fef3c7 65%, #ffedd5 100%);
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-hero {
   background:
-    linear-gradient(135deg, #0c1029 0%, #150d24 35%, #1a0c1a 65%, #0a1518 100%);
+    linear-gradient(135deg, #1c1008 0%, #1a0c0c 35%, #1a1208 65%, #150e08 100%);
 }
 
-/* 底层色盘：缓慢旋转的柔和四色渐变（流动的第一重保障，10s 一周清晰可感） */
+/* 底层色盘：缓慢旋转的暖色四色渐变（流动的第一重保障，10s 一周清晰可感） */
 .cr-pn-hero-gradient {
   position: absolute;
   inset: -45%;
   background: conic-gradient(
     from 0deg,
-    rgba(20, 86, 240, 0.5),
-    rgba(139, 92, 246, 0.42),
-    rgba(236, 72, 153, 0.38),
-    rgba(6, 182, 212, 0.42),
-    rgba(20, 86, 240, 0.5)
+    rgba(249, 115, 22, 0.52),
+    rgba(245, 158, 11, 0.44),
+    rgba(244, 63, 94, 0.4),
+    rgba(234, 88, 12, 0.46),
+    rgba(249, 115, 22, 0.52)
   );
   filter: blur(48px);
   animation: cr-pn-disks-spin 10s linear infinite;
@@ -272,11 +273,11 @@ html.cr-pn-lock { overflow: hidden; }
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-gradient {
   background: conic-gradient(
     from 0deg,
-    rgba(20, 86, 240, 0.6),
-    rgba(139, 92, 246, 0.52),
-    rgba(236, 72, 153, 0.46),
-    rgba(6, 182, 212, 0.52),
-    rgba(20, 86, 240, 0.6)
+    rgba(249, 115, 22, 0.62),
+    rgba(245, 158, 11, 0.54),
+    rgba(251, 113, 133, 0.48),
+    rgba(234, 88, 12, 0.56),
+    rgba(249, 115, 22, 0.62)
   );
 }
 
@@ -285,7 +286,7 @@ html.cr-pn-lock { overflow: hidden; }
   to { transform: rotate(360deg); }
 }
 
-/* 4 枚独立漂移的色彩光斑：Blora 品牌四色（蓝/紫/粉/青）各占一枚 */
+/* 4 枚独立漂移的色彩光斑：暖色四色（橙/琥珀/玫瑰/赤陶）各占一枚 */
 .cr-pn-hero-blob {
   position: absolute;
   border-radius: 50%;
@@ -307,7 +308,7 @@ html.cr-pn-lock { overflow: hidden; }
   block-size: 240px;
   left: -18%;
   top: -30%;
-  background: radial-gradient(circle, rgba(20, 86, 240, 0.72) 0%, rgba(20, 86, 240, 0) 68%);
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.74) 0%, rgba(249, 115, 22, 0) 68%);
   animation-name: cr-pn-orb-a;
   animation-duration: 7s;
 }
@@ -317,7 +318,7 @@ html.cr-pn-lock { overflow: hidden; }
   block-size: 210px;
   right: -12%;
   top: -18%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.68) 0%, rgba(139, 92, 246, 0) 68%);
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.7) 0%, rgba(245, 158, 11, 0) 68%);
   animation-name: cr-pn-orb-b;
   animation-duration: 9s;
 }
@@ -327,33 +328,33 @@ html.cr-pn-lock { overflow: hidden; }
   block-size: 260px;
   left: 24%;
   bottom: -40%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.6) 0%, rgba(236, 72, 153, 0) 68%);
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.62) 0%, rgba(244, 63, 94, 0) 68%);
   animation-name: cr-pn-orb-c;
   animation-duration: 8s;
 }
 
-/* 第 4 枚青色光斑：轮播路径互补，确保 4 个品牌色全部参与流动 */
+/* 第 4 枚赤陶光斑：轮播路径互补，确保 4 个暖色全部参与流动 */
 .cr-pn-hero-blob--d {
   inline-size: 200px;
   block-size: 200px;
   right: 18%;
   bottom: -35%;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.55) 0%, rgba(6, 182, 212, 0) 68%);
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.58) 0%, rgba(234, 88, 12, 0) 68%);
   animation-name: cr-pn-orb-d;
   animation-duration: 11s;
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--a {
-  background: radial-gradient(circle, rgba(60, 120, 255, 0.85) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(255, 140, 50, 0.85) 0%, transparent 68%);
 }
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--b {
-  background: radial-gradient(circle, rgba(160, 110, 255, 0.75) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.75) 0%, transparent 68%);
 }
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--c {
-  background: radial-gradient(circle, rgba(255, 90, 170, 0.65) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(251, 113, 133, 0.7) 0%, transparent 68%);
 }
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--d {
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.6) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.65) 0%, transparent 68%);
 }
 
 @keyframes cr-pn-orb-a {
@@ -429,8 +430,8 @@ html.cr-pn-lock { overflow: hidden; }
 .cr-pn-wordmark span {
   display: inline-block;
   max-inline-size: 100%;
-  /* 深色文字 + 微妙投影：在明亮极光背景上清晰可读 */
-  color: rgba(15, 15, 35, 0.88);
+  /* 深色文字 + 微妙投影：在明亮暖色极光背景上清晰可读 */
+  color: rgba(40, 20, 10, 0.9);
   font-family: var(--lg-font-display, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   font-size: clamp(28px, 6vw, 40px);
   font-weight: 700;
@@ -439,15 +440,15 @@ html.cr-pn-lock { overflow: hidden; }
   white-space: nowrap;
   text-shadow:
     0 1px 2px rgba(255, 255, 255, 0.6),
-    0 0 40px rgba(20, 86, 240, 0.15);
-  transition: font-family 0.08s ease, filter 0.12s ease, opacity 0.12s ease;
+    0 0 40px rgba(249, 115, 22, 0.18);
+  transition: font-family 0.04s ease, filter 0.04s ease, opacity 0.04s ease;
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-wordmark span {
   color: rgba(255, 255, 255, 0.95);
   text-shadow:
     0 1px 3px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(100, 140, 255, 0.3);
+    0 0 40px rgba(255, 160, 80, 0.32);
 }
 
 .cr-pn-wordmark span.is-swapping {
