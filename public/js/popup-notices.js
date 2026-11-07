@@ -28,6 +28,10 @@
     try { console.warn.apply(console, ['[弹窗通知]'].concat([].slice.call(arguments))); } catch (_) { /* ignore */ }
   }
 
+  function debug() {
+    try { console.debug.apply(console, ['[弹窗通知]'].concat([].slice.call(arguments))); } catch (_) { /* ignore */ }
+  }
+
   function prefersReducedMotion() {
     try { return global.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
   }
@@ -98,6 +102,28 @@
     // 通用族本身也是「字体」：追加为轮播项，保证至少能切换出差异
     var list = families.length >= 6 ? families : FONT_CANDIDATES.map(function (entry) { return entry[0]; });
     list = list.concat(FALLBACK_FAMILIES);
+    // 按 canvas 度量的宽度间隔排列：宽度相同的相邻字体视觉上无差异，
+    // 先排序再「洗牌」为相邻不同宽的序列，保证每一拍都「跳动」
+    var widthByName = {};
+    list.forEach(function (name) { widthByName[name] = fontFamilyWidth(name); });
+    var distinct = list.filter(function (name, index) {
+      return index === 0 || widthByName[name] !== widthByName[list[index - 1]];
+    });
+    if (distinct.length >= 2) {
+      list = distinct;
+      // 相邻同宽时把后者移到队尾重试一次（小列表很少发生；失败也无妨）
+      for (var pass = 0; pass < 3; pass += 1) {
+        var moved = false;
+        for (var i = 1; i < list.length; i += 1) {
+          if (widthByName[list[i]] === widthByName[list[i - 1]]) {
+            list.push(list.splice(i, 1)[0]);
+            moved = true;
+          }
+        }
+        if (!moved) break;
+      }
+    }
+    debug('字体轮播候选', list.length, '个：', list.slice(0, 12).join(', '), list.length > 12 ? '…' : '');
     detectedFamilies = list;
     return list;
   }
@@ -107,6 +133,14 @@
     if (entry) return cssFamily(entry[0], entry[1]);
     if (FALLBACK_FAMILIES.indexOf(name) !== -1) return name;
     return '"' + name + '", sans-serif';
+  }
+
+  function fontFamilyWidth(name) {
+    try {
+      var ctx = fontFamilyWidth._ctx || (fontFamilyWidth._ctx = document.createElement('canvas').getContext('2d'));
+      ctx.font = '72px ' + familyStackFor(name);
+      return ctx.measureText('CrewRouter AGMW 09').width;
+    } catch (_) { return 0; }
   }
 
   /* ------------------------------------------------------------------ *
@@ -292,6 +326,7 @@
     node.style.fontFamily = familyStackFor(state.fontList[state.fontIndex]);
     node.classList.add('is-swapping');
     global.setTimeout(function () { node.classList.remove('is-swapping'); }, 120);
+    debug('字体切换 →', state.fontList[state.fontIndex]);
   }
 
   function restartFontCycle() {
@@ -374,6 +409,7 @@
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--a'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--b'));
     hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--c'));
+    hero.appendChild(createEl('div', 'cr-pn-hero-blob cr-pn-hero-blob--d'));
     hero.appendChild(createEl('div', 'cr-pn-hero-sheen'));
     var wordmark = createEl('div', 'cr-pn-wordmark');
     wordmark.appendChild(createEl('span', null, 'CrewRouter'));
@@ -458,6 +494,7 @@
     var list = normalizeItems(items, options.preview === true);
     if (!list.length) return false;
     if (state.dialog) destroy();
+    debug(list.length === 1 ? '打开弹窗通知：' + list[0].title : '打开弹窗通知：' + list.length + ' 条');
 
     state.items = list;
     state.preview = options.preview === true;

@@ -50,48 +50,32 @@
 
 html.cr-pn-lock { overflow: hidden; }
 
-/* ---------- 布局 ---------- */
+/* ---------- 布局 ----------
+   卡片必须始终相对整个视口居中：stage 占满 overlay 并 flex 居中，
+   气泡列表退化为悬浮在左侧的独立层（不参与 grid 列分配）。
+   ------------------------------------------------------------ */
 .cr-pn-layout {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 240px) auto;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(16px, 3vw, 36px);
-  inline-size: min(100%, 920px);
+  inline-size: 100%;
   block-size: 100%;
-  margin-inline: auto;
-  padding: clamp(16px, 3vh, 32px) clamp(16px, 3vw, 32px);
+  /* 居中由 stage 承担；layout 只负责承载 */
+  display: block;
   box-sizing: border-box;
 }
 
-.cr-pn-layout:not(.has-bubbles) {
-  grid-template-columns: auto;
-  justify-items: center;
-}
-
-.cr-pn-stage {
-  position: relative;
-  justify-self: center;
-  inline-size: min(440px, calc(100vw - 32px));
-  block-size: min(580px, calc(100dvh - 128px));
-  min-block-size: 360px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cr-pn-stage > .cr-pn-card {
-  inline-size: 100%;
-  max-block-size: 100%;
-}
-
-/* ---------- 气泡列表 ---------- */
+/* 气泡列表：左侧悬浮层（>1 条时显示）；宽度受限，长标题截断 */
 .cr-pn-bubbles {
+  position: absolute;
+  left: clamp(12px, 2.5vw, 28px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  inline-size: clamp(200px, 20vw, 260px);
+  max-inline-size: calc(50vw - 260px);
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-block-size: min(540px, calc(100dvh - 96px));
+  max-block-size: min(60dvh, 540px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px;
@@ -125,6 +109,7 @@ html.cr-pn-lock { overflow: hidden; }
     border-color var(--lg-dur-fast, 0.2s) var(--lg-ease),
     transform var(--lg-dur-fast, 0.2s) var(--lg-ease),
     box-shadow var(--lg-dur-fast, 0.2s) var(--lg-ease);
+  overflow: hidden;
 }
 
 .cr-pn-bubble:hover {
@@ -181,11 +166,21 @@ html.cr-pn-lock { overflow: hidden; }
   white-space: nowrap;
 }
 
+/* ---------- 卡片舞台：占满 overlay，屏幕居中；grid 单元格让多卡叠放 ---------- */
+.cr-pn-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vh, 32px) clamp(12px, 3vw, 32px);
+  box-sizing: border-box;
+  animation: cr-pn-stage-in 0.5s var(--lg-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
 /* ---------- 卡片：全玻璃面板 ---------- */
 .cr-pn-card {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+  grid-area: 1 / 1;
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -202,7 +197,7 @@ html.cr-pn-lock { overflow: hidden; }
     0 40px 100px var(--lg-sheet-shadow, rgba(0, 0, 0, 0.22));
   color: var(--lg-fg, #1d1d1f);
   transform:
-    translate(-50%, calc(-50% + (var(--d-offset, 0) * 12px)))
+    translateY(calc(var(--d-offset, 0) * 12px))
     scale(calc(1 - var(--d-offset, 0) * 0.04));
   opacity: calc(1 - var(--d-offset, 0) * 0.2);
   z-index: calc(100 - var(--d, 0));
@@ -223,7 +218,7 @@ html.cr-pn-lock { overflow: hidden; }
 
 .cr-pn-card.is-leaving {
   opacity: 0 !important;
-  transform: translate(-50%, calc(-50% + 16px)) scale(0.93) !important;
+  transform: translateY(16px) scale(0.93) !important;
   pointer-events: none;
 }
 
@@ -248,14 +243,9 @@ html.cr-pn-lock { overflow: hidden; }
   to { opacity: 1; transform: none; }
 }
 
-.cr-pn-stage {
-  animation: cr-pn-stage-in 0.5s var(--lg-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
-}
-
 /* ---------- Hero：Blora 配色极光流动 ----------
-   设计：luminous aurora mesh — 4 枚独立漂移的 Blora 品牌色光斑
-   在明亮底色上交融，产生有机流动的极光效果。
-   毛玻璃层柔化色彩交界，呈现 Apple 级材质质感。
+   设计：4 枚大尺寸品牌色光斑各自沿关键帧路径漂移（transform 动画，
+   GPU 合成，任何浏览器都流畅可见），叠加一层缓慢旋转的柔性色盘。
    ------------------------------------------------------------ */
 .cr-pn-hero {
   position: relative;
@@ -274,17 +264,20 @@ html.cr-pn-lock { overflow: hidden; }
     linear-gradient(135deg, #0c1029 0%, #150d24 35%, #1a0c1a 65%, #0a1518 100%);
 }
 
-/* 渐变底层：柔和的 mesh gradient 用 background-size 动画缓慢呼吸 */
+/* 底层色盘：缓慢旋转的柔和四色渐变（流动的第一重保障，10s 一周清晰可感） */
 .cr-pn-hero-gradient {
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 80% at 20% 30%, rgba(20, 86, 240, 0.55) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 70% at 80% 20%, rgba(139, 92, 246, 0.45) 0%, transparent 55%),
-    radial-gradient(ellipse 75% 75% at 70% 80%, rgba(236, 72, 153, 0.40) 0%, transparent 58%),
-    radial-gradient(ellipse 65% 65% at 15% 75%, rgba(6, 182, 212, 0.45) 0%, transparent 55%);
-  background-size: 200% 200%;
-  animation: cr-pn-mesh-drift 12s ease-in-out infinite alternate;
+  inset: -45%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(20, 86, 240, 0.5),
+    rgba(139, 92, 246, 0.42),
+    rgba(236, 72, 153, 0.38),
+    rgba(6, 182, 212, 0.42),
+    rgba(20, 86, 240, 0.5)
+  );
+  filter: blur(48px);
+  animation: cr-pn-disks-spin 10s linear infinite;
   animation-play-state: paused;
 }
 
@@ -293,30 +286,29 @@ html.cr-pn-lock { overflow: hidden; }
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-gradient {
-  background:
-    radial-gradient(ellipse 80% 80% at 20% 30%, rgba(20, 86, 240, 0.65) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 70% at 80% 20%, rgba(139, 92, 246, 0.55) 0%, transparent 55%),
-    radial-gradient(ellipse 75% 75% at 70% 80%, rgba(236, 72, 153, 0.50) 0%, transparent 58%),
-    radial-gradient(ellipse 65% 65% at 15% 75%, rgba(6, 182, 212, 0.55) 0%, transparent 55%);
+  background: conic-gradient(
+    from 0deg,
+    rgba(20, 86, 240, 0.6),
+    rgba(139, 92, 246, 0.52),
+    rgba(236, 72, 153, 0.46),
+    rgba(6, 182, 212, 0.52),
+    rgba(20, 86, 240, 0.6)
+  );
 }
 
-@keyframes cr-pn-mesh-drift {
-  0%   { background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%; }
-  25%  { background-position: 30% 20%, 70% 30%, 80% 60%, 20% 80%; }
-  50%  { background-position: 50% 50%, 50% 50%, 50% 50%, 50% 50%; }
-  75%  { background-position: 70% 80%, 30% 70%, 20% 40%, 80% 20%; }
-  100% { background-position: 100% 100%, 0% 100%, 0% 0%, 100% 0%; }
+@keyframes cr-pn-disks-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* 3 枚独立漂移的色彩光斑：Blora 品牌四色中取三个做叠加 */
+/* 4 枚独立漂移的色彩光斑：Blora 品牌四色（蓝/紫/粉/青）各占一枚 */
 .cr-pn-hero-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(40px);
+  filter: blur(36px);
   mix-blend-mode: normal;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-  animation-direction: alternate;
   animation-play-state: paused;
   will-change: transform;
 }
@@ -325,62 +317,87 @@ html.cr-pn-lock { overflow: hidden; }
   animation-play-state: running;
 }
 
+/* 光斑：大尺寸 + 大幅路径（hero 宽度的 30%+ 位移），保证肉眼可见的流动 */
 .cr-pn-hero-blob--a {
-  inline-size: 160px;
-  block-size: 160px;
-  left: -10%;
-  top: -20%;
-  background: radial-gradient(circle, rgba(20, 86, 240, 0.7) 0%, rgba(20, 86, 240, 0) 70%);
+  inline-size: 240px;
+  block-size: 240px;
+  left: -18%;
+  top: -30%;
+  background: radial-gradient(circle, rgba(20, 86, 240, 0.72) 0%, rgba(20, 86, 240, 0) 68%);
   animation-name: cr-pn-orb-a;
-  animation-duration: 8s;
+  animation-duration: 7s;
 }
 
 .cr-pn-hero-blob--b {
-  inline-size: 140px;
-  block-size: 140px;
-  right: -5%;
-  top: -10%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.65) 0%, rgba(139, 92, 246, 0) 70%);
+  inline-size: 210px;
+  block-size: 210px;
+  right: -12%;
+  top: -18%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.68) 0%, rgba(139, 92, 246, 0) 68%);
   animation-name: cr-pn-orb-b;
-  animation-duration: 10s;
-}
-
-.cr-pn-hero-blob--c {
-  inline-size: 180px;
-  block-size: 180px;
-  left: 20%;
-  bottom: -30%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.55) 0%, rgba(236, 72, 153, 0) 70%);
-  animation-name: cr-pn-orb-c;
   animation-duration: 9s;
 }
 
+.cr-pn-hero-blob--c {
+  inline-size: 260px;
+  block-size: 260px;
+  left: 24%;
+  bottom: -40%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.6) 0%, rgba(236, 72, 153, 0) 68%);
+  animation-name: cr-pn-orb-c;
+  animation-duration: 8s;
+}
+
+/* 第 4 枚青色光斑：轮播路径互补，确保 4 个品牌色全部参与流动 */
+.cr-pn-hero-blob--d {
+  inline-size: 200px;
+  block-size: 200px;
+  right: 18%;
+  bottom: -35%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.55) 0%, rgba(6, 182, 212, 0) 68%);
+  animation-name: cr-pn-orb-d;
+  animation-duration: 11s;
+}
+
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--a {
-  background: radial-gradient(circle, rgba(60, 120, 255, 0.8) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(60, 120, 255, 0.85) 0%, transparent 68%);
 }
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--b {
-  background: radial-gradient(circle, rgba(160, 110, 255, 0.7) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(160, 110, 255, 0.75) 0%, transparent 68%);
 }
 :root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--c {
-  background: radial-gradient(circle, rgba(255, 90, 170, 0.6) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 90, 170, 0.65) 0%, transparent 68%);
+}
+:root[data-blora-color-scheme="dark"] .cr-pn-hero-blob--d {
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.6) 0%, transparent 68%);
 }
 
 @keyframes cr-pn-orb-a {
   0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(80%, 60%) scale(1.2); }
-  100% { transform: translate(40%, 30%) scale(0.9); }
+  33%  { transform: translate(140%, 90%) scale(1.25); }
+  66%  { transform: translate(60%, 150%) scale(0.85); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes cr-pn-orb-b {
   0%   { transform: translate(0, 0) scale(1.1); }
-  50%  { transform: translate(-60%, 50%) scale(0.85); }
-  100% { transform: translate(-30%, 80%) scale(1.15); }
+  33%  { transform: translate(-130%, 80%) scale(0.9); }
+  66%  { transform: translate(-60%, 140%) scale(1.3); }
+  100% { transform: translate(0, 0) scale(1.1); }
 }
 
 @keyframes cr-pn-orb-c {
   0%   { transform: translate(0, 0) scale(0.95); }
-  50%  { transform: translate(30%, -40%) scale(1.1); }
-  100% { transform: translate(-20%, -20%) scale(1); }
+  33%  { transform: translate(110%, -90%) scale(1.2); }
+  66%  { transform: translate(-80%, -50%) scale(0.9); }
+  100% { transform: translate(0, 0) scale(0.95); }
+}
+
+@keyframes cr-pn-orb-d {
+  0%   { transform: translate(0, 0) scale(1.05); }
+  33%  { transform: translate(-120%, -70%) scale(0.85); }
+  66%  { transform: translate(-30%, -130%) scale(1.15); }
+  100% { transform: translate(0, 0) scale(1.05); }
 }
 
 /* 毛玻璃覆盖层：柔化色彩交界，增加玻璃质感深度 */
@@ -540,17 +557,20 @@ html.cr-pn-lock { overflow: hidden; }
 /* ---------- 响应式 ---------- */
 @media (max-width: 900px) {
   .cr-pn-layout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    justify-items: center;
-    align-content: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 16px;
     padding: 16px 16px max(16px, env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
 
+  /* 气泡列表恢复为文档流内的底部横向滚动行 */
   .cr-pn-bubbles {
+    position: static;
+    transform: none;
     order: 2;
     flex-direction: row;
     inline-size: min(100%, 640px);
@@ -576,6 +596,7 @@ html.cr-pn-lock { overflow: hidden; }
 
   .cr-pn-stage {
     order: 1;
+    position: static;
     inline-size: min(420px, calc(100vw - 32px));
     block-size: auto;
     min-block-size: 0;
@@ -585,11 +606,6 @@ html.cr-pn-lock { overflow: hidden; }
 
   .cr-pn-stage > .cr-pn-card.is-active {
     display: flex;
-    position: relative;
-    top: auto;
-    left: auto;
-    transform: none;
-    opacity: 1;
     animation: cr-pn-card-mobile-in 0.36s var(--lg-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
   }
 
