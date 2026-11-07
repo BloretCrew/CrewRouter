@@ -1642,18 +1642,159 @@ blora-command[open] {
 .trace-report-table-wrap td { border-bottom: 1px solid var(--lg-divider); color: var(--lg-fg); }
 .trace-report-table-wrap tr:last-child td { border-bottom: 0; }
 
-/* 管理后台脚本「AI 辅助模型」选择浮层：浮层本身挂 body，内联样式写死了白底 */
-#scriptAiModelPickerOverlay { background: var(--lg-scrim) !important; }
-#scriptAiModelPickerOverlay > [role="dialog"] {
+/* 管理后台脚本「AI 辅助模型」选择浮层 */
+#scriptAiModelPickerOverlay,
+.script-ai-model-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--lg-scrim);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+#scriptAiModelPickerOverlay > [role="dialog"],
+.script-ai-model-picker {
   isolation: isolate;
-  border: 0 !important;
-  border-radius: 32px !important;
-  background: var(--g-tint-menu) !important;
+  width: min(560px, 100%);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  color: var(--lg-fg);
   -webkit-backdrop-filter: var(--g-fallback-menu);
   backdrop-filter: var(--lens, var(--g-fallback-menu));
-  box-shadow: var(--g-depth), var(--shadow-float) !important;
-  color: var(--lg-fg) !important;
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
-#scriptAiModelPickerOverlay [role="dialog"] > div { border-color: var(--lg-divider) !important; }
-#scriptAiModelPickerOverlay [role="dialog"] span,
-#scriptAiModelPickerOverlay [role="dialog"] div[style*="muted-foreground"] { color: var(--lg-fg-secondary) !important; }
+.script-ai-model-picker-head,
+.script-ai-model-picker-search,
+.script-ai-model-picker-foot {
+  padding: 16px 18px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--lg-divider);
+  color: var(--lg-fg);
+}
+.script-ai-model-picker-search { padding: 12px 18px; }
+.script-ai-model-picker-foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--lg-divider);
+  padding: 12px 18px;
+  flex-wrap: wrap;
+}
+.script-ai-model-picker-title { font-weight: 600; font-size: 15px; }
+.script-ai-model-picker-desc,
+.script-ai-model-picker-current { font-size: 12px; color: var(--lg-fg-secondary); }
+.script-ai-model-picker-list { padding: 0 10px 12px; overflow-y: auto; flex: 1; min-height: 200px; max-height: 50vh; }
+
+/* ---------- 晶液 toast（抄 liquid.css .toast-stack / .app-toast） ---------- */
+.toast-stack {
+  position: fixed;
+  top: max(62px, env(safe-area-inset-top, 0px));
+  right: max(14px, env(safe-area-inset-right, 0px));
+  z-index: 10050;
+  width: min(352px, calc(100vw - 28px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.app-toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  isolation: isolate;
+  position: relative;
+  padding: 12px 12px 12px 14px;
+  gap: 12px;
+  border-radius: 22px;
+  border: 0;
+  background: var(--g-tint-menu);
+  color: var(--text);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+  transition: opacity .2s, translate .5s var(--spring-soft), scale .5s var(--spring-soft);
+}
+@starting-style { .app-toast { opacity: 0; translate: 40px 0; scale: .96; } }
+.app-toast.leaving { opacity: 0; translate: 30px 0; scale: .96; }
+.toast-symbol {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #fff;
+  background: oklch(.64 .15 152);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.app-toast[data-kind="error"] .toast-symbol { background: oklch(.62 .2 25); }
+.app-toast[data-kind="info"] .toast-symbol { background: var(--accent); }
+.app-toast[data-kind="warning"] .toast-symbol { background: oklch(.74 .15 72); }
+.toast-symbol .ico { width: 16px; height: 16px; stroke-width: 2.2; }
+.toast-body { min-width: 0; }
+.toast-body strong { display: block; font: 650 13.5px var(--font-display); color: var(--text); letter-spacing: -.2px; }
+.toast-body p { margin: 2px 0 0; font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
+.toast-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--text-3);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.toast-close:hover { background: var(--hover); color: var(--text); }
+.toast-close .ico { width: 14px; height: 14px; }
+
+/* 公开页悬浮导航：掀掉 vendor ::before 的 blur(20px)，胶囊透镜 */
+.lg-scope blora-navbar.public-navbar,
+blora-navbar.public-navbar { background: transparent; }
+.lg-scope blora-navbar.public-navbar > .blora-navbar,
+blora-navbar.public-navbar > .blora-navbar,
+.lg-scope .public-navbar .blora-navbar[data-variant="floating"] {
+  isolation: isolate;
+  border: 0;
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+.lg-scope .blora-navbar::before,
+blora-navbar.public-navbar .blora-navbar::before {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Playground 右键菜单：菜单玻璃 */
+.lg-scope .pg-context-menu,
+.pg-context-menu {
+  isolation: isolate;
+  border: 0;
+  border-radius: 18px;
+  padding: 6px;
+  background: var(--g-tint-menu);
+  color: var(--text);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+}
+.lg-scope .pg-context-menu-item { border-radius: 12px; color: var(--text); }
+.lg-scope .pg-context-menu-item:hover { background: var(--hover); }
+.lg-scope .pg-context-menu-item svg { color: var(--text-2); }
+.lg-scope .pg-context-menu-separator { background: var(--line-strong); }
+.lg-scope .pg-thinking-controls blora-switch { flex: none; }

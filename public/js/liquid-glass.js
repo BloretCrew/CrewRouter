@@ -128,9 +128,12 @@
     ['.provider-tag-assign-dropdown, .api-key-tag-assign-dropdown, .api-key-tags-overflow-popover, .api-key-route-queue-tip', 'menu'],
     ['.blora-timepicker__panel', 'menu'],
     ['.blora-tooltip__bubble', 'toast'],
+    ['.app-toast', 'toast'],
     ['blora-dialog.lg-scope[open], blora-dialog[open]', 'panel'],
     ['.trace-report-dialog', 'panel'],
-    ['#scriptAiModelPickerOverlay > [role="dialog"]', 'panel'],
+    ['#scriptAiModelPickerOverlay > [role="dialog"], .script-ai-model-picker', 'panel'],
+    ['blora-navbar.public-navbar > .blora-navbar, .public-navbar .blora-navbar', 'capsule'],
+    ['#pgContextMenu, .pg-context-menu', 'menu'],
     // 弹窗通知卡按对话框面板透镜（更宽边缘折射）；气泡列表仍用 toast
     ['.cr-pn-card.is-active', 'panel'],
     ['.cr-pn-bubble', 'toast'],
@@ -741,6 +744,7 @@
     };
     watchNav();
     mountPickers();
+    toastStack();
     requestAnimationFrame(() => requestAnimationFrame(scheduleScan));
     [400, 1500].forEach(ms => setTimeout(() => { watchNav(); mountPickers(); scheduleScan(); }, ms));
     window.addEventListener('hashchange', () => { scheduleScan(); mountPickers(); });
@@ -754,7 +758,68 @@
     });
   }
 
-  window.CrewRouterLiquid = { mount, updateIndicators, updateLens, register, scan: flushScan, setAppearance, appearance };
+  /* ---------- Toast: copied from scaffold.js + liquid.css .app-toast ---------- */
+  const TOAST_TITLE = { info: '提示', success: '已完成', warning: '需要注意', error: '操作结果尚未确认' };
+  const toastSvg = (body) => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  const TOAST_ICO = {
+    success: toastSvg('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+    info: toastSvg('<circle cx="12" cy="12" r="8.5"/><path d="M12 16v-4.5M12 8h.01"/>'),
+    warning: toastSvg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 16h.01"/>'),
+    error: toastSvg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 16h.01"/>'),
+    x: toastSvg('<path d="M17 7 7 17M7 7l10 10"/>'),
+  };
+  function escToast(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  let toastStackEl = null;
+  let toastStackObserver = null;
+  function toastStack() {
+    if (toastStackEl && toastStackEl.isConnected) return toastStackEl;
+    toastStackEl = $('#lg-toast-stack');
+    if (!toastStackEl) {
+      toastStackEl = document.createElement('div');
+      toastStackEl.id = 'lg-toast-stack';
+      toastStackEl.className = 'toast-stack';
+      toastStackEl.setAttribute('aria-live', 'polite');
+      toastStackEl.setAttribute('aria-label', '操作反馈');
+      document.body.append(toastStackEl);
+    }
+    if (!toastStackObserver) {
+      toastStackObserver = new MutationObserver(() => {
+        $$('.app-toast', toastStackEl).forEach(card => {
+          if (!lenses.has(card) && isVisibleGlass(card)) register(card, 'toast');
+        });
+        lenses.forEach((lens, el) => {
+          if (el.isConnected) return;
+          lens.filter.remove();
+          lenses.delete(el);
+        });
+      });
+      toastStackObserver.observe(toastStackEl, { childList: true });
+    }
+    return toastStackEl;
+  }
+  function toast(message, kind = 'info', opts = {}) {
+    const k = ['success', 'error', 'warning', 'info'].includes(kind) ? kind : 'info';
+    const card = document.createElement('section');
+    card.className = 'app-toast';
+    card.dataset.kind = k;
+    card.setAttribute('role', k === 'error' ? 'alert' : 'status');
+    card.innerHTML = `<span class="toast-symbol">${TOAST_ICO[k] || TOAST_ICO.info}</span><div class="toast-body"><strong>${escToast(opts.title || TOAST_TITLE[k])}</strong><p>${escToast(message)}</p></div><button type="button" class="toast-close" aria-label="关闭提示">${TOAST_ICO.x}</button>`;
+    const dismiss = () => {
+      if (!card.isConnected || card.classList.contains('leaving')) return;
+      card.classList.add('leaving');
+      setTimeout(() => card.remove(), reduced() ? 0 : 180);
+    };
+    card.querySelector('.toast-close').addEventListener('click', dismiss);
+    const stack = toastStack();
+    while (stack.children.length >= 3) stack.firstElementChild.remove();
+    stack.append(card);
+    if (k !== 'error') setTimeout(dismiss, 5200);
+    return card;
+  }
+
+  window.CrewRouterLiquid = { mount, updateIndicators, updateLens, register, scan: flushScan, setAppearance, appearance, toast };
 
   const boot = () => setTimeout(mount, 0);
   if (document.readyState === 'loading') {

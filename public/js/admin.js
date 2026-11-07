@@ -2711,15 +2711,16 @@ class AdminApp {
 
   // 供应商管理
   showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = 'admin-toast admin-toast-' + type;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => { toast.classList.add('admin-toast-show'); });
-    setTimeout(() => {
-      toast.classList.remove('admin-toast-show');
-      setTimeout(() => toast.remove(), 300);
-    }, 2800);
+    if (window.CrewRouterLiquid && typeof CrewRouterLiquid.toast === 'function') {
+      CrewRouterLiquid.toast(message, type);
+      return;
+    }
+    const run = () => window.CrewRouterLiquid?.toast?.(message, type);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run, { once: true });
+    } else {
+      setTimeout(run, 0);
+    }
   }
 
   toggleProviderMoreMenu(e) {
@@ -5576,30 +5577,30 @@ class AdminApp {
 
     const overlay = document.createElement('div');
     overlay.id = 'scriptAiModelPickerOverlay';
-    overlay.classList.add('lg-scope');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.className = 'script-ai-model-picker-overlay lg-scope';
     overlay.innerHTML = `
-      <div role="dialog" aria-label="${t('选择 AI 辅助模型')}" style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
-        <div style="padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);">
+      <div role="dialog" class="script-ai-model-picker" aria-label="${t('选择 AI 辅助模型')}">
+        <div class="script-ai-model-picker-head">
           <div>
-            <div style="font-weight:600;font-size:15px;">选择 AI 辅助模型</div>
-            <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">仅用于密钥脚本的分析/修复</div>
+            <div class="script-ai-model-picker-title">选择 AI 辅助模型</div>
+            <div class="script-ai-model-picker-desc">仅用于密钥脚本的分析/修复</div>
           </div>
-          <button type="button" id="scriptAiModelPickerClose" class="blora-button" style="min-width:auto;" data-variant="secondary" data-size="sm">关闭</button>
+          <button type="button" id="scriptAiModelPickerClose" class="blora-button" data-variant="secondary" data-size="sm">关闭</button>
         </div>
-        <div style="padding:12px 18px;">
+        <div class="script-ai-model-picker-search">
           <input type="search" id="scriptAiModelSearch" class="input" placeholder="${t('搜索模型名称 / ID / 供应商...')}" style="width:100%;">
         </div>
-        <div id="scriptAiModelList" style="padding:0 10px 12px;overflow-y:auto;flex:1;min-height:200px;max-height:50vh;">
+        <div id="scriptAiModelList" class="script-ai-model-picker-list">
           ${pageLoadingHtml(t('加载中...'), { size: 'md', compact: true })}
         </div>
-        <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <div class="script-ai-model-picker-foot">
           <button type="button" class="blora-button" id="scriptAiModelClear" data-variant="secondary" data-size="sm">使用自动选择</button>
-          <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${this._formatScriptAiModelLabel(selected)}</span>
+          <span class="script-ai-model-picker-current">当前：${this._formatScriptAiModelLabel(selected)}</span>
         </div>
       </div>
     `;
     document.body.appendChild(overlay);
+    window.CrewRouterLiquid?.scan?.();
 
     const close = () => overlay.remove();
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });

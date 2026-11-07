@@ -171,7 +171,81 @@ async function main() {
     assert.match(dynamic.lens || '', /^url\(/, '动态对话框透镜');
     assert.ok(!/blur\(/.test(dynamic.maskBlur || 'none'), '动态对话框遮罩无 blur');
 
-    console.log('PASS liquid controls + dynamic dialog');
+    const toast = await cdp.evaluate(`(() => {
+      const card = CrewRouterLiquid.toast('晶液探针', 'success');
+      CrewRouterLiquid.scan();
+      const cs = getComputedStyle(card);
+      const symbol = card.querySelector('.toast-symbol');
+      const symbolBg = symbol ? getComputedStyle(symbol).backgroundColor : '';
+      return {
+        kind: card.dataset.kind,
+        radius: cs.borderRadius,
+        bg: cs.backgroundColor,
+        filter: cs.backdropFilter || cs.webkitBackdropFilter,
+        lens: card.style.getPropertyValue('--lens') || cs.getPropertyValue('--lens'),
+        hasSymbol: !!symbol,
+        symbolBg,
+        solidGreen: /^(rgb\\(22,\\s*163,\\s*74\\)|#16a34a)$/i.test(cs.backgroundColor.replace(/\\s/g, '')),
+      };
+    })()`);
+    assert.equal(toast.kind, 'success', 'toast kind=success');
+    assert.ok(toast.hasSymbol, 'toast 有彩色圆点');
+    assert.equal(toast.radius, '22px', 'toast 圆角 22px');
+    assert.equal(toast.solidGreen, false, 'toast 不是实心绿色条');
+    assert.match(toast.filter || '', /url\(|blur\(/, 'toast 有透镜或回退模糊');
+
+    const picker = await cdp.evaluate(`(() => {
+      const overlay = document.createElement('div');
+      overlay.id = 'scriptAiModelPickerOverlay';
+      overlay.className = 'script-ai-model-picker-overlay lg-scope';
+      overlay.innerHTML = '<div role="dialog" class="script-ai-model-picker"><p>probe</p></div>';
+      document.body.append(overlay);
+      CrewRouterLiquid.scan();
+      const panel = overlay.querySelector('[role="dialog"]');
+      const cs = getComputedStyle(panel);
+      const out = {
+        radius: cs.borderRadius,
+        border: cs.borderTopWidth,
+        filter: cs.backdropFilter || cs.webkitBackdropFilter,
+        lens: panel.style.getPropertyValue('--lens') || cs.getPropertyValue('--lens'),
+        overlayBg: getComputedStyle(overlay).backgroundColor,
+      };
+      overlay.remove();
+      return out;
+    })()`);
+    assert.equal(picker.radius, '32px', '模型选择器圆角 32px');
+    assert.equal(picker.border, '0px', '模型选择器无描边');
+    assert.match(picker.filter || '', /url\(|blur\(/, '模型选择器透镜');
+
+    const navbar = await cdp.evaluate(`(() => {
+      const host = document.createElement('blora-navbar');
+      host.setAttribute('brand-href', '/');
+      host.setAttribute('title', 'CrewRouter');
+      host.setAttribute('variant', 'floating');
+      host.className = 'public-navbar';
+      document.body.append(host);
+      const bar = host.querySelector('.blora-navbar');
+      if (!bar) return { missing: true };
+      CrewRouterLiquid.scan();
+      const cs = getComputedStyle(bar);
+      const before = getComputedStyle(bar, '::before');
+      const out = {
+        missing: false,
+        radius: cs.borderRadius,
+        border: cs.borderTopWidth,
+        filter: cs.backdropFilter || cs.webkitBackdropFilter,
+        lens: bar.style.getPropertyValue('--lens') || cs.getPropertyValue('--lens'),
+        beforeFilter: before.backdropFilter || before.webkitBackdropFilter || 'none',
+        beforeDisplay: before.display,
+      };
+      host.remove();
+      return out;
+    })()`);
+    assert.equal(navbar.missing, false, '公开页有悬浮导航');
+    assert.ok(!/blur\(20px\)/.test(navbar.beforeFilter || ''), '导航 ::before 无 vendor blur(20px)');
+    assert.match(navbar.filter || '', /url\(|blur\(/, '导航胶囊透镜');
+
+    console.log('PASS liquid controls + dynamic dialog + toast + navbar');
   } finally {
     cdp.ws.close();
     await fetch(`${debug}/json/close/${target.id}`).catch(() => {});

@@ -3053,11 +3053,7 @@ class ConsoleApp {
             <div style="font-size:14px;font-weight:500;">启用 Fusion</div>
             <div style="font-size:12px;color:var(--muted-foreground);">禁用后，请求 fusion 模型将回退到当前绑定模型</div>
           </div>
-          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-            <input type="checkbox" id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;inset:0;background:${fusionEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
-            <span style="position:absolute;top:2px;${fusionEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
-          </label>
+          <blora-switch id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} aria-label="启用 Fusion"></blora-switch>
         </div>
 
         <div id="fusionConfigBody" style="${fusionEnabled ? '' : 'opacity:0.4;pointer-events:none;'}">
@@ -3066,11 +3062,7 @@ class ConsoleApp {
             <div style="font-size:14px;font-weight:500;">${t('启用 Fusion 综合提示')}</div>
             <div id="fusionSynthesisPromptRisk" style="font-size:12px;color:${synthesisPromptEnabled ? 'var(--muted-foreground)' : 'var(--destructive)'};">${synthesisPromptEnabled ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。') : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。')}</div>
           </div>
-          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex:none;">
-            <input type="checkbox" id="fusionSynthesisPromptToggle" ${synthesisPromptEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;inset:0;background:${synthesisPromptEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
-            <span style="position:absolute;top:2px;${synthesisPromptEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
-          </label>
+          <blora-switch id="fusionSynthesisPromptToggle" ${synthesisPromptEnabled ? 'checked' : ''} aria-label="${escapeHtml(t('启用 Fusion 综合提示'))}"></blora-switch>
         </div>
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
@@ -3130,11 +3122,6 @@ class ConsoleApp {
           const on = toggleEl.checked;
           const body = document.getElementById('fusionConfigBody');
           if (body) { body.style.opacity = on ? '' : '0.4'; body.style.pointerEvents = on ? '' : 'none'; }
-          // 更新滑块外观
-          const track = toggleEl.nextElementSibling;
-          const knob = track?.nextElementSibling;
-          if (track) track.style.background = on ? 'var(--primary)' : 'var(--border)';
-          if (knob) { knob.style.left = on ? '' : '2px'; knob.style.right = on ? '2px' : ''; }
         });
       }
 
@@ -3142,11 +3129,7 @@ class ConsoleApp {
       if (synthesisToggleEl) {
         synthesisToggleEl.addEventListener('change', () => {
           const on = synthesisToggleEl.checked;
-          const track = synthesisToggleEl.nextElementSibling;
-          const knob = track?.nextElementSibling;
           const risk = document.getElementById('fusionSynthesisPromptRisk');
-          if (track) track.style.background = on ? 'var(--primary)' : 'var(--border)';
-          if (knob) { knob.style.left = on ? '' : '2px'; knob.style.right = on ? '2px' : ''; }
           if (risk) {
             risk.textContent = on
               ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。')
@@ -8431,16 +8414,16 @@ ${extractorBody}
   }
 
   showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:10000;padding:12px 20px;border-radius:8px;font-size:14px;color:white;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:opacity 0.3s;opacity:0;`;
-    toast.style.background = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--info)';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => { toast.style.opacity = '1'; });
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, 2500);
+    if (window.CrewRouterLiquid && typeof CrewRouterLiquid.toast === 'function') {
+      CrewRouterLiquid.toast(message, type);
+      return;
+    }
+    const run = () => window.CrewRouterLiquid?.toast?.(message, type);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run, { once: true });
+    } else {
+      setTimeout(run, 0);
+    }
   }
 
   async logout() {

@@ -53,7 +53,7 @@
 | `capsule` | 侧栏、移动顶栏、筛选条、悬浮工具栏 |
 | `menu` | 下拉菜单、选择弹层、气泡菜单 |
 | `panel` | 对话框、登录卡、独立页主卡 |
-| `toast` | 提示气泡、弹窗通知气泡列表 |
+| `toast` | 操作反馈 `.app-toast`、提示气泡、弹窗通知气泡列表 |
 | `panel` | 对话框、登录卡、弹窗通知激活卡（整圈边缘折射） |
 | `rim` | 水滴被拖动时的窄边折射 |
 
@@ -150,6 +150,13 @@ SidebarNav / foundation 互刷，卡死主线程）。晚到的导航用 400ms /
   `blora-dialog` / `blora-drawer` 补上这个类。
 - 挂在 `body` 下、由 JS 动态创建的浮层同样需要作用域：模型库 Key 气泡菜单、
   跟踪报告浮层、脚本「AI 辅助模型」选择器、供应商标签分配下拉。
+- 操作反馈 toast 抄晶液 `.app-toast`：玻璃菜单材质 + 彩色圆点（成功绿 / 错误红 /
+  信息强调色），不是整块实心色条。`CrewRouterLiquid.toast(message, kind)` 写入
+  `#lg-toast-stack`；控制台、管理后台、Playground 的 `showToast` 都走这里。
+  只观察 toast 栈的 `childList`，不观察整棵文档。
+- 公开页 `blora-navbar.public-navbar`（初始化、飞书绑定）掀掉 vendor
+  `::before { backdrop-filter: blur(20px) }`，胶囊透镜。
+- Playground 右键菜单是菜单玻璃；思考开关与 Fusion 配置开关用 `blora-switch`。
 - 旧版内容区 `.content-section` / `.section-header`：`--sheet` + 页内标题。
 - 卡片（`.blora-card`）、统计数字（`blora-statistic`）、开关（`blora-switch`）、
   组合控件、时间选择面板。

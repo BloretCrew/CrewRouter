@@ -115,12 +115,15 @@ class PlaygroundApp {
     const budgetGroup = document.getElementById('pgThinkingBudgetGroup');
     const reasoningGroup = document.getElementById('pgReasoningEffortGroup');
 
+    const thinkingInput = thinkingToggle?.querySelector?.('input') || thinkingToggle;
     if (caps.supportsThinking) {
-      thinkingToggle.disabled = false;
+      if (thinkingInput) thinkingInput.disabled = false;
+      thinkingToggle?.removeAttribute?.('disabled');
       thinkingLabel.textContent = thinkingToggle.checked ? t('已启用') : t('已禁用');
     } else {
       thinkingToggle.checked = true;
-      thinkingToggle.disabled = true;
+      if (thinkingInput) thinkingInput.disabled = true;
+      thinkingToggle?.setAttribute?.('disabled', '');
       thinkingLabel.textContent = t('不支持');
     }
 
@@ -1106,15 +1109,16 @@ class PlaygroundApp {
   }
 
   showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'pg-toast';
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, 1500);
+    if (window.CrewRouterLiquid && typeof CrewRouterLiquid.toast === 'function') {
+      CrewRouterLiquid.toast(msg, 'info');
+      return;
+    }
+    const run = () => window.CrewRouterLiquid?.toast?.(msg, 'info');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run, { once: true });
+    } else {
+      setTimeout(run, 0);
+    }
   }
 
   // ========== Utils ==========
