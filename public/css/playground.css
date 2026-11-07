@@ -1472,24 +1472,17 @@ body.blora-page.lg-scope .pg-container {
   background: transparent;
   isolation: isolate;
 }
-body.blora-page.lg-scope .pg-container::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--lg-wallpaper);
-  opacity: 1;
-  pointer-events: none;
-}
+body.blora-page.lg-scope .pg-container::before { content: none; }
 body.blora-page.lg-scope { background: var(--lg-bg); }
 
 /* 左右两栏：半透明玻璃，随背后光斑变化 */
 body.blora-page.lg-scope .pg-history-panel,
 body.blora-page.lg-scope .pg-settings-panel {
-  border-color: var(--lg-divider);
-  background-color: var(--lg-sidebar-bg);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  isolation: isolate;
+  border-color: transparent;
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
   color: var(--lg-fg);
 }
 body.blora-page.lg-scope .pg-history-panel { border-inline-end: 1px solid var(--lg-divider); }
@@ -1517,12 +1510,13 @@ body.blora-page.lg-scope .pg-composer,
 body.blora-page.lg-scope .pg-input-area { border-top-color: var(--lg-divider); background: transparent; }
 body.blora-page.lg-scope .pg-composer-input,
 body.blora-page.lg-scope .pg-input-row {
-  border: 1px solid var(--lg-glass-border);
+  isolation: isolate;
+  border: 0;
   border-radius: var(--lg-radius-pill);
-  background-color: var(--lg-glass-bg-strong);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 body.blora-page.lg-scope .pg-composer textarea,
 body.blora-page.lg-scope .pg-input-row textarea {
@@ -1542,23 +1536,24 @@ body.blora-page.lg-scope .pg-settings-panel small { color: var(--lg-fg-tertiary)
 
 /* 历史详情弹窗 */
 body.blora-page.lg-scope .pg-history-modal::part(panel) {
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-sheet-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow);
+  isolation: isolate;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-win);
   color: var(--lg-fg);
 }
 body.blora-page.lg-scope .pg-history-modal-header h3 { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.02em; }
 
 /* 移动端顶栏与抽屉 */
 body.blora-page.lg-scope .pg-mobile-bar {
-  border-bottom: 1px solid var(--lg-divider);
-  background: var(--lg-panel-bg);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  isolation: isolate;
+  border-bottom: 0;
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
 }
 body.blora-page.lg-scope .pg-mobile-title { color: var(--lg-fg); }
 body.blora-page.lg-scope .pg-overlay { background: var(--lg-scrim); }

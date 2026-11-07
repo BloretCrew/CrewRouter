@@ -30,12 +30,12 @@
 
 .admin-library-manager { background: var(--lg-scrim); }
 .admin-library-manager-panel {
-  border-inline-start: 1px solid var(--lg-glass-border-strong);
-  background-color: var(--lg-sheet-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), -24px 0 70px var(--lg-sheet-shadow);
+  isolation: isolate;
+  border-inline-start: 0;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-win);
   color: var(--lg-fg);
 }
 .admin-library-manager-header {

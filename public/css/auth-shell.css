@@ -177,41 +177,30 @@
    本文件只负责卡片与容器的材质层级。
    ========================================================================= */
 
-/* 登录页：背景光斑 + 居中玻璃卡片 */
-/* 背景光斑：liquid-glass.css 里 body.blora-page::before 默认 opacity:0，
-   这里用同特异性但更高优先级的写法覆盖（含 ::before 本身） */
-body.blora-page.lg-scope { background: var(--lg-bg); }
-body.blora-page.lg-scope::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--lg-wallpaper);
-  opacity: 1;
-  pointer-events: none;
-  transition: opacity 0.45s var(--lg-ease);
-}
+/* 登录页：晶液壁纸 + 居中玻璃卡片 */
+body.blora-page.lg-scope { background: var(--wp-bg); }
+body.blora-page.lg-scope::before { content: none; }
 
 .login-container { padding: 32px 20px; }
 
 .auth-card.login-card,
 .setup-card,
 .oc-card {
-  border: 1px solid var(--lg-glass-border);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  isolation: isolate;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 .auth-card.login-card { padding: 32px 28px; }
 
 .auth-card__logo {
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: 14px;
-  background: var(--lg-surface);
-  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+  background: var(--sheet);
+  box-shadow: var(--lg-shadow-control);
 }
 .auth-card__header h1 {
   color: var(--lg-fg);
@@ -295,14 +284,14 @@ body.blora-page.lg-scope .pi-brand {
   letter-spacing: -0.02em;
 }
 body.blora-page.lg-scope .pi-card {
+  isolation: isolate;
   padding: 26px 28px;
-  border: 1px solid var(--lg-glass-border);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   color: var(--lg-fg);
 }
 body.blora-page.lg-scope .pi-loading { color: var(--lg-fg-secondary); }
@@ -330,13 +319,13 @@ body.blora-page.lg-scope .pi-card [style*="border-top"] { border-color: var(--lg
 /* ---------- 购买商品页（purchase.html，复用控制台壳层 + 内联卡片） ---------- */
 body.blora-page.lg-scope .purchase-container { max-inline-size: 480px; padding: 0 20px; }
 body.blora-page.lg-scope .purchase-card {
-  border: 1px solid var(--lg-glass-border);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  isolation: isolate;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   overflow: hidden;
 }
 body.blora-page.lg-scope .purchase-image,
@@ -374,16 +363,8 @@ body.blora-page.lg-scope #langToggle {
 /* 使用控制台壳层的独立页（purchase）：补背景光斑。
    themes.css 给 body 画了点阵 + 渐变 background-image，会盖住 ::before，必须显式清掉 */
 body.blora-page.lg-scope:has(.app-container) {
-  background-color: var(--lg-bg) !important;
+  background-color: var(--wp-bg) !important;
   background-image: none !important;
 }
-body.blora-page.lg-scope:has(.app-container)::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--lg-wallpaper) !important;
-  opacity: 1 !important;
-  pointer-events: none;
-}
+body.blora-page.lg-scope:has(.app-container)::before { content: none; }
 body.blora-page.lg-scope:has(.app-container) .main-content { padding-block-start: 24px; }

@@ -5,21 +5,13 @@
    liquid-glass.css 的 body::before 光斑，因此这里统一清掉并补光斑。
    ========================================================================= */
 
-/* ---------- 通用：独立页背景 ---------- */
+/* ---------- 通用：独立页背景（壁纸 SVG 由 liquid-glass.js 插入） ---------- */
 body.blora-page.lg-scope:not(:has(.pg-container)):not(:has(.store-shell)) {
-  background-color: var(--lg-bg) !important;
+  background-color: var(--wp-bg) !important;
   background-image: none !important;
   color: var(--lg-fg);
 }
-body.blora-page.lg-scope:not(:has(.pg-container)):not(:has(.store-shell))::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--lg-wallpaper) !important;
-  opacity: 1 !important;
-  pointer-events: none;
-}
+body.blora-page.lg-scope:not(:has(.pg-container)):not(:has(.store-shell))::before { content: none; }
 
 /* ---------- 插件安装确认页（plugin-install.html） ---------- */
 body.blora-page.lg-scope .pi-wrap { max-inline-size: 640px; padding: 64px 20px 40px; }
@@ -32,14 +24,14 @@ body.blora-page.lg-scope .pi-brand {
   letter-spacing: -0.02em;
 }
 body.blora-page.lg-scope .pi-card {
+  isolation: isolate;
   padding: 26px 28px;
-  border: 1px solid var(--lg-glass-border);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 30px 80px var(--lg-shadow-glass);
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   color: var(--lg-fg);
 }
 body.blora-page.lg-scope .pi-loading { color: var(--lg-fg-secondary); }
@@ -118,13 +110,14 @@ body.blora-page.lg-scope {
 
 /* showcase：顶部导航为悬浮玻璃条 */
 body.blora-page.lg-scope .showcase-nav {
-  border-bottom: 1px solid var(--lg-divider);
-  background: var(--lg-panel-bg);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  box-shadow: 0 1px 0 var(--lg-glass-highlight) inset;
+  isolation: isolate;
+  border-bottom: 0;
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
-body.blora-page.lg-scope .showcase-nav.scrolled { box-shadow: var(--lg-rim), var(--lg-shadow-glass); }
+body.blora-page.lg-scope .showcase-nav.scrolled { box-shadow: var(--g-depth), var(--shadow-float); }
 body.blora-page.lg-scope .nav-brand { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.01em; }
 body.blora-page.lg-scope .nav-links a { color: var(--lg-fg-secondary); }
 body.blora-page.lg-scope .nav-links a:hover { color: var(--lg-fg); }
@@ -149,18 +142,17 @@ body.blora-page.lg-scope .hero-buttons .btn-secondary {
   border-radius: var(--lg-radius-pill);
 }
 body.blora-page.lg-scope .nav-cta {
-  background: var(--lg-accent);
-  color: var(--lg-on-accent);
-  box-shadow: 0 4px 14px var(--lg-accent-glow);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
 }
 
 /* 特性 / 亮点卡片：玻璃卡 */
 body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card, .mock-window) {
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: var(--lg-radius-group);
-  background-color: var(--lg-card-bg);
-  background-image: var(--lg-sheen);
-  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  background: var(--sheet-2);
+  box-shadow: var(--lg-shadow-card);
 }
 body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card):hover {
   border-color: var(--lg-glass-border-strong);

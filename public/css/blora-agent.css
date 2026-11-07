@@ -482,13 +482,14 @@
 /* ---------- 移动端：历史抽屉玻璃面板 ---------- */
 @media (max-width: 800px) {
   .lg-page.blora-agent-page .ba-history {
+    isolation: isolate;
     padding: 14px;
     border-radius: 0 20px 20px 0;
     border-inline-start: 0;
-    background-color: var(--lg-sheet-bg);
-    -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-    backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-    box-shadow: var(--lg-rim), 0 24px 60px var(--lg-sheet-shadow);
+    background: var(--g-tint-menu);
+    -webkit-backdrop-filter: var(--g-fallback-menu);
+    backdrop-filter: var(--lens, var(--g-fallback-menu));
+    box-shadow: var(--g-depth), var(--shadow-win);
   }
   .lg-page.blora-agent-page .ba-overlay {
     background: var(--lg-scrim);

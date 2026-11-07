@@ -27,26 +27,15 @@
     align-items: center;
     margin-block-end: 20px;
     padding: 6px;
-    border: 1px solid var(--lg-glass-border);
+    isolation: isolate;
+    border: 0;
     border-radius: var(--lg-radius-pill);
-    background-color: var(--lg-panel-bg);
-    background-image: var(--lg-sheen);
-    -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-    backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-    box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+    background: var(--g-tint-bar);
+    -webkit-backdrop-filter: var(--g-fallback);
+    backdrop-filter: var(--lens, var(--g-fallback));
+    box-shadow: var(--g-depth), var(--shadow-float);
   }
-  & .up-toolbar-slot::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    padding: 1px;
-    border-radius: inherit;
-    background: var(--lg-rim-gradient);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
+  & .up-toolbar-slot::before { content: none; }
   & .up-toolbar-slot > * { grid-area: 1 / 1; margin-block-end: 0; }
   & .up-toolbar-slot > [data-up-off] { visibility: hidden; }
   & .up-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-block-size: var(--lg-control-h); }

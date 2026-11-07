@@ -28,9 +28,9 @@
 }
 
 .cr-pn-overlay::backdrop {
-  background: rgba(0, 0, 0, 0.24);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
+  background: var(--lg-scrim);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-overlay::backdrop {
@@ -43,9 +43,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.24);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
+  background: var(--lg-scrim);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 html.cr-pn-lock { overflow: hidden; }
@@ -90,12 +90,12 @@ html.cr-pn-lock { overflow: hidden; }
   inline-size: 100%;
   min-block-size: 40px;
   padding: 8px 14px;
-  border: 1px solid var(--lg-glass-border, rgba(255, 255, 255, 0.7));
+  isolation: isolate;
+  border: 0;
   border-radius: var(--lg-radius-pill, 999px);
-  background-color: var(--lg-glass-bg-strong, rgba(255, 255, 255, 0.65));
-  background-image: var(--lg-sheen, none);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
   color: var(--lg-fg-secondary, rgba(0, 0, 0, 0.56));
   font: inherit;
   font-size: 13px;
@@ -187,14 +187,11 @@ html.cr-pn-lock { overflow: hidden; }
   inline-size: min(440px, calc(100vw - 32px));
   block-size: auto;
   max-block-size: min(84dvh, 640px);
-  border: 1px solid var(--lg-glass-border-strong, rgba(255, 255, 255, 0.95));
+  isolation: isolate;
+  border: 0;
   border-radius: var(--lg-radius-sheet, 32px);
-  background-color: var(--lg-sheet-bg, rgba(255, 255, 255, 0.82));
-  background-image: var(--lg-sheen, none);
-  box-shadow:
-    var(--lg-rim, none),
-    0 0 0 1px var(--lg-glass-edge, rgba(0, 0, 0, 0.06)),
-    0 40px 100px var(--lg-sheet-shadow, rgba(0, 0, 0, 0.22));
+  background: var(--g-tint-menu);
+  box-shadow: var(--g-depth), var(--shadow-win);
   color: var(--lg-fg, #1d1d1f);
   transform:
     translateY(calc(var(--d-offset, 0) * 12px))
@@ -212,8 +209,8 @@ html.cr-pn-lock { overflow: hidden; }
 
 /* 仅激活卡片使用背景模糊 */
 .cr-pn-card.is-active {
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick, 60px)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick, 60px)) saturate(200%);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
 }
 
 .cr-pn-card.is-leaving {
@@ -222,20 +219,7 @@ html.cr-pn-lock { overflow: hidden; }
   pointer-events: none;
 }
 
-/* 渐变边缘高光（与 .lg-glass::before 同源） */
-.cr-pn-card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  padding: 1px;
-  border-radius: inherit;
-  background: var(--lg-rim-gradient, linear-gradient(140deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 22%, rgba(255, 255, 255, 0) 46%, rgba(255, 255, 255, 0) 64%, rgba(255, 255, 255, 0.5) 100%));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 10;
-}
+.cr-pn-card::before { content: none; }
 
 /* 入场动画 */
 @keyframes cr-pn-stage-in {

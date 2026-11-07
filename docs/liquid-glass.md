@@ -1,68 +1,95 @@
-# Liquid Glass 设计（控制台）
+# Liquid Glass 设计（晶液）
 
-控制台正在从 Blora 外观迁移到 Apple Liquid Glass 风格。设计直接复用
-`/data/HTML-Clock/index.html`（Liquid Glass Clock）的材质令牌与组件做法，
-再按 Apple Liquid Glass 与系统色校准。迁移按页面进行，一页一次提交。
+控制台的 Apple Liquid Glass 直接抄自 `BloraDesign3-ARCHIVE/themes/skins/liquid/`
+（晶液）。光学、令牌、壁纸和水滴都按那套写法挂到 CrewRouter 的 DOM 上。
+
+## 五条规则
+
+1. 玻璃只给控制层。文字和数据坐在 `--sheet` 纸面上。
+2. 透镜，不是磨砂。Chromium 用 SVG `feDisplacementMap` 做边缘折射
+   （`backdrop-filter: url(#filter)`）；模糊只是非 Chromium 回退，约 16px。
+3. 没有描边、没有 rim glow。轮廓来自材质对比和软阴影。
+4. 同心圆角：外 28 → 内 20 → 12。
+5. 选中态只由一颗滑动、拉伸的白色玻璃水滴来画。
+
+默认调色板是晶液青灰：`--hue: 200; --chroma: .06`。强调色由 hue/chroma 算出，
+不用 systemBlue `#007AFF`。不引入晶液的 Dock / 启动器 / 窗口铬，也不引入六套色盘。
 
 ## 文件
 
 | 文件 | 作用 |
 | --- | --- |
-| `public/css/liquid-glass.css` | 令牌、可复用材质、Blora 令牌桥接、组件皮肤、控制台壳层、无障碍降级 |
-| `public/css/popup-notices.css` | 管理后台弹窗通知：叠放卡片、气泡列表、Blora 配色 hero、管理端列表 |
-| `public/js/popup-notices.js` | 弹窗通知渲染器（`window.CrewRouterPopupNotices`），控制台与管理后台预览共用 |
+| `public/css/liquid-glass.css` | 晶液令牌、玻璃配方、水滴、Blora 令牌桥接、组件皮肤、壳层、无障碍降级 |
+| `public/js/liquid-glass.js` | 壁纸 SVG、透镜引擎、水滴几何与拖拽（抄自 `liquid.js` + `scaffold.js`） |
+| `public/css/liquid-glass-pages.css` | 独立页（登录、商店、Playground 等）共用的壁纸与卡片层级 |
+| `public/css/popup-notices.css` | 管理后台弹窗通知：叠放卡片、气泡列表、管理端列表 |
+| `public/js/popup-notices.js` | 弹窗通知渲染器（`window.CrewRouterPopupNotices`） |
 | `public/css/model-library-console.css` | 模型库页面布局与材质层级 |
 | `public/css/my-upstream.css` | 我的上游页面布局，以及其 6 个弹窗内部的布局 |
-| `public/css/api-keys.css` | API Key 页布局、Key 卡片、标签 / 路由浮层、本页弹窗与 Key picker 列表 |
+| `public/css/api-keys.css` | API Key 页布局、Key 卡片、标签 / 路由浮层 |
 | `public/css/config-dialog-blora.css` | 客户端配置弹窗内部布局（面板外观交给玻璃面板） |
 | `public/js/blora-dialog.js` | 从玻璃页面打开的确认框 / 提示框自动加 `lg-scope` |
 
 `liquid-glass.css` 在 `console.html` 中排在 `console-blora.css` / `sidebar-blora.css`
-之后、各页面样式之前加载；页面样式可以覆盖基础皮肤。独立页面（如 `/store`）
-没有 `.lg-page`，在 `<body>` 上加 `lg-scope` 即可拿到同一套令牌与组件皮肤。
+之后、各页面样式之前加载；页面样式可以覆盖基础皮肤。独立页面没有 `.lg-page`，
+在 `<body>` 上加 `lg-scope` 即可拿到同一套令牌与组件皮肤。所有 HTML 页面都加载
+`liquid-glass.js`。
 
-## 来源与校准
+`--lg-*` 是给旧页面 CSS 用的别名：`--lg-glass-border` 为透明，`--lg-sheen` /
+`--lg-rim-gradient` 为 `none`，`--lg-blur` 为 16px。页面里写
+`border: 1px solid var(--lg-glass-border)` 不会再画出描边。
 
-直接沿用 HTML-Clock 的值：`--glass-bg`、`--glass-bg-strong`、`--glass-border(-strong)`、
-`--glass-highlight`、`--panel-bg`、`--divider`、`--chip-bg`、`--transition`
-（`cubic-bezier(0.32, 0.72, 0, 1)`）、`--blur-amount`（40px）、`blur() saturate(180%)`
-的玻璃配方、胶囊控件、`.font-card` 卡片（半透明 + 高光 + 描边）、强调色光晕、
-`:active` 缩放 0.96、深色「午夜」背景与 accent 光斑。
+## 光学
 
-按 Apple Liquid Glass 调整的部分：
+`liquid-glass.js` 按元素尺寸画 canvas 位移图，塞进 SVG `feDisplacementMap`，
+再写成 `--lens: url(#liquid-lens-N)`。只有 Chromium 会在 `backdrop-filter` 里
+渲染 `url()` filter；其它引擎走 CSS 里的 `--g-fallback`。
 
-- 强调色与状态色使用 Apple 系统色：浅色 systemBlue `#007AFF`、深色 `#0A84FF`，
-  绿 / 橙 / 红等同理；文字使用「增强对比度」版本（如 `#248A3D`、`#D70015`）。
-- 浅色模式给白色玻璃补一圈极浅外描边和左上 / 右下更亮的渐变边缘高光
-  （`--lg-rim-gradient`），白玻璃在浅色背景上仍有轮廓。
-- 侧栏是悬浮的玻璃面板（macOS 26 侧栏），选中态为中性白色胶囊，
-  与尚未迁移页面的 Blora 强调色不冲突。
-- 背景光斑改为静态渐变。HTML-Clock 的光斑持续漂移，背景每帧变化会让所有玻璃
-  每帧重新模糊；控制台长时间常开，因此不做动画。
-- 支持系统「减少透明度」（玻璃改实色）、「增强对比度」（加深分隔线与描边）、
-  「减少动态效果」；不支持背景模糊的浏览器自动提高不透明度。
+透镜配置抄自晶液 `PROFILES`：
+
+| 配置 | 用在 |
+| --- | --- |
+| `capsule` | 侧栏、移动顶栏、筛选条、悬浮工具栏 |
+| `menu` | 下拉菜单、选择弹层、气泡菜单 |
+| `panel` | 对话框、登录卡、独立页主卡 |
+| `toast` | 提示气泡、弹窗通知卡 |
+| `rim` | 水滴被拖动时的窄边折射 |
+
+控件层 CSS 必须写成 `backdrop-filter: var(--lens, var(--g-fallback))`，
+页面自己写 `blur(...)` 会盖掉透镜。
+
+壁纸是晶液青灰构图的内联 SVG（`#lg-wallpaper`），颜色走 `--wp-*`。
+`body::before` 的旧径向光斑已关掉。
+
+## 水滴
+
+侧栏分组、分段控件、页签导航会挂 `[data-indicator]`。选中项不再自带底色，
+由 `.indicator` 按 `--ind-x/y/w/h` 滑动。行程用 `--glide`（约 150ms 越过、
+0.45s 落定）。沿运动方向拉伸，停下时回弹。观察器策略抄晶液：透镜按元素
+`ResizeObserver` 更新；主题只盯 `data-blora-color-scheme`；侧栏只盯
+`aria-current` 等选中态属性。不观察整棵文档的 `childList`（会和 Blora
+SidebarNav / foundation 互刷，卡死主线程）。晚到的导航用 400ms / 1.5s
+各扫一次，菜单在 `pointerdown` 时再登记。
 
 ## 启用方式
 
-- 页面容器加 `lg-page`（如 `<div id="modelLibraryPage" class="page lg-page">`）。
-  作用域内的 Blora 组件通过令牌桥接（`--blora-*` → `--lg-*`）与统一皮肤呈现玻璃外观。
-- 不在页面容器内的弹层（对话框、挂在 body 下的菜单）加 `lg-scope`。
-  `<blora-dialog class="lg-scope">` 的面板变为玻璃面板（`::part(panel)` 等）。
-  `Dialog.confirm / alert / showModal` 生成的临时弹窗在当前页带 `lg-page` 时自动加上。
-- 当前页带 `lg-page` 时，`body::before` 显示背景光斑；切到未迁移页面时淡出。
+- 页面容器加 `lg-page`。作用域内的 Blora 组件通过令牌桥接
+  （`--blora-*` → `--lg-*`）与统一皮肤呈现玻璃外观。
+- 不在页面容器内的弹层加 `lg-scope`。`<blora-dialog class="lg-scope">` 的面板
+  变为玻璃面板（`::part(panel)`）。`Dialog.confirm / alert / showModal` 生成的
+  临时弹窗在当前页带 `lg-page` 时自动加上。
+- 当前页带 `lg-page` 或 body 带 `lg-scope` 时显示晶液壁纸。
 - 壳层（侧栏、页面大标题、主题按钮、移动顶栏）对整个控制台生效。
 
 ## 材质层级
 
-背景光斑 → 玻璃面板 → 分组底 → 卡片 → 控件。
+壁纸 → 玻璃控制层 → `--sheet` 内容 → 控件。
 
-- 真实背景模糊（`backdrop-filter`）只用于浮在内容上的元素：侧栏、悬浮工具栏、
-  筛选工具栏、绑定卡、菜单、提示气泡、玻璃按钮。
-- 内容卡片沿用 HTML-Clock `.font-card`：半透明底 + 高光 + 描边，不做模糊。
-  卡片数量可能很多，逐个模糊滚动开销大；而且带模糊的祖先会成为 backdrop root，
-  内部元素本来也只能模糊到祖先自身。
-- 菜单与下拉弹层使用 0.95 不透明度的厚材质：它们常位于带模糊的工具栏内，
-  模糊取不到工具栏以外的内容，必须不依赖模糊也可读。
+- 真实透镜只用于浮在内容上的元素：侧栏、悬浮工具栏、筛选条、菜单、提示、
+  对话框、登录卡。
+- 内容卡片用 `--sheet` / `--sheet-2`，不做模糊。卡片数量可能很多，逐个透镜
+  开销大；带模糊的祖先还会成为 backdrop root。
+- 菜单用不透明更高的 `--g-tint-menu`。
 - 菜单打开时提升所在卡片 / 分组的 `z-index`，避免被后面的元素盖住。
 
 ## 弹窗通知（管理后台广播）
@@ -74,123 +101,79 @@
 - 浮层是原生 `<dialog class="cr-pn-overlay lg-scope">`，`showModal()` 后与
   `blora-dialog` 同在 top layer，预览可以盖住仍打开的编辑弹窗；不支持 `<dialog>`
   时回退为 fixed 浮层。
-- 卡片是玻璃面板（`--lg-sheet-bg` + `--lg-sheen` + `--lg-rim`），仅当前激活卡片
-  使用背景模糊与 hero 渐变，后层卡片只做位移/缩放/透明度，避免多张卡片持续重绘模糊。
-- hero 是 Blora coral 调色板的径向光斑（浅色 `#9F5964` 等，深色取
-  `tokens.dark.css` 对应值），因为 `.lg-scope` 会把 `--blora-color-*` 桥接成 LG
-  值，所以配色单独定义为 `--cr-pn-*`，深色用 `:root[data-blora-color-scheme="dark"]`。
-  "CrewRouter" 每 350ms 换一种已安装系统字体（canvas 度量检测，检测不足 6 种时回退
-  为完整候选清单），`prefers-reduced-motion` 下固定为 `--lg-font-display`。
+- 卡片是晶液玻璃面板（`--g-tint-menu` + 透镜），仅当前激活卡片使用透镜。
+- hero 是彩色径向光斑（浅色 `#9F5964` 等，深色取 `tokens.dark.css` 对应值），
+  因为 `.lg-scope` 会把 `--blora-color-*` 桥接成 LG 值，所以配色单独定义为
+  `--cr-pn-*`，深色用 `:root[data-blora-color-scheme="dark"]`。
+  "CrewRouter" 每 350ms 换一种已安装系统字体（canvas 度量检测，检测不足 6 种时
+  回退为完整候选清单），`prefers-reduced-motion` 下固定为 `--lg-font-display`。
 - 多条通知叠放，左侧（≤900px 时卡片下方）显示气泡列表；只剩一条时不显示列表，
   窄屏只显示当前卡片。
 - 已读按服务端记录（`popup_notice_views`），激活/关闭时批量上报，失败保留重试。
 - 客户端拉取、上报失败均静默，不阻塞控制台；内容全部 `textContent` 写入。
 
-## 已有的组件皮肤
+## 组件皮肤
+
 作用域内统一生效，后续页面直接复用：
 
-- 按钮：primary 实心强调色 + 光晕；secondary 灰色胶囊；outline 玻璃胶囊；ghost 透明；danger 红色。
-- 标签 / 徽章：无边框着色胶囊（中性、强调、成功、警告、危险、信息）。
-- 下拉选择（`blora-select`，经 `::part`）：胶囊触发器 + 上下双箭头，弹层为厚玻璃。
-- 搜索与输入：iOS 填充式，聚焦时强调色光环；作用域内的普通文本输入框同样生效。
+- 按钮：primary 实心强调色；secondary 用 `--field`；没有光晕。
+- 标签 / 徽章：无边框着色胶囊。
+- 下拉选择（`blora-select`，经 `::part`）：胶囊触发器，弹层为菜单玻璃 + 透镜。
+- 搜索与输入：`--field` 填充，聚焦时强调色光环。
 - 菜单（`blora-dropdown`）、提示气泡、分段控件（`blora-segmented`）。
-- 页签（`blora-tabs`）：iOS 分段控件，滑块沿用 Blora 计算的位置变量。
-- 表格（`blora-table`）：玻璃面板中的分组列表；右侧固定列为透明 + 模糊，
-  横向滚动时内容从玻璃下滑过；批量操作条为强调色胶囊。
+- 页签（`blora-tabs`）：轨道是浅凹槽，选中由水滴来画。
+- 表格（`blora-table`）：`--sheet` 分组列表；右侧固定列为透明 + 轻模糊，
+  横向滚动时内容从下方滑过；批量操作条为强调色胶囊。
 - 复选框：圆角方框，选中为强调色实心 + 白色对勾（开关里的隐藏 input 除外）。
-- 表单：字段标签次级小字；`blora-fieldset` 为 iOS 分组底；步骤条强调色。
-- 对话框：玻璃面板（blur 60px + saturate 200%），圆形关闭按钮悬停旋转；
+- 表单：字段标签次级小字；`blora-fieldset` 为分组底。
+- 对话框：菜单玻璃 + 透镜，圆角 32px，圆形关闭按钮悬停旋转。
   由 `blora-dialog.js` 托管的旧版 `.modal-content` 弹窗同样改为玻璃面板。
-  面板用 `box-sizing: border-box`（描边不吃宽度），并把组件的回弹曲线换成
-  `--lg-ease-out`：回弹会在动画中途把面板放大到超过 `max-width`。
-  旧版弹窗的宽度上限取 HTML 声明值（行内 `max-width` 或 `.modal-wide`），
-  适配器原先先把内容 `max-width` 改写为 `100%` 再读取，导致所有声明宽度失效、
-  面板铺满视口；现在先读取声明值再改写，并把它写到面板的 `max-width` 上。
-  控制台与 `admin.html` 的 46 个静态弹窗全部加了 `lg-scope`。
+  面板用 `box-sizing: border-box`，并把组件的回弹曲线换成 `--ease-out`。
+  旧版弹窗的宽度上限取 HTML 声明值（行内 `max-width` 或 `.modal-wide`）。
+  控制台与 `admin.html` 的静态弹窗全部加了 `lg-scope`。
 - 挂在 `body` 下、由 JS 动态创建的浮层同样需要作用域：模型库 Key 气泡菜单、
   跟踪报告浮层、脚本「AI 辅助模型」选择器、供应商标签分配下拉。
-  前三个在创建时加 `lg-scope`；供应商标签下拉在内联样式里，按类名在基础文件中换皮。
-- 旧版内容区 `.content-section` / `.section-header`：玻璃面板 + 页内标题。
-- 卡片（`.blora-card`）、统计数字（`blora-statistic`）、iOS 绿色开关（`blora-switch`）、
-  组合控件（`blora-join` 改为留间距）、时间选择面板。
+- 旧版内容区 `.content-section` / `.section-header`：`--sheet` + 页内标题。
+- 卡片（`.blora-card`）、统计数字（`blora-statistic`）、开关（`blora-switch`）、
+  组合控件、时间选择面板。
 - app.js 行内样式使用的旧变量（`--muted-foreground`、`--border`、`--destructive` 等）
   在作用域内同样映射到玻璃令牌。
 
+## 无障碍
+
+- `prefers-reduced-transparency`：关掉透镜，玻璃改实色。
+- `prefers-contrast: more`：加深分隔线。
+- `prefers-reduced-motion`：水滴不做拉伸与拖拽。
+- 不支持 `backdrop-filter` 的浏览器走更高不透明度的 `--sheet`。
+
 ## 与旧样式的优先级
 
-`console-blora.css` 未分层，并直接写了 `background`、`border-radius`、输入框边框
-（`.blora-page input:not(...)×3`）。基础皮肤因此写实际属性而不只是改 Blora 变量，
-并使用同等或更高的特异性，靠加载顺序胜出。迁移新页面时如果组件颜色没变，
-先检查是否被 `console-blora.css` 的同名规则覆盖。复选框同理：`toggles-blora.css`
-用 `:not()` 链给所有复选框定了尺寸与圆角，玻璃皮肤沿用同样的 `:not()` 链。
+`console-blora.css` 未分层，并直接写了 `background`、`border-radius`、输入框边框。
+基础皮肤因此写实际属性而不只是改 Blora 变量，并使用同等或更高的特异性，
+靠加载顺序胜出。迁移新页面时如果组件颜色没变，先检查是否被
+`console-blora.css` 的同名规则覆盖。复选框同理：`toggles-blora.css` 用
+`:not()` 链给所有复选框定了尺寸与圆角，玻璃皮肤沿用同样的 `:not()` 链。
 
-## 迁移进度
+页面 CSS 若再写 `backdrop-filter: blur(...)`，会盖掉 `--lens`。控件层一律写
+`var(--lens, var(--g-fallback))`。
 
-1. 模型库 `#modelLibraryPage` — 已完成
-2. 我的上游 `#myUpstreamPage`，含添加 / 编辑供应商、管理模型、添加 / 编辑模型、
-   批量编辑、批量设置价格 6 个弹窗，以及删除确认等临时弹窗 — 已完成
-3. API Key 与用量 `#apiKeysPage`：Key 卡片、标签栏、悬浮顶栏、授权管理，
-   标签 / 路由队列浮层，创建密钥、成员、选项、签名、定时、新建标签、额度脚本、
-   模型队列（Key picker）、客户端配置等弹窗 — 已完成
-4. 统计信息 `#statsPage`：筛选条、统计瓷片、实时活动、缓存命中、今日 / 昨日、
-   分段页签、10 个分析页签（概览、延迟与吞吐、多维分析、每日、时段、模型、密钥、
-   客户端、消息、调用记录）、供应商额度与图表配色 — 已完成
-5. 项目工作 `#projectWorkPage`：工作台标题、筛选条、汇总瓷片、最近活动图表、
-   最近活跃项目、项目卡片 — 已完成
-6. 排行榜 `#leaderboardPage`：玻璃排行表（名次徽章、头像、当前用户行高亮、页脚） — 已完成
-7. 积分 `#balancePage`：余额数字、Team 与限额卡、进度条 — 已完成
-8. 操作日志 `#auditLogsPage`：动作筛选胶囊、玻璃日志行、详情展开、分页 — 已完成
-9. 提示词 `#promptsPage`：注入条目卡、筛选条、提示词表格、详情 / 编辑弹窗（lg-scope） — 已完成
-10. 会话 `#sessionsPage`：会话面板、筛选条、会话卡、详情时间线与事件卡、内联总结、
-    总结弹窗（lg-scope） — 已完成
-11. Blora Agent `#bloraAgentPage`：模式分段控件、历史侧栏（移动端抽屉）、对话气泡、
-    推理块、工具卡、参数区与输入区、模型库弹窗 — 已完成
-12. 用户设置 `#settingsPage`：概览版本卡、类别网格、返回与详情标题、通知 / 插件 /
-    事件 / 安全 / 签名分组、我的通知行卡、修改密码 — 已完成
-13. 管理后台（`admin.html`，独立页面，Blora 2.0.8）：`liquid-glass.css` 已接入，
-    壳层同样生效；通用管理组件（统计瓷片、`admin-filter-bar`、
-    `users-table` / `models-table`、分页）的玻璃皮肤写在基础文件里。
-    用户管理 `#adminUsersPage`、编辑用户弹窗（lg-scope） — 已完成；
-    模型库 `#adminModelLibraryPage`（顶部说明 / 范围 / 筛选玻璃面板、供应商卡、
-    模型卡、供应商额度折叠卡） — 已完成；
-    统计信息 `#adminStatsPage`（瓷片、页签栏、9 个页签的图表卡、多维面板、
-    今日 / 昨日、分析表格，`admin.js` 增加与 `app.js` 一致的玻璃图表配色） — 已完成；
-    调用错误、操作日志、提示词（含详情弹窗）、插件管理（内联样式用更高特异性覆盖）、
-    系统设置、配置抽屉（`.lg-scope`）与 Team / 模型 / 供应商页 — 已完成
-14. 下一步：管理后台已全部启用 `lg-page`；后续按新页面或视觉回归补充细节。
-15. 独立页面（不在控制台侧栏）：
-    - 插件商店 `/store`（仅 demo 实例提供）：头部悬浮玻璃条、工具栏、插件卡、
-      详情页、表单、实例选择弹窗；语言选择并入头部 — 已完成
-    - 登录 `index`、设置密码、OAuth 授权、初始化、飞书绑定、简洁登录：
-      `auth-shell.css` 追加玻璃材质，body 加 `lg-scope` — 已完成
-    - 用量 `usage`、Playground、购买 `purchase`、插件安装 `plugin-install`：
-      各自的页面样式补玻璃材质 — 已完成
-    - `themes.css` 给 body 画的点阵背景会盖住光斑，独立页统一在
-      `liquid-glass-pages.css` 里清掉 `background-image` 并补 `::before` 光斑。
-16. demo 专属页面：`showcase.html`（营销首页）、`data.html`（实例统计） —
-    已完成。两页是大段内联样式，只在页面作用域内把旧变量桥接到玻璃令牌，
-    再替换导航、卡片、指标卡与表格的材质。
-17. 至此 `public/pages/` 下所有 HTML 页面均已迁移（`admin.html.bak` 未被路由使用）。
+## 图表配色
 
-`.stats-filters` 筛选条的玻璃皮肤已提到 `liquid-glass.css`，统计信息、项目工作、
-排行榜等页面直接复用，页面 CSS 只调下拉宽度与排布。
+canvas 不解析 `var(--x)`，`app.js` 的 `_upsertChart` 会按图表所在 `.page` 作用域
+解析颜色：Liquid Glass 页额外把 `--info` / `--success` 等文字用的 ink 色换成
+`--lg-accent` / `--lg-green` 等（`_glassChartTokens`），线条 2px 无点 + 渐隐面积，
+柱状圆角、圆环带间隙；主题切换时由 `_watchGlassChartTheme` 重算数据色。
+`multi-dimension-chart.js` 单独建图，用 `container.closest('.lg-page')` 判断后
+套用同一套色。
 
-## 图表配色（Liquid Glass 页）
+## 新页面清单
 
-canvas 不解析 `var(--x)`，`app.js` 的 `_upsertChart` 会按图表所在 `.page` 作用域解析颜色：
-Liquid Glass 页额外把 `--info` / `--success` 等文字用的 ink 色换成 `--lg-accent` /
-`--lg-green` 等标准系统色（`_glassChartTokens`），线条 2px 无点 + 渐隐面积，柱状圆角、
-圆环带间隙；主题切换时由 `_watchGlassChartTheme` 重算数据色。`multi-dimension-chart.js`
-单独建图，用 `container.closest('.lg-page')` 判断后套用同一套系统色与刻度色。
-
-## 新页面迁移清单
-
-1. 容器加 `lg-page`，弹层加 `lg-scope`。
-2. 页面 CSS 只写布局与材质层级，组件外观交给 `liquid-glass.css`；
-   需要新组件皮肤时加到基础文件，供后续页面复用。
-3. 去掉页面内的旧背景色（页面容器不能盖住背景光斑）。
-4. 浅色 / 深色、1440 / 820 / 390 宽度截图检查；打开菜单与下拉检查层级与可读性。
-5. 运行相关浏览器测试，与迁移前结果对比。
+1. 容器加 `lg-page`，弹层加 `lg-scope`，页面加载 `liquid-glass.js`。
+2. 页面 CSS 只写布局与材质层级，组件外观交给 `liquid-glass.css`。
+3. 控件层用透镜；内容用 `--sheet`。不要描边、不要 rim glow、不要厚模糊。
+4. 浅色 / 深色、1440 / 820 / 390 宽度对照
+   `BloraDesign3-ARCHIVE/themes/index.html?skin=liquid`。
+5. 打开菜单与下拉检查层级与可读性；点侧栏看水滴是否跟着走。
 
 ## 验证
 
@@ -198,24 +181,7 @@ Liquid Glass 页额外把 `--info` / `--success` 等文字用的 ink 色换成 `
 # 隔离的演示服务与无头 Chrome（不连生产库），浏览器测试默认连 18571 / 18572
 node scripts/verify-blora-correction-browser.js --server
 node scripts/verify-blora-correction-browser.js --chrome
-node scripts/test-agent-model-library-browser.js
-node scripts/test-client-config-browser.js
-node scripts/test-provider-editor-pages-browser.js
-node scripts/test-api-key-card-controls-browser.js
-# 自带服务与浏览器
-node scripts/test-unified-provider-browser.js
 ```
 
-迁移后通过：`test-agent-model-library-browser.js`、`test-client-config-browser.js`、
-`test-provider-editor-pages-browser.js`、`test-unified-provider-browser.js`、
-`test-api-key-card-controls-browser.js`、`test-session-attachments-browser.js`、
-`test-session-summary-dialog-browser.js`。
-
-`test-blora-agent-registration.js` 期望 `bind()` 返回 Promise；`ee48d517` 把
-`bind()` 改成同步后该断言已失效，与本次迁移无关。
-
-`test-library-sticky-alignment-browser.js`、`test-model-card-badges-browser.js`、
-`test-inject-uptime-menu-browser.js`、`test-library-closed-keys-browser.js`、
-`test-provider-quota-layout-browser.js`、`test-cpa-quota-browser.js`、
-`test-provider-wizard-browser.js`、`test-api-keys-desktop-layout-browser.js`、
-`test-config-dialog-browser.js` 在迁移前已在同一断言失败，迁移后结果相同。
+对照基准：`BloraDesign3-ARCHIVE/themes/index.html?skin=liquid`。
+需要看透镜时用 Chromium（`google-chrome`）；Firefox 只会看到模糊回退。

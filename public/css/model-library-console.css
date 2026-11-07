@@ -32,14 +32,13 @@
   padding-inline: 14px;
   font-size: 13.5px;
 }
-/* 次要操作：玻璃胶囊（HTML-Clock .meta-inner） */
 #modelLibraryPage .model-library-header-actions .blora-button[data-variant="secondary"],
 #modelLibraryPage .model-library-header-more .ml-library-more-trigger {
-  --blora-button-bg: var(--lg-glass-bg-strong);
-  --blora-button-bd: var(--lg-glass-border);
-  -webkit-backdrop-filter: blur(20px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(20px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+  --blora-button-bg: var(--field);
+  --blora-button-bd: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 #modelLibraryPage .model-library-header-actions .blora-button[data-variant="secondary"]:hover,
 #modelLibraryPage .model-library-header-more .ml-library-more-trigger:hover {
@@ -62,13 +61,13 @@
   gap: 16px;
   margin-block-end: var(--ml-section-gap);
   padding: 20px 24px;
-  border: 1px solid var(--lg-glass-border);
+  isolation: isolate;
+  border: 0;
   border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+  background: var(--g-tint);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-win);
 }
 #modelLibraryPage .model-library-binding-main { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; inline-size: 100%; max-inline-size: 100%; min-width: 0; }
 #modelLibraryPage .model-library-key-selector { display: none !important; }
@@ -185,18 +184,8 @@
 #modelLibraryPage .binding-empty-title { color: var(--lg-fg); font-size: 15px; font-weight: 600; }
 #modelLibraryPage .binding-empty-desc { color: var(--lg-fg-secondary); font-size: 13px; }
 
-/* 玻璃面板的渐变边缘高光（令牌见 liquid-glass.css --lg-rim-gradient） */
 #modelLibraryPage :is(.model-library-binding-bar, .ml-model-filter-bar, .model-library-sticky-bar, .model-library-team, .ml-model-quota-section, .ml-library-reorder-toolbar, .model-library-empty)::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  padding: 1px;
-  border-radius: inherit;
-  background: var(--lg-rim-gradient);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  content: none;
 }
 #modelLibraryPage .model-library-empty { position: relative; }
 
@@ -204,13 +193,13 @@
 #modelLibraryPage .ml-model-filter-bar,
 #modelLibraryPage .model-library-sticky-bar {
   box-sizing: border-box;
-  border: 1px solid var(--lg-glass-border);
+  isolation: isolate;
+  border: 0;
   border-radius: var(--lg-radius-pill);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 #modelLibraryPage .ml-model-filter-bar {
   position: relative;
@@ -232,10 +221,10 @@
   z-index: 45;
   width: var(--ml-sticky-width);
   padding: 6px;
-  background-color: var(--lg-glass-bg-strong);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
   animation: ml-glass-in 0.32s var(--lg-ease-out) backwards;
 }
 #modelLibraryPage .model-library-sticky-bar[hidden] { display: none; }
@@ -667,12 +656,13 @@
   gap: 10px 16px;
   margin-block-end: var(--ml-section-gap);
   padding: 10px 10px 10px 20px;
-  border: 1px solid var(--lg-glass-border);
+  isolation: isolate;
+  border: 0;
   border-radius: 24px;
-  background-color: var(--lg-panel-bg);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 #modelLibraryPage .ml-library-reorder-toolbar-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; color: var(--lg-fg); font-weight: 600; }
 #modelLibraryPage .ml-library-reorder-toolbar-hint { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 400; }
@@ -778,13 +768,14 @@
 
 /* ---------- 8. Key 工具浮层（挂在 body 下，单独套用玻璃菜单） ---------- */
 body.blora-page #libraryKeyBubbleMenu {
+  isolation: isolate;
   padding: 6px;
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-card);
-  background: var(--lg-menu-bg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   font-family: var(--lg-font);
 }
 body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item {

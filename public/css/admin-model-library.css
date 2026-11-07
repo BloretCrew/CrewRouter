@@ -424,18 +424,26 @@
 
 /* ---------- 顶部说明 / 范围 / 筛选条：玻璃面板 ---------- */
 .lg-page.admin-model-library .aml-header,
-.lg-page.admin-model-library .aml-scope,
-.lg-page.admin-model-library .aml-toolbar {
+.lg-page.admin-model-library .aml-scope {
   position: relative;
   z-index: 4;
   padding: 18px 22px;
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+  background: var(--sheet);
+  box-shadow: var(--lg-shadow-card);
+}
+.lg-page.admin-model-library .aml-toolbar {
+  position: relative;
+  z-index: 4;
+  isolation: isolate;
+  padding: 18px 22px;
+  border: 0;
+  border-radius: var(--lg-radius-panel);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 .lg-page.admin-model-library .aml-header { z-index: 6; margin-block-end: 16px; padding: 18px 22px; }
 .lg-page.admin-model-library .aml-scope { z-index: 5; margin-block-end: 16px; }
@@ -490,12 +498,13 @@
 /* 高级筛选 / TEAM 面板：厚玻璃浮层 */
 .lg-page.admin-model-library .aml-filter-panel,
 .lg-page.admin-model-library .aml-team-panel {
-  border: 1px solid var(--lg-glass-border-strong);
+  isolation: isolate;
+  border: 0;
   border-radius: var(--lg-radius-group);
-  background: var(--lg-menu-bg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 .lg-page.admin-model-library .aml-filter-panel label,
 .lg-page.admin-model-library .aml-team-panel { color: var(--lg-fg-secondary); }

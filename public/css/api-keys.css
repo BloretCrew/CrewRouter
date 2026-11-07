@@ -12,14 +12,14 @@
   inset-inline: calc(15.5rem + var(--ak-gutter)) var(--ak-gutter);
   z-index: 45;
   box-sizing: border-box;
+  isolation: isolate;
   padding: 6px 6px 6px 18px;
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: var(--lg-radius-pill);
-  background-color: var(--lg-glass-bg-strong);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
   visibility: hidden;
   opacity: 0;
   transform: translateY(-8px);
@@ -231,16 +231,17 @@
   min-inline-size: 200px;
   max-inline-size: min(320px, calc(100vw - 16px));
   max-block-size: min(60vh, 420px);
+  isolation: isolate;
   padding: 6px;
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-card);
-  background: var(--lg-menu-bg);
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
   color: var(--lg-fg);
   font-family: var(--lg-font);
   font-size: 13px;
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   animation: ak-pop-in 0.2s var(--lg-ease-out) both;
 }
 :is(.api-key-tags-overflow-title, .api-key-route-queue-tip-title) { padding: 6px 10px 6px; color: var(--lg-fg-secondary); font-size: 11.5px; font-weight: 600; }

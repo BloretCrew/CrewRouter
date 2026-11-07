@@ -117,8 +117,8 @@
    本文件负责商店页布局：头部、工具栏、插件卡、详情页、表单、审核行与实例弹窗。
    ========================================================================= */
 
-body.blora-page:has(.store-shell) { background: var(--lg-bg); }
-body.blora-page:has(.store-shell)::before { opacity: 1; }
+body.blora-page:has(.store-shell) { background: var(--wp-bg); }
+body.blora-page:has(.store-shell)::before { content: none; }
 
 .store-shell { max-inline-size: 1120px; padding: 0 16px 40px; }
 
@@ -129,14 +129,14 @@ body.blora-page:has(.store-shell)::before { opacity: 1; }
   z-index: 20;
   gap: 14px;
   margin-block: 12px 0;
+  isolation: isolate;
   padding: 10px 16px;
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+  background: var(--g-tint-bar);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 .store-brand { gap: 10px; color: var(--lg-fg); }
 .store-brand img { border-radius: 8px; box-shadow: var(--lg-rim); }
@@ -342,13 +342,13 @@ body.blora-page:has(.store-shell)::before { opacity: 1; }
 /* ---------- 实例选择弹窗 ---------- */
 .store-modal-mask { background: var(--lg-scrim); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
 .store-modal {
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-sheet-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow);
+  isolation: isolate;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-win);
   color: var(--lg-fg);
 }
 .store-modal__head { border-bottom: 1px solid var(--lg-divider); }

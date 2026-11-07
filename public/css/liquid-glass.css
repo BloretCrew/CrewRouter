@@ -1,245 +1,338 @@
 /* =========================================================================
-   CrewRouter · Liquid Glass 设计基础
+   CrewRouter · 晶液 Liquid Glass
 
-   材质令牌直接复用 /data/HTML-Clock/index.html（Liquid Glass Clock）：
-   --glass-bg / --glass-border / --glass-highlight / --panel-bg / --chip-* /
-   --transition / --blur-amount 等原值保留，按 Apple Liquid Glass 校准：
-   · 强调色与状态色改用 Apple 系统色（浅色 systemBlue #007AFF、深色 #0A84FF）；
-   · 浅色模式补一圈极浅外描边，白色玻璃在浅色背景上仍有轮廓；
-   · 背景光斑改为静态渐变（不再持续动画），避免玻璃每帧重新模糊；
-   · 支持「减少透明度 / 增强对比度 / 减少动态效果」系统设置。
+   光学、令牌、水滴直接抄自 BloraDesign3-ARCHIVE/themes/skins/liquid/
+   （Apple Liquid Glass 的正确写法）。规则：
+   1. 玻璃只给控制层；文字和数据坐在 --sheet 纸面上。
+   2. 透镜，不是磨砂。边缘 SVG 位移折射（Chromium url() filter），
+      模糊只是非 Chromium 回退。
+   3. 没有描边、没有 rim glow。轮廓来自材质对比和软阴影。
+   4. 同心圆角：外 28 → 内 20 → 12。
+   5. 选中态只由一颗水滴来画。
 
-   用法：页面容器加 .lg-page（局部弹层可用 .lg-scope），其中的 Blora
-   组件通过令牌桥接与统一皮肤呈现玻璃外观；未启用的页面保持原样。
-   壳层（侧栏、标题、移动顶栏）对整个控制台生效，选中态保持中性色。
+   用法：页面容器加 .lg-page（局部弹层可用 .lg-scope）。
+   壳层（侧栏、标题、移动顶栏）对整个控制台生效。
    ========================================================================= */
 
-/* ---------- 1. 令牌：浅色（HTML-Clock [data-theme="light"] 原值 + Apple 校准） ---------- */
+/* Palette = hue + chroma. Default 青灰, copied from themes/core/base.css */
+:root { --hue: 200; --chroma: .06; }
+
+/* ---------- 1. 令牌：浅色（晶液 liquid.css :root 原值） ---------- */
 :root {
-  --lg-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
-  --lg-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
-  --lg-font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "JetBrains Mono", monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Segoe UI", "Microsoft YaHei", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  --spring: cubic-bezier(.3, 1.45, .55, 1);
+  --spring-soft: cubic-bezier(.25, 1.2, .5, 1);
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  /* droplet travel: Apple's "snappy" spring (response .35s, bounce .15 — the preset iOS 26 glass
+   * indicators use), sampled into linear(): ~150ms across, settles by .45s, barely overshoots */
+  --glide: linear(0, .035, .12, .229, .347, .461, .567, .659, .738, .804, .857, .899, .931, .955, .973, .986, .994, 1, 1.003, 1.005, 1.006, 1.006, 1.006, 1.005, 1.005, 1.004, 1.003, 1.003, 1);
 
-  /* HTML-Clock：--transition、uiContentIn 曲线、--blur-amount */
-  --lg-ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --lg-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --lg-dur-fast: 0.2s;
+  --accent: oklch(.58 calc(var(--chroma) * 1.3) var(--hue));
+  --accent-hi: oklch(.68 calc(var(--chroma) * 1.25) calc(var(--hue) - 12));
+  --accent-ink: oklch(.5 calc(var(--chroma) * 1.25) var(--hue));
+  --on-accent: #fff;
+  --accent-soft: oklch(.6 calc(var(--chroma) * 1.2) var(--hue) / .13);
+  --on-accent-soft: oklch(.42 calc(var(--chroma) * 1.2) var(--hue));
+
+  --text: oklch(.2 .02 var(--hue));
+  --text-2: oklch(.2 .02 var(--hue) / .64);
+  --text-3: oklch(.2 .02 var(--hue) / .44);
+  --line: oklch(.2 .03 var(--hue) / .075);
+  --line-strong: oklch(.2 .03 var(--hue) / .13);
+  --hover: oklch(.2 .03 var(--hue) / .05);
+  --pressed: oklch(.2 .03 var(--hue) / .09);
+  --focus: oklch(.6 .17 var(--hue));
+  --success: oklch(.56 .14 152); --success-soft: oklch(.62 .14 152 / .14);
+  --warning: oklch(.6 .13 65); --warning-soft: oklch(.72 .14 75 / .18);
+  --danger: oklch(.56 .19 25); --danger-soft: oklch(.6 .19 25 / .12);
+
+  /* Glass recipe */
+  --g-tint: oklch(.99 .006 var(--hue) / .30);
+  --g-tint-bar: oklch(.99 .006 var(--hue) / .3);
+  --g-tint-menu: oklch(.99 .005 var(--hue) / .58);
+  --g-tint-clear: oklch(1 0 0 / .06);
+  --g-depth: inset 0 1px 1.5px oklch(1 0 0 / .55), inset 0 -1px 1px oklch(.3 .04 var(--hue) / .08), inset 0 0 18px oklch(1 0 0 / .14);
+  --g-fallback: blur(16px) saturate(1.9) brightness(1.04);
+  --g-fallback-clear: blur(5px) saturate(2) brightness(1.06);
+  --g-fallback-menu: blur(10px) saturate(2) brightness(1.04);
+
+  --sheet: oklch(.996 .002 var(--hue) / .97);
+  --sheet-2: oklch(.965 .006 var(--hue) / .75);
+  --field: oklch(.94 .008 var(--hue) / .7);
+  --field-hover: oklch(.92 .01 var(--hue) / .8);
+  --shadow-win: 0 28px 56px -22px oklch(.28 .07 var(--hue) / .38), 0 10px 22px -12px oklch(.28 .06 var(--hue) / .24);
+  --shadow-win-focus: 0 46px 90px -26px oklch(.26 .08 var(--hue) / .5), 0 18px 34px -16px oklch(.26 .07 var(--hue) / .3);
+  --shadow-float: 0 22px 44px -16px oklch(.28 .08 var(--hue) / .38), 0 6px 14px -6px oklch(.28 .06 var(--hue) / .18);
+  --term-bg: oklch(.21 .025 var(--hue) / .94);
+
+  --wp-bg: oklch(.918 calc(var(--chroma) * .18) calc(var(--hue) + 4));
+  --wp-1: oklch(.861 calc(var(--chroma) * .31) calc(var(--hue) + 5));
+  --wp-2: oklch(.781 calc(var(--chroma) * .53) calc(var(--hue) + 4));
+  --wp-3: oklch(.646 calc(var(--chroma) * .72) calc(var(--hue) + 6));
+  --wp-4: oklch(.509 calc(var(--chroma) * .85) calc(var(--hue) + 10));
+  --wp-5: oklch(.836 calc(var(--chroma) * .29) calc(var(--hue) - 3));
+  --wp-6: oklch(.876 calc(var(--chroma) * .14) calc(var(--hue) - 43));
+  color-scheme: light;
+
+  /* lg-* aliases so page CSS keeps working without a rewrite */
+  --lg-font: var(--font-sans);
+  --lg-font-display: var(--font-display);
+  --lg-font-mono: "SF Mono", ui-monospace, Menlo, monospace;
+  --lg-ease: var(--ease-out);
+  --lg-ease-out: var(--ease-out);
+  --lg-dur-fast: 0.15s;
   --lg-dur: 0.3s;
-  --lg-blur: 40px;
-  --lg-blur-thick: 60px;
-  --lg-saturate: 180%;
-
-  /* 同心圆角：外层面板 → 分组 → 卡片 → 控件 */
+  --lg-blur: 16px;
+  --lg-blur-thick: 10px;
+  --lg-saturate: 190%;
   --lg-radius-sheet: 32px;
-  --lg-radius-panel: 26px;
+  --lg-radius-panel: 28px;
   --lg-radius-group: 20px;
   --lg-radius-card: 16px;
   --lg-radius-field: 12px;
   --lg-radius-item: 10px;
   --lg-radius-pill: 999px;
-  --lg-control-h: 36px;
-  --lg-control-h-sm: 30px;
+  --lg-control-h: 34px;
+  --lg-control-h-sm: 28px;
   --lg-shell-gap: 10px;
-
-  --lg-accent: #007aff;
-  --lg-accent-strong: #0062cc;
-  --lg-accent-ink: #0066cc;
-  --lg-accent-glow: rgba(0, 122, 255, 0.32);
-  --lg-accent-tint: rgba(0, 122, 255, 0.12);
-  --lg-on-accent: #fff;
-
-  --lg-bg: #f5f5f7;
-  --lg-fg: #1d1d1f;
-  --lg-fg-secondary: rgba(0, 0, 0, 0.56);
-  --lg-fg-tertiary: rgba(0, 0, 0, 0.36);
-  --lg-fg-quaternary: rgba(0, 0, 0, 0.22);
-
-  --lg-glass-bg: rgba(255, 255, 255, 0.45);
-  --lg-glass-bg-strong: rgba(255, 255, 255, 0.65);
-  --lg-glass-border: rgba(255, 255, 255, 0.7);
-  --lg-glass-border-strong: rgba(255, 255, 255, 0.95);
-  --lg-glass-highlight: rgba(255, 255, 255, 0.95);
-  --lg-glass-lowlight: rgba(0, 0, 0, 0.03);
-  --lg-glass-edge: rgba(0, 0, 0, 0.06);
-  --lg-glass-shadow: rgba(0, 0, 0, 0.15);
-  --lg-panel-bg: rgba(255, 255, 255, 0.62);
-  --lg-divider: rgba(0, 0, 0, 0.08);
-  --lg-chip-bg: rgba(120, 120, 128, 0.14);
-  --lg-chip-hover: rgba(120, 120, 128, 0.24);
-  --lg-chip-active: rgba(120, 120, 128, 0.32);
-
-  /* 由 HTML-Clock 卡片推导：内容卡比面板更实、分组底用极浅填充 */
-  --lg-surface: rgba(255, 255, 255, 0.92);
-  --lg-card-bg: rgba(255, 255, 255, 0.74);
-  --lg-card-bg-hover: rgba(255, 255, 255, 0.9);
-  --lg-group-bg: rgba(120, 120, 128, 0.07);
-  --lg-menu-bg: rgba(250, 250, 252, 0.95);
-  --lg-sheet-bg: rgba(255, 255, 255, 0.82);
-  --lg-sheet-shadow: rgba(0, 0, 0, 0.22);
-  --lg-sidebar-bg: rgba(255, 255, 255, 0.58);
-  --lg-selection-bg: rgba(255, 255, 255, 0.86);
-  --lg-tooltip-bg: rgba(29, 29, 31, 0.9);
-  --lg-tooltip-fg: #fff;
-  --lg-scrim: rgba(0, 0, 0, 0.32);
-
-  --lg-sheen: radial-gradient(120% 90% at 18% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 56%);
-  --lg-rim: inset 0 1px 0 var(--lg-glass-highlight), inset 0 -1px 0 var(--lg-glass-lowlight);
-  /* 边缘高光：左上与右下更亮，模拟光线在玻璃边缘折射 */
-  --lg-rim-gradient: linear-gradient(140deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 22%, rgba(255, 255, 255, 0) 46%, rgba(255, 255, 255, 0) 64%, rgba(255, 255, 255, 0.5) 100%);
-  --lg-shadow-glass: 0 0 0 1px var(--lg-glass-edge), 0 8px 32px rgba(0, 0, 0, 0.1);
-  --lg-shadow-panel: 0 0 0 1px var(--lg-glass-edge), 0 18px 50px rgba(0, 0, 0, 0.08);
-  --lg-shadow-card: 0 0 0 1px var(--lg-glass-edge), 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.05);
-  --lg-shadow-card-hover: 0 0 0 1px var(--lg-glass-edge), 0 12px 30px rgba(0, 0, 0, 0.12);
-  --lg-shadow-float: 0 0 0 1px var(--lg-glass-edge), 0 20px 55px rgba(0, 0, 0, 0.18);
-  --lg-shadow-control: 0 0 0 1px var(--lg-glass-edge), 0 2px 8px rgba(0, 0, 0, 0.06);
-
-  /* Apple 系统色：填充用标准色，文字用「增强对比度」版本 */
-  --lg-green: #34c759;  --lg-green-ink: #248a3d;
-  --lg-orange: #ff9500; --lg-orange-ink: #c93400;
-  --lg-red: #ff3b30;    --lg-red-ink: #d70015;
-  --lg-yellow: #ffcc00; --lg-yellow-ink: #b25000;
-  --lg-teal: #30b0c7;   --lg-teal-ink: #008299;
-  --lg-indigo: #5856d6; --lg-indigo-ink: #3634a3;
-  --lg-purple: #af52de; --lg-purple-ink: #8944ab;
-  --lg-pink: #ff2d55;   --lg-pink-ink: #d30f45;
-  --lg-cyan: #32ade6;   --lg-cyan-ink: #0071a4;
-  --lg-mint: #00c7be;   --lg-mint-ink: #0c817b;
-  --lg-gray: #8e8e93;   --lg-gray-ink: #6c6c70;
-
-  /* 背景：HTML-Clock 环境光斑（accent 100% / 50%）改为静态渐变，并加冷暖辅色 */
-  --lg-wallpaper:
-    radial-gradient(70vmax 56vmax at 4% -6%, rgba(0, 122, 255, 0.26) 0%, rgba(0, 122, 255, 0) 62%),
-    radial-gradient(48vmax 40vmax at 96% 4%, rgba(90, 200, 250, 0.24) 0%, rgba(90, 200, 250, 0) 62%),
-    radial-gradient(62vmax 52vmax at 102% 104%, rgba(175, 82, 222, 0.2) 0%, rgba(175, 82, 222, 0) 62%),
-    radial-gradient(46vmax 40vmax at -4% 104%, rgba(255, 149, 0, 0.1) 0%, rgba(255, 149, 0, 0) 60%),
-    var(--lg-bg);
+  --lg-accent: var(--accent);
+  --lg-accent-strong: var(--accent-hi);
+  --lg-accent-ink: var(--accent-ink);
+  --lg-accent-glow: transparent;
+  --lg-accent-tint: var(--accent-soft);
+  --lg-on-accent: var(--on-accent);
+  --lg-bg: var(--wp-bg);
+  --lg-fg: var(--text);
+  --lg-fg-secondary: var(--text-2);
+  --lg-fg-tertiary: var(--text-3);
+  --lg-fg-quaternary: var(--text-3);
+  --lg-glass-bg: var(--g-tint);
+  --lg-glass-bg-strong: var(--g-tint-bar);
+  --lg-glass-border: transparent;
+  --lg-glass-border-strong: transparent;
+  --lg-glass-highlight: oklch(1 0 0 / .55);
+  --lg-glass-lowlight: oklch(.3 .04 var(--hue) / .08);
+  --lg-glass-edge: transparent;
+  --lg-glass-shadow: oklch(.28 .07 var(--hue) / .38);
+  --lg-panel-bg: var(--g-tint);
+  --lg-divider: var(--line);
+  --lg-chip-bg: var(--hover);
+  --lg-chip-hover: var(--pressed);
+  --lg-chip-active: var(--pressed);
+  --lg-surface: var(--sheet);
+  --lg-card-bg: var(--sheet-2);
+  --lg-card-bg-hover: var(--field-hover);
+  --lg-group-bg: var(--hover);
+  --lg-menu-bg: var(--g-tint-menu);
+  --lg-sheet-bg: var(--g-tint-menu);
+  --lg-sheet-shadow: oklch(.28 .08 var(--hue) / .38);
+  --lg-sidebar-bg: var(--g-tint-bar);
+  --lg-selection-bg: transparent;
+  --lg-tooltip-bg: var(--g-tint-menu);
+  --lg-tooltip-fg: var(--text);
+  --lg-scrim: oklch(.25 .04 var(--hue) / .18);
+  --lg-sheen: none;
+  --lg-rim: var(--g-depth);
+  --lg-rim-gradient: none;
+  --lg-shadow-glass: var(--g-depth), var(--shadow-float);
+  --lg-shadow-panel: var(--g-depth), var(--shadow-win);
+  --lg-shadow-card: 0 0 0 .5px var(--line-strong), 0 1px 2px oklch(.3 .04 var(--hue) / .06), 0 8px 24px -14px oklch(.3 .05 var(--hue) / .25);
+  --lg-shadow-card-hover: 0 0 0 .5px var(--line-strong), 0 6px 18px -12px oklch(.3 .05 var(--hue) / .35);
+  --lg-shadow-float: var(--g-depth), var(--shadow-float);
+  --lg-shadow-control: inset 0 0 0 .5px var(--line-strong), inset 0 1px 0 oklch(1 0 0 / .5);
+  --lg-green: var(--success);  --lg-green-ink: var(--success);
+  --lg-orange: var(--warning); --lg-orange-ink: var(--warning);
+  --lg-red: var(--danger);     --lg-red-ink: var(--danger);
+  --lg-yellow: oklch(.72 .14 75); --lg-yellow-ink: oklch(.6 .13 65);
+  --lg-teal: oklch(.56 .1 200); --lg-teal-ink: oklch(.5 .1 200);
+  --lg-indigo: oklch(.5 .14 280); --lg-indigo-ink: oklch(.42 .14 280);
+  --lg-purple: oklch(.52 .16 320); --lg-purple-ink: oklch(.44 .16 320);
+  --lg-pink: oklch(.58 .18 350); --lg-pink-ink: oklch(.5 .18 350);
+  --lg-cyan: oklch(.58 .1 210); --lg-cyan-ink: oklch(.48 .1 210);
+  --lg-mint: oklch(.62 .12 170); --lg-mint-ink: oklch(.5 .12 170);
+  --lg-gray: oklch(.55 0 0); --lg-gray-ink: oklch(.42 0 0);
+  --lg-wallpaper: var(--wp-bg);
+  --focus-ring: 2.5px solid color-mix(in oklch, var(--focus) 70%, transparent);
+  --focus-offset: 2px;
 }
 
-/* ---------- 1b. 令牌：深色（HTML-Clock :root 深色原值） ---------- */
+/* ---------- 1b. 令牌：深色（晶液 :root[data-theme="dark"] 原值） ---------- */
+:root.dark,
+:root[data-theme="dark"],
 :root[data-blora-color-scheme="dark"] {
-  --lg-accent: #0a84ff;
-  --lg-accent-strong: #409cff;
-  --lg-accent-ink: #4aa8ff;
-  --lg-accent-glow: rgba(10, 132, 255, 0.5);
-  --lg-accent-tint: rgba(10, 132, 255, 0.22);
+  --accent: oklch(.62 calc(var(--chroma) * 1.35) var(--hue));
+  --accent-hi: oklch(.72 calc(var(--chroma) * 1.3) calc(var(--hue) - 12));
+  --accent-ink: oklch(.82 calc(var(--chroma) * 1.1) var(--hue));
+  --accent-soft: oklch(.72 calc(var(--chroma) * 1.2) var(--hue) / .18);
+  --on-accent-soft: oklch(.88 calc(var(--chroma) * .9) var(--hue));
+  --text: oklch(.97 .004 var(--hue));
+  --text-2: oklch(.97 .004 var(--hue) / .66);
+  --text-3: oklch(.97 .004 var(--hue) / .44);
+  --line: oklch(1 0 0 / .08);
+  --line-strong: oklch(1 0 0 / .13);
+  --hover: oklch(1 0 0 / .06);
+  --pressed: oklch(1 0 0 / .1);
+  --focus: oklch(.8 .13 var(--hue));
+  --success: oklch(.8 .15 152); --success-soft: oklch(.75 .15 152 / .16);
+  --warning: oklch(.84 .13 78); --warning-soft: oklch(.8 .13 78 / .16);
+  --danger: oklch(.74 .16 25); --danger-soft: oklch(.7 .16 25 / .18);
 
-  --lg-bg: #000;
-  --lg-fg: #fff;
-  --lg-fg-secondary: rgba(255, 255, 255, 0.58);
-  --lg-fg-tertiary: rgba(255, 255, 255, 0.36);
-  --lg-fg-quaternary: rgba(255, 255, 255, 0.22);
+  --g-tint: oklch(.2 .015 var(--hue) / .42);
+  --g-tint-bar: oklch(.22 .015 var(--hue) / .5);
+  --g-tint-menu: oklch(.23 .015 var(--hue) / .62);
+  --g-tint-clear: oklch(.25 .01 var(--hue) / .16);
+  --g-depth: inset 0 1px 0 oklch(1 0 0 / .045), inset 0 0 22px oklch(1 0 0 / .03), 0 0 0 .5px oklch(0 0 0 / .55);
+  --g-fallback: blur(18px) saturate(1.7) brightness(.92);
+  --g-fallback-clear: blur(5px) saturate(1.8) brightness(.95);
+  --g-fallback-menu: blur(10px) saturate(1.8) brightness(.93);
 
-  --lg-glass-bg: rgba(255, 255, 255, 0.08);
-  --lg-glass-bg-strong: rgba(255, 255, 255, 0.14);
-  --lg-glass-border: rgba(255, 255, 255, 0.18);
-  --lg-glass-border-strong: rgba(255, 255, 255, 0.32);
-  --lg-glass-highlight: rgba(255, 255, 255, 0.22);
-  --lg-glass-lowlight: rgba(0, 0, 0, 0.28);
-  --lg-glass-edge: rgba(0, 0, 0, 0.42);
-  --lg-glass-shadow: rgba(0, 0, 0, 0.5);
-  --lg-panel-bg: rgba(22, 22, 24, 0.55);
-  --lg-divider: rgba(255, 255, 255, 0.08);
-  --lg-chip-bg: rgba(120, 120, 128, 0.22);
-  --lg-chip-hover: rgba(120, 120, 128, 0.34);
-  --lg-chip-active: rgba(120, 120, 128, 0.44);
+  --sheet: oklch(.185 .012 var(--hue) / .96);
+  --sheet-2: oklch(.25 .014 var(--hue) / .7);
+  --field: oklch(.3 .014 var(--hue) / .62);
+  --field-hover: oklch(.34 .016 var(--hue) / .7);
+  --shadow-win: 0 28px 60px -20px oklch(0 0 0 / .6), 0 10px 24px -12px oklch(0 0 0 / .45);
+  --shadow-win-focus: 0 46px 96px -24px oklch(0 0 0 / .72), 0 18px 36px -14px oklch(0 0 0 / .5);
+  --shadow-float: 0 22px 48px -14px oklch(0 0 0 / .62), 0 6px 16px -6px oklch(0 0 0 / .4);
+  --term-bg: oklch(.15 .015 var(--hue) / .92);
 
-  --lg-surface: rgba(44, 44, 46, 0.92);
-  --lg-card-bg: rgba(255, 255, 255, 0.06);
-  --lg-card-bg-hover: rgba(255, 255, 255, 0.1);
-  --lg-group-bg: rgba(120, 120, 128, 0.1);
-  --lg-menu-bg: rgba(38, 38, 42, 0.95);
-  --lg-sheet-bg: rgba(30, 30, 32, 0.74);
-  --lg-sheet-shadow: rgba(0, 0, 0, 0.6);
-  --lg-sidebar-bg: rgba(22, 22, 24, 0.55);
-  --lg-selection-bg: rgba(255, 255, 255, 0.14);
-  --lg-tooltip-bg: rgba(58, 58, 60, 0.94);
-  --lg-tooltip-fg: #fff;
-  --lg-scrim: rgba(0, 0, 0, 0.55);
+  --wp-bg: oklch(.273 calc(var(--chroma) * .19) calc(var(--hue) + 10));
+  --wp-1: oklch(.34 calc(var(--chroma) * .24) calc(var(--hue) + 18));
+  --wp-2: oklch(.397 calc(var(--chroma) * .33) calc(var(--hue) + 11));
+  --wp-3: oklch(.446 calc(var(--chroma) * .38) calc(var(--hue) + 9));
+  --wp-4: oklch(.485 calc(var(--chroma) * .4) calc(var(--hue) + 12));
+  --wp-5: oklch(.405 calc(var(--chroma) * .33) calc(var(--hue) + 11));
+  --wp-6: oklch(.343 calc(var(--chroma) * .25) calc(var(--hue) + 10));
+  color-scheme: dark;
 
-  --lg-sheen: radial-gradient(120% 90% at 18% 0%, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 56%);
-  --lg-rim-gradient: linear-gradient(140deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 24%, rgba(255, 255, 255, 0) 46%, rgba(255, 255, 255, 0) 66%, rgba(255, 255, 255, 0.16) 100%);
-  --lg-shadow-glass: 0 0 0 1px var(--lg-glass-edge), 0 8px 32px rgba(0, 0, 0, 0.5);
-  --lg-shadow-panel: 0 0 0 1px var(--lg-glass-edge), 0 18px 50px rgba(0, 0, 0, 0.45);
-  --lg-shadow-card: 0 0 0 1px var(--lg-glass-edge), 0 6px 18px rgba(0, 0, 0, 0.28);
-  --lg-shadow-card-hover: 0 0 0 1px var(--lg-glass-edge), 0 12px 30px rgba(0, 0, 0, 0.45);
-  --lg-shadow-float: 0 0 0 1px var(--lg-glass-edge), 0 24px 60px rgba(0, 0, 0, 0.6);
-  --lg-shadow-control: 0 0 0 1px var(--lg-glass-edge), 0 2px 10px rgba(0, 0, 0, 0.3);
-
-  --lg-green: #30d158;  --lg-green-ink: #30db5b;
-  --lg-orange: #ff9f0a; --lg-orange-ink: #ffb340;
-  --lg-red: #ff453a;    --lg-red-ink: #ff6961;
-  --lg-yellow: #ffd60a; --lg-yellow-ink: #ffd426;
-  --lg-teal: #40c8e0;   --lg-teal-ink: #5de6ff;
-  --lg-indigo: #5e5ce6; --lg-indigo-ink: #7d7aff;
-  --lg-purple: #bf5af2; --lg-purple-ink: #da8fff;
-  --lg-pink: #ff375f;   --lg-pink-ink: #ff6482;
-  --lg-cyan: #64d2ff;   --lg-cyan-ink: #70d7ff;
-  --lg-mint: #63e6e2;   --lg-mint-ink: #66d4cf;
-  --lg-gray: #8e8e93;   --lg-gray-ink: #aeaeb2;
-
-  /* HTML-Clock「午夜」背景 + 两枚 accent 光斑 */
-  --lg-wallpaper:
-    radial-gradient(60vmax 60vmax at 10% 2%, rgba(10, 132, 255, 0.3) 0%, rgba(10, 132, 255, 0) 66%),
-    radial-gradient(56vmax 56vmax at 100% 100%, rgba(10, 132, 255, 0.14) 0%, rgba(10, 132, 255, 0) 66%),
-    radial-gradient(ellipse at 30% 20%, #172554 0%, #0b0a24 50%, #000 100%);
+  --lg-scrim: oklch(0 0 0 / .35);
+  --lg-shadow-card: 0 0 0 .5px oklch(1 0 0 / .07), inset 0 1px 0 oklch(1 0 0 / .04), 0 10px 30px -16px oklch(0 0 0 / .6);
+  --lg-shadow-card-hover: 0 0 0 .5px oklch(1 0 0 / .07), 0 10px 30px -16px oklch(0 0 0 / .6);
+  --lg-shadow-control: inset 0 0 0 .5px var(--line-strong), inset 0 1px 0 oklch(1 0 0 / .07);
+  --lg-green: var(--success);  --lg-green-ink: var(--success);
+  --lg-orange: var(--warning); --lg-orange-ink: var(--warning);
+  --lg-red: var(--danger);     --lg-red-ink: var(--danger);
 }
 
-/* ---------- 2. 背景：仅在启用 Liquid Glass 的页面显示（切页淡入淡出） ---------- */
-body.blora-page::before {
-  content: "";
+/* ---------- 2. 壁纸：晶液青灰构图 SVG（liquid.js 插入 #lg-wallpaper） ---------- */
+.lg-wallpaper {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: var(--lg-wallpaper);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.45s var(--lg-ease);
+  background: var(--wp-bg);
+  opacity: 0;
+  transition: opacity .45s var(--ease-out);
 }
-body.blora-page:has(.page.active.lg-page) { background: var(--lg-bg); }
-body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
+.lg-wallpaper svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+body.blora-page:has(.page.active.lg-page),
+body.blora-page.lg-scope { background: var(--wp-bg); }
+body.blora-page:has(.page.active.lg-page) > .lg-wallpaper,
+body.blora-page.lg-scope > .lg-wallpaper { opacity: 1; }
+body.blora-page::before { content: none; }
 
-/* ---------- 3. 可复用材质（后续页面迁移直接使用） ---------- */
+/* ---------- 3. 可复用材质：透镜优先，模糊只是回退 ---------- */
 .lg-glass {
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  border: 1px solid var(--lg-glass-border);
+  isolation: isolate;
+  background: var(--g-tint);
+  border: 0;
   border-radius: var(--lg-radius-panel);
-  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+  box-shadow: var(--g-depth), var(--shadow-win);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
 }
 .lg-glass-pill {
-  background-color: var(--lg-glass-bg-strong);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-  border: 1px solid var(--lg-glass-border);
+  isolation: isolate;
+  background: var(--g-tint-bar);
+  border: 0;
   border-radius: var(--lg-radius-pill);
-  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+  box-shadow: var(--g-depth), var(--shadow-float);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
 }
 .lg-card {
-  background-color: var(--lg-card-bg);
-  background-image: var(--lg-sheen);
-  border: 1px solid var(--lg-glass-border);
+  background: var(--sheet-2);
+  border: 0;
   border-radius: var(--lg-radius-card);
-  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  box-shadow: var(--lg-shadow-card);
 }
-/* 渐变边缘高光层：宿主需为定位元素；溢出裁剪的宿主用 inset: 0 */
+
+/* 水滴：抄自 liquid.css。选中项不再自带底色，由这一颗胶囊滑动、拉伸。 */
+@property --drop-clear { syntax: "<number>"; inherits: false; initial-value: 0; }
+[data-indicator] { position: relative; -webkit-user-select: none; user-select: none; }
+[data-indicator] > :not(.indicator, .ind-rim) { position: relative; z-index: 1; }
+[data-indicator] > .indicator,
+.blora-segmented[data-indicator] > .blora-segmented__indicator,
+.blora-tabs [data-indicator] > .blora-tabs__indicator {
+  position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none;
+  width: var(--ind-w, 0); height: var(--ind-h, 0);
+  translate: var(--ind-x, 0) var(--ind-y, 0);
+  opacity: var(--ind-o, 0);
+  border-radius: 999px; transform-origin: center;
+  background: linear-gradient(180deg, oklch(1 0 0 / calc(.95 - .1 * var(--drop-clear))), oklch(.99 .004 var(--hue) / calc(.84 - .16 * var(--drop-clear))));
+  box-shadow: inset 0 1px 1.5px -.5px oklch(1 0 0), 0 1px 2px oklch(.3 .06 var(--hue) / .08), 0 4px 12px -5px oklch(.3 .06 var(--hue) / .2);
+  -webkit-backdrop-filter: saturate(1.5) brightness(1); backdrop-filter: saturate(1.5) brightness(1);
+  /* override Blora left/width/transform so the droplet owns geometry */
+  inset: auto; transform: none;
+}
+:root.dark [data-indicator] > .indicator,
+:root[data-theme="dark"] [data-indicator] > .indicator,
+:root[data-blora-color-scheme="dark"] [data-indicator] > .indicator,
+:root.dark .blora-segmented[data-indicator] > .blora-segmented__indicator,
+:root[data-theme="dark"] .blora-segmented[data-indicator] > .blora-segmented__indicator,
+:root[data-blora-color-scheme="dark"] .blora-segmented[data-indicator] > .blora-segmented__indicator,
+:root.dark .blora-tabs [data-indicator] > .blora-tabs__indicator,
+:root[data-theme="dark"] .blora-tabs [data-indicator] > .blora-tabs__indicator,
+:root[data-blora-color-scheme="dark"] .blora-tabs [data-indicator] > .blora-tabs__indicator {
+  background: oklch(1 0 0 / .05);
+  box-shadow: inset 0 0 0 .5px oklch(1 0 0 / .07), 0 1px 2px oklch(0 0 0 / .4), 0 4px 12px -4px oklch(0 0 0 / .5);
+  -webkit-backdrop-filter: saturate(1.15); backdrop-filter: saturate(1.15);
+}
+:is(.ind-bloom, .ind-drag) > .indicator { box-shadow: inset 0 1px 1.5px -.5px oklch(1 0 0), 0 1.5px 3px oklch(.3 .06 var(--hue) / .09), 0 7px 16px -6px oklch(.3 .06 var(--hue) / .25); }
+.ind-drag > .indicator { --drop-clear: 1; -webkit-backdrop-filter: saturate(1.8) brightness(1.04); backdrop-filter: saturate(1.8) brightness(1.04); }
+:root.dark :is(.ind-bloom, .ind-drag) > .indicator,
+:root[data-theme="dark"] :is(.ind-bloom, .ind-drag) > .indicator,
+:root[data-blora-color-scheme="dark"] :is(.ind-bloom, .ind-drag) > .indicator {
+  background: oklch(1 0 0 / .05);
+  box-shadow: inset 0 0 0 .5px oklch(1 0 0 / .07), 0 1px 2px oklch(0 0 0 / .4), 0 4px 12px -4px oklch(0 0 0 / .5);
+  --drop-clear: 0; -webkit-backdrop-filter: saturate(1.15); backdrop-filter: saturate(1.15);
+}
+:root.dark :is(.ind-drag, .ind-bloom) > .ind-rim,
+:root[data-theme="dark"] :is(.ind-drag, .ind-bloom) > .ind-rim,
+:root[data-blora-color-scheme="dark"] :is(.ind-drag, .ind-bloom) > .ind-rim { opacity: 0; }
+[data-indicator].ind-drag > :not(.indicator, .ind-rim):is(:hover, :active, *) { background: none; scale: none; }
+.ind-drag, .ind-drag * { cursor: grabbing; }
+.blora-segmented[data-indicator], .blora-tabs__nav[data-indicator] { touch-action: pan-y; }
+.sidebar-list[data-indicator] { touch-action: pan-x; }
+[data-indicator].ind-drag > :is(.indicator, .ind-rim) {
+  transition: width .14s var(--ease-out), height .14s var(--ease-out), scale .18s var(--ease-out), opacity .2s, box-shadow .2s var(--ease-out), --drop-clear .2s var(--ease-out), -webkit-backdrop-filter .2s var(--ease-out), backdrop-filter .2s var(--ease-out);
+  scale: var(--ind-along, 1) var(--ind-across, 1);
+}
+.sidebar-list[data-indicator].ind-drag > :is(.indicator, .ind-rim) { scale: var(--ind-across, 1) var(--ind-along, 1); }
+.ind-rim {
+  position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; border-radius: 999px;
+  width: var(--ind-w, 0); height: var(--ind-h, 0); translate: var(--ind-x, 0) var(--ind-y, 0);
+  opacity: 0; box-shadow: inset 0 0 5px oklch(1 0 0 / .35);
+  -webkit-backdrop-filter: var(--lens, none); backdrop-filter: var(--lens, none);
+}
+:root.dark .ind-rim, :root[data-theme="dark"] .ind-rim, :root[data-blora-color-scheme="dark"] .ind-rim { box-shadow: inset 0 0 5px oklch(1 0 0 / .08); }
+[data-ind-ready] > .ind-rim { transition: translate .45s var(--glide), width .45s var(--glide), height .45s var(--glide), opacity .25s, scale .26s var(--ease-out); }
+:is(.ind-drag, .ind-bloom) > .ind-rim { opacity: 1; }
+.ind-bloom:not(.ind-drag) > .ind-rim { transition: translate .45s var(--glide), width .45s var(--glide), height .45s var(--glide), opacity .08s, scale .26s var(--ease-out); }
+.ind-moving-x > .ind-rim { scale: 1.1 .86; }
+.ind-moving-y > .ind-rim { scale: .95 1.14; }
+[data-ind-ready] > .indicator,
+[data-ind-ready] > .blora-segmented__indicator,
+[data-ind-ready] > .blora-tabs__indicator {
+  transition: translate .45s var(--glide), width .45s var(--glide), height .45s var(--glide), opacity .2s, scale .26s var(--ease-out), box-shadow .4s var(--ease-out), --drop-clear .4s var(--ease-out), -webkit-backdrop-filter .4s var(--ease-out), backdrop-filter .4s var(--ease-out);
+}
+.ind-moving-x > .indicator { scale: 1.1 .86; }
+.ind-moving-y > .indicator { scale: .95 1.14; }
+@media (prefers-reduced-motion: reduce) {
+  [data-ind-ready] > .indicator, [data-ind-ready] > .ind-rim { transition: none; }
+}
+
 .lg-glass, .lg-glass-pill { position: relative; }
-.lg-glass::before,
-.lg-glass-pill::before,
-.blora-page .app-container > .sidebar::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  padding: 1px;
-  border-radius: inherit;
-  background: var(--lg-rim-gradient);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-.blora-page .app-container > .sidebar::before { inset: 0; z-index: 1; }
 
 /* ---------- 4. Blora 令牌桥接：作用域内的 Blora 组件改用玻璃令牌 ---------- */
 :is(.lg-page, .lg-scope) {
@@ -290,12 +383,12 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   --blora-shadow-3: var(--lg-shadow-float);
   --blora-shadow-4: var(--lg-shadow-float);
   --blora-shadow-inset: var(--lg-rim);
-  --blora-shadow-primary: 0 4px 14px var(--lg-accent-glow);
+  --blora-shadow-primary: none;
   --blora-border-subtle: 1px solid var(--lg-divider);
   --blora-border-strong: 1px solid var(--lg-fg-tertiary);
   --blora-border-primary: 1px solid var(--lg-accent);
-  --blora-focus-ring-default: 0 0 0 3px var(--lg-accent-glow);
-  --blora-focus-ring-strong: 0 0 0 4px var(--lg-accent-glow);
+  --blora-focus-ring-default: 0 0 0 4px color-mix(in oklch, var(--focus) 22%, transparent);
+  --blora-focus-ring-strong: 0 0 0 4px color-mix(in oklch, var(--focus) 22%, transparent);
   --blora-easing-standard: var(--lg-ease);
   --blora-ease: var(--lg-ease);
 
@@ -368,33 +461,39 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   transform: none;
   box-shadow: none;
 }
-:is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: scale(0.96); }
-:is(.lg-page, .lg-scope) .blora-button:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: 2px; }
+:is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: scale(0.955); }
+:is(.lg-page, .lg-scope) .blora-button:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 :is(.lg-page, .lg-scope) .blora-button:disabled,
 :is(.lg-page, .lg-scope) .blora-button[aria-disabled="true"] { opacity: 0.42; transform: none; box-shadow: none; filter: none; }
 
 :is(.lg-page, .lg-scope) .blora-button[data-variant="primary"] {
-  --blora-button-bg: var(--lg-accent);
-  --blora-button-fg: var(--lg-on-accent);
-  font-weight: 600;
-  box-shadow: 0 4px 14px var(--lg-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --blora-button-bg: var(--accent);
+  --blora-button-fg: var(--on-accent);
+  font-weight: 550;
+  box-shadow: none;
 }
 :is(.lg-page, .lg-scope) .blora-button[data-variant="primary"]:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 6px 18px var(--lg-accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  filter: brightness(1.06) saturate(1.05);
+  box-shadow: none;
 }
 :is(.lg-page, .lg-scope) .blora-button[data-variant="secondary"]:hover { --blora-button-bg: var(--lg-chip-hover); }
+:is(.lg-page, .lg-scope) .blora-button[data-variant="secondary"],
+:is(.lg-page, .lg-scope) .blora-button:not([data-variant]) {
+  --blora-button-bg: var(--field);
+  --blora-button-bd: transparent;
+  box-shadow: var(--lg-shadow-control);
+}
 :is(.lg-page, .lg-scope) .blora-button[data-variant="outline"] {
-  --blora-button-bg: var(--lg-glass-bg-strong);
-  --blora-button-bd: var(--lg-glass-border);
-  -webkit-backdrop-filter: blur(20px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(20px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+  --blora-button-bg: var(--field);
+  --blora-button-bd: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--lg-shadow-control);
 }
 :is(.lg-page, .lg-scope) .blora-button[data-variant="outline"]:hover {
-  --blora-button-bg: var(--lg-card-bg-hover);
-  --blora-button-bd: var(--lg-glass-border-strong);
-  box-shadow: var(--lg-rim), var(--lg-shadow-control);
+  --blora-button-bg: var(--field-hover);
+  --blora-button-bd: transparent;
+  box-shadow: var(--lg-shadow-control);
 }
 :is(.lg-page, .lg-scope) .blora-button[data-variant="ghost"] {
   --blora-button-bg: transparent;
@@ -405,9 +504,9 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   --blora-button-fg: var(--lg-fg);
 }
 :is(.lg-page, .lg-scope) .blora-button[data-variant="danger"] {
-  --blora-button-bg: var(--lg-red);
-  --blora-button-fg: #fff;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--lg-red) 35%, transparent);
+  --blora-button-bg: var(--danger-soft);
+  --blora-button-fg: var(--danger);
+  box-shadow: inset 0 0 0 .5px oklch(.6 .19 25 / .2);
 }
 :is(.lg-page, .lg-scope) .blora-button[data-variant="danger"]:hover { filter: brightness(1.08); }
 :is(.lg-page, .lg-scope) .blora-button[data-variant="text"] {
@@ -450,18 +549,18 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   min-height: var(--lg-control-h);
   padding: 0 2.3em 0 1em;
   border: 0;
-  border-radius: var(--lg-radius-pill);
-  background: var(--lg-chip-bg);
+  border-radius: 12px;
+  background: var(--field);
   color: var(--lg-fg);
   font-family: var(--lg-font);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   line-height: var(--lg-control-h);
   text-align: start;
-  box-shadow: none;
+  box-shadow: var(--lg-shadow-control);
   transition: background-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
 }
-:is(.lg-page, .lg-scope) blora-select::part(trigger):hover { background: var(--lg-chip-hover); }
+:is(.lg-page, .lg-scope) blora-select::part(trigger):hover { background: var(--field-hover); }
 :is(.lg-page, .lg-scope) blora-select[disabled]::part(trigger) { opacity: 0.45; }
 :is(.lg-page, .lg-scope) blora-select::part(trigger):focus-visible { outline: 2px solid var(--lg-accent); outline-offset: 2px; }
 :is(.lg-page, .lg-scope) blora-select::part(trigger)::after {
@@ -476,15 +575,16 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   transform: translateY(-50%);
 }
 :is(.lg-page, .lg-scope) blora-select::part(popup) {
+  isolation: isolate;
   inset-block-start: calc(100% + 6px);
   min-inline-size: max(100%, 11rem);
   padding: 6px;
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-card);
-  background: var(--lg-menu-bg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 :is(.lg-page, .lg-scope) blora-select::part(option) {
   padding: 7px 10px;
@@ -492,27 +592,29 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   font-family: var(--lg-font);
   font-size: 13.5px;
 }
-:is(.lg-page, .lg-scope) blora-select::part(option):hover { background: var(--lg-chip-bg); }
+:is(.lg-page, .lg-scope) blora-select::part(option):hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
 
 /* 搜索 / 输入：iOS 填充式胶囊，聚焦时强调色光环（HTML-Clock .input-row）。
    console-blora.css 用 `.blora-page input:not(...)×3` 统一给输入框上边框和底色，
    这里沿用同样的 :not() 组合以取得更高特异性。 */
 :is(.lg-page, .lg-scope) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']), textarea, select.blora-input) {
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--lg-radius-field);
-  background: var(--lg-chip-bg);
+  background: var(--field);
   color: var(--lg-fg);
   font-family: var(--lg-font);
-  box-shadow: none;
-  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
+  box-shadow: var(--lg-shadow-control), inset 0 1px 2px oklch(.3 .04 var(--hue) / .05);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease);
 }
 :is(.lg-page, .lg-scope) :is(input, textarea)::placeholder { color: var(--lg-fg-tertiary); }
-:is(.lg-page, .lg-scope) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']), textarea, select.blora-input):hover { border-color: transparent; background: var(--lg-chip-hover); }
+:is(.lg-page, .lg-scope) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']), textarea, select.blora-input):hover { background: var(--field-hover); }
 :is(.lg-page, .lg-scope) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']), textarea, select.blora-input):focus {
-  border-color: var(--lg-accent);
-  outline: none;
-  background: var(--lg-surface);
-  box-shadow: 0 0 0 3px var(--lg-accent-glow);
+  outline: 0;
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1px var(--focus), 0 0 0 4px color-mix(in oklch, var(--focus) 22%, transparent);
 }
 :is(.lg-page, .lg-scope) .blora-search input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']) {
   box-sizing: border-box;
@@ -529,15 +631,16 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 
 /* 菜单：厚玻璃面板，条目圆角，悬停为中性填充 */
 :is(.lg-page, .lg-scope) .blora-dropdown__menu {
+  isolation: isolate;
   min-width: 190px;
   padding: 6px;
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-card);
-  background: var(--lg-menu-bg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
-  transition: opacity var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur) var(--lg-ease);
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+  transition: opacity .16s var(--ease-out), scale .38s var(--spring-soft);
 }
 :is(.lg-page, .lg-scope) .blora-dropdown__item {
   min-height: 32px;
@@ -547,7 +650,7 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   font-family: var(--lg-font);
   font-size: 13.5px;
 }
-:is(.lg-page, .lg-scope) .blora-dropdown__item:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+:is(.lg-page, .lg-scope) .blora-dropdown__item:hover { background: var(--accent); color: var(--on-accent); }
 :is(.lg-page, .lg-scope) .blora-dropdown__item:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: -2px; }
 :is(.lg-page, .lg-scope) .blora-dropdown__item.danger,
 :is(.lg-page, .lg-scope) .blora-dropdown__item[data-variant="danger"] { color: var(--lg-red-ink); }
@@ -555,14 +658,20 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 :is(.lg-page, .lg-scope) .blora-dropdown__item:disabled { color: var(--lg-fg-tertiary); background: transparent; cursor: default; }
 :is(.lg-page, .lg-scope) .blora-dropdown__sep { height: 1px; margin: 5px 8px; background: var(--lg-divider); }
 
-/* 分段控件：iOS 样式滑块 */
-:is(.lg-page, .lg-scope) .blora-segmented { background: var(--lg-chip-bg); }
-:is(.lg-page, .lg-scope) .blora-segmented__indicator {
-  background: var(--lg-selection-bg);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), var(--lg-rim);
+/* 分段控件：轨道是浅凹槽，选中由水滴来画 */
+:is(.lg-page, .lg-scope) .blora-segmented {
+  padding: 3px;
+  border-radius: 999px;
+  background: oklch(.3 .04 var(--hue) / .07);
+  box-shadow: inset 0 1px 2px oklch(.3 .04 var(--hue) / .08);
 }
-:is(.lg-page, .lg-scope) .blora-segmented__item { color: var(--lg-fg-secondary); font-weight: 500; }
-:is(.lg-page, .lg-scope) .blora-segmented__item[data-active] { color: var(--lg-fg); }
+:root.dark :is(.lg-page, .lg-scope) .blora-segmented,
+:root[data-theme="dark"] :is(.lg-page, .lg-scope) .blora-segmented,
+:root[data-blora-color-scheme="dark"] :is(.lg-page, .lg-scope) .blora-segmented {
+  background: oklch(0 0 0 / .25);
+}
+:is(.lg-page, .lg-scope) .blora-segmented__item { color: var(--text-2); font-weight: 500; background: none; }
+:is(.lg-page, .lg-scope) .blora-segmented__item[data-active] { color: var(--text); font-weight: 600; }
 
 /* 提示气泡：深色小玻璃 */
 :is(.lg-page, .lg-scope) .blora-tooltip__bubble {
@@ -573,9 +682,10 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   color: var(--lg-tooltip-fg);
   font-family: var(--lg-font);
   font-size: 12px;
-  -webkit-backdrop-filter: blur(20px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(20px) saturate(var(--lg-saturate));
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  isolation: isolate;
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 :is(.lg-page, .lg-scope) .blora-tooltip__bubble::before { border-block-start-color: var(--lg-tooltip-bg); }
 
@@ -586,11 +696,18 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
    --blora-tab-x / --blora-tab-w / --blora-tab-h 定位滑块 */
 :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav {
   align-self: flex-start;
-  gap: 0;
+  gap: 2px;
   padding: 3px;
   border: 0;
-  border-radius: var(--lg-radius-pill);
-  background: var(--lg-chip-bg);
+  border-radius: 999px;
+  background: oklch(.3 .04 var(--hue) / .07);
+  box-shadow: inset 0 1px 2px oklch(.3 .04 var(--hue) / .08);
+}
+:root.dark :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav,
+:root[data-theme="dark"] :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav,
+:root[data-blora-color-scheme="dark"] :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav {
+  background: oklch(0 0 0 / .22);
+  box-shadow: inset 0 1px 2px oklch(0 0 0 / .3);
 }
 :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab {
   margin: 0;
@@ -606,25 +723,16 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab:hover { color: var(--lg-fg); }
 :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab[aria-selected="true"] { color: var(--lg-fg); font-weight: 600; }
 :is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: -2px; }
-:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__indicator {
-  top: 3px;
-  bottom: auto;
-  height: var(--blora-tab-h, calc(100% - 6px));
-  border-radius: var(--lg-radius-pill);
-  background: var(--lg-selection-bg);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), var(--lg-rim);
-  transition: width var(--lg-dur) var(--lg-ease), transform var(--lg-dur) var(--lg-ease);
-}
+:is(.lg-page, .lg-scope) .blora-tabs:not([data-orientation="vertical"]) > .blora-tabs__nav > .blora-tabs__tab[aria-selected="true"] { background: none; }
 :is(.lg-page, .lg-scope) .blora-tabs__panel { padding-top: 20px; }
 
 /* 表格：玻璃面板里的分组列表——表头为次级小字，行间细分隔线，悬停/选中轻着色；
    右侧固定列改为透明 + 背景模糊，横向滚动时内容从玻璃下方滑过 */
 :is(.lg-page, .lg-scope) .blora-table-wrap {
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+  background: var(--sheet);
+  box-shadow: var(--lg-shadow-card);
 }
 /* separate 边框：每个单元格自己画分隔线，固定列的模糊层不会盖住分隔线 */
 :is(.lg-page, .lg-scope) .blora-table { border-collapse: separate; border-spacing: 0; font-family: var(--lg-font); font-size: 13.5px; }
@@ -691,9 +799,9 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 }
 :is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):hover { border-color: var(--lg-fg-secondary); }
 :is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):is(:checked, :indeterminate) {
-  border-color: var(--lg-accent);
-  background: var(--lg-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.3 4.9 8.7 9.6 3.6' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat;
-  box-shadow: 0 2px 6px var(--lg-accent-glow);
+  border-color: transparent;
+  background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.3 4.9 8.7 9.6 3.6' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat;
+  box-shadow: none;
 }
 :is(.lg-page, .lg-scope) input[type="checkbox"]:not(.pg-toggle input):not(.toggle-switch input):not(.blora-checkbox > input):not(.blora-switch input):not([role="switch"]):indeterminate {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='%23fff' stroke-width='1.9' stroke-linecap='round'/%3E%3C/svg%3E");
@@ -723,7 +831,7 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 }
 :is(.lg-page, .lg-scope) .blora-fieldset__description { color: var(--lg-fg-secondary); font-size: 12.5px; }
 :is(.lg-page, .lg-scope) .blora-step__icon { border: 0; background: var(--lg-chip-bg); color: var(--lg-fg-secondary); }
-:is(.lg-page, .lg-scope) .blora-step[data-state="active"] .blora-step__icon { background: var(--lg-accent); color: var(--lg-on-accent); box-shadow: 0 4px 14px var(--lg-accent-glow); }
+:is(.lg-page, .lg-scope) .blora-step[data-state="active"] .blora-step__icon { background: var(--accent); color: var(--on-accent); box-shadow: none; }
 :is(.lg-page, .lg-scope) .blora-step[data-state="done"] .blora-step__icon { background: var(--lg-green); color: #fff; }
 :is(.lg-page, .lg-scope) .blora-step__line { background: var(--lg-divider); }
 :is(.lg-page, .lg-scope) .blora-step__title { color: var(--lg-fg); font-weight: 500; }
@@ -775,29 +883,18 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
   :is(.lg-page, .lg-scope) .stats-filter-group:last-child { flex: 0 0 auto; inline-size: 100%; }
 }
 
-/* 旧版内容区（.content-section + .section-header）：玻璃面板 + 页内标题 */
+/* 旧版内容区：纸面，不是玻璃 */
 .lg-page .content-section,
 .lg-page .content-section:hover {
   position: relative;
-  padding: 24px;
-  border: 1px solid var(--lg-glass-border);
-  border-radius: var(--lg-radius-panel);
-  background-color: var(--lg-panel-bg);
-  background-image: var(--lg-sheen);
-  box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+  padding: 20px 22px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--sheet);
+  background-image: none;
+  box-shadow: var(--lg-shadow-card);
 }
-.lg-page .content-section::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  padding: 1px;
-  border-radius: inherit;
-  background: var(--lg-rim-gradient);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
+.lg-page .content-section::before { content: none; }
 .lg-page .content-section + .content-section { margin-block-start: 20px; }
 .lg-page .section-header { margin-block-end: 18px; }
 .lg-page .section-header h2 {
@@ -810,15 +907,15 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 }
 .lg-page .section-header p { color: var(--lg-fg-secondary); }
 
-/* Blora 卡片：HTML-Clock .font-card 玻璃卡片 */
+/* Blora 卡片：纸面 */
 :is(.lg-page, .lg-scope) .blora-card {
-  border: 1px solid var(--lg-glass-border);
-  border-radius: 20px;
-  background-color: var(--lg-card-bg);
-  background-image: var(--lg-sheen);
-  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  border: 0;
+  border-radius: 18px;
+  background: var(--sheet-2);
+  background-image: none;
+  box-shadow: inset 0 0 0 .5px var(--line-strong);
 }
-:is(.lg-page, .lg-scope) .blora-card[data-variant="hover"]:hover { box-shadow: var(--lg-rim), var(--lg-shadow-card-hover); }
+:is(.lg-page, .lg-scope) .blora-card[data-variant="hover"]:hover { box-shadow: inset 0 0 0 .5px var(--line-strong); }
 
 /* 统计数字：Display 字形的大号数字，标签为次级小字 */
 :is(.lg-page, .lg-scope) .blora-stat { gap: 6px; }
@@ -851,24 +948,26 @@ body.blora-page:has(.page.active.lg-page)::before { opacity: 1; }
 
 /* 时间选择面板：厚玻璃 */
 :is(.lg-page, .lg-scope) .blora-timepicker__panel {
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-card);
-  background: var(--lg-menu-bg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  isolation: isolate;
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
 }
 
 /* 旧版弹窗（.modal-content 由 blora-dialog.js 适配器托管，组件面板透明）：
    内容层本身改成玻璃面板 */
 blora-dialog.lg-scope > .modal-content {
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-sheet);
-  background-color: var(--lg-sheet-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 40px 100px var(--lg-sheet-shadow);
+  isolation: isolate;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  background-image: none;
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   color: var(--lg-fg);
 }
 blora-dialog.lg-scope > .modal-content .modal-header h3 {
@@ -889,19 +988,22 @@ blora-dialog.lg-scope > .modal-content .modal-close {
 }
 blora-dialog.lg-scope > .modal-content .modal-close:hover { background: var(--lg-chip-hover); color: var(--lg-fg); transform: rotate(90deg); }
 
-/* 对话框：玻璃面板（HTML-Clock .settings-modal：blur 60px + saturate 200% + 高光描边），
-   关闭按钮为圆形灰底、悬停旋转（.settings-close）。对话框加 .lg-scope 即可启用 */
+/* 对话框：晶液玻璃面板。遮罩只有淡色，没有 blur（blur 会变成 backdrop root）。 */
+blora-dialog.lg-scope::part(backdrop) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 blora-dialog.lg-scope::part(panel) {
+  isolation: isolate;
   box-sizing: border-box;
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-sheet);
-  background-color: var(--lg-sheet-bg);
-  background-image: var(--lg-sheen);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-glass-edge), 0 40px 100px var(--lg-sheet-shadow);
-  /* 组件的回弹曲线会短暂放大面板（超过 max-width），玻璃面板改为平滑淡入上浮 */
-  transition: opacity var(--lg-dur) var(--lg-ease), transform var(--lg-dur) var(--lg-ease-out);
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  background-image: none;
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
+  transition: opacity .2s var(--ease-out), scale .5s var(--spring-soft);
 }
 blora-dialog.lg-scope::part(header) { padding: 22px 24px 16px 26px; }
 blora-dialog.lg-scope::part(title) {
@@ -948,36 +1050,44 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
   line-height: 1.15;
   letter-spacing: -0.012em;
 }
+.blora-page .mobile-topbar {
+  isolation: isolate;
+  background: var(--g-tint-bar);
+  border: 0;
+  box-shadow: var(--g-depth), var(--shadow-float);
+  -webkit-backdrop-filter: var(--g-fallback);
+  backdrop-filter: var(--lens, var(--g-fallback));
+}
 .blora-page .content-header .theme-toggle .blora-button,
 .blora-page .mobile-topbar #themeToggleMobile {
   --blora-button-radius: 50%;
-  --blora-button-bg: var(--lg-glass-bg-strong);
-  --blora-button-fg: var(--lg-fg);
-  --blora-button-bd: var(--lg-glass-border);
-  border-color: var(--blora-button-bd);
+  --blora-button-bg: transparent;
+  --blora-button-fg: var(--text);
+  --blora-button-bd: transparent;
+  border: 0;
   border-radius: 50%;
-  background: var(--blora-button-bg);
-  color: var(--blora-button-fg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
-  transition: transform 0.4s var(--lg-ease), background-color var(--lg-dur-fast) var(--lg-ease);
+  background: none;
+  color: var(--text);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  transition: background .15s, scale .3s var(--spring);
 }
 .blora-page .content-header .theme-toggle .blora-button:hover,
 .blora-page .mobile-topbar #themeToggleMobile:hover {
-  --blora-button-bg: var(--lg-card-bg-hover);
-  --blora-button-bd: var(--lg-glass-border-strong);
-  border-color: var(--blora-button-bd);
-  background: var(--blora-button-bg);
-  color: var(--lg-fg);
-  transform: scale(1.06);
-  box-shadow: var(--lg-rim), var(--lg-shadow-glass);
+  --blora-button-bg: var(--hover);
+  background: var(--hover);
+  color: var(--text);
+  transform: none;
+  scale: 1.08;
+  box-shadow: none;
 }
 .blora-page .content-header .theme-toggle .blora-button:active,
 .blora-page .mobile-topbar #themeToggleMobile:active { transform: scale(0.94); }
 
 @media (min-width: 641px) {
   .blora-page .app-container > .sidebar {
+    isolation: isolate;
     top: var(--lg-shell-gap);
     bottom: var(--lg-shell-gap);
     left: var(--lg-shell-gap);
@@ -985,13 +1095,13 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
     width: calc(15.5rem - 2 * var(--lg-shell-gap));
     height: auto;
     overflow: hidden;
-    border: 1px solid var(--lg-glass-border);
-    border-radius: var(--lg-radius-panel);
-    background-color: var(--lg-sidebar-bg);
-    background-image: var(--lg-sheen);
-    -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-    backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-    box-shadow: var(--lg-rim), var(--lg-shadow-panel);
+    border: 0;
+    border-radius: 28px;
+    background: var(--g-tint-bar);
+    background-image: none;
+    -webkit-backdrop-filter: var(--g-fallback);
+    backdrop-filter: var(--lens, var(--g-fallback));
+    box-shadow: var(--g-depth), var(--shadow-float);
   }
 }
 @media (min-width: 641px) and (max-width: 834px) {
@@ -1013,20 +1123,28 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 .blora-page .sidebar-footer { border-color: var(--lg-divider); }
 .blora-page .sidebar-header { border-bottom-color: transparent; }
 .blora-page .sidebar-header h2 { color: var(--lg-fg); font-family: var(--lg-font-display); font-weight: 650; letter-spacing: -0.01em; }
-.blora-page .business-sidebar-navigation .blora-sidebar-nav__link {
-  min-height: 2.375rem;
-  border-radius: 12px;
-  color: var(--lg-fg);
-  font-family: var(--lg-font);
-  font-weight: 450;
-  transition: background-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease);
+.blora-page .business-sidebar-navigation .blora-sidebar-nav__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-.blora-page .business-sidebar-navigation .blora-sidebar-nav__link:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+.blora-page .business-sidebar-navigation .blora-sidebar-nav__link {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--text);
+  font-family: var(--lg-font);
+  font-size: 13px;
+  font-weight: 450;
+  transition: background .15s, scale .3s var(--spring), color .2s;
+}
+.blora-page .business-sidebar-navigation .blora-sidebar-nav__link:not([aria-current="page"]):hover { background: var(--hover); color: var(--text); }
+.blora-page .business-sidebar-navigation .blora-sidebar-nav__link:active { scale: .97; }
 .blora-page .business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"] {
-  background: var(--lg-selection-bg);
-  color: var(--lg-fg);
+  background: none;
+  color: var(--text);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), var(--lg-rim);
+  box-shadow: none;
 }
 .blora-page .business-sidebar-navigation .blora-sidebar-nav__link:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: -2px; }
 .blora-page .business-sidebar-navigation .blora-sidebar-nav__group-label {
@@ -1039,11 +1157,11 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 
 @media (max-width: 640px) {
   .blora-page .mobile-topbar {
-    border-bottom: 1px solid var(--lg-divider);
-    background: var(--lg-panel-bg);
-    -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-    backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
-    box-shadow: 0 1px 0 var(--lg-glass-highlight) inset;
+    border-bottom: 0;
+    background: var(--g-tint-bar);
+    -webkit-backdrop-filter: var(--g-fallback);
+    backdrop-filter: var(--lens, var(--g-fallback));
+    box-shadow: var(--g-depth), var(--shadow-float);
   }
   /* 移动端顶栏已有主题按钮，标题区不再重复 */
   .blora-page .content-header .theme-toggle { display: none; }
@@ -1114,11 +1232,10 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 :is(.lg-page, .lg-scope) .users-table,
 :is(.lg-page, .lg-scope) .models-table,
 :is(.lg-page, .lg-scope) .table-scroll {
-  border: 1px solid var(--lg-glass-border);
+  border: 0;
   border-radius: 20px;
-  background-color: var(--lg-card-bg);
-  background-image: var(--lg-sheen);
-  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+  background: var(--sheet);
+  box-shadow: var(--lg-shadow-card);
 }
 :is(.lg-page, .lg-scope) :is(.users-table, .models-table) table { border-collapse: separate; border-spacing: 0; }
 :is(.lg-page, .lg-scope) :is(.users-table, .models-table) th {
@@ -1142,36 +1259,40 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 :is(.lg-page, .lg-scope) .admin-pagination-summary { color: var(--lg-fg-secondary); font-size: 12.5px; }
 
 /* ---------- 7. 无障碍与降级 ---------- */
-/* 系统「减少透明度」：玻璃改为实色，保留圆角、层级与描边 */
 @media (prefers-reduced-transparency: reduce) {
-  :root { --lg-panel-bg: #fff; --lg-sidebar-bg: #fff; --lg-glass-bg: #fff; --lg-glass-bg-strong: #fff; --lg-card-bg: #fff; --lg-card-bg-hover: #fff; --lg-menu-bg: #fff; --lg-sheet-bg: #fff; --lg-surface: #fff; --lg-group-bg: #f2f2f7; --lg-blur: 0px; --lg-wallpaper: var(--lg-bg); }
-  :root[data-blora-color-scheme="dark"] { --lg-panel-bg: #1c1c1e; --lg-sidebar-bg: #1c1c1e; --lg-glass-bg: #2c2c2e; --lg-glass-bg-strong: #2c2c2e; --lg-card-bg: #3a3a3c; --lg-card-bg-hover: #48484a; --lg-menu-bg: #2c2c2e; --lg-sheet-bg: #1c1c1e; --lg-surface: #2c2c2e; --lg-group-bg: #2c2c2e; --lg-wallpaper: var(--lg-bg); }
-  .lg-glass, .lg-glass-pill { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  :root {
+    --g-tint: var(--sheet); --g-tint-bar: var(--sheet); --g-tint-menu: var(--sheet);
+    --g-fallback: none; --g-fallback-menu: none; --g-fallback-clear: none;
+  }
+  .lg-glass, .lg-glass-pill, .lg-wallpaper { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
-/* 不支持背景模糊的浏览器：提高不透明度保证可读 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root { --lg-panel-bg: rgba(255, 255, 255, 0.92); --lg-sidebar-bg: rgba(255, 255, 255, 0.94); --lg-menu-bg: #fff; --lg-sheet-bg: rgba(255, 255, 255, 0.97); --lg-glass-bg-strong: rgba(255, 255, 255, 0.9); }
-  :root[data-blora-color-scheme="dark"] { --lg-panel-bg: rgba(28, 28, 30, 0.94); --lg-sidebar-bg: rgba(28, 28, 30, 0.96); --lg-menu-bg: #2c2c2e; --lg-sheet-bg: rgba(28, 28, 30, 0.97); --lg-glass-bg-strong: rgba(58, 58, 60, 0.9); }
+  :root { --g-tint: oklch(.99 .006 var(--hue) / .92); --g-tint-bar: oklch(.99 .006 var(--hue) / .94); --g-tint-menu: oklch(.99 .005 var(--hue) / .97); }
+  :root.dark, :root[data-theme="dark"], :root[data-blora-color-scheme="dark"] {
+    --g-tint: oklch(.2 .015 var(--hue) / .94); --g-tint-bar: oklch(.22 .015 var(--hue) / .96); --g-tint-menu: oklch(.23 .015 var(--hue) / .97);
+  }
 }
-/* 系统「增强对比度」：加深分隔线与玻璃描边 */
 @media (prefers-contrast: more) {
-  :root { --lg-divider: rgba(0, 0, 0, 0.2); --lg-glass-edge: rgba(0, 0, 0, 0.22); --lg-fg-secondary: rgba(0, 0, 0, 0.72); --lg-chip-bg: rgba(120, 120, 128, 0.24); }
-  :root[data-blora-color-scheme="dark"] { --lg-divider: rgba(255, 255, 255, 0.24); --lg-glass-border: rgba(255, 255, 255, 0.4); --lg-fg-secondary: rgba(255, 255, 255, 0.78); --lg-chip-bg: rgba(120, 120, 128, 0.4); }
+  :root { --line: oklch(.2 .03 var(--hue) / .2); --line-strong: oklch(.2 .03 var(--hue) / .32); --text-2: oklch(.2 .02 var(--hue) / .78); }
+  :root.dark, :root[data-theme="dark"], :root[data-blora-color-scheme="dark"] {
+    --line: oklch(1 0 0 / .24); --line-strong: oklch(1 0 0 / .36); --text-2: oklch(.97 .004 var(--hue) / .78);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  body.blora-page::before { transition: none; }
+  .lg-wallpaper { transition: none; }
   :is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: none; }
 }
 
 /* ---------- 8. 挂在 body 下的浮层（不在 .lg-page 内，按类名直接换皮） ---------- */
 /* 模型库 Key 气泡菜单：厚玻璃浮层，条目圆角悬停 */
 .library-key-bubble-menu {
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-group);
-  background: var(--lg-menu-bg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  isolation: isolate;
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   color: var(--lg-fg);
 }
 .library-key-bubble-menu .expand-dropdown-divider { background: var(--lg-divider); opacity: 1; }
@@ -1182,12 +1303,13 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 
 /* 供应商页标签分配下拉：厚玻璃浮层 */
 .provider-tag-assign-dropdown {
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-group);
-  background: var(--lg-menu-bg);
-  -webkit-backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  backdrop-filter: blur(30px) saturate(var(--lg-saturate));
-  box-shadow: var(--lg-rim), var(--lg-shadow-float);
+  isolation: isolate;
+  border: 0;
+  border-radius: 18px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   color: var(--lg-fg);
 }
 .provider-tag-assign-dropdown :is(.provider-tag-assign-item, .provider-tag-assign-empty) { color: var(--lg-fg-secondary); border-radius: var(--lg-radius-item); }
@@ -1196,12 +1318,13 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 /* 跟踪报告全屏浮层（模型库「未查看的跟踪报告」） */
 .trace-report-modal { background: var(--lg-scrim); }
 .trace-report-dialog {
-  border: 1px solid var(--lg-glass-border-strong);
-  border-radius: var(--lg-radius-panel);
-  background: var(--lg-sheet-bg);
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow);
+  isolation: isolate;
+  border: 0;
+  border-radius: 32px;
+  background: var(--g-tint-menu);
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float);
   color: var(--lg-fg);
 }
 .trace-report-dialog-head h3 { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 18px; font-weight: 650; letter-spacing: -0.02em; }
@@ -1220,12 +1343,13 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 /* 管理后台脚本「AI 辅助模型」选择浮层：浮层本身挂 body，内联样式写死了白底 */
 #scriptAiModelPickerOverlay { background: var(--lg-scrim) !important; }
 #scriptAiModelPickerOverlay > [role="dialog"] {
-  border: 1px solid var(--lg-glass-border-strong) !important;
-  border-radius: var(--lg-radius-panel) !important;
-  background: var(--lg-sheet-bg) !important;
-  -webkit-backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  backdrop-filter: blur(var(--lg-blur-thick)) saturate(200%);
-  box-shadow: var(--lg-rim), 0 30px 80px var(--lg-sheet-shadow) !important;
+  isolation: isolate;
+  border: 0 !important;
+  border-radius: 32px !important;
+  background: var(--g-tint-menu) !important;
+  -webkit-backdrop-filter: var(--g-fallback-menu);
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  box-shadow: var(--g-depth), var(--shadow-float) !important;
   color: var(--lg-fg) !important;
 }
 #scriptAiModelPickerOverlay [role="dialog"] > div { border-color: var(--lg-divider) !important; }
