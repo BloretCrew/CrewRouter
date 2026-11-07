@@ -69,18 +69,43 @@ class CDP {
       const hidden = document.querySelector(${JSON.stringify(selector)});
       if (!el && hidden?.closest('.aml-provider-menu')) { hidden.closest('.aml-provider-menu').open = true; return false; }
       if (!el) return false;
-      el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+      if (el.tagName === 'BLORA-SWITCH' && !el.querySelector('.blora-switch__track')) return false;
+      const target = el.tagName === 'BLORA-SWITCH' ? (el.querySelector('.blora-switch__track') || el) : el;
+      target.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
       return true;
     })()`;
     if (frame) await this.evaluate("document.getElementById('unifiedProviderManager').scrollIntoView({block:'center',behavior:'instant'})");
     await this.wait(find, frame);
+    if (/data-action=["']?reset/.test(selector)) {
+      await this.evaluate(`document.querySelectorAll('blora-select').forEach(host => host.close?.('select'))`, frame);
+      await sleep(80);
+    }
     await sleep(180);
     let point = await this.evaluate(`(() => {
       const el = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && !e.disabled);
-      const r = el.getBoundingClientRect();
-      const x = r.x + r.width / 2, y = r.y + r.height / 2;
-      const hit = document.elementFromPoint(x, y);
-      return { x, y, ok: x >= 0 && x < innerWidth && y >= 0 && y < innerHeight && (hit === el || el.contains(hit)), hit: hit?.outerHTML.slice(0, 300) };
+      if (!el) return { ok: false, hit: 'missing' };
+      const target = el.tagName === 'BLORA-SWITCH' ? (el.querySelector('.blora-switch__track') || el) : el;
+      const r = target.getBoundingClientRect();
+      if (!(r.width > 0 && r.height > 0)) return { ok: false, hit: 'empty-rect', tag: target.tagName, w: r.width, h: r.height };
+      const hits = (x, y) => {
+        const hit = document.elementFromPoint(x, y);
+        const ok = !!hit && (hit === el || el.contains(hit) || hit === target || target.contains(hit));
+        return { x, y, ok, hit: hit?.outerHTML.slice(0, 300), tag: hit?.tagName };
+      };
+      const inset = (axis, size) => Math.min(8, Math.max(2, size / 2));
+      const candidates = [
+        [r.x + r.width / 2, r.y + r.height / 2],
+        [r.x + inset('x', r.width), r.y + r.height / 2],
+        [r.x + r.width - inset('x', r.width), r.y + r.height / 2],
+        [r.x + r.width / 2, r.y + inset('y', r.height)],
+        [r.x + r.width / 2, r.y + r.height - inset('y', r.height)]
+      ];
+      for (const [x, y] of candidates) {
+        if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+        const point = hits(x, y);
+        if (point.ok) return point;
+      }
+      return hits(r.x + r.width / 2, r.y + r.height / 2);
     })()`, frame);
     assert.ok(point?.ok, `入口被遮挡或超出视口: ${selector} ${JSON.stringify(point)}`);
     point = { x: point.x, y: point.y };
@@ -282,15 +307,18 @@ async function main() {
       await cdp.click(selector);
       await sleep(350);
       const selected = await cdp.evaluate(`(() => {
-        const host = document.querySelector(${JSON.stringify(selector)});
+        const host = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
+        if (!host) return false;
         const root = host.shadowRoot || host;
         const option = [...root.querySelectorAll('[part="option"], .blora-select__option')].find(item => item.dataset.value === ${JSON.stringify(value)});
         if (!option) return false;
         option.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
         option.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        host.close?.('select');
         return true;
       })()`);
       assert.ok(selected, `找不到下拉选项 ${selector}=${value}`);
+      await cdp.evaluate(`document.querySelectorAll('blora-select').forEach(host => host.close?.('select'))`);
       await sleep(400);
     };
     for (const width of [1440, 1024, 390]) {
@@ -298,7 +326,7 @@ async function main() {
       state.reset();
       await check(`${p} 页面、零模型供应商与布局`, async () => {
         await navigate(width); await expect("document.querySelectorAll('.aml-provider').length === 2", '应显示包括零模型在内的两个供应商');
-        await expect("!!document.querySelector('.model-library-header') && !!document.querySelector('.model-filter-bar') && !!document.querySelector('.model-library-provider-header')", '后台应使用控制台模型库区块与供应商结构');
+        await expect("!!document.querySelector('.model-library-header') && !!document.querySelector('.ml-model-filter-bar') && !!document.querySelector('.model-library-binding-bar') && !!document.querySelector('.model-library-provider-header')", '后台应使用控制台模型库区块与供应商结构');
         await expand('fixture-empty'); await expect("document.querySelector('[data-provider=" + JSON.stringify('fixture-empty') + "] .aml-model-grid').textContent.includes('暂无')", '零模型供应商不应被渲染为模型');
         await expect('document.documentElement.scrollWidth <= innerWidth + 1', '页面横向溢出');
       });

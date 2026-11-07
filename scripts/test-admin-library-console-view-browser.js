@@ -15,8 +15,8 @@ async function main() {
     <meta name="viewport" content="width=device-width, initial-scale=1"><script type="module" src="/vendor/blora-2.0.8/auto.js"></script>
     <style>@layer legacy-reset, blora.tokens, blora.reset, blora.base, blora.components, blora.utilities;</style>
     <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css"><link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css">
-    <link rel="stylesheet" href="/css/themes.css"><link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/model-library-blora.css"><link rel="stylesheet" href="/css/admin-model-library.css">
-    <style>body{padding:24px;background:var(--blora-color-surface-page)}#library{max-width:1120px;margin:auto}</style><div id="library"></div><pre id="result">pending</pre>
+    <link rel="stylesheet" href="/css/themes.css"><link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/model-library-blora.css"><link rel="stylesheet" href="/css/liquid-glass.css"><link rel="stylesheet" href="/css/admin-model-library-console.css"><link rel="stylesheet" href="/css/admin-model-library.css">
+    <style>body{padding:24px;background:var(--blora-color-surface-page)}#adminModelLibraryPage{max-width:1120px;margin:auto}</style><div id="adminModelLibraryPage" class="page lg-page admin-model-library"></div><pre id="result">pending</pre>
     <script src="/js/admin-library-console-view.js"></script><script src="/js/admin-model-library.js"></script><script>
     (async () => {
       try {
@@ -32,12 +32,14 @@ async function main() {
             ? { items: [{ provider_id: 'p1', provider_name: 'Fixture provider', model_count: 1 }], total: 1, stats: { model_count: 1 } }
             : { items: [{ model_id: 'm1', name: 'Fixture model', system_enabled: true, team_enabled: enabled, test_ok: true, test_latency_ms: 20, test_tokens_per_second: 50 }], page: 1, limit: 24, total: 1 };
         };
-        library.mount('#library');
+        library.mount('#adminModelLibraryPage');
         await library.load();
         const expand = document.querySelector('[data-action=expand]');
         await library.onClick({ target: expand });
         check(document.querySelector('.model-library-item-info .model-library-item-name'), 'console model structure missing');
         check(document.querySelector('.model-library-provider-header'), 'console provider structure missing');
+        check(document.querySelector('.ml-model-filter-bar'), 'console filter bar missing');
+        check(document.querySelector('.model-library-binding-bar'), 'console binding bar missing');
         await customElements.whenDefined('blora-select');
         check(document.querySelector('blora-search[data-filter="q"]'), 'console search missing');
         check(document.querySelector('blora-select[data-filter="provider"]'), 'console select missing');
@@ -46,6 +48,7 @@ async function main() {
         check(document.querySelectorAll('.aml-header > .model-library-header-actions > button').length === 2, 'header must keep only two main actions');
         check(document.querySelectorAll('.aml-card-actions > button').length === 1, 'card actions must be condensed');
         check(!document.querySelector('select[data-filter]'), 'native admin select leaked');
+        check(document.querySelector('blora-switch[data-action=toggle-model]'), 'homemade switch leaked');
         const checkbox = document.querySelector('[data-select]');
         checkbox.click();
         check(writes === 0 && library.selected.has('m1'), 'selection must not change authorization');
