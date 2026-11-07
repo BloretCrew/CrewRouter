@@ -111,9 +111,9 @@ SidebarNav / foundation 互刷，卡死主线程）。晚到的导航用 400ms /
   `blora-dialog` 同在 top layer，预览可以盖住仍打开的编辑弹窗；不支持 `<dialog>`
   时回退为 fixed 浮层。
 - 卡片是晶液玻璃面板（`--g-tint-menu` + `panel` 透镜），仅当前激活卡片使用透镜；
-  打开/切换后会调用 `CrewRouterLiquid.scan()` 生成 `--lens`。激活卡还有一层
-  `::after` 边框环（mask 挖空）复用同一透镜，保证 hero 全幅渐变下仍能看到整圈
-  边缘折射。
+  打开/切换后会调用 `CrewRouterLiquid.scan()` 生成 `--lens`。不要再叠一层带
+  `backdrop-filter` 的 `::after` 边框环：Chromium 下 mask 常失效，会整块盖住
+  正文区变成发白磨砂板。
 - hero 是暖色径向光斑（琥珀 / 珊瑚 / 玫瑰 / 赤陶），"CrewRouter" 每 50～70ms
   （随机）切换已安装系统字体；`prefers-reduced-motion` 下固定为 `--lg-font-display`。
 - 多条通知叠放，左侧（≤900px 时卡片下方）显示气泡列表；只剩一条时不显示列表，
