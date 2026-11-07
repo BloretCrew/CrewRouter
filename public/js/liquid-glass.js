@@ -131,7 +131,9 @@
     ['blora-dialog.lg-scope[open], blora-dialog[open]', 'panel'],
     ['.trace-report-dialog', 'panel'],
     ['#scriptAiModelPickerOverlay > [role="dialog"]', 'panel'],
-    ['.cr-pn-card, .cr-pn-overlay .cr-pn-sheet, .cr-pn-bubble', 'toast'],
+    // 弹窗通知卡按对话框面板透镜（更宽边缘折射）；气泡列表仍用 toast
+    ['.cr-pn-card.is-active', 'panel'],
+    ['.cr-pn-bubble', 'toast'],
     ['.auth-card, .login-card, .pi-card, .oc-card, .setup-card, .purchase-card, .plain-card', 'panel'],
     ['.up-toolbar-slot', 'capsule'],
     ['#modelLibraryPage .model-library-binding-bar', 'panel'],

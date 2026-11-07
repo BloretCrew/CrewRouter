@@ -47,6 +47,15 @@
     try { return global.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
   }
 
+  /** 动态插入的通知卡需要手动冲一次晶液透镜队列，否则只有 blur 回退、没有边缘折射 */
+  function refreshLiquidGlass() {
+    try {
+      if (global.CrewRouterLiquid && typeof global.CrewRouterLiquid.scan === 'function') {
+        global.CrewRouterLiquid.scan();
+      }
+    } catch (_) { /* ignore */ }
+  }
+
   /* ------------------------------------------------------------------ *
    * 字体轮播
    * ------------------------------------------------------------------ */
@@ -280,6 +289,7 @@
     queueSeen(id);
     renderBubbles();
     restartFontCycle();
+    refreshLiquidGlass();
   }
 
   function ensureActive() {
@@ -643,6 +653,12 @@
     global.document.addEventListener('i18n:ready', state.i18nHandler);
 
     setActive(list[0].id);
+    refreshLiquidGlass();
+    // 入场动画改变布局透明度/尺寸后再扫一次，确保 panel 透镜按最终几何生成
+    global.setTimeout(function () {
+      if (state.dialog !== dialog || state.closing) return;
+      refreshLiquidGlass();
+    }, prefersReducedMotion() ? 40 : OVERLAY_ENTER_MS);
     // 入场后再聚焦关闭按钮，避免打断缩放淡入
     global.setTimeout(function () {
       if (state.dialog !== dialog || state.closing) return;

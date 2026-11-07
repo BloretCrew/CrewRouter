@@ -266,10 +266,34 @@ html.cr-pn-lock { overflow: hidden; }
 
 .cr-pn-card[hidden] { display: none; }
 
-/* 仅激活卡片使用背景模糊 */
+/* 仅激活卡片使用晶液透镜（panel 边缘折射） */
 .cr-pn-card.is-active {
   -webkit-backdrop-filter: var(--g-fallback-menu);
   backdrop-filter: var(--lens, var(--g-fallback-menu));
+}
+
+/*
+ * 整圈边缘折射层：hero 全幅渐变会盖住卡片自身 backdrop 的上沿，
+ * 用 mask 挖出约 22px 边框环，单独再铺一层 --lens，保证四边都有折射。
+ */
+.cr-pn-card.is-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  border-radius: inherit;
+  pointer-events: none;
+  box-sizing: border-box;
+  padding: 22px;
+  background: transparent;
+  -webkit-backdrop-filter: var(--lens, var(--g-fallback-menu));
+  backdrop-filter: var(--lens, var(--g-fallback-menu));
+  -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  -webkit-mask-clip: content-box, border-box;
+  -webkit-mask-composite: xor;
+  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  mask-clip: content-box, border-box;
+  mask-composite: exclude;
 }
 
 .cr-pn-card.is-leaving {
@@ -278,6 +302,8 @@ html.cr-pn-lock { overflow: hidden; }
   pointer-events: none;
   transition-duration: var(--cr-pn-motion-exit, 0.3s);
 }
+
+.cr-pn-card.is-leaving::after { opacity: 0; }
 
 .cr-pn-card::before { content: none; }
 
@@ -695,10 +721,12 @@ html.cr-pn-lock { overflow: hidden; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .cr-pn-card,
+  .cr-pn-card.is-active::after,
   .cr-pn-bubble {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
+  .cr-pn-card.is-active::after { content: none; }
   .cr-pn-overlay::backdrop {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

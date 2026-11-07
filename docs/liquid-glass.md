@@ -53,7 +53,8 @@
 | `capsule` | 侧栏、移动顶栏、筛选条、悬浮工具栏 |
 | `menu` | 下拉菜单、选择弹层、气泡菜单 |
 | `panel` | 对话框、登录卡、独立页主卡 |
-| `toast` | 提示气泡、弹窗通知卡 |
+| `toast` | 提示气泡、弹窗通知气泡列表 |
+| `panel` | 对话框、登录卡、弹窗通知激活卡（整圈边缘折射） |
 | `rim` | 水滴被拖动时的窄边折射 |
 
 控件层 CSS 必须写成 `backdrop-filter: var(--lens, var(--g-fallback))`，
@@ -109,12 +110,12 @@ SidebarNav / foundation 互刷，卡死主线程）。晚到的导航用 400ms /
 - 浮层是原生 `<dialog class="cr-pn-overlay lg-scope">`，`showModal()` 后与
   `blora-dialog` 同在 top layer，预览可以盖住仍打开的编辑弹窗；不支持 `<dialog>`
   时回退为 fixed 浮层。
-- 卡片是晶液玻璃面板（`--g-tint-menu` + 透镜），仅当前激活卡片使用透镜。
-- hero 是彩色径向光斑（浅色 `#9F5964` 等，深色取 `tokens.dark.css` 对应值），
-  因为 `.lg-scope` 会把 `--blora-color-*` 桥接成 LG 值，所以配色单独定义为
-  `--cr-pn-*`，深色用 `:root[data-blora-color-scheme="dark"]`。
-  "CrewRouter" 每 350ms 换一种已安装系统字体（canvas 度量检测，检测不足 6 种时
-  回退为完整候选清单），`prefers-reduced-motion` 下固定为 `--lg-font-display`。
+- 卡片是晶液玻璃面板（`--g-tint-menu` + `panel` 透镜），仅当前激活卡片使用透镜；
+  打开/切换后会调用 `CrewRouterLiquid.scan()` 生成 `--lens`。激活卡还有一层
+  `::after` 边框环（mask 挖空）复用同一透镜，保证 hero 全幅渐变下仍能看到整圈
+  边缘折射。
+- hero 是暖色径向光斑（琥珀 / 珊瑚 / 玫瑰 / 赤陶），"CrewRouter" 每 50～70ms
+  （随机）切换已安装系统字体；`prefers-reduced-motion` 下固定为 `--lg-font-display`。
 - 多条通知叠放，左侧（≤900px 时卡片下方）显示气泡列表；只剩一条时不显示列表，
   窄屏只显示当前卡片。
 - 已读按服务端记录（`popup_notice_views`），激活/关闭时批量上报，失败保留重试。
