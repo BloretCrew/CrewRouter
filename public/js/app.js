@@ -373,13 +373,25 @@ class ConsoleApp {
     }
   }
 
+  // HTTPS 反代下 Express 可能仍按 http 计算 requestOrigin，浏览器 Origin(https)
+  // 对不上时写请求必须带会话 CSRF；控制台变更类接口统一走这里。
+  async _csrfHeaders(extra = {}) {
+    const headers = { ...extra };
+    try {
+      const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' })
+        .then((r) => (r.ok ? r.json() : {}))
+        .catch(() => ({}));
+      if (csrf.token) headers['X-CSRF-Token'] = csrf.token;
+    } catch (_) {}
+    return headers;
+  }
+
   async _setStatsConsent(allow) {
     this.closeModals();
     try {
-      const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...(csrf.token ? { 'X-CSRF-Token': csrf.token } : {}) },
+        headers: await this._csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ stats_report_enabled: !!allow, stats_report_granularity: 'detailed' })
       });
       if (!res.ok) {
@@ -7617,7 +7629,7 @@ class ConsoleApp {
     try {
       const res = await fetch('/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this._csrfHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'same-origin',
         body: JSON.stringify({ oldPassword: currentPassword || undefined, newPassword })
       });
