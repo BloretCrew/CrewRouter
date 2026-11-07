@@ -454,7 +454,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition: opacity .15s, background .15s, scale .32s var(--spring);
   box-shadow: var(--shadow-button);
 }
 
@@ -462,8 +462,9 @@
   opacity: 0.9;
 }
 
-.pg-send-btn:active {
-  transform: scale(0.95);
+.pg-send-btn:active:not(:disabled) {
+  scale: .955;
+  transform: none;
 }
 
 .pg-send-btn:disabled {
@@ -719,8 +720,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 44px;
-    padding: 0 12px;
+    height: calc(44px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 12px 0;
     background: var(--card);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
@@ -737,8 +738,9 @@
     color: var(--muted-foreground);
     text-decoration: none;
     border-radius: 13px;
-    transition: all 0.15s;
+    transition: background .15s, color .15s, scale .3s var(--spring);
   }
+  .pg-mobile-back:active { scale: .9; }
 
   .pg-mobile-back:hover {
     background: var(--accent);
@@ -767,8 +769,9 @@
     color: var(--muted-foreground);
     cursor: pointer;
     border-radius: 13px;
-    transition: all 0.15s;
+    transition: background .15s, color .15s, scale .3s var(--spring);
   }
+  .pg-mobile-menu:active { scale: .9; }
 
   .pg-mobile-menu:hover {
     background: var(--accent);
@@ -796,12 +799,13 @@
     position: fixed;
     top: 0;
     left: -300px;
-    width: 280px;
-    height: 100vh;
+    width: min(280px, calc(100vw - 24px));
+    height: 100dvh;
     z-index: 300;
-    transition: left 0.25s ease;
+    transition: left .45s var(--spring-soft, cubic-bezier(.25, 1.2, .5, 1));
     box-shadow: none;
     background: var(--card);
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .pg-history-panel.open {
@@ -819,8 +823,15 @@
   }
 
   .pg-input-area {
-    padding: 8px 16px 12px;
+    padding: 8px 16px max(12px, env(safe-area-inset-bottom, 0px));
   }
+  .pg-messages { min-width: 0; }
+  .pg-container { overflow-x: clip; }
+}
+
+@media (max-width: 390px) {
+  .pg-messages { padding: 12px; }
+  .pg-input-area { padding: 8px 12px max(12px, env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ============================================

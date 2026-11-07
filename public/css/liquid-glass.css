@@ -508,12 +508,12 @@ body.blora-page::before { content: none; }
   font-weight: 500;
   letter-spacing: 0;
   transition:
-    background-color var(--lg-dur-fast) var(--lg-ease),
-    border-color var(--lg-dur-fast) var(--lg-ease),
-    box-shadow var(--lg-dur-fast) var(--lg-ease),
-    color var(--lg-dur-fast) var(--lg-ease),
-    filter var(--lg-dur-fast) var(--lg-ease),
-    transform var(--lg-dur-fast) var(--lg-ease);
+    background-color .15s,
+    border-color .15s,
+    box-shadow .2s,
+    color .15s,
+    filter .15s,
+    scale .32s var(--spring);
 }
 :is(.lg-page, .lg-scope) .blora-button:hover,
 :is(.lg-page, .lg-scope) .blora-button[data-variant]:hover {
@@ -523,7 +523,7 @@ body.blora-page::before { content: none; }
   transform: none;
   box-shadow: none;
 }
-:is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: scale(0.955); }
+:is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { scale: .955; transform: none; }
 :is(.lg-page, .lg-scope) .blora-button:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 :is(.lg-page, .lg-scope) .blora-button:disabled,
 :is(.lg-page, .lg-scope) .blora-button[aria-disabled="true"] { opacity: 0.42; transform: none; box-shadow: none; filter: none; }
@@ -704,6 +704,7 @@ body.blora-page::before { content: none; }
   box-shadow: var(--g-depth), var(--shadow-float);
   transition: opacity .16s var(--ease-out), scale .38s var(--spring-soft);
 }
+@starting-style { :is(.lg-page, .lg-scope) .blora-dropdown__menu { opacity: 0; scale: .9; } }
 :is(.lg-page, .lg-scope) .blora-dropdown__item {
   min-height: 32px;
   padding: 6px 10px;
@@ -881,8 +882,9 @@ body.blora-page::before { content: none; }
   border-radius: 6px;
   background: var(--lg-surface);
   box-shadow: none;
-  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease);
+  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), scale .3s var(--spring);
 }
+:is(.lg-page, .lg-scope) .blora-checkbox:active > input:not(:disabled) + .blora-checkbox__box { scale: .85; }
 :is(.lg-page, .lg-scope) .blora-checkbox:hover > input:not(:disabled) + .blora-checkbox__box { border-color: var(--lg-fg-secondary); }
 :is(.lg-page, .lg-scope) .blora-checkbox > input:checked + .blora-checkbox__box,
 :is(.lg-page, .lg-scope) .blora-checkbox[data-indeterminate] > input + .blora-checkbox__box {
@@ -1043,7 +1045,16 @@ body.blora-page::before { content: none; }
   border: 0;
   background: var(--lg-chip-hover);
 }
-:is(.lg-page, .lg-scope) .blora-switch__track::after { background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+:is(.lg-page, .lg-scope) .blora-switch__track::after {
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  transition: inset-inline-start .45s var(--spring), scale .35s var(--spring), background .2s, box-shadow .2s;
+}
+:is(.lg-page, .lg-scope) .blora-switch > input:active + .blora-switch__track::after {
+  scale: 1.22 1.12;
+  background: oklch(1 0 0 / .35);
+  box-shadow: inset 0 1px 1px oklch(1 0 0 / .9), inset 0 -1px 1px oklch(0 0 0 / .08), 0 0 0 1px oklch(1 0 0 / .65), 0 4px 10px oklch(0 0 0 / .15);
+}
 :is(.lg-page, .lg-scope) .blora-switch > input:checked + .blora-switch__track { border-color: transparent; background: var(--lg-green); }
 :is(.lg-page, .lg-scope) .blora-switch > input:focus-visible + .blora-switch__track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--lg-green) 40%, transparent); }
 :is(.lg-page, .lg-scope) blora-switch[label] .blora-switch { color: var(--lg-fg); font-size: 14px; }
@@ -1193,6 +1204,7 @@ blora-dialog.lg-scope::part(panel) {
   box-shadow: var(--g-depth), var(--shadow-float);
   transition: opacity .2s var(--ease-out), scale .5s var(--spring-soft);
 }
+@starting-style { blora-dialog.lg-scope[open]::part(panel) { opacity: 0; scale: .9; } }
 blora-dialog.lg-scope::part(header) { padding: 22px 24px 16px 26px; }
 blora-dialog.lg-scope::part(title) {
   color: var(--lg-fg);
@@ -1271,7 +1283,11 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
   box-shadow: none;
 }
 .blora-page .content-header .theme-toggle .blora-button:active,
-.blora-page .mobile-topbar #themeToggleMobile:active { transform: scale(0.94); }
+.blora-page .mobile-topbar #themeToggleMobile:active { transform: none; scale: .94; }
+.blora-page .mobile-hamburger {
+  transition: background .15s, scale .3s var(--spring);
+}
+.blora-page .mobile-hamburger:active { scale: .9; }
 
 @media (min-width: 641px) {
   .blora-page .app-container > .sidebar {
@@ -1354,6 +1370,9 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
   /* 移动端顶栏已有主题按钮，标题区不再重复 */
   .blora-page .content-header .theme-toggle { display: none; }
   .blora-page .content-header h1 { font-size: 28px; }
+  .blora-page .sidebar {
+    transition: transform .45s var(--spring-soft);
+  }
 }
 
 /* ---------- 6b. 管理后台通用组件：统计瓷片、筛选条、表格、分页 ---------- */
@@ -1468,7 +1487,13 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
 }
 @media (prefers-reduced-motion: reduce) {
   .lg-wallpaper { transition: none; }
-  :is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: none; }
+  :is(.lg-page, .lg-scope) .blora-button:active:not(:disabled) { transform: none; scale: none; }
+  .lg-page.page.active,
+  .lg-scope .auth-card,
+  .lg-scope .setup-card,
+  .lg-scope .pi-card,
+  .lg-scope .oc-card,
+  .lg-scope .purchase-card { animation: none; }
 }
 
 /* 日期选择面板、移动端抽屉：晶液菜单/面板 */
@@ -1798,3 +1823,217 @@ blora-navbar.public-navbar .blora-navbar::before {
 .lg-scope .pg-context-menu-item svg { color: var(--text-2); }
 .lg-scope .pg-context-menu-separator { background: var(--line-strong); }
 .lg-scope .pg-thinking-controls blora-switch { flex: none; }
+.lg-scope .pg-context-menu,
+.pg-context-menu {
+  transition: opacity .16s var(--ease-out), scale .38s var(--spring-soft);
+}
+@starting-style { .lg-scope .pg-context-menu, .pg-context-menu { opacity: 0; scale: .9; } }
+
+/* ---------- 8. 晶液动效补全（liquid.css .btn / .menu / .window-dialog / .app-window） ---------- */
+@keyframes liquid-pulse { 50% { opacity: .3; scale: .7; } }
+@keyframes liquid-sheen { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes liquid-blink { 50% { opacity: 0; } }
+@keyframes lg-sheet-in {
+  from { opacity: 0; translate: 0 8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.lg-page.page.active {
+  animation: lg-sheet-in .45s var(--spring-soft);
+}
+:is(.lg-page, .lg-scope) blora-select::part(popup) {
+  transition: opacity .16s var(--ease-out), scale .38s var(--spring-soft), box-shadow .2s var(--ease-out);
+}
+:is(.lg-page, .lg-scope) .blora-popover__panel,
+.blora-popover__panel,
+:is(.lg-page, .lg-scope) .blora-datepicker__panel,
+.blora-datepicker__panel {
+  transition: opacity .16s var(--ease-out), scale .38s var(--spring-soft);
+}
+@starting-style {
+  :is(.lg-page, .lg-scope) .blora-popover__panel,
+  .blora-popover__panel,
+  :is(.lg-page, .lg-scope) .blora-datepicker__panel,
+  .blora-datepicker__panel { opacity: 0; scale: .9; }
+}
+:is(.lg-page, .lg-scope) :is(.blora-command, .blora-cmdk),
+.blora-command, .blora-cmdk {
+  transition: opacity .2s var(--ease-out), scale .5s var(--spring-soft);
+}
+@starting-style {
+  :is(.lg-page, .lg-scope) :is(.blora-command, .blora-cmdk),
+  .blora-command, .blora-cmdk { opacity: 0; scale: .9; }
+}
+blora-drawer.lg-scope::part(panel),
+blora-drawer.mobile-sidebar-drawer::part(panel) {
+  transition: translate .45s var(--spring-soft), opacity .2s var(--ease-out);
+}
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.blora-switch > input),
+:is(.lg-page, .lg-scope) .aml-check input {
+  transition: background .15s, box-shadow .15s, scale .3s var(--spring);
+}
+:is(.lg-page, .lg-scope) input[type="checkbox"]:not(.blora-switch > input):active,
+:is(.lg-page, .lg-scope) .aml-check input:active { scale: .85; }
+:is(.lg-page, .lg-scope) :is(.aml-skeleton, .blora-skeleton, [aria-busy="true"] .skeleton) {
+  background-size: 200% 100%;
+  animation: liquid-sheen 1.5s linear infinite;
+}
+.lg-scope :is(.auth-card, .login-card, .setup-card, .pi-card, .oc-card, .purchase-card) {
+  transition: opacity .22s var(--ease-out), scale .45s var(--spring-soft);
+}
+@starting-style {
+  .lg-scope :is(.auth-card, .login-card, .setup-card, .pi-card, .oc-card, .purchase-card) {
+    opacity: 0;
+    scale: .965;
+  }
+}
+
+/* 图标钮 / 关闭 / 标签：抄 liquid.css .topbar-icon / .wc / .launcher-item */
+:is(.lg-page, .lg-scope) .blora-button[data-icon]:active:not(:disabled),
+:is(.lg-page, .lg-scope) .blora-button.btn-icon:active:not(:disabled),
+:is(.lg-page, .lg-scope) .blora-icon-button:active:not(:disabled) { scale: .9; }
+:is(.lg-page, .lg-scope) .blora-tag {
+  transition: background .15s, color .15s, scale .3s var(--spring);
+}
+:is(.lg-page, .lg-scope) .blora-tag:active { scale: .94; }
+:is(.lg-page, .lg-scope) .blora-segmented__item {
+  transition: color .2s, scale .3s var(--spring);
+}
+:is(.lg-page, .lg-scope) .blora-tabs__tab {
+  transition: color .2s, background .15s, scale .3s var(--spring);
+}
+:is(.lg-page, .lg-scope) .blora-tabs__tab:active { scale: .97; }
+blora-dialog.lg-scope::part(close),
+:is(.lg-page, .lg-scope) :is(.dialog-close, .modal-close, .store-modal__close) {
+  transition: background .15s, color .15s, scale .3s var(--spring);
+}
+blora-dialog.lg-scope::part(close):active,
+:is(.lg-page, .lg-scope) :is(.dialog-close, .modal-close, .store-modal__close):active { scale: .86; }
+:is(.lg-page, .lg-scope) .status-chip[data-status="pending"] i,
+:is(.lg-page, .lg-scope) .blora-badge[data-pulse] {
+  animation: liquid-pulse 1.6s ease-in-out infinite;
+}
+:is(.lg-page, .lg-scope) :is(.blora-progress__bar, .progress i)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, oklch(1 0 0 / .5) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: liquid-sheen 1.8s linear infinite;
+}
+.toast-close { transition: background .15s, scale .3s var(--spring); }
+.toast-close:active { scale: .86; }
+
+/* ---------- 9. 全页移动端（晶液是桌面窗，这里用同一套令牌收 390 布局） ---------- */
+@media (max-width: 640px) {
+  html:has(.blora-page),
+  body.blora-page {
+    overflow-x: clip;
+  }
+  .blora-page .main-content,
+  .blora-page .content,
+  .lg-page,
+  .lg-scope {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .blora-page .mobile-topbar {
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .blora-page .main-content {
+    padding-inline: 16px;
+    padding-top: calc(68px + env(safe-area-inset-top, 0px));
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+  .lg-page :is(.model-library-header, .aml-header, .section-header, .content-header, .store-header, .usage-header, .page-header, .data-title) {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .lg-page :is(.model-library-header-actions, .aml-header-actions, .section-actions, .content-header .theme-toggle, .page-toolbar) {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .lg-page :is(.ml-model-filter-bar, .admin-filter-bar, .stats-filters, .model-filter-bar, .filter-bar, .toolbar, .store-toolbar) {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .lg-page :is(.ml-model-filter-bar, .admin-filter-bar, .stats-filters, .filter-bar, .toolbar) > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  :is(.lg-page, .lg-scope) blora-select,
+  :is(.lg-page, .lg-scope) blora-search,
+  :is(.lg-page, .lg-scope) .blora-input,
+  :is(.lg-page, .lg-scope) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  :is(.lg-page, .lg-scope) textarea,
+  :is(.lg-page, .lg-scope) select {
+    max-width: 100%;
+    min-width: 0;
+  }
+  :is(.lg-page, .lg-scope) :is(.users-table, .models-table, .table-scroll, .table-wrap, .usage-detail-table, .stats-table, .blora-table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  :is(.lg-page, .lg-scope) :is(td, code, .mono, .model-id, pre) { overflow-wrap: anywhere; }
+  :is(.lg-page, .lg-scope) .admin-pagination,
+  :is(.lg-page, .lg-scope) .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  :is(.lg-page, .lg-scope) .admin-stat-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  blora-dialog.lg-scope::part(panel),
+  blora-dialog.lg-scope > .modal-content {
+    width: min(100vw - 16px, 100%);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    border-radius: 22px;
+  }
+  blora-drawer.lg-scope::part(panel),
+  blora-drawer.mobile-sidebar-drawer::part(panel) {
+    width: min(320px, calc(100vw - 24px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .toast-stack {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    width: auto;
+  }
+  @starting-style { .app-toast { translate: 0 -16px; scale: .96; } }
+  .lg-page .content-section { padding: 16px; border-radius: 18px; }
+  .lg-page .section-header h2 { font-size: 20px; }
+  .lg-page :is(.chip-row, .tag-list, .model-library-item-actions, .aml-header-actions) {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 390px) {
+  :is(.lg-page, .lg-scope) .admin-stat-cards,
+  :is(.lg-page, .lg-scope) :is(.stats-overview-grid, .ak-overview, .limits-grid, .metric-grid) {
+    grid-template-columns: 1fr;
+  }
+  .blora-page .content-header h1 { font-size: 24px; }
+  .lg-page :is(.blora-button, .aml-button) { max-width: 100%; }
+  .lg-page .content-section { padding: 14px; border-radius: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-page.page.active { animation: none; }
+  :is(.lg-page, .lg-scope) .blora-switch__track::after { transition: none; }
+  :is(.lg-page, .lg-scope) :is(.aml-skeleton, .blora-skeleton, [aria-busy="true"] .skeleton) { animation: none; }
+  :is(.lg-page, .lg-scope) :is(.blora-button, .blora-tag, .blora-tabs__tab, .blora-checkbox__box) {
+    transition: none;
+    animation: none;
+    scale: none;
+  }
+  :is(.lg-page, .lg-scope) :is(.blora-progress__bar, .progress i)::after,
+  :is(.lg-page, .lg-scope) .status-chip[data-status="pending"] i { animation: none; }
+  .blora-page .sidebar { transition: none; }
+}

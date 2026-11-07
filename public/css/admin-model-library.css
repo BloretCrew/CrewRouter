@@ -293,4 +293,16 @@
   .admin-model-library .aml-filter-count { margin-inline-start: 0; flex-basis: 100%; }
   .admin-model-library .aml-batch-entry { flex: 1 1 100%; }
   .admin-model-library .aml-team-panel { position: static; width: 100%; }
+  .admin-model-library .aml-scope-tabs,
+  .admin-model-library .aml-team-tabs,
+  .admin-model-library .aml-header-actions { width: 100%; }
+  .admin-model-library .model-library-item-actions { flex-wrap: wrap; justify-content: flex-start; }
+}
+
+@media (max-width: 390px) {
+  .admin-model-library .aml-quota-host,
+  .admin-model-library .ml-model-quota-section .aml-quota-host {
+    grid-template-columns: 1fr;
+  }
+  #adminModelLibraryPage .ml-model-filter-bar { border-radius: 22px; }
 }

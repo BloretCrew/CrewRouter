@@ -210,3 +210,64 @@ body.blora-page.lg-scope .table-wrap td { border-bottom: 1px solid var(--lg-divi
 body.blora-page.lg-scope .table-wrap tr:last-child td { border-bottom: 0; }
 body.blora-page.lg-scope .section-title { color: var(--lg-fg); font-family: var(--lg-font-display); letter-spacing: -0.02em; }
 body.blora-page.lg-scope .muted, body.blora-page.lg-scope .empty { color: var(--lg-fg-secondary); }
+
+body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card, .metric-card, .pi-card, .oc-card) {
+  transition: background-color .15s, box-shadow .35s var(--ease-out), scale .32s var(--spring);
+}
+body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card):active { scale: .985; }
+body.blora-page.lg-scope .nav-cta,
+body.blora-page.lg-scope .hero-buttons .btn-primary,
+body.blora-page.lg-scope .hero-buttons .btn-secondary {
+  transition: background .15s, scale .32s var(--spring), filter .15s;
+}
+body.blora-page.lg-scope .nav-cta:active,
+body.blora-page.lg-scope .hero-buttons .btn-primary:active,
+body.blora-page.lg-scope .hero-buttons .btn-secondary:active { scale: .955; }
+
+@media (max-width: 640px) {
+  body.blora-page.lg-scope .pi-wrap { padding: 28px 14px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  body.blora-page.lg-scope .pi-card { padding: 20px; border-radius: 22px; }
+  body.blora-page.lg-scope .showcase-nav,
+  body.blora-page.lg-scope .data-nav {
+    height: auto;
+    min-height: calc(56px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  body.blora-page.lg-scope .data-nav {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+  body.blora-page.lg-scope .data-nav__link { white-space: nowrap; }
+  body.blora-page.lg-scope .metric-card { min-width: 0; }
+  body.blora-page.lg-scope .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.blora-page.lg-scope .table-wrap { max-width: 100%; }
+  body.blora-page.lg-scope .hero { padding-top: calc(96px + env(safe-area-inset-top, 0px)); }
+  body.blora-page.lg-scope .showcase-nav .nav-cta { display: none; }
+  body.blora-page.lg-scope .hero-buttons {
+    width: 100%;
+  }
+  body.blora-page.lg-scope .hero-buttons .btn-primary,
+  body.blora-page.lg-scope .hero-buttons .btn-secondary {
+    width: min(100%, 320px);
+    justify-content: center;
+  }
+  body.blora-page.lg-scope .purchase-container {
+    width: min(100% - 28px, 480px);
+    margin-block-start: 24px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body.blora-page.lg-scope .purchase-card { border-radius: 22px; }
+}
+@media (max-width: 390px) {
+  body.blora-page.lg-scope .metric-grid { grid-template-columns: 1fr; }
+  body.blora-page.lg-scope .pi-card,
+  body.blora-page.lg-scope .purchase-card { border-radius: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.blora-page.lg-scope :is(.feature-card, .highlight-card, .arch-card, .metric-card, .pi-card, .oc-card, .nav-cta, .btn-primary, .btn-secondary) {
+    transition: none;
+    animation: none;
+  }
+}

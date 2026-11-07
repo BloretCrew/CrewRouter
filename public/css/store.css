@@ -229,9 +229,9 @@ body.blora-page:has(.store-shell)::before { content: none; }
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+  transition: background .15s, color .15s, border-color .15s, filter .15s, scale .32s var(--spring);
 }
-.store-shell .btn:active:not(:disabled) { transform: scale(0.96); }
+.store-shell .btn:active:not(:disabled) { scale: .955; transform: none; }
 .store-shell .btn-primary {
   border-color: transparent;
   background: var(--lg-accent);
@@ -256,14 +256,14 @@ body.blora-page:has(.store-shell)::before { content: none; }
   background-color: var(--lg-card-bg);
   background-image: var(--lg-sheen);
   box-shadow: var(--lg-rim), var(--lg-shadow-card);
-  transition: background-color var(--lg-dur-fast) var(--lg-ease), border-color var(--lg-dur-fast) var(--lg-ease), box-shadow var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+  transition: background-color .15s, box-shadow .35s var(--ease-out), scale .32s var(--spring);
 }
 .store-card:hover {
   border-color: var(--lg-glass-border-strong);
   background-color: var(--lg-card-bg-hover);
   box-shadow: var(--lg-rim), var(--lg-shadow-card-hover);
-  transform: translateY(-1px);
 }
+.store-card:active { scale: .985; }
 .store-card__cover { height: 112px; background: var(--lg-group-bg); font-size: 36px; }
 .store-card__cover img { border-radius: 14px; box-shadow: var(--lg-rim); }
 .store-card__name { color: var(--lg-fg); font-size: 15px; font-weight: 650; }
@@ -367,9 +367,12 @@ body.blora-page:has(.store-shell)::before { content: none; }
   .store-side-card { position: static; }
 }
 @media (max-width: 640px) {
-  .store-shell { padding: 0 12px 32px; }
-  .store-header { padding: 10px 12px; border-radius: 20px; }
-  .store-nav { gap: 2px; }
+  .store-shell { padding: 0 12px max(32px, env(safe-area-inset-bottom, 0px)); }
+  .store-header {
+    padding: max(10px, env(safe-area-inset-top, 0px)) 12px 10px;
+    border-radius: 20px;
+  }
+  .store-nav { gap: 2px; flex-wrap: wrap; }
   .store-nav__link { padding: 5px 10px; font-size: 13px; }
   .store-toolbar { flex-wrap: wrap; }
   .store-toolbar input[type="search"], .store-toolbar input[type="text"] { flex: 1 1 100%; min-inline-size: 0; }
@@ -378,11 +381,23 @@ body.blora-page:has(.store-shell)::before { content: none; }
   .store-detail__head { gap: 12px; }
   .store-detail__icon { inline-size: 60px; block-size: 60px; border-radius: 16px; }
   .store-detail__icon img { inline-size: 60px; block-size: 60px; }
-  .store-modal { border-radius: 24px; }
+  .store-modal { border-radius: 22px; width: min(100vw - 16px, 100%); }
+}
+@media (max-width: 390px) {
+  .store-shell { padding: 0 10px max(24px, env(safe-area-inset-bottom, 0px)); }
+  .store-grid { grid-template-columns: 1fr; }
+  .store-header {
+    flex-direction: column;
+    align-items: stretch;
+    border-radius: 16px;
+  }
+  .store-nav { width: 100%; }
+  .store-detail__title { font-size: 20px; }
+  .store-modal { border-radius: 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .store-card, .store-shell .btn, .store-nav__link { transition: none; }
-  .store-card:hover { transform: none; }
+  .store-card, .store-shell .btn, .store-nav__link { transition: none; animation: none; scale: none; }
+  .store-card:hover, .store-card:active { transform: none; scale: none; }
 }
 
 /* 详情页与提交页的标题（store.js 直接输出 h某级 / 无 class 的标题） */

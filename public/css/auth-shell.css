@@ -262,15 +262,32 @@ body.lg-scope .auth-lang-select::part(trigger) {
   line-height: 32px;
 }
 
+@media (max-width: 640px) {
+  .login-container,
+  .setup-container {
+    width: min(100% - 28px, 32rem);
+    padding-block: 24px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+  .auth-card.login-card,
+  .setup-card,
+  .oc-card { border-radius: 22px; }
+  body.blora-page.lg-scope .purchase-container {
+    width: min(100% - 28px, 480px);
+    margin-block-start: 24px;
+  }
+  body.blora-page.lg-scope .purchase-card { border-radius: 22px; }
+}
 @media (max-width: 480px) {
   .login-container { padding: 20px 14px; }
-  .auth-card.login-card { padding: 26px 20px; border-radius: 26px; }
+  .auth-card.login-card { padding: 26px 20px; border-radius: 22px; }
   .setup-container { padding-block: 24px; }
   .setup-card { padding: 20px; }
   .auth-card__header h1 { font-size: 21px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .auth-simple-link a { transition: none; }
+  .auth-simple-link a,
+  body.blora-page.lg-scope .purchase-btn { transition: none; scale: none; }
 }
 
 /* ---------- 插件安装确认页（plugin-install.html，内联布局 + 本文件材质） ---------- */
@@ -341,10 +358,10 @@ body.blora-page.lg-scope .purchase-btn {
   color: var(--lg-on-accent);
   font-family: var(--lg-font);
   box-shadow: 0 4px 14px var(--lg-accent-glow);
-  transition: background-color var(--lg-dur-fast) var(--lg-ease), transform var(--lg-dur-fast) var(--lg-ease);
+  transition: background .15s, scale .32s var(--spring), filter .15s;
 }
 body.blora-page.lg-scope .purchase-btn:hover { background: var(--lg-accent-strong); opacity: 1; }
-body.blora-page.lg-scope .purchase-btn:active:not(:disabled) { transform: scale(0.97); }
+body.blora-page.lg-scope .purchase-btn:active:not(:disabled) { scale: .955; transform: none; }
 body.blora-page.lg-scope .purchase-btn:disabled { opacity: 0.45; }
 body.blora-page.lg-scope .back-link { color: var(--lg-accent-ink); }
 body.blora-page.lg-scope .error-text { color: var(--lg-red-ink); }

@@ -202,7 +202,16 @@ body.blora-page.lg-scope.usage-page::before {
 .usage-state { color: var(--lg-fg-secondary); }
 
 @media (max-width: 640px) {
-  .usage-shell { width: min(100% - 20px, 960px); padding-top: 16px; }
+  .usage-shell {
+    width: min(100% - 20px, 960px);
+    padding-top: max(16px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
   .usage-card { padding: 20px 16px; border-radius: 22px; }
-  .usage-header { margin-bottom: 14px; }
+  .usage-header { margin-bottom: 14px; flex-wrap: wrap; }
+}
+@media (max-width: 390px) {
+  .usage-shell { width: min(100% - 16px, 960px); }
+  .usage-card { padding: 16px 14px; border-radius: 22px; }
+  .usage-title-row h1 { font-size: 22px; }
 }
