@@ -149,6 +149,37 @@
   <script>
     let pending2FAUserId = null;
 
+    // HTTPS 反代未把协议正确传给 Express 时，浏览器 Origin(https) 与服务端
+    // requestOrigin(http) 不一致，同源校验会失败；登录写请求必须带会话 CSRF。
+    async function getCsrfHeaders(extra = {}) {
+      const headers = { ...extra };
+      try {
+        const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' })
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({}));
+        if (csrf.token) headers['X-CSRF-Token'] = csrf.token;
+      } catch (_) {}
+      return headers;
+    }
+
+    async function ensureFormCsrf(form) {
+      if (!form) return;
+      try {
+        const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' })
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({}));
+        if (!csrf.token) return;
+        let input = form.querySelector('input[name="_csrf"]');
+        if (!input) {
+          input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = '_csrf';
+          form.prepend(input);
+        }
+        input.value = csrf.token;
+      } catch (_) {}
+    }
+
     async function handleLogin(e) {
       e.preventDefault();
       const loginInput = document.querySelector('#loginInput input')?.value || '';
@@ -164,7 +195,7 @@
       try {
         const res = await fetch('/auth/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          headers: await getCsrfHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
           credentials: 'same-origin',
           body: JSON.stringify({ login: loginInput, password })
         });
@@ -206,7 +237,7 @@
       try {
         const res = await fetch('/auth/login/2fa', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getCsrfHeaders({ 'Content-Type': 'application/json' }),
           credentials: 'same-origin',
           body: JSON.stringify({ userId: pending2FAUserId, code })
         });
@@ -309,7 +340,7 @@
         const username = (loginInput && loginInput.value || '').trim();
         const optRes = await fetch('/api/passkey/login/options', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getCsrfHeaders({ 'Content-Type': 'application/json' }),
           credentials: 'same-origin',
           body: JSON.stringify(username ? { username } : {}),
         });
@@ -330,7 +361,7 @@
         const authBody = prepareAuthenticationResponse(credential);
         const verifyRes = await fetch('/api/passkey/login/verify', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getCsrfHeaders({ 'Content-Type': 'application/json' }),
           credentials: 'same-origin',
           body: JSON.stringify({
             username: username || undefined,
@@ -398,6 +429,8 @@
         console.error('[登录页] 查询飞书状态失败:', err);
       }
     })();
+
+    ensureFormCsrf(document.getElementById('loginForm'));
 
     // 显示错误信息
     const params = new URLSearchParams(window.location.search);

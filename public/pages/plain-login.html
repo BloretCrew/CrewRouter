@@ -112,6 +112,39 @@
     function showError(message) { errorEl.textContent = message; errorEl.hidden = false; }
     function clearError() { errorEl.textContent = ''; errorEl.hidden = true; }
 
+    // HTTPS 反代未把协议正确传给 Express 时，浏览器 Origin(https) 与服务端
+    // requestOrigin(http) 不一致；登录写请求必须带会话 CSRF。
+    async function getCsrfHeaders(extra = {}) {
+      const headers = { ...extra };
+      try {
+        const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' })
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({}));
+        if (csrf.token) headers['X-CSRF-Token'] = csrf.token;
+      } catch (_) {}
+      return headers;
+    }
+
+    async function ensureFormCsrf(form) {
+      if (!form) return;
+      try {
+        const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' })
+          .then((r) => (r.ok ? r.json() : {}))
+          .catch(() => ({}));
+        if (!csrf.token) return;
+        let input = form.querySelector('input[name="_csrf"]');
+        if (!input) {
+          input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = '_csrf';
+          form.prepend(input);
+        }
+        input.value = csrf.token;
+      } catch (_) {}
+    }
+
+    ensureFormCsrf(document.getElementById('loginForm'));
+
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
       if (!window.fetch) return;
       event.preventDefault();
@@ -121,7 +154,7 @@
       try {
         const response = await fetch('/auth/login', {
           method: 'POST', credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          headers: await getCsrfHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
           body: JSON.stringify({ login: document.getElementById('loginInput').value, password: document.getElementById('password').value })
         });
         const data = await response.json();
@@ -148,7 +181,8 @@
       clearError();
       try {
         const response = await fetch('/auth/login/2fa', {
-          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', credentials: 'same-origin',
+          headers: await getCsrfHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ userId: pending2FAUserId, code: document.getElementById('tfaCode').value })
         });
         const data = await response.json();
