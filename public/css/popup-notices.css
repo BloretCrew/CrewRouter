@@ -8,6 +8,9 @@
 
 /* ---------- 遮罩层：原生 dialog 覆盖 UA 默认 ---------- */
 .cr-pn-overlay {
+  --cr-pn-motion: 0.34s;
+  --cr-pn-motion-exit: 0.3s;
+  --cr-pn-ease: var(--lg-ease-out, cubic-bezier(0.22, 1, 0.36, 1));
   position: fixed;
   inset: 0;
   inline-size: 100%;
@@ -31,13 +34,24 @@
   background: var(--lg-scrim);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+  opacity: 0;
+  transition: opacity var(--cr-pn-motion) var(--cr-pn-ease);
+}
+
+.cr-pn-overlay.is-visible::backdrop {
+  opacity: 1;
+}
+
+.cr-pn-overlay.is-exiting::backdrop {
+  opacity: 0;
+  transition-duration: var(--cr-pn-motion-exit);
 }
 
 :root[data-blora-color-scheme="dark"] .cr-pn-overlay::backdrop {
   background: rgba(0, 0, 0, 0.48);
 }
 
-/* 不支持 <dialog> 时的 fixed 兜底 */
+/* 不支持 <dialog> 时的 fixed 兜底：自带 scrim，随 is-visible / is-exiting 淡入淡出 */
 .cr-pn-overlay.is-fallback {
   z-index: 10050;
   display: flex;
@@ -46,6 +60,17 @@
   background: var(--lg-scrim);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+  opacity: 0;
+  transition: opacity var(--cr-pn-motion) var(--cr-pn-ease);
+}
+
+.cr-pn-overlay.is-fallback.is-visible {
+  opacity: 1;
+}
+
+.cr-pn-overlay.is-fallback.is-exiting {
+  opacity: 0;
+  transition-duration: var(--cr-pn-motion-exit);
 }
 
 html.cr-pn-lock { overflow: hidden; }
@@ -61,6 +86,41 @@ html.cr-pn-lock { overflow: hidden; }
   /* 居中由 stage 承担；layout 只负责承载 */
   display: block;
   box-sizing: border-box;
+  opacity: 0;
+  transform: scale(0.94) translateY(12px);
+  transform-origin: center center;
+  transition:
+    opacity var(--cr-pn-motion) var(--cr-pn-ease),
+    transform var(--cr-pn-motion) var(--cr-pn-ease);
+  will-change: opacity, transform;
+}
+
+.cr-pn-overlay.is-visible .cr-pn-layout {
+  opacity: 1;
+  transform: none;
+}
+
+.cr-pn-overlay.is-exiting .cr-pn-layout {
+  opacity: 0;
+  transform: scale(0.94) translateY(10px);
+  transition-duration: var(--cr-pn-motion-exit);
+  pointer-events: none;
+}
+
+.cr-pn-overlay.is-fallback .cr-pn-layout {
+  /* fallback 时整层 opacity 已负责淡入淡出；内容只做缩放，避免双重变淡 */
+  opacity: 1;
+}
+
+.cr-pn-overlay.is-fallback:not(.is-visible):not(.is-exiting) .cr-pn-layout,
+.cr-pn-overlay.is-fallback.is-exiting .cr-pn-layout {
+  opacity: 1;
+  transform: scale(0.94) translateY(10px);
+}
+
+.cr-pn-overlay.is-fallback.is-visible .cr-pn-layout {
+  opacity: 1;
+  transform: none;
 }
 
 /* 气泡列表：左侧悬浮层（>1 条时显示）；宽度受限，长标题截断 */
@@ -174,7 +234,6 @@ html.cr-pn-lock { overflow: hidden; }
   place-items: center;
   padding: clamp(12px, 3vh, 32px) clamp(12px, 3vw, 32px);
   box-sizing: border-box;
-  animation: cr-pn-stage-in 0.5s var(--lg-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 
 /* ---------- 卡片：全玻璃面板 ---------- */
@@ -215,17 +274,12 @@ html.cr-pn-lock { overflow: hidden; }
 
 .cr-pn-card.is-leaving {
   opacity: 0 !important;
-  transform: translateY(16px) scale(0.93) !important;
+  transform: translateY(12px) scale(0.94) !important;
   pointer-events: none;
+  transition-duration: var(--cr-pn-motion-exit, 0.3s);
 }
 
 .cr-pn-card::before { content: none; }
-
-/* 入场动画 */
-@keyframes cr-pn-stage-in {
-  from { opacity: 0; transform: scale(0.92) translateY(12px); }
-  to { opacity: 1; transform: none; }
-}
 
 /* ---------- Hero：暖色调极光流动 ----------
    设计：4 枚大尺寸暖色光斑各自沿关键帧路径漂移（transform 动画，
@@ -615,15 +669,30 @@ html.cr-pn-lock { overflow: hidden; }
 
 /* ---------- 无障碍与降级 ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .cr-pn-stage { animation: none; }
-  .cr-pn-card { transition: none; }
+  .cr-pn-overlay,
+  .cr-pn-overlay::backdrop,
+  .cr-pn-overlay.is-fallback,
+  .cr-pn-layout,
+  .cr-pn-card {
+    transition: none !important;
+  }
+  .cr-pn-layout,
+  .cr-pn-overlay.is-exiting .cr-pn-layout,
+  .cr-pn-overlay.is-fallback:not(.is-visible) .cr-pn-layout {
+    opacity: 1;
+    transform: none;
+  }
+  .cr-pn-overlay::backdrop,
+  .cr-pn-overlay.is-fallback {
+    opacity: 1;
+  }
   .cr-pn-hero-gradient { animation: none !important; background-size: 100% 100% !important; }
   .cr-pn-hero-blob { animation: none !important; }
   .cr-pn-wordmark span.is-swapping { filter: none; opacity: 1; }
   .cr-pn-bubble { transition: none; }
   .cr-pn-close { transition: none; }
+  .cr-pn-stage > .cr-pn-card.is-active { animation: none; }
 }
-
 @media (prefers-reduced-transparency: reduce) {
   .cr-pn-card,
   .cr-pn-bubble {

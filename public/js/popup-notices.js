@@ -9,6 +9,7 @@
  *    后打开者在上，避免被 blora-dialog 的 popover 覆盖；不支持时回落 fixed。
  *  - 通知内容全部通过 textContent 写入（不拼 HTML）。
  *  - 上半部分：暖色调动态渐变 + "CrewRouter" 每 50～70ms（随机）切换系统字体。
+ *  - 出现/消失：遮罩淡入淡出 + 内容柔和缩放（约 300～340ms）；prefers-reduced-motion 时跳过。
  *  - 已读按服务端记录：每条在激活/关闭时批量上报，幂等。
  *  - 任何异常都不阻塞控制台（静默 console.warn）。
  */
@@ -19,6 +20,9 @@
   var FONT_SWAP_MS_MAX = 70;
   var FONT_SWAP_FLASH_MS = 40;
   var SEEN_FLUSH_DELAY_MS = 250;
+  var OVERLAY_ENTER_MS = 340;
+  var OVERLAY_EXIT_MS = 300;
+  var CARD_LEAVE_MS = 300;
   var DEFAULT_CLOSE_TEXT = '知道了';
 
   function nextFontDelay() {
@@ -197,6 +201,7 @@
     closedIds: new Set(),
     pendingSeen: new Set(),
     seenFlushTimer: null,
+    exitTimer: null,
     fontTimer: null,
     fontIndex: 0,
     fontList: null,
@@ -204,6 +209,7 @@
     opener: null,
     lockSnapshot: null,
     i18nHandler: null,
+    closing: false,
   };
 
   function remainingItems() {
@@ -503,6 +509,70 @@
     }
   }
 
+  function clearExitTimer() {
+    if (state.exitTimer) {
+      global.clearTimeout(state.exitTimer);
+      state.exitTimer = null;
+    }
+  }
+
+  function playEnterAnimation(dialog) {
+    if (!dialog) return;
+    dialog.classList.remove('is-exiting');
+    if (prefersReducedMotion()) {
+      dialog.classList.add('is-visible');
+      return;
+    }
+    dialog.classList.remove('is-visible');
+    // 强制一次样式结算，确保从缩放/透明起点过渡到可见
+    void dialog.offsetWidth;
+    var armed = false;
+    function arm() {
+      if (armed || state.dialog !== dialog || state.closing) return;
+      armed = true;
+      dialog.classList.add('is-visible');
+    }
+    // 双 rAF 保证过渡起点落在绘制后；headless/后台页 rAF 可能被节流，用短延时兜底
+    if (typeof global.requestAnimationFrame === 'function') {
+      global.requestAnimationFrame(function () {
+        global.requestAnimationFrame(arm);
+      });
+    }
+    global.setTimeout(arm, 32);
+  }
+
+  function teardownOverlay(dialog, opener) {
+    clearExitTimer();
+    stopFontCycle();
+    global.document.removeEventListener('keydown', onKeyDown);
+    global.document.removeEventListener('visibilitychange', onVisibilityChange);
+    if (state.i18nHandler) {
+      global.document.removeEventListener('i18n:ready', state.i18nHandler);
+      state.i18nHandler = null;
+    }
+    if (state.dialog === dialog) {
+      state.dialog = null;
+      state.layout = null;
+      state.bubbles = null;
+      state.stage = null;
+      state.items = [];
+      state.activeId = null;
+      state.preview = false;
+      state.opener = null;
+    }
+    state.closing = false;
+    if (dialog) {
+      try {
+        if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+      } catch (_) { /* ignore */ }
+      if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
+    }
+    unlockScroll();
+    if (opener && typeof opener.focus === 'function') {
+      try { opener.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
+    }
+  }
+
   function open(items, options) {
     options = options || {};
     var list = normalizeItems(items, options.preview === true);
@@ -517,6 +587,7 @@
     state.activeId = list[0].id;
     state.fontIndex = 0;
     state.fontList = null;
+    state.closing = false;
     state.opener = global.document.activeElement;
 
     var dialog = global.document.createElement('dialog');
@@ -553,9 +624,11 @@
     }
 
     lockScroll();
+    playEnterAnimation(dialog);
 
     dialog.addEventListener('cancel', function (event) {
       event.preventDefault();
+      if (state.closing) return;
       if (state.activeId != null) closeCard(state.activeId);
     });
     dialog.addEventListener('keydown', onKeyDown);
@@ -570,17 +643,19 @@
     global.document.addEventListener('i18n:ready', state.i18nHandler);
 
     setActive(list[0].id);
-    // 首帧把焦点放到关闭按钮，便于键盘操作
+    // 入场后再聚焦关闭按钮，避免打断缩放淡入
     global.setTimeout(function () {
+      if (state.dialog !== dialog || state.closing) return;
       var card = cardById(state.activeId);
       var button = card && card.querySelector('.cr-pn-close');
       if (button) { try { button.focus({ preventScroll: true }); } catch (_) { button.focus(); } }
-    }, 60);
+    }, prefersReducedMotion() ? 30 : Math.min(120, OVERLAY_ENTER_MS));
     return true;
   }
 
   function closeCard(id) {
     id = Number(id);
+    if (state.closing) return;
     if (!state.items.some(function (item) { return item.id === id; })) return;
     state.closedIds.add(id);
     queueSeen(id);
@@ -591,7 +666,7 @@
       card.classList.add('is-leaving');
       global.setTimeout(function () {
         if (card && card.parentNode) card.parentNode.removeChild(card);
-      }, 240);
+      }, prefersReducedMotion() ? 0 : CARD_LEAVE_MS);
     }
     var list = remainingItems();
     if (!list.length) {
@@ -603,35 +678,35 @@
     setActive(list[nextIndex].id);
   }
 
-  function closeAll() {
-    stopFontCycle();
-    flushSeen();
-    global.document.removeEventListener('keydown', onKeyDown);
-    global.document.removeEventListener('visibilitychange', onVisibilityChange);
-    if (state.i18nHandler) {
-      global.document.removeEventListener('i18n:ready', state.i18nHandler);
-      state.i18nHandler = null;
-    }
+  function closeAll(options) {
+    options = options || {};
     var dialog = state.dialog;
+    if (!dialog) {
+      unlockScroll();
+      return;
+    }
+    if (state.closing && !options.immediate) return;
+
+    flushSeen();
+    stopFontCycle();
+
     var opener = state.opener;
-    state.dialog = null;
-    state.layout = null;
-    state.bubbles = null;
-    state.stage = null;
-    state.items = [];
-    state.activeId = null;
-    state.preview = false;
-    state.opener = null;
-    if (dialog) {
-      try {
-        if (typeof dialog.close === 'function' && dialog.open) dialog.close();
-      } catch (_) { /* ignore */ }
-      if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
+    var immediate = options.immediate === true || prefersReducedMotion();
+
+    if (immediate) {
+      teardownOverlay(dialog, opener);
+      return;
     }
-    unlockScroll();
-    if (opener && typeof opener.focus === 'function') {
-      try { opener.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
-    }
+
+    state.closing = true;
+    dialog.classList.remove('is-visible');
+    dialog.classList.add('is-exiting');
+    // 离场期间仍保留 dialog 引用，避免重复打开时序错乱；交互已由 is-exiting 关掉
+    clearExitTimer();
+    state.exitTimer = global.setTimeout(function () {
+      state.exitTimer = null;
+      teardownOverlay(dialog, opener);
+    }, OVERLAY_EXIT_MS);
   }
 
   function destroy() {
@@ -642,7 +717,7 @@
       global.clearTimeout(state.seenFlushTimer);
       state.seenFlushTimer = null;
     }
-    closeAll();
+    closeAll({ immediate: true });
   }
 
   /* ---------------- 拉取 ---------------- */

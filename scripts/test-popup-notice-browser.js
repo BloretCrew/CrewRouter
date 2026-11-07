@@ -115,6 +115,20 @@ async function waitFor(fn, timeoutMs = 12000, intervalMs = 150) {
   return null;
 }
 
+async function waitOverlayGone(cdp, timeoutMs = 2500) {
+  const gone = await waitFor(() => cdp.evaluate(`!document.querySelector('dialog.cr-pn-overlay')`), timeoutMs, 50);
+  assert.ok(gone, '弹窗遮罩应在离场动画后移除');
+}
+
+async function waitOverlayVisible(cdp, timeoutMs = 2500) {
+  const visible = await waitFor(
+    () => cdp.evaluate(`document.querySelector('dialog.cr-pn-overlay[open]')?.classList.contains('is-visible')`),
+    timeoutMs,
+    50,
+  );
+  assert.ok(visible, '弹窗应完成入场（is-visible）');
+}
+
 function startServer(configPath, logPath) {
   const env = {
     PATH: process.env.PATH,
@@ -243,6 +257,8 @@ async function main() {
     await newPage(cdp, `${BASE}/console`);
     const opened = await waitFor(() => cdp.evaluate(`!!document.querySelector('dialog.cr-pn-overlay[open]')`));
     assert.ok(opened, '弹窗通知应自动打开');
+    const entered = await waitFor(() => cdp.evaluate(`document.querySelector('dialog.cr-pn-overlay')?.classList.contains('is-visible')`));
+    assert.ok(entered, '打开后应带 is-visible 入场类');
     assert.equal(await cdp.evaluate(`document.querySelectorAll('.cr-pn-card').length`), 2, '应渲染 2 张卡片');
     assert.equal(await cdp.evaluate(`document.querySelectorAll('.cr-pn-bubble').length`), 2, '应渲染 2 个气泡');
     assert.equal(await cdp.evaluate(`document.querySelector('.cr-pn-overlay').getAttribute('aria-modal')`), 'true');
@@ -303,13 +319,15 @@ async function main() {
     assert.equal(await cdp.evaluate(`document.querySelector('.cr-pn-bubble[data-id="2"]').classList.contains('is-active')`), true);
     await cdp.screenshot('console-1440-active2');
 
-    // ---------- 4. 逐条关闭 ----------
+    // ---------- 4. 逐条关闭（末条应走遮罩离场动画） ----------
     assert.ok(await cdp.click('.cr-pn-card.is-active .cr-pn-close'));
-    await sleep(400);
-    assert.equal(await cdp.evaluate(`document.querySelectorAll('.cr-pn-card').length`), 1, '关闭后应剩 1 张');
+    await sleep(420);
+    assert.equal(await cdp.evaluate(`document.querySelectorAll('.cr-pn-card:not(.is-leaving)').length`), 1, '关闭后应剩 1 张');
     assert.equal(await cdp.evaluate(`document.querySelectorAll('.cr-pn-bubble').length`), 0, '只剩一条时不再显示气泡列表');
     assert.ok(await cdp.click('.cr-pn-card.is-active .cr-pn-close'));
-    await sleep(500);
+    const exiting = await waitFor(() => cdp.evaluate(`document.querySelector('dialog.cr-pn-overlay')?.classList.contains('is-exiting')`));
+    assert.ok(exiting, '最后一条关闭时应进入 is-exiting');
+    await waitFor(() => cdp.evaluate(`!document.querySelector('dialog.cr-pn-overlay')`), 2500);
     assert.equal(await cdp.evaluate(`!!document.querySelector('dialog.cr-pn-overlay')`), false, '全部关闭后应移除浮层');
     assert.equal(await cdp.evaluate(`document.documentElement.classList.contains('cr-pn-lock')`), false, '滚动应解锁');
     const seenBodies = await cdp.evaluate('window.__pnSeen || []');
@@ -389,24 +407,25 @@ async function main() {
     assert.equal(await cdp.evaluate(`document.querySelectorAll('.cr-pn-bubble').length`), 0, '预览单条不带气泡列表');
     await cdp.screenshot('admin-preview-1440');
     await cdp.evaluate(`document.querySelector('dialog.cr-pn-overlay').querySelector('.cr-pn-close').click()`);
-    await sleep(400);
-    assert.equal(await cdp.evaluate(`!!document.querySelector('dialog.cr-pn-overlay')`), false);
+    await waitOverlayGone(cdp);
 
     // ---------- 7. 编辑弹窗 + 顶部草稿预览 ----------
     await cdp.evaluate(`adminApp.openPopupNoticeEditor(1)`);
     await waitFor(() => cdp.evaluate(`document.getElementById('popupNoticeTitle').value.length > 0`));
     assert.equal(await cdp.evaluate(`document.getElementById('popupNoticeTitle').value`), '欢迎使用 CrewRouter');
     assert.equal(await cdp.evaluate(`document.getElementById('popupNoticeEnabled').checked`), true, '启用开关应反映通知状态');
+    await cdp.evaluate(`adminApp.closePopupNoticeEditor()`);
+    await sleep(200);
     // 「停用」一条后重新打开编辑，开关应为关闭
-    await cdp.evaluate(`document.querySelector('.cr-admin-pn-row .cr-admin-pn-actions .blora-button[data-variant="outline"]:nth-of-type(2)')?.click()`);
-    await sleep(500);
     const disabledState = await cdp.evaluate(`(async () => {
       const row = document.querySelector('.cr-admin-pn-row');
       const buttons = [...row.querySelectorAll('.cr-admin-pn-actions .blora-button')];
-      buttons.find(b => b.textContent === '停用')?.click();
-      await new Promise(r => setTimeout(r, 400));
+      const disableBtn = buttons.find(b => (b.textContent || '').trim() === '停用');
+      if (!disableBtn) return 'missing-disable';
+      disableBtn.click();
+      await new Promise(r => setTimeout(r, 500));
       adminApp.openPopupNoticeEditor(1);
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 250));
       const checked = document.getElementById('popupNoticeEnabled').checked;
       adminApp.closePopupNoticeEditor();
       return checked;
@@ -416,16 +435,17 @@ async function main() {
     await cdp.evaluate(`(async () => {
       const row = document.querySelector('.cr-admin-pn-row');
       const buttons = [...row.querySelectorAll('.cr-admin-pn-actions .blora-button')];
-      buttons.find(b => b.textContent === '启用')?.click();
-      await new Promise(r => setTimeout(r, 400));
+      buttons.find(b => (b.textContent || '').trim() === '启用')?.click();
+      await new Promise(r => setTimeout(r, 500));
       adminApp.openPopupNoticeEditor(1);
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 250));
     })()`);
     await sleep(300);
     // 编辑弹窗内预览：top layer 后打开者应在上，中心点命中预览卡片
     await cdp.evaluate(`adminApp.previewPopupNoticeDraft()`);
     await waitFor(() => cdp.evaluate(`!!document.querySelector('dialog.cr-pn-overlay[open]')`));
-    await sleep(350);
+    await waitOverlayVisible(cdp);
+    await sleep(120);
     const topmost = await cdp.evaluate(`(() => {
       const card = document.querySelector('dialog.cr-pn-overlay .cr-pn-card.is-active');
       const r = card.getBoundingClientRect();
@@ -435,8 +455,7 @@ async function main() {
     assert.equal(topmost, true, '预览应位于编辑弹窗之上');
     await cdp.screenshot('admin-preview-over-editor-1440');
     await cdp.evaluate(`document.querySelector('dialog.cr-pn-overlay .cr-pn-close').click()`);
-    await sleep(400);
-    assert.equal(await cdp.evaluate(`!!document.querySelector('dialog.cr-pn-overlay')`), false);
+    await waitOverlayGone(cdp);
     assert.equal(await cdp.evaluate(`document.getElementById('popupNoticeEditorModal').hasAttribute('open')`), true, '关闭预览后编辑弹窗仍在');
     await cdp.screenshot('admin-editor-1440');
 
@@ -451,7 +470,8 @@ async function main() {
     }));
     await cdp.evaluate(`window.CrewRouterPopupNotices.show(${JSON.stringify(many)})`);
     await waitFor(() => cdp.evaluate(`!!document.querySelector('dialog.cr-pn-overlay[open]')`));
-    await sleep(400);
+    await waitOverlayVisible(cdp);
+    await sleep(120);
     const manyState = await cdp.evaluate(`(() => {
       const card = document.querySelector('.cr-pn-card.is-active');
       const title = card.querySelector('.cr-pn-title');
