@@ -197,7 +197,8 @@ body.blora-page.lg-scope .table-wrap {
   border: 1px solid var(--lg-glass-border);
   border-radius: var(--lg-radius-group);
   background: var(--lg-card-bg);
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 body.blora-page.lg-scope .table-wrap th {
   border-bottom: 1px solid var(--lg-divider);

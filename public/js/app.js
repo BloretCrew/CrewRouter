@@ -3624,7 +3624,7 @@ class ConsoleApp {
       const pendingLabel = analysisStatus.pending_requests ? row(t('后台待分析'), analysisStatus.pending_requests.toLocaleString()) : '';
       const fmtTok = (v) => { const n = Number(v || 0); return `<span title="${n.toLocaleString()}">${this._formatBigNumber(n)}</span>`; };
       setHTML(document.getElementById('userMessageStatsSummary'), [row(t('活跃请求'), s.analyzed_requests || 0), row(t('项目数'), (data.by_workspace || []).length), row(t('活跃天数'), s.active_days || 0), row(t('日均请求'), Number(s.avg_daily_requests || 0).toFixed(1)), row(t('总 Token'), fmtTok(s.total_tokens)), row(t('Git 状态率'), `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
-      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || ('<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>')}</tbody></table></div>`;
+      const table = (headers, rows) => `<div style="overflow-x:auto;overflow-y:hidden;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || ('<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>')}</tbody></table></div>`;
       setHTML(document.getElementById('userMessageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
       setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td></tr>`; }).join('')));
       if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: 'var(--info)', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: 'var(--purple)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
@@ -6293,7 +6293,7 @@ class ConsoleApp {
       if (Array.isArray(data.recent_refs) && data.recent_refs.length) {
         refsHtml = `
           <h4 style="margin:16px 0 8px;font-size:14px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
-          <div style="overflow-x:auto;">
+          <div style="overflow-x:auto;overflow-y:hidden;">
             <table class="table prompt-refs-table">
               <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
               <tbody>

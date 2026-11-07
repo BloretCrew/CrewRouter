@@ -6564,7 +6564,7 @@ async function(ctx) {
     if (history && historyPeriods.length) {
       const formatCents = cents => Number.isFinite(Number(cents)) ? `$${(Number(cents) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
       history.style.display = 'block';
-      setHTML(history, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('历史周期')}</div><div style="overflow:auto;"><table style="width:100%;font-size:12px;"><thead><tr><th style="text-align:left;padding:6px 8px;">周期</th><th style="text-align:right;padding:6px 8px;">使用率</th><th style="text-align:right;padding:6px 8px;">用量</th><th style="text-align:right;padding:6px 8px;">时间</th></tr></thead><tbody>${historyPeriods.map(period => { const percent = Number.isFinite(Number(period.percent)) ? `${Number(period.percent)}%` : '-'; const amount = period.amountCents ? formatCents(period.amountCents.total) : '-'; return `<tr><td style="padding:6px 8px;">${escapeHtml(period.label || period.key)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(percent)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(amount)}</td><td style="padding:6px 8px;text-align:right;color:var(--muted-foreground);">${escapeHtml([period.startsAt, period.resetsAt].filter(Boolean).join(t(' 至 ')) || '-')}</td></tr>`; }).join('')}</tbody></table></div>`);
+      setHTML(history, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('历史周期')}</div><div style="overflow-x:auto;overflow-y:hidden;"><table style="width:100%;font-size:12px;"><thead><tr><th style="text-align:left;padding:6px 8px;">周期</th><th style="text-align:right;padding:6px 8px;">使用率</th><th style="text-align:right;padding:6px 8px;">用量</th><th style="text-align:right;padding:6px 8px;">时间</th></tr></thead><tbody>${historyPeriods.map(period => { const percent = Number.isFinite(Number(period.percent)) ? `${Number(period.percent)}%` : '-'; const amount = period.amountCents ? formatCents(period.amountCents.total) : '-'; return `<tr><td style="padding:6px 8px;">${escapeHtml(period.label || period.key)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(percent)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(amount)}</td><td style="padding:6px 8px;text-align:right;color:var(--muted-foreground);">${escapeHtml([period.startsAt, period.resetsAt].filter(Boolean).join(t(' 至 ')) || '-')}</td></tr>`; }).join('')}</tbody></table></div>`);
     }
   }
 
@@ -7254,7 +7254,7 @@ async function(ctx) {
         setHTML(container, `
           <div style="background:var(--muted);border-radius:12px;padding:20px;">
             <h3 style="margin:0 0 16px 0;font-size:14px;">每日详细统计</h3>
-            <div style="overflow-x:auto;">
+            <div style="overflow-x:auto;overflow-y:hidden;">
               <table>
                 <thead>
                   <tr>
@@ -7491,7 +7491,7 @@ async function(ctx) {
       const analysisStatus = s.analysis_status || {};
       const pendingLabel = analysisStatus.pending_requests ? card(t('后台待分析'), analysisStatus.pending_requests.toLocaleString()) : '';
       setHTML(document.getElementById('messageStatsSummary'), [card(t('活跃请求'), s.analyzed_requests || 0), card(t('活跃项目'), (data.by_workspace || []).length), card(t('活跃天数'), s.active_days || 0), card(t('日均请求'), Number(s.avg_daily_requests || 0).toFixed(1)), card(t('总 Token'), this._formatBigNumber(Number(s.total_tokens || 0))), card(t('Git 状态率'), `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
-      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>'}</tbody></table></div>`;
+      const table = (headers, rows) => `<div style="overflow-x:auto;overflow-y:hidden;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>'}</tbody></table></div>`;
       setHTML(document.getElementById('messageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token', t('Git率')], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${(r.git_requests / Math.max(r.requests, 1) * 100).toFixed(1)}%</td></tr>`; }).join('')));
       setHTML(document.getElementById('messageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
       setHTML(document.getElementById('messageStatsWorkspaceTable'), table([t('项目/工作区'), t('请求数'), 'Token', t('积分'), t('来源')], (data.by_workspace || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td><code>${escapeHtml(r.workspace_path)}</code></td><td>${r.requests}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${Number(r.cost || 0).toFixed(4)}</td><td>${escapeHtml(Object.entries(r.sources || {}).map(([k, v]) => `${k}: ${v}`).join(', '))}</td></tr>`; }).join('')));
@@ -8201,7 +8201,7 @@ async function(ctx) {
     this.modelStatsPage = modelPg.page;
 
     setHTML(container, `
-      <div style="overflow-x:auto;">
+      <div style="overflow-x:auto;overflow-y:hidden;">
         <table>
           <thead>
             <tr>
@@ -8294,7 +8294,7 @@ async function(ctx) {
     this.providerStatsPage = providerPg.page;
 
     setHTML(container, `
-      <div style="overflow-x:auto;">
+      <div style="overflow-x:auto;overflow-y:hidden;">
         <table>
           <thead>
             <tr>
@@ -8511,7 +8511,7 @@ async function(ctx) {
     if (container.dataset.statsSignature === signature) return;
     container.dataset.statsSignature = signature;
     setHTML(container, `
-      <div style="overflow-x:auto;">
+      <div style="overflow-x:auto;overflow-y:hidden;">
         <table>
           <thead>
             <tr>
@@ -8567,7 +8567,7 @@ async function(ctx) {
     if (container.dataset.statsSignature === signature) return;
     container.dataset.statsSignature = signature;
     setHTML(container, `
-      <div style="overflow-x:auto;">
+      <div style="overflow-x:auto;overflow-y:hidden;">
         <table>
           <thead>
             <tr>

@@ -118,6 +118,54 @@ async function main() {
       await goto(session.cdp, `${base}${path}`);
       const box = await overflow(session.cdp);
       assert.ok(box.overflow <= 2, `${name} 390 无横向溢出 (${box.overflow}, html=${box.html}, inner=${box.inner})`);
+      if (name === 'console' || name === 'admin') {
+        const scroll = await session.cdp.evaluate(`(() => {
+          const cs = el => getComputedStyle(el);
+          const html = document.documentElement;
+          const body = document.body;
+          const main = document.querySelector('.main-content');
+          const section = document.querySelector('.lg-page.active .content-section, .page.active .content-section');
+          const nested = [...document.querySelectorAll('div, section, article, main, table')]
+            .filter(el => {
+              if (el.closest('blora-dialog, blora-drawer, .modal, .pg-container')) return false;
+              const s = cs(el);
+              const oy = s.overflowY;
+              if (oy !== 'auto' && oy !== 'scroll') return false;
+              const h = el.clientHeight;
+              return h > 160 && el.scrollHeight > h + 8;
+            })
+            .map(el => ({
+              tag: el.tagName.toLowerCase(),
+              id: el.id || '',
+              className: String(el.className || '').slice(0, 80),
+              h: el.clientHeight,
+              sh: el.scrollHeight,
+              oy: cs(el).overflowY,
+              ox: cs(el).overflowX,
+            }));
+          return {
+            htmlOy: cs(html).overflowY,
+            bodyOy: cs(body).overflowY,
+            mainOy: main ? cs(main).overflowY : null,
+            sectionOy: section ? cs(section).overflowY : null,
+            nested,
+          };
+        })()`);
+        assert.notEqual(scroll.bodyOy, 'auto', `${name} body 不应是纵向滚动容器`);
+        assert.notEqual(scroll.bodyOy, 'scroll', `${name} body 不应是纵向滚动容器`);
+        if (scroll.mainOy) {
+          assert.notEqual(scroll.mainOy, 'auto', `${name} .main-content 不应是纵向滚动容器`);
+          assert.notEqual(scroll.mainOy, 'scroll', `${name} .main-content 不应是纵向滚动容器`);
+        }
+        if (scroll.sectionOy) {
+          assert.notEqual(scroll.sectionOy, 'auto', `${name} .content-section 不应是纵向滚动容器`);
+          assert.notEqual(scroll.sectionOy, 'scroll', `${name} .content-section 不应是纵向滚动容器`);
+        }
+        const offenders = scroll.nested.filter(n =>
+          /content-section|main-content|app-container|stats-table-card|blora-card|chart-card/.test(`${n.className} ${n.id}`)
+        );
+        assert.equal(offenders.length, 0, `${name} 区块不应各自滚动 ${JSON.stringify(offenders)}`);
+      }
       if (name === 'showcase') {
         const mobileMotion = await session.cdp.evaluate(`(() => {
           const btn = document.querySelector('.nav-cta, .hero-buttons .btn-primary');

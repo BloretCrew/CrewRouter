@@ -1001,6 +1001,8 @@ body.blora-page::before { content: none; }
   background: var(--sheet);
   background-image: none;
   box-shadow: var(--lg-shadow-card);
+  overflow-x: clip;
+  overflow-y: visible;
 }
 .lg-page .content-section::before { content: none; }
 .lg-page .content-section + .content-section { margin-block-start: 20px; }
@@ -1238,6 +1240,37 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) { color: var(--lg-f
 blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-child { display: inline-block; margin-block-end: 2px; color: var(--lg-fg); font-size: 15px; font-weight: 600; }
 
 /* ---------- 6. 壳层：侧栏为悬浮玻璃面板（macOS 26 侧栏），选中态中性 ---------- */
+.blora-page .app-container,
+.blora-page .main-content {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+/* 表格只横向滑。overflow-x:auto 且 overflow-y 为 visible 时，Y 会算成 auto，
+   每个表/区块都会变成一条竖向滚动条，把整页手势吃掉。 */
+:is(.lg-page, .lg-scope) :is(
+  .table-scroll,
+  .table-wrap,
+  .table-wrapper,
+  .blora-table-wrap,
+  .users-table,
+  .models-table,
+  .usage-table-wrap,
+  .usage-detail-table,
+  .multi-stats-combination-table-wrap,
+  .stats-table-card > div
+),
+.blora-page #usageLogsList {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+}
+:is(.lg-page, .lg-scope) [style*="overflow-x:auto"],
+:is(.lg-page, .lg-scope) [style*="overflow-x: auto"] {
+  overflow-y: hidden;
+}
 .blora-page .content-header {
   border-bottom: 0;
   padding-bottom: 0;
@@ -1926,25 +1959,52 @@ blora-dialog.lg-scope::part(close):active,
 
 /* ---------- 9. 全页移动端（晶液是桌面窗，这里用同一套令牌收 390 布局） ---------- */
 @media (max-width: 640px) {
-  html:has(.blora-page),
-  body.blora-page {
+  /* 只让视口滚。overflow-x 非 visible 会把 overflow-y 算成 auto/clip，
+     html+body+主栏+每个区块叠在一起就会出现「整页滚不动、每块一条滚动条」。 */
+  html:has(.blora-page):not(:has(.pg-container)) {
     overflow-x: clip;
+    overflow-y: auto;
+  }
+  body.blora-page:not(:has(.pg-container)) {
+    overflow: visible;
+    height: auto;
+  }
+  .blora-page .app-container {
+    overflow: visible;
+    height: auto;
+    min-height: 100dvh;
+    align-items: flex-start;
+  }
+  .blora-page .main-content {
+    overflow: visible;
+    height: auto;
+    flex: 1 1 auto;
+    width: 100%;
+    padding-inline: 16px;
+    padding-top: calc(68px + env(safe-area-inset-top, 0px));
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+  .blora-page .page,
+  .lg-page {
+    overflow: visible;
   }
   .blora-page .main-content,
   .blora-page .content,
-  .lg-page,
-  .lg-scope {
+  .lg-page {
     min-width: 0;
     max-width: 100%;
+  }
+  .lg-page .content-section,
+  .lg-page .blora-card,
+  .lg-page .chart-card,
+  .lg-page .stats-table-card,
+  .lg-page .stat-card {
+    overflow-x: clip;
+    overflow-y: visible;
   }
   .blora-page .mobile-topbar {
     height: calc(56px + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);
-  }
-  .blora-page .main-content {
-    padding-inline: 16px;
-    padding-top: calc(68px + env(safe-area-inset-top, 0px));
-    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
   }
   .lg-page :is(.model-library-header, .aml-header, .section-header, .content-header, .store-header, .usage-header, .page-header, .data-title) {
     flex-wrap: wrap;
@@ -1973,10 +2033,24 @@ blora-dialog.lg-scope::part(close):active,
     max-width: 100%;
     min-width: 0;
   }
-  :is(.lg-page, .lg-scope) :is(.users-table, .models-table, .table-scroll, .table-wrap, .usage-detail-table, .stats-table, .blora-table) {
+  :is(.lg-page, .lg-scope) :is(
+    .table-scroll,
+    .table-wrap,
+    .table-wrapper,
+    .blora-table-wrap,
+    .users-table,
+    .models-table,
+    .usage-table-wrap,
+    .usage-detail-table,
+    .multi-stats-combination-table-wrap,
+    .stats-table-card > div
+  ),
+  .blora-page #usageLogsList {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-y: hidden;
     max-width: 100%;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
   }
   :is(.lg-page, .lg-scope) :is(td, code, .mono, .model-id, pre) { overflow-wrap: anywhere; }
   :is(.lg-page, .lg-scope) .admin-pagination,

@@ -171,7 +171,7 @@
 #statsPage .chart-card h4 { margin: 0 0 12px; color: var(--lg-fg); font-family: var(--lg-font); font-size: 15px; font-weight: 600; }
 #statsPage .chart-container { height: 280px; }
 #statsPage .stats-table-card { margin-block-start: 20px; }
-#statsPage .stats-table-card > div { overflow-x: auto; }
+#statsPage .stats-table-card > div { overflow-x: auto; overflow-y: hidden; }
 #statsPage :is(.stats-table, .stats-table-card table) {
   width: 100%;
   border: 0;
