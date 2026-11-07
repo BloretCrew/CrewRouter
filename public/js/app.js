@@ -7977,7 +7977,9 @@ class ConsoleApp {
       const baseUrl = data.env.ANTHROPIC_BASE_URL;
       const apiKey = data.env.ANTHROPIC_AUTH_TOKEN;
 
-      const generated = window.CrewRouterClientConfig.generate(tool, { baseUrl, apiKey, claudeConfig: data });
+      const generated = window.CrewRouterClientConfig.generateShellCommand
+        ? window.CrewRouterClientConfig.generateShellCommand(tool, { baseUrl, apiKey, claudeConfig: data })
+        : Object.assign({}, window.CrewRouterClientConfig.generate(tool, { baseUrl, apiKey, claudeConfig: data }), { shell: '' });
       const bridge = window.crewrouterDesktop;
       let target = null;
       if (generated.supported && bridge?.getClientConfigTarget && bridge?.writeClientConfig) {
@@ -7985,10 +7987,13 @@ class ConsoleApp {
       }
       if (configRequest !== this._configRequestId) return;
       const desktop = !!target?.supported;
+      const hasShell = !!(generated.supported && generated.shell);
       this._desktopClientConfig = desktop ? { tool, baseUrl, apiKey, model: 'claude-fable-5' } : null;
+      this._configOutput = { content: generated.content || '', shell: generated.shell || '', hasShell };
       document.getElementById('configOutputTitle').textContent = desktop ? t('写入') + ' ' + generated.title + '？' : generated.title;
       document.getElementById('configOutputDesc').textContent = t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
-      document.getElementById('configOutputContent').value = generated.content;
+      document.getElementById('configOutputContent').value = generated.content || '';
+      document.getElementById('configShellContent').value = generated.shell || '';
       document.getElementById('desktopConfigWrite').hidden = !desktop;
       document.getElementById('desktopConfigPath').textContent = target?.path || '';
       document.getElementById('desktopConfigNotice').textContent = desktop
@@ -8003,6 +8008,9 @@ class ConsoleApp {
       document.getElementById('desktopConfigWriteButton').hidden = !desktop;
       document.getElementById('desktopConfigWriteButton').disabled = false;
       document.getElementById('desktopConfigStatus').textContent = generated.reason ? t(generated.reason) : '';
+      document.getElementById('configOutputModeWrap').hidden = !hasShell;
+      this._setConfigOutputMode('content');
+      this._bindConfigOutputMode();
       this.showModal('configOutputModal');
       const modal = document.getElementById('configOutputModal');
       if (!modal._clientConfigCleanup) {
@@ -8010,15 +8018,53 @@ class ConsoleApp {
         modal.addEventListener('blora-before-close', () => {
           this._configRequestId = (this._configRequestId || 0) + 1;
           this._desktopClientConfig = null;
+          this._configOutput = null;
         });
         modal.addEventListener('blora-close', () => {
           if (modal.hasAttribute('open')) return;
           this._desktopClientConfig = null;
+          this._configOutput = null;
           document.getElementById('configOutputContent').value = '';
+          document.getElementById('configShellContent').value = '';
         });
       }
     } catch (e) {
       if (configRequest === this._configRequestId) alert(t('生成配置失败'));
+    }
+  }
+
+  _bindConfigOutputMode() {
+    const seg = document.getElementById('configOutputMode');
+    if (!seg || seg._configOutputModeBound) return;
+    seg._configOutputModeBound = true;
+    seg.addEventListener('blora-change', (e) => {
+      const value = e.detail?.value || seg.value;
+      if (value) this._setConfigOutputMode(value);
+    });
+  }
+
+  _setConfigOutputMode(mode) {
+    const next = mode === 'shell' && this._configOutput?.hasShell ? 'shell' : 'content';
+    if (this._configOutputMode === next && document.getElementById('configOutputContent')?.hidden === (next !== 'content')) {
+      return;
+    }
+    this._configOutputMode = next;
+    const seg = document.getElementById('configOutputMode');
+    if (seg && seg.value !== next) {
+      seg.querySelector(`.blora-segmented__item[data-value="${next}"]`)?.click();
+    }
+    const content = document.getElementById('configOutputContent');
+    const shell = document.getElementById('configShellContent');
+    const hint = document.getElementById('configShellHint');
+    if (content) content.hidden = next !== 'content';
+    if (shell) shell.hidden = next !== 'shell';
+    if (hint) hint.hidden = next !== 'shell';
+    const label = next === 'shell' ? t('复制终端命令') : t('复制配置');
+    for (const id of ['configCopyButton', 'configManualCopy']) {
+      const btn = document.getElementById(id);
+      if (!btn) continue;
+      const span = btn.querySelector('span') || btn;
+      span.textContent = label;
     }
   }
 
@@ -8098,7 +8144,10 @@ class ConsoleApp {
   }
 
   copyConfigOutput() {
-    const text = document.getElementById('configOutputContent').value;
+    const mode = this._configOutputMode === 'shell' && this._configOutput?.hasShell ? 'shell' : 'content';
+    const text = mode === 'shell'
+      ? (this._configOutput?.shell || document.getElementById('configShellContent')?.value || '')
+      : (this._configOutput?.content || document.getElementById('configOutputContent')?.value || '');
     if (!text) return;
 
     const doCopy = async () => {
@@ -8116,12 +8165,17 @@ class ConsoleApp {
       return ok;
     };
 
+    const btn = (typeof event !== 'undefined' && event?.target)
+      ? event.target.closest('button') || event.target
+      : document.getElementById('configCopyButton');
+    const restoreLabel = mode === 'shell' ? t('复制终端命令') : t('复制配置');
     doCopy().then(ok => {
-      if (ok) {
-        const btn = event.target;
-        const orig = btn.textContent;
-        btn.textContent = t('已复制 ✓');
-        setTimeout(() => { btn.textContent = orig; }, 2000);
+      if (ok && btn) {
+        const span = btn.querySelector('span') || btn;
+        span.textContent = t('已复制 ✓');
+        setTimeout(() => { span.textContent = restoreLabel; }, 2000);
+      } else if (ok) {
+        this.showToast(t('已复制到剪贴板'), 'success');
       }
     }).catch(() => {});
   }

@@ -93,13 +93,32 @@
   gap: var(--blora-space-3);
 }
 
+.config-output-desc,
 #configOutputDesc {
   margin: 0 !important;
   color: var(--blora-color-text-subtle) !important;
   line-height: 1.6;
 }
 
-#configOutputContent {
+.config-output-mode {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.config-output-mode blora-segmented {
+  width: min(100%, 20rem);
+}
+
+.config-shell-hint {
+  margin: 0;
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-sm);
+  line-height: 1.55;
+}
+
+.config-output-content,
+#configOutputContent,
+#configShellContent {
   display: block;
   width: 100%;
   min-height: 22rem;
@@ -107,9 +126,9 @@
   box-sizing: border-box;
   resize: vertical;
   overflow: auto;
-  border: var(--blora-border-subtle);
+  border: 0;
   border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
+  background: var(--sheet-2, var(--blora-color-surface-raised));
   color: var(--blora-color-text-primary);
   font-family: var(--blora-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: var(--blora-text-xs);
@@ -117,9 +136,13 @@
   white-space: pre;
 }
 
-#configOutputModal .modal-footer {
+#configOutputModal .modal-footer,
+.config-output-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
+  justify-content: flex-end;
   flex-shrink: 0;
-  border-top: var(--blora-border-subtle);
 }
 
 @media (max-width: 640px) {
@@ -136,9 +159,15 @@
     max-width: 40%;
   }
 
-  #configOutputContent {
+  .config-output-content,
+  #configOutputContent,
+  #configShellContent {
     min-height: 15rem;
     max-height: 48dvh;
+  }
+
+  .config-output-mode blora-segmented {
+    width: 100%;
   }
 }
 
@@ -169,5 +198,11 @@
 .desktop-config-status { white-space: pre-wrap; overflow-wrap: anywhere; }
 .desktop-config-status:empty { display: none; }
 #configManualDetails summary { cursor: pointer; color: var(--blora-color-text-primary); padding-block: var(--blora-space-3); }
+#configManualDetails[open] .config-output-desc,
 #configManualDetails[open] #configOutputDesc { margin-bottom: var(--blora-space-3) !important; }
+#configManualDetails .config-output-mode,
+#configManualDetails .config-shell-hint { margin-bottom: var(--blora-space-3); }
 #configManualCopy { margin-top: var(--blora-space-3); }
+#configOutputModal .config-output-mode[hidden],
+#configOutputModal .config-shell-hint[hidden],
+#configOutputModal .config-output-content[hidden] { display: none !important; }

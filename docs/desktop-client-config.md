@@ -1,6 +1,6 @@
 # Desktop 客户端配置
 
-Desktop 控制台的“客户端配置”支持确认后写入当前电脑。浏览器和旧版 Desktop 保留手动配置与复制按钮。
+Desktop 控制台的“客户端配置”支持确认后写入当前电脑。浏览器和旧版 Desktop 保留手动配置与复制按钮。结果弹窗可用晶液分段控件在「配置内容」与「终端命令」之间切换；终端命令面向 Bash（Linux / macOS / WSL），粘贴后整文件覆盖写入目标路径。
 
 ## 支持工具
 
@@ -14,7 +14,15 @@ Desktop 控制台的“客户端配置”支持确认后写入当前电脑。浏
 | Hermes | `~/.hermes/config.yaml` | named custom provider 与默认模型 |
 | OpenClaw | `~/.openclaw/openclaw.json` | `models.providers.crewrouter` 与默认模型 |
 
-Desktop 尊重工具的配置目录环境变量；实际路径显示在弹窗及系统确认框。系统服务、项目配置、profile 或环境变量可能改变工具最终生效的配置。Hermes 现有凭证池也可能影响认证。DeepSeek Harness 的本地配置结构尚未核实，仅提供带提示的手动参考。
+Desktop 尊重工具的配置目录环境变量；实际路径显示在弹窗及系统确认框。系统服务、项目配置、profile 或环境变量可能改变工具最终生效的配置。Hermes 现有凭证池也可能影响认证。DeepSeek Harness 的本地配置结构尚未核实，仅提供带提示的手动参考，不生成可执行终端命令。
+
+## 终端一键命令
+
+- 生成器：`CrewRouterClientConfig.generateShellCommand()`（`public/js/client-config.js`）。
+- 形态：`mkdir -p "$HOME/..."`、`cat > ... <<'CREWROUTER_EOF'`、`chmod 600`。
+- 语义：整文件覆盖，与 Desktop「合并写入并备份」不同；适合新机或可接受覆盖的场景。
+- 命令含密钥；UI 提示勿分享。不支持 Windows 原生 PowerShell。
+- OpenCode 终端命令写入用户级默认路径；项目目录选择仍仅 Desktop 写入流程提供。
 
 ## 写入保护
 

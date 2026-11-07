@@ -74,12 +74,32 @@ async function main() {
           assert.ok(await cdp.click(`[onclick="app.generateToolConfig('${tool}')"]`), 'tool click ' + tool);
           await sleep(400);
           assert.ok(await cdp.evaluate(`(() => {const modal=document.getElementById('configOutputModal');const panel=modal.shadowRoot.querySelector('[part=panel]').getBoundingClientRect();return modal.hasAttribute('open') && document.getElementById('desktopConfigWriteButton').hidden && document.getElementById('configManualDetails').open && !!document.getElementById('configOutputContent').value && panel.left>=0 && panel.right<=innerWidth && panel.bottom<=innerHeight;})()`), `manual fallback ${mode}/${tool}/${width}`);
+          const expectShell = tool !== 'deepseek';
+          assert.equal(await cdp.evaluate("document.getElementById('configOutputModeWrap').hidden"), !expectShell, `shell mode visibility ${tool}`);
           assert.ok(await cdp.click('#configCopyButton'), 'copy configuration');
           const content = await cdp.evaluate("document.getElementById('configOutputContent').value");
           const copied = await cdp.evaluate('navigator.clipboard.readText()');
           assert.equal(copied,content);
+          if (expectShell) {
+            assert.ok(await cdp.click('#configOutputMode .blora-segmented__item[data-value="shell"]')
+              || await cdp.evaluate(`(() => { const item=document.querySelector('#configOutputMode .blora-segmented__item[data-value="shell"]'); if(!item) return false; item.click(); return true; })()`), 'switch to shell');
+            await sleep(250);
+            assert.equal(await cdp.evaluate("document.getElementById('configShellContent').hidden"), false, 'shell textarea visible');
+            assert.equal(await cdp.evaluate("document.getElementById('configOutputContent').hidden"), true, 'content textarea hidden');
+            assert.equal(await cdp.evaluate("document.getElementById('configShellHint').hidden"), false, 'shell hint visible');
+            const shell = await cdp.evaluate("document.getElementById('configShellContent').value");
+            assert.match(shell, /mkdir -p "\$HOME\//);
+            assert.match(shell, /chmod 600 "\$HOME\//);
+            assert.ok(shell.includes(content));
+            assert.ok(await cdp.click('#configCopyButton'), 'copy shell command');
+            assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), shell);
+            assert.ok(await cdp.click('#configOutputMode .blora-segmented__item[data-value="content"]')
+              || await cdp.evaluate(`(() => { const item=document.querySelector('#configOutputMode .blora-segmented__item[data-value="content"]'); if(!item) return false; item.click(); return true; })()`), 'switch to content');
+            await sleep(200);
+          }
           assert.ok(await cdp.click('#configOutputModal .modal-close'), 'close'); await sleep(400);
           assert.equal(await cdp.evaluate("document.getElementById('configOutputContent').value"),'');
+          assert.equal(await cdp.evaluate("document.getElementById('configShellContent').value"),'');
         }
         console.log(`PASS browser manual client configuration ${mode} ${width}px`);
       }

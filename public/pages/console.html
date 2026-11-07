@@ -39,7 +39,7 @@
   <link rel="stylesheet" href="/css/popup-notices.css?v=lg-3">
   <link rel="stylesheet" href="/css/model-library-console.css?v=lg-2">
   <link rel="stylesheet" href="/css/api-keys.css?v=lg-4">
-  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=lg-3">
+  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=shell-cmd-20260326">
   <link rel="stylesheet" href="/css/stats-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
@@ -2091,12 +2091,20 @@
         <output id="desktopConfigStatus" class="desktop-config-status" role="status" aria-live="polite"></output>
         <details id="configManualDetails" open>
           <summary id="configManualSummary" hidden data-i18n="备用选项：手动配置">备用选项：手动配置</summary>
-          <p id="configOutputDesc" style="color:var(--muted-foreground);margin-bottom:12px;font-size:13px;"></p>
-          <textarea id="configOutputContent" class="blora-input input" rows="18" readonly style="font-family:monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;"></textarea>
-          <button id="configManualCopy" type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="outline" hidden><span data-i18n="复制配置">复制配置</span></button>
+          <p id="configOutputDesc" class="config-output-desc"></p>
+          <div id="configOutputModeWrap" class="config-output-mode" hidden>
+            <blora-segmented id="configOutputMode" value="content" aria-label="配置展示方式">
+              <blora-segment value="content" label="配置内容" data-i18n-label="配置内容"></blora-segment>
+              <blora-segment value="shell" label="终端命令" data-i18n-label="终端命令"></blora-segment>
+            </blora-segmented>
+          </div>
+          <p id="configShellHint" class="config-shell-hint" hidden data-i18n="将覆盖目标配置文件。请在 Bash 终端粘贴执行；命令含密钥，请勿分享。">将覆盖目标配置文件。请在 Bash 终端粘贴执行；命令含密钥，请勿分享。</p>
+          <textarea id="configOutputContent" class="blora-textarea config-output-content" rows="18" readonly spellcheck="false"></textarea>
+          <textarea id="configShellContent" class="blora-textarea config-output-content" rows="18" readonly spellcheck="false" hidden></textarea>
+          <button id="configManualCopy" type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="secondary" hidden><span data-i18n="复制配置">复制配置</span></button>
         </details>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer config-output-footer">
         <button id="desktopConfigWriteButton" type="button" class="blora-button" onclick="app.writeDesktopClientConfig()" data-variant="primary" hidden><span data-i18n="写入配置">写入配置</span></button>
         <button id="configCopyButton" type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="primary"><span data-i18n="复制配置">复制配置</span></button>
       </div>
@@ -2227,9 +2235,9 @@
   <script src="/js/multi-dimension-chart.js?v=lg-4"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/client-config.js?v=desktop-write-20261010"></script>
+  <script src="/js/client-config.js?v=shell-cmd-20260326"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=lg-11"></script>
+  <script src="/js/app.js?v=shell-cmd-20260326"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

@@ -9,11 +9,39 @@ const YAML = require('../CrewRouter-Desktop/node_modules/yaml');
 
 const context = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/js/client-config.js'), 'utf8'), context);
-const generate = context.window.CrewRouterClientConfig.generate;
+const { generate, generateShellCommand } = context.window.CrewRouterClientConfig;
 const tools = ['claude', 'codex', 'grok', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek'];
 const parse = (tool, content) => ['codex', 'grok'].includes(tool)
   ? TOML.parse(content)
   : ['hermes', 'deepseek'].includes(tool) ? YAML.parse(content) : JSON.parse(content);
+
+function extractHeredocBody(shell) {
+  const open = shell.match(/<<'([^']+)'\n/);
+  assert.ok(open, 'shell 应使用 quoted heredoc');
+  const delimiter = open[1];
+  const start = open.index + open[0].length;
+  const endMarker = '\n' + delimiter + '\n';
+  const end = shell.indexOf(endMarker, start);
+  assert.ok(end > start, 'shell heredoc 应正确闭合');
+  return shell.slice(start, end);
+}
+
+function checkShellCommand(tool, options, generated) {
+  const shellOutput = generateShellCommand(tool, options);
+  assert.equal(shellOutput.content, generated.content);
+  assert.equal(shellOutput.path, generated.path);
+  assert.equal(shellOutput.supported, generated.supported);
+  if (!generated.supported) {
+    assert.equal(shellOutput.shell, '');
+    return;
+  }
+  assert.ok(shellOutput.shell);
+  assert.match(shellOutput.shell, /mkdir -p "\$HOME\//);
+  assert.match(shellOutput.shell, /cat > "\$HOME\//);
+  assert.match(shellOutput.shell, /chmod 600 "\$HOME\//);
+  assert.equal(extractHeredocBody(shellOutput.shell), generated.content);
+  assert.ok(!shellOutput.shell.includes('<<CREWROUTER_EOF'), 'heredoc 分隔符应加引号');
+}
 
 function checkConfigs(options) {
   const model = options.model ?? 'claude-fable-5';
@@ -25,6 +53,7 @@ function checkConfigs(options) {
     assert.ok(output.title && output.path && output.content);
     assert.equal(output.supported, tool !== 'deepseek');
     assert.equal(output.reason.length > 0, tool === 'deepseek');
+    checkShellCommand(tool, options, output);
     const config = parse(tool, output.content);
     switch (tool) {
       case 'claude':
@@ -143,13 +172,21 @@ async function main() {
   const unknown = generate('unknown', { baseUrl: 'https://example.test', apiKey: 'test-only-key' });
   assert.equal(unknown.supported, false);
   assert.equal(unknown.content, '');
+  assert.equal(generateShellCommand('unknown', { baseUrl: 'https://example.test', apiKey: 'test-only-key' }).shell, '');
+  const delimiterClash = generateShellCommand('claude', {
+    baseUrl: 'https://example.test',
+    apiKey: 'test-only-key\nCREWROUTER_EOF\nCREWROUTER_EOF_1\nstill-secret'
+  });
+  assert.match(delimiterClash.shell, /<<'CREWROUTER_EOF_2'/);
+  assert.equal(extractHeredocBody(delimiterClash.shell), delimiterClash.content);
   for (const invalid of [undefined, {}, { baseUrl: 1, apiKey: 'test-only-key' },
     { baseUrl: 'https://example.test', apiKey: '' },
     { baseUrl: 'https://example.test', apiKey: 'test-only-key', model: '\ud800' }]) {
     assert.throws(() => generate('claude', invalid), /客户端配置参数无效/);
+    assert.throws(() => generateShellCommand('claude', invalid), /客户端配置参数无效/);
   }
   await checkClaudeRoute();
-  console.log('客户端配置测试通过：8 种工具、格式解析、安全转义、Claude 路由。');
+  console.log('客户端配置测试通过：8 种工具、终端命令、格式解析、安全转义、Claude 路由。');
 }
 
 main().catch(() => {

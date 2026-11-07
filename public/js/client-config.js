@@ -114,5 +114,48 @@
     }
   }
 
-  root.CrewRouterClientConfig = Object.freeze({ generate });
+  function toHomePath(path) {
+    if (typeof path !== 'string' || !path) return '';
+    if (path === '~') return '$HOME';
+    if (path.startsWith('~/')) return '$HOME/' + path.slice(2);
+    return path;
+  }
+
+  function parentDir(path) {
+    const idx = path.lastIndexOf('/');
+    return idx > 0 ? path.slice(0, idx) : '';
+  }
+
+  function pickHeredocDelimiter(content) {
+    let delimiter = 'CREWROUTER_EOF';
+    let n = 0;
+    while (content.includes(delimiter)) {
+      n += 1;
+      delimiter = 'CREWROUTER_EOF_' + n;
+    }
+    return delimiter;
+  }
+
+  function generateShellCommand(tool, options) {
+    const generated = generate(tool, options);
+    if (!generated.supported || !generated.path || !generated.content) {
+      return Object.assign({}, generated, { shell: '' });
+    }
+    const filePath = toHomePath(generated.path);
+    const dirPath = parentDir(filePath);
+    if (!filePath || !dirPath) {
+      return Object.assign({}, generated, { shell: '', supported: false, reason: generated.reason || '无法生成终端命令' });
+    }
+    const delimiter = pickHeredocDelimiter(generated.content);
+    const shell = [
+      'mkdir -p "' + dirPath + '"',
+      'cat > "' + filePath + '" <<\'' + delimiter + '\'',
+      generated.content,
+      delimiter,
+      'chmod 600 "' + filePath + '"'
+    ].join('\n');
+    return Object.assign({}, generated, { shell });
+  }
+
+  root.CrewRouterClientConfig = Object.freeze({ generate, generateShellCommand });
 })(typeof window !== 'undefined' ? window : globalThis);
