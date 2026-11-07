@@ -29,7 +29,8 @@
   }
 
   function debug() {
-    try { console.debug.apply(console, ['[弹窗通知]'].concat([].slice.call(arguments))); } catch (_) { /* ignore */ }
+    // console.debug 在多数浏览器默认隐藏，必须用 log 级别才「开箱可见」
+    try { console.log.apply(console, ['[弹窗通知]'].concat([].slice.call(arguments))); } catch (_) { /* ignore */ }
   }
 
   function prefersReducedMotion() {
