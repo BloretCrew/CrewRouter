@@ -398,7 +398,10 @@ function respondProxyError(res, status, body, options = {}) {
     return { __proxyError: true, status: status || 502, body, retryable };
   }
   if (!res.headersSent) {
-    res.status(status || 502).json(body);
+    const finalStatus = status || 502;
+    res.status(finalStatus).json(body);
+    // 供上层在 result=null 时记录真实的上游状态，避免统一误记为 502
+    res._upstreamProxyError = { status: finalStatus, body };
   }
   return null;
 }
@@ -1518,6 +1521,34 @@ async function validateApiKey(req, res, next, boundKey = null) {
  * @param {object} baseHeaders - 必须的基础头（auth、anthropic-version 等）
  * @returns {object} 最终的请求头
  */
+function isOpenCodeUpstream(provider) {
+  try {
+    const host = new URL(String(provider?.base_url || '')).hostname;
+    return /(^|\.)opencode\.ai$/i.test(host);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * OpenCode Zen / Go 要求 x-opencode-session 用于把同一会话固定到同一后端。
+ * 官方客户端会自带；第三方客户端（如 Grok Build）没有该头，上游会直接
+ * 返回 400 MissingSessionID。缺失时补一个稳定值：优先复用会话身份，
+ * 其次按 API Key 固定，保证同一会话的缓存亲和性。
+ */
+function openCodeSessionValue(req) {
+  try {
+    const identity = extractRequestIdentity(req);
+    if (identity?.logicalSessionKey) return identity.logicalSessionKey;
+  } catch { /* 身份解析失败时回退到密钥维度 */ }
+  const seed = req?.apiUser?.keyId != null
+    ? `key:${req.apiUser.keyId}`
+    : req?.apiUser?.userId != null
+      ? `user:${req.apiUser.userId}`
+      : crypto.randomUUID();
+  return `cr-${crypto.createHash('sha256').update(String(seed)).digest('hex').slice(0, 32)}`;
+}
+
 function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provider.format) {
   const headers = { ...baseHeaders };
 
@@ -1559,6 +1590,11 @@ function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provi
       if (!lower.startsWith('anthropic-') || !val || headers[lower] !== undefined) continue;
       headers[lower] = Array.isArray(val) ? val.join(', ') : val;
     }
+  }
+
+  // OpenCode Zen / Go：缺少会话路由头时补齐，否则上游直接 400
+  if (isOpenCodeUpstream(provider) && !headers['x-opencode-session']) {
+    headers['x-opencode-session'] = openCodeSessionValue(req);
   }
 
   // 供应商级静态 User-Agent 覆盖（插件仍可在 beforeUpstream 钩子中动态改写）
@@ -1689,6 +1725,15 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   // 注入提示词：插入首条 user 消息前的 meta user（复制数组，重试/换供应商不会重复拼接）
   if (req.apiUser?.injectPrompt) {
     upstreamBody.messages = openaiAppend([...(upstreamBody.messages || [])], req.apiUser.injectPrompt);
+  }
+  // isMeta 是 Claude Code 的私有字段，OpenAI 兼容上游（如 OpenCode Go）会因
+  // 未知参数直接 400；对 OpenAI 协议出站时移除，只保留标准 role/content。
+  if (Array.isArray(upstreamBody.messages)) {
+    upstreamBody.messages = upstreamBody.messages.map((message) => {
+      if (!message || typeof message !== 'object' || message.isMeta === undefined) return message;
+      const { isMeta, ...rest } = message;
+      return rest;
+    });
   }
 
   if (stream && !upstreamBody.stream_options) {
@@ -3126,11 +3171,13 @@ async function handleChatCompletion(req, res) {
     }
 
     if (!result) {
+      const sentError = res._upstreamProxyError;
       recordModelCall(uptimeModelId, false);
-      recordLiveCallTest(uptimeModelId, { ok: false, latency_ms: Date.now() - liveCallStart, error: 'upstream_error' });
+      recordLiveCallTest(uptimeModelId, { ok: false, latency_ms: Date.now() - liveCallStart, error: sentError ? `HTTP ${sentError.status}` : 'upstream_error' });
       captureCallError(req, {
         modelId: uptimeModelId, providerId: provider?.id, requestType: 'chat',
-        status: 502, body: { error: { message: 'upstream_error', type: 'server_error' } },
+        status: sentError?.status || 502,
+        body: sentError?.body || { error: { message: 'upstream_error', type: 'server_error' } },
         latencyMs: Date.now() - liveCallStart, isFinal: true
       });
       // 已写入响应（非 suppress 路径）
@@ -3826,11 +3873,13 @@ async function handleAnthropicMessage(req, res) {
     }
 
     if (!result) {
+      const sentError = res._upstreamProxyError;
       recordModelCall(modelConfig.id || model, false);
-      recordLiveCallTest(modelConfig.id || model, { ok: false, latency_ms: Date.now() - liveCallStart, error: 'upstream_error' });
+      recordLiveCallTest(modelConfig.id || model, { ok: false, latency_ms: Date.now() - liveCallStart, error: sentError ? `HTTP ${sentError.status}` : 'upstream_error' });
       captureCallError(req, {
         modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'anthropic',
-        status: 502, body: { type: 'error', error: { type: 'api_error', message: 'upstream_error' } },
+        status: sentError?.status || 502,
+        body: sentError?.body || { type: 'error', error: { type: 'api_error', message: 'upstream_error' } },
         latencyMs: Date.now() - liveCallStart, isFinal: true
       });
       return;
