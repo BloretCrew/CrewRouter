@@ -191,7 +191,7 @@ async function queryBatchTests() {
   let calls = 0;
   let release;
   const wait = new Promise(resolve => { release = resolve; });
-  const sandbox = { module: { exports: {} }, console, setTimeout, setInterval, require: name => {
+  const sandbox = { module: { exports: {} }, console, process, setTimeout, setInterval, require: name => {
     if (name === './commandcode-usage') return { fetchCommandCodeUsage: async () => { calls++; await wait; return balance(10,90); } };
     if (name === '../logger') return { info() {},warn() {} };
     if (name === '../models/database') return { pool: {} };
@@ -222,16 +222,24 @@ async function queryLogSafetyTests() {
   const path = require('node:path');
   const source = fs.readFileSync(require.resolve('../utils/provider-quota'),'utf8');
   const logs = [];
-  const sandbox = { module: { exports: {} }, console, setTimeout, setInterval, AbortSignal,
-    fetch: async () => ({ok:true,text:async()=>JSON.stringify({remaining:0})}), require: name => {
+  const previousScriptFlag = process.env.CR_ENABLE_CUSTOM_QUOTA_SCRIPTS;
+  process.env.CR_ENABLE_CUSTOM_QUOTA_SCRIPTS = '1';
+  const sandbox = { module: { exports: {} }, console, process, setTimeout, setInterval, AbortSignal,
+    require: name => {
       if (name === '../logger') return Object.fromEntries(['info','warn','error'].map(key=>[key,text=>logs.push(text)]));
       if (name === '../models/database') return {pool:{}};
-      if (name === './url-validator') return {validateUrl:async()=>({ok:true})};
+      if (name === './url-validator') return {validateUrl:async(url)=>({ok:true,url:new URL(url)})};
+      if (name === '../proxy-pool') return {
+        pinnedFetchValidated: async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ remaining: 0 }) }),
+        getProxyAgent: async () => null,
+      };
       return require(require.resolve(name,{paths:[path.dirname(require.resolve('../utils/provider-quota'))]}));
     }};
+  try {
   vm.runInNewContext(source,sandbox);
   const fixture = {...provider,quota_script:JSON.stringify({request:{url:'https://example.invalid/quota?token={apiKey}'},extractor:'function(r){return {isValid:true,remaining:r.remaining,currency:"USD"};}'})};
   const result = await sandbox.module.exports.queryProviderQuota(fixture);
+  assert.equal(result.ok, true);
   assert.equal(result.quota.remaining,0);
   assert.equal(result.quota.total,null);
   assert.equal(result.quota.used,null);
@@ -240,6 +248,10 @@ async function queryLogSafetyTests() {
   await sandbox.module.exports.queryProviderQuota(fixture);
   assert(!JSON.stringify(logs).includes(provider.api_key));
   console.log('额度请求日志脱敏与脚本缺失值测试通过');
+  } finally {
+    if (previousScriptFlag === undefined) delete process.env.CR_ENABLE_CUSTOM_QUOTA_SCRIPTS;
+    else process.env.CR_ENABLE_CUSTOM_QUOTA_SCRIPTS = previousScriptFlag;
+  }
 }
 
 pureTests();

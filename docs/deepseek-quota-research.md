@@ -40,7 +40,7 @@
 - **归一化**：结果为 `unit: balance` 标准结构，`currency` 取响应币种，`total` 与 `remaining` 都是当前总余额，`used` 留空（接口没有额度上限和已用量，不能用余额反推使用率）。`extra` 展示赠金、充值余额；`is_available=false` 时提示 HTTP 402；多币种时首条为主展示，其余金额写入 `extra`。
 - **管理端**：供应商表单「额度查询方式」新增「DeepSeek 开放平台（/user/balance）」，使用供应商 API Key，无需额外配置。
 - **额度历史**：余额按 Key 归属记录（`keyModes` 包含 `deepseek`），避免更换 API Key 后把不同账户的余额合并到同一序列。
-- **多 Key**：余额是账户级数据，同一账户的多把 Key 会返回同一余额。该模式不使用逐 Key 汇总，避免把同一账户的余额重复相加；查询使用主 Key。
+- **多 Key**：`/user/balance` 按 Key 所属账户返回余额。一把 Key 对应一个账户时（常见负载/池化场景），`quota_mode=deepseek` 走 `PER_KEY_QUOTA_MODES` 逐 Key 并发查询，管理端弹窗与控制台额度卡展示「逐 Key 额度」，并对 `unit: balance` 结果求和汇总。若多把 Key 实际属于同一账户，各 Key 会返回相同余额，汇总会重复计入，此时应只保留一把启用 Key，或拆成不同供应商。
 - **用户端**：模型库「供应商额度」读取定时查询或手动刷新保存的快照，与其它 `balance` 模式一致。
 
 ## 验证
@@ -51,3 +51,4 @@
 - 余额不足提示与多币种展示。
 - 缺少 `balance_infos` / `total_balance` 时的错误。
 - Base URL 只取 origin，非法 URL 回退官方主机。
+- 多 Key DeepSeek 供应商逐 Key 查询：三把不同账户 Key 各请求一次，返回 `keys.length === 3`，聚合余额为三账户之和；单 Key 失败不影响其余 Key。

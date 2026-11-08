@@ -415,4 +415,125 @@ console.log('new-api quota tests passed');
 console.log('DeepSeek quota tests passed');
 console.log('OpenRouter / Moonshot / SiliconFlow quota tests passed');
 console.log('command code quota tests passed');
-console.log('quota usage tests passed');
+
+async function testDeepSeekPerKeyQuota() {
+  const vm = require('node:vm');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const source = fs.readFileSync(require.resolve('../utils/provider-quota'), 'utf8');
+  const seenKeys = [];
+  const balances = {
+    'sk-account-aaa-1111': 10,
+    'sk-account-bbb-2222': 20,
+    'sk-account-ccc-3333': 30,
+  };
+  const sandbox = {
+    module: { exports: {} },
+    console,
+    process,
+    setTimeout,
+    setInterval,
+    require: (name) => {
+      if (name === './deepseek-usage') {
+        return {
+          fetchDeepSeekUsage: async (provider) => {
+            const key = String(provider.api_key || '');
+            seenKeys.push(key);
+            if (key === 'sk-account-bbb-2222') throw new Error('账户 B 查询失败');
+            const total = balances[key];
+            if (total == null) throw new Error(`unexpected key ${key}`);
+            return {
+              planName: 'DeepSeek',
+              unit: 'balance',
+              currency: 'CNY',
+              total,
+              used: null,
+              remaining: total,
+              periods: [],
+              extra: `CNY`,
+            };
+          },
+        };
+      }
+      if (name === '../logger') return { info() {}, warn() {}, error() {} };
+      if (name === '../models/database') return { pool: {} };
+      return require(require.resolve(name, { paths: [path.dirname(require.resolve('../utils/provider-quota'))] }));
+    },
+  };
+  vm.runInNewContext(source, sandbox);
+  const { queryProviderQuotaPerKey } = sandbox.module.exports;
+
+  const provider = {
+    id: 'deepseek-multi',
+    name: 'DeepSeek 三账户',
+    quota_mode: 'deepseek',
+    base_url: 'https://api.deepseek.com/v1',
+    api_keys: [
+      { key: 'sk-account-aaa-1111', label: '账户 A', weight: 1, enabled: true },
+      { key: 'sk-account-bbb-2222', label: '账户 B', weight: 1, enabled: true },
+      { key: 'sk-account-ccc-3333', label: '账户 C', weight: 1, enabled: true },
+    ],
+  };
+
+  const result = await queryProviderQuotaPerKey(provider);
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.keyCount, 3);
+  assert.strictEqual(result.keys.length, 3);
+  assert.strictEqual(result.keys[0].ok, true);
+  assert.strictEqual(result.keys[0].label, '账户 A');
+  assert.strictEqual(result.keys[0].quota.remaining, 10);
+  assert.strictEqual(result.keys[1].ok, false);
+  assert.match(result.keys[1].error, /账户 B/);
+  assert.strictEqual(result.keys[2].ok, true);
+  assert.strictEqual(result.keys[2].quota.remaining, 30);
+  assert.ok(result.aggregated);
+  assert.strictEqual(result.aggregated.unit, 'balance');
+  assert.strictEqual(result.aggregated.total, 40);
+  assert.strictEqual(result.aggregated.remaining, 40);
+  assert.match(result.aggregated.extra, /2 个 Key 有效/);
+  assert.deepStrictEqual([...seenKeys].sort(), Object.keys(balances).sort());
+
+  // 对照：moonshot 仍不在 PER_KEY_QUOTA_MODES，多 Key 只查主 Key 一次
+  const sandbox2 = {
+    module: { exports: {} },
+    console,
+    process,
+    setTimeout,
+    setInterval,
+    require: (name) => {
+      if (name === './moonshot-usage') {
+        return {
+          fetchMoonshotUsage: async (providerArg) => {
+            seenKeys.push(String(providerArg.api_key || providerArg.api_keys?.[0]?.key || ''));
+            return { planName: 'Moonshot', unit: 'balance', currency: 'CNY', total: 5, used: null, remaining: 5, periods: [], extra: '' };
+          },
+        };
+      }
+      if (name === '../logger') return { info() {}, warn() {}, error() {} };
+      if (name === '../models/database') return { pool: {} };
+      return require(require.resolve(name, { paths: [path.dirname(require.resolve('../utils/provider-quota'))] }));
+    },
+  };
+  vm.runInNewContext(source, sandbox2);
+  seenKeys.length = 0;
+  const moonshotResult = await sandbox2.module.exports.queryProviderQuotaPerKey({
+    id: 'moonshot-multi',
+    name: 'Moonshot',
+    quota_mode: 'moonshot',
+    api_keys: [
+      { key: 'sk-m1-xxxxxxxx', label: 'M1', enabled: true },
+      { key: 'sk-m2-xxxxxxxx', label: 'M2', enabled: true },
+    ],
+  });
+  assert.strictEqual(moonshotResult.ok, true);
+  assert.ok(!Array.isArray(moonshotResult.keys) || moonshotResult.keys.length <= 1);
+  assert.strictEqual(seenKeys.length, 1);
+  console.log('DeepSeek per-key quota tests passed');
+}
+
+testDeepSeekPerKeyQuota()
+  .then(() => console.log('quota usage tests passed'))
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

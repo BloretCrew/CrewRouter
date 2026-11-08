@@ -32,8 +32,9 @@ function readError(data) {
 
 /**
  * 把 /user/balance 响应归一化为统一 quota 结构。
- * 余额是账户当前可用金额，没有额度上限，因此 total 与 remaining 相同、used 留空，
+ * 余额是该 API Key 所属账户的当前可用金额，没有额度上限，因此 total 与 remaining 相同、used 留空，
  * 避免把余额误报成「已用 0%」。多币种时以第一条为主展示，其余写入 extra。
+ * 多 Key 供应商由 queryProviderQuotaPerKey 逐 Key 查询并汇总（一把 Key 通常对应一个账户）。
  */
 function normalizeDeepSeekBalance(data, providerName) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('DeepSeek 返回无效余额数据');

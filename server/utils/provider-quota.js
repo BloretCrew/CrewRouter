@@ -436,8 +436,9 @@ async function queryProviderQuota(provider, options = {}) {
   }
 }
 
-// 按 Key 独立计费的上游模式：多 Key 供应商应逐 Key 查询额度
-const PER_KEY_QUOTA_MODES = new Set(['script', 'opencode_go', 'commandcode', 'newapi', 'cursor']);
+// 按 Key / 账户独立计费的上游模式：多 Key 供应商应逐 Key 查询额度。
+// deepseek 的 /user/balance 虽是账户级，但一把 Key 对应一个账户；多 Key 常来自不同账户，需分别查询后汇总。
+const PER_KEY_QUOTA_MODES = new Set(['script', 'opencode_go', 'commandcode', 'newapi', 'cursor', 'deepseek']);
 
 /** Key 脱敏展示：前 6 位 + **** + 后 4 位，不足 10 位全部掩码 */
 function maskApiKey(key) {
