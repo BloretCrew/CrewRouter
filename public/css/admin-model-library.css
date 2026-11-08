@@ -297,6 +297,33 @@
   .admin-model-library .aml-team-tabs,
   .admin-model-library .aml-header-actions { width: 100%; }
   .admin-model-library .model-library-item-actions { flex-wrap: wrap; justify-content: flex-start; }
+  /* 纵向 flex 时 320px basis 会变成高度，标题卡被撑成一块空纸 */
+  #adminModelLibraryPage .model-library-header,
+  .admin-model-library .aml-header.model-library-header {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 10px;
+    height: auto;
+    min-height: 0;
+    padding: 12px 14px;
+  }
+  #adminModelLibraryPage .model-library-header-left,
+  .admin-model-library .model-library-header-left {
+    display: block;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+  }
+  #adminModelLibraryPage .model-library-header-actions,
+  .admin-model-library .aml-header-actions.model-library-header-actions {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 390px) {

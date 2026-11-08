@@ -1400,9 +1400,8 @@ blora-dialog.lg-scope[id^="blora-dialog-"] > div:not([slot]) > strong:first-chil
     backdrop-filter: var(--lens, var(--g-fallback));
     box-shadow: var(--g-depth), var(--shadow-float);
   }
-  /* 移动端顶栏已有主题按钮，标题区不再重复 */
-  .blora-page .content-header .theme-toggle { display: none; }
-  .blora-page .content-header h1 { font-size: 28px; }
+  /* 移动端顶栏已有标题和主题按钮，不再重复一排大标题 */
+  body.blora-page .content-header { display: none; }
   .blora-page .sidebar {
     transition: transform .45s var(--spring-soft);
   }
@@ -2011,8 +2010,9 @@ blora-dialog.lg-scope::part(close):active,
     gap: 10px;
   }
   .lg-page :is(.model-library-header-actions, .aml-header-actions, .section-actions, .content-header .theme-toggle, .page-toolbar) {
-    flex: 1 1 100%;
+    flex: 0 0 auto;
     flex-wrap: wrap;
+    width: 100%;
     min-width: 0;
   }
   .lg-page :is(.ml-model-filter-bar, .admin-filter-bar, .stats-filters, .model-filter-bar, .filter-bar, .toolbar, .store-toolbar) {
@@ -2093,7 +2093,7 @@ blora-dialog.lg-scope::part(close):active,
   :is(.lg-page, .lg-scope) :is(.stats-overview-grid, .ak-overview, .limits-grid, .metric-grid) {
     grid-template-columns: 1fr;
   }
-  .blora-page .content-header h1 { font-size: 24px; }
+  body.blora-page .content-header { display: none; }
   .lg-page :is(.blora-button, .aml-button) { max-width: 100%; }
   .lg-page .content-section { padding: 14px; border-radius: 16px; }
 }
