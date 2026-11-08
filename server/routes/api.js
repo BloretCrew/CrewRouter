@@ -1538,6 +1538,10 @@ function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provi
       'connection', 'upgrade', 'keep-alive', 'expect',
       'x-forwarded-for', 'x-forwarded-proto', 'x-real-ip', 'x-forwarded-host',
       'cf-connecting-ip', 'cf-ray', 'cf-worker', 'cdn-loop',
+      // 出站统一由 axios 协商（gzip/deflate/br）并解压；透传客户端的
+      // accept-encoding 会让上游返回 axios 无法解码的编码（如 zstd），
+      // 导致 SSE 流读到的全是压缩字节、永远等不到 [DONE]。
+      'accept-encoding',
     ]);
     for (const [key, val] of Object.entries(req.headers)) {
       const lower = key.toLowerCase();

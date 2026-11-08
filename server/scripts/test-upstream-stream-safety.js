@@ -3,6 +3,7 @@
 // Actual api.js functions and loopback proxyFetch; persistence and side effects are isolated.
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const zlib = require('node:zlib');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
@@ -150,9 +151,10 @@ class Response extends EventEmitter {
   end() { this.writableEnded = true; this.writableFinished = true; this.emit('finish'); }
 }
 
-async function fixture(frames, endless = false) {
+async function fixture(frames, endless = false, encoding = null) {
   const received = [];
   const sockets = new Set();
+  const payload = encoding === 'zstd' ? zlib.zstdCompressSync(Buffer.from(frames)) : frames;
   const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', value => { body += value; });
@@ -160,8 +162,11 @@ async function fixture(frames, endless = false) {
       const entry = { body: JSON.parse(body), closed: false };
       received.push(entry);
       res.on('close', () => { entry.closed = true; });
-      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-      if (endless) res.write(frames); else res.end(frames);
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        ...(encoding ? { 'Content-Encoding': encoding } : {}),
+      });
+      if (endless) res.write(payload); else res.end(payload);
     });
   });
   server.on('connection', socket => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });
@@ -227,26 +232,26 @@ async function main() {
   ];
   for (const [name, protocol] of cases) {
     const modes = ['success', 'error', 'error-residual', 'error-then-terminal', 'missing-terminal', 'drain-cancel', 'read-cancel'];
-    if (name === 'proxyOpenAI') modes.push('success-no-space-terminal');
+    if (name === 'proxyOpenAI') modes.push('success-no-space-terminal', 'success-zstd');
     for (const mode of modes) {
       total++;
       let f;
       const readerStart = readers.length;
       const res = new Response(mode === 'drain-cancel');
       try {
-        const frames = protocol.start + (mode === 'success' ? protocol.stop + protocol.terminal
+        const frames = protocol.start + (mode === 'success' || mode === 'success-zstd' ? protocol.stop + protocol.terminal
           : mode === 'success-no-space-terminal' ? protocol.stop + protocol.terminalNoSpace
           : mode === 'error' ? protocol.error
           : mode === 'error-residual' ? protocol.error.trimEnd()
           : mode === 'error-then-terminal' ? protocol.error + protocol.terminal
           : mode === 'missing-terminal' ? protocol.stop : '');
-        f = await fixture(frames, mode.endsWith('-cancel'));
+        f = await fixture(frames, mode.endsWith('-cancel'), mode === 'success-zstd' ? 'zstd' : null);
         let error;
         let cancelTimer;
         if (mode === 'read-cancel') cancelTimer = setTimeout(() => { res.destroyed = true; res.emit('close'); }, 50);
         try { await bounded(invoke(name, f, res)); } catch (caught) { error = caught; }
         finally { clearTimeout(cancelTimer); }
-        if (mode === 'success' || mode === 'success-no-space-terminal') {
+        if (mode === 'success' || mode === 'success-no-space-terminal' || mode === 'success-zstd') {
           assert.equal(error, undefined, error?.stack);
           assert.ok(res.text.includes(name.startsWith('stream') ? 'response.completed' : name.includes('ToAnthropic') ? '"type":"message_stop"' : 'data: [DONE]'), 'Normal terminal must produce success');
         } else {

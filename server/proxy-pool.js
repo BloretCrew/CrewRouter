@@ -13,6 +13,7 @@ const { SocksProxyAgent } = require('socks-proxy-agent');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const { Readable } = require('stream');
+const zlib = require('node:zlib');
 const net = require('node:net');
 const Logger = require('./logger');
 const pool = require('./models/database').pool;
@@ -634,7 +635,21 @@ async function proxyFetchTransport(url, options = {}) {
   attempt.responseStarted = true;
   attempt.phase = 'headers';
   logAttempt();
-  const stream = axiosResponse.data;
+  // axios 只内置解压 gzip/deflate/br；部分上游（如 DeepSeek 在收到
+  // accept-encoding: zstd 时）会返回 zstd，未解压的字节会被下游当成
+  // SSE/JSON 解析，表现为“流结束但没有完成事件”。这里补一层兜底解压。
+  const sourceStream = axiosResponse.data;
+  const contentEncoding = String(axiosResponse.headers?.['content-encoding'] || '').trim().toLowerCase();
+  const stream = contentEncoding === 'zstd' && typeof zlib.createZstdDecompress === 'function'
+    ? sourceStream.pipe(zlib.createZstdDecompress())
+    : sourceStream;
+  if (stream !== sourceStream) {
+    delete axiosResponse.headers['content-encoding'];
+    // 解压后长度不再等于压缩体长度，避免下游按 content-length 截断
+    delete axiosResponse.headers['content-length'];
+    // pipe 不会自动转发源流的错误，手动转给解压流以便统一走 onError
+    sourceStream.once('error', (error) => stream.destroy(error));
+  }
   const onEnd = () => {
     attempt.phase = 'completed';
     logAttempt();
@@ -670,7 +685,7 @@ async function proxyFetchTransport(url, options = {}) {
   const bodyless = [204, 205, 304].includes(axiosResponse.status);
   let response;
   try {
-    response = new Response(bodyless ? null : Readable.toWeb(axiosResponse.data), {
+    response = new Response(bodyless ? null : Readable.toWeb(stream), {
       status: axiosResponse.status,
       statusText: axiosResponse.statusText,
       headers: responseHeaders,
