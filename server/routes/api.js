@@ -1846,9 +1846,9 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('data:')) {
             sseLineCount++;
-            const data = line.slice(6).trim();
+            const data = line.slice(5).replace(/^ /, '').trim();
             if (data === '[DONE]') {
               Logger.stream(`[proxyOpenAI] 收到上游 [DONE] 事件`);
               gotDone = true;
@@ -1864,9 +1864,9 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
         Logger.stream(`[proxyOpenAI] 处理残余缓冲区: ${buffer.length} bytes`);
         const lines = buffer.split('\n');
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith('data:')) {
             sseLineCount++;
-            const data = line.slice(6).trim();
+            const data = line.slice(5).replace(/^ /, '').trim();
             if (data === '[DONE]') {
               gotDone = true;
               continue;

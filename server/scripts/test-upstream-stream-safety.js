@@ -110,6 +110,7 @@ const chat = {
   start: frame({ id: 'chatcmpl-local', choices: [{ index: 0, delta: { role: 'assistant', content: 'local-text' } }] }),
   stop: frame({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }),
   terminal: 'data: [DONE]\n\n',
+  terminalNoSpace: 'data:[DONE]\n\n',
   error: frame({ error: { type: 'server_error', message: 'fixture failure' } }),
 };
 const anthropic = {
@@ -225,13 +226,16 @@ async function main() {
     ['proxyOpenAIStreamToAnthropic', chat], ['streamOpenAIAsResponses', chat], ['streamAnthropicAsResponses', anthropic],
   ];
   for (const [name, protocol] of cases) {
-    for (const mode of ['success', 'error', 'error-residual', 'error-then-terminal', 'missing-terminal', 'drain-cancel', 'read-cancel']) {
+    const modes = ['success', 'error', 'error-residual', 'error-then-terminal', 'missing-terminal', 'drain-cancel', 'read-cancel'];
+    if (name === 'proxyOpenAI') modes.push('success-no-space-terminal');
+    for (const mode of modes) {
       total++;
       let f;
       const readerStart = readers.length;
       const res = new Response(mode === 'drain-cancel');
       try {
         const frames = protocol.start + (mode === 'success' ? protocol.stop + protocol.terminal
+          : mode === 'success-no-space-terminal' ? protocol.stop + protocol.terminalNoSpace
           : mode === 'error' ? protocol.error
           : mode === 'error-residual' ? protocol.error.trimEnd()
           : mode === 'error-then-terminal' ? protocol.error + protocol.terminal
@@ -242,7 +246,7 @@ async function main() {
         if (mode === 'read-cancel') cancelTimer = setTimeout(() => { res.destroyed = true; res.emit('close'); }, 50);
         try { await bounded(invoke(name, f, res)); } catch (caught) { error = caught; }
         finally { clearTimeout(cancelTimer); }
-        if (mode === 'success') {
+        if (mode === 'success' || mode === 'success-no-space-terminal') {
           assert.equal(error, undefined, error?.stack);
           assert.ok(res.text.includes(name.startsWith('stream') ? 'response.completed' : name.includes('ToAnthropic') ? '"type":"message_stop"' : 'data: [DONE]'), 'Normal terminal must produce success');
         } else {
