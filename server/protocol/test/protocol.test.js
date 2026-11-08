@@ -291,7 +291,7 @@ function cacheRouteContext() {
   const context = vm.createContext({
     config: { gateway: {} }, Logger: { debug() {}, info() {}, warn() {} },
     cleanBaseUrl: value => value, upstreamUrl: (base, endpoint) => base + endpoint,
-    buildUpstreamHeaders: () => ({}), affinityKeyForRequest: () => 'test',
+    buildUpstreamHeaders: () => ({}), affinityKeyForRequest: () => "test", isOpenCodeUpstream: () => false, sanitizeOpenAIMessages: (m) => m,
     proxyPool: { getProxyAgent: async () => null, getProxies: async () => [] },
     MAX_UPSTREAM_ATTEMPTS: 1, UPSTREAM_TIMEOUT: 1000, UPSTREAM_STREAM_TIMEOUT: 1000,
     AbortSignal,

@@ -39,6 +39,8 @@ const context = vm.createContext({
   normalizeUsageTokens: () => ({ promptTokens: 0, completionTokens: 0, cachedTokens: 0 }),
   wireShapes: require('../protocol/wire-shapes'),
   ...require('../utils/request-metrics'),
+  isOpenCodeUpstream: () => false,
+  openCodeSessionValue: () => "test",
 });
 const headersStart = source.indexOf('function buildUpstreamHeaders(');
 const headersEnd = source.indexOf('\n// 清理 base_url', headersStart);
