@@ -1549,6 +1549,37 @@ function openCodeSessionValue(req) {
   return `cr-${crypto.createHash('sha256').update(String(seed)).digest('hex').slice(0, 32)}`;
 }
 
+// OpenAI Chat Completions 标准消息/内容块字段；严格校验的上游（OpenCode Go）
+// 会拒绝任何额外字段（isMeta、model_id 等），转发前按白名单裁剪。
+const OPENAI_MESSAGE_FIELDS = new Set([
+  'role', 'content', 'name', 'tool_calls', 'tool_call_id', 'function_call', 'refusal',
+]);
+const OPENAI_CONTENT_PART_FIELDS = new Set([
+  'type', 'text', 'image_url', 'input_audio', 'file', 'refusal',
+]);
+
+function sanitizeOpenAIMessages(messages) {
+  if (!Array.isArray(messages)) return messages;
+  return messages.map((message) => {
+    if (!message || typeof message !== 'object') return message;
+    const clean = {};
+    for (const [key, value] of Object.entries(message)) {
+      if (OPENAI_MESSAGE_FIELDS.has(key)) clean[key] = value;
+    }
+    if (Array.isArray(clean.content)) {
+      clean.content = clean.content.map((part) => {
+        if (!part || typeof part !== 'object' || Array.isArray(part)) return part;
+        const cleaned = {};
+        for (const [key, value] of Object.entries(part)) {
+          if (OPENAI_CONTENT_PART_FIELDS.has(key)) cleaned[key] = value;
+        }
+        return cleaned;
+      });
+    }
+    return clean;
+  });
+}
+
 function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provider.format) {
   const headers = { ...baseHeaders };
 
@@ -1734,6 +1765,11 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       const { isMeta, ...rest } = message;
       return rest;
     });
+  }
+  // OpenCode Go 采用严格参数校验，客户端附带的私有字段（如 messages[n].model_id）
+  // 也会导致 400；仅在目标为 OpenCode 时按 OpenAI 标准字段裁剪。
+  if (isOpenCodeUpstream(provider)) {
+    upstreamBody.messages = sanitizeOpenAIMessages(upstreamBody.messages);
   }
 
   if (stream && !upstreamBody.stream_options) {

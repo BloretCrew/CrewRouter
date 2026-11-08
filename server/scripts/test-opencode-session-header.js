@@ -63,4 +63,15 @@ assert.equal(
   undefined,
 );
 
-console.log('OpenCode session header injection: 5/5 passed');
+// 6. OpenCode 严格校验：消息及内容块的私有字段必须被裁剪
+const cleaned = context.sanitizeOpenAIMessages([
+  {
+    role: 'user',
+    isMeta: true,
+    model_id: 'internal',
+    content: [{ type: 'text', text: 'hi', cache_control: { type: 'ephemeral' } }],
+  },
+]);
+assert.equal(JSON.stringify(cleaned), JSON.stringify([{ role: 'user', content: [{ type: 'text', text: 'hi' }] }]));
+
+console.log('OpenCode session header injection: 6/6 passed');
