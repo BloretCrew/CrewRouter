@@ -8838,7 +8838,7 @@ ${extractorBody}
 
       const verifyRes = await fetch('/api/passkey/register/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this._csrfHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'same-origin',
         body: JSON.stringify(serializedCredential),
       });
@@ -8867,6 +8867,7 @@ ${extractorBody}
     try {
       const res = await fetch(`/api/passkey/${encodeURIComponent(credentialID)}`, {
         method: 'DELETE',
+        headers: await this._csrfHeaders(),
         credentials: 'same-origin',
       });
 

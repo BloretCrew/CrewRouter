@@ -44,13 +44,59 @@ function managerFixture() {
   };
   const module = { exports: {} };
   vm.runInNewContext(read('../utils/PassKey.js'), { module, exports: module.exports,
-    require(name) { assert.equal(name, '@simplewebauthn/server'); return webauthn; },
-    process: { env: {} }, Buffer, TextEncoder, Uint8Array,
+    require(name) {
+      if (name === '@simplewebauthn/server') return webauthn;
+      if (name === '../config-loader') return { app: { publicOrigin: 'https://router.example' } };
+      assert.fail(`unexpected require: ${name}`);
+    },
+    process: { env: {} }, Buffer, TextEncoder, Uint8Array, URL,
     Date: class extends Date { static now() { return now; } }, console: { error() {} },
     setInterval(fn) { state.sweeper = fn; return { unref() {} }; },
   });
   return { manager: module.exports, state, advance(ms) { now += ms; } };
 }
+
+test('getWebAuthnConfig prefers publicOrigin over http request protocol behind untrusted proxies', () => {
+  const { manager } = managerFixture();
+  const cfg = manager.getWebAuthnConfig({
+    protocol: 'http',
+    secure: false,
+    hostname: 'router.example',
+    get: () => 'router.example',
+    headers: { host: 'router.example' },
+  });
+  assert.equal(cfg.origin, 'https://router.example');
+  assert.equal(cfg.rpID, 'router.example');
+});
+
+test('getWebAuthnConfig falls back to request origin when publicOrigin is unset', () => {
+  const module = { exports: {} };
+  const webauthn = {
+    async generateRegistrationOptions() { return { challenge: 'x' }; },
+    async generateAuthenticationOptions() { return { challenge: 'y' }; },
+    async verifyRegistrationResponse() { return { verified: true, registrationInfo: { credential: { id: 'c', publicKey: Buffer.from('k') } } }; },
+    async verifyAuthenticationResponse() { return { verified: true, authenticationInfo: { newCounter: 1 } }; },
+  };
+  vm.runInNewContext(read('../utils/PassKey.js'), { module, exports: module.exports,
+    require(name) {
+      if (name === '@simplewebauthn/server') return webauthn;
+      if (name === '../config-loader') return { app: { publicOrigin: '' } };
+      assert.fail(`unexpected require: ${name}`);
+    },
+    process: { env: {} }, Buffer, TextEncoder, Uint8Array, URL,
+    Date, console: { error() {} },
+    setInterval: () => ({ unref() {} }),
+  });
+  const cfg = module.exports.getWebAuthnConfig({
+    protocol: 'https',
+    secure: true,
+    hostname: 'localhost',
+    get: () => 'localhost:20003',
+    headers: { host: 'localhost:20003' },
+  });
+  assert.equal(cfg.origin, 'https://localhost:20003');
+  assert.equal(cfg.rpID, 'localhost');
+});
 const credential = { credentialID: 'credential', credentialPublicKey: 'a2V5', counter: 0 };
 
 test('authentication challenge belongs to its browser and is consumed once before async verification', async () => {

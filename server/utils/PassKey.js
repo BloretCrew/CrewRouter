@@ -69,15 +69,36 @@ function base64urlToBuffer(base64url) {
 }
 
 /**
- * 从请求推导 RP ID 与 Origin
- * 可用环境变量 RP_ID / ORIGIN 覆盖
+ * 从请求推导 RP ID 与 Origin。
+ * 优先 ORIGIN / config.app.publicOrigin，避免反代未纳入 trust proxy 时
+ * req.protocol 仍是 http，导致 expectedOrigin 与浏览器 https Origin 不一致。
+ * 可用环境变量 RP_ID / ORIGIN 覆盖。
  */
 function getWebAuthnConfig(req) {
     const hostHeader = req?.get?.('host') || req?.headers?.host || '';
     const hostname = (req?.hostname || hostHeader.split(':')[0] || '').split(':')[0];
-    const rpID = process.env.RP_ID || hostname || 'localhost';
     const proto = req?.protocol || (req?.secure ? 'https' : 'http') || 'https';
-    const origin = process.env.ORIGIN || (hostHeader ? `${proto}://${hostHeader}` : `https://${rpID}`);
+    const requestOrigin = hostHeader ? `${proto}://${hostHeader}` : '';
+
+    let configuredOrigin = String(process.env.ORIGIN || '').trim().replace(/\/$/, '');
+    if (!configuredOrigin) {
+        try {
+            const config = require('../config-loader');
+            configuredOrigin = String(config.app?.publicOrigin || '').trim().replace(/\/$/, '');
+        } catch {
+            configuredOrigin = '';
+        }
+    }
+
+    const origin = configuredOrigin || requestOrigin || `https://${hostname || 'localhost'}`;
+    let rpID = String(process.env.RP_ID || '').trim();
+    if (!rpID) {
+        try {
+            rpID = new URL(origin).hostname;
+        } catch {
+            rpID = hostname || 'localhost';
+        }
+    }
     return { rpID, origin, rpName: RP_NAME };
 }
 

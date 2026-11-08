@@ -93,7 +93,10 @@ router.post('/register/verify', requireAuth, requirePasskeyLogin, async (req, re
     let newPasskey;
     try {
       newPasskey = await passkeyManager.verifyRegistration(req.session.user.id, body, { ...getWebAuthnConfig(req), owner: owner(req) });
-    } catch { throw httpError(401, '注册验证失败，请重新获取选项'); }
+    } catch (error) {
+      Logger.error('[PassKey] verifyRegistration failed:', error);
+      throw httpError(401, '注册验证失败，请重新获取选项');
+    }
     await withLockedPasskeys(pool, req.session.user.id, (_user, passkeys) => { passkeys.push(newPasskey); }, newPasskey.credentialID);
     audit(req, req.session.user, ACTIONS.USER_PASSKEY_REGISTER, { method: 'passkey', credentialIdSha256: crypto.createHash('sha256').update(newPasskey.credentialID).digest('hex') });
     res.json({ success: true, passkey: { credentialID: newPasskey.credentialID, deviceType: newPasskey.deviceType, createdAt: newPasskey.createdAt } });
