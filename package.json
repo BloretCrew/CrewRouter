@@ -79,7 +79,8 @@
     "money-precision:migrate": "node scripts/migrate-money-precision.js",
     "sdk:generate": "node sdk/codegen/generate.mjs",
     "sdk:check": "node sdk/codegen/generate.mjs --check",
-    "test:embedded-sdk": "node --test server/scripts/test-embedded-sdk.js"
+    "test:embedded-sdk": "node --test server/scripts/test-embedded-sdk.js",
+    "docs:check": "node scripts/check-doc-links.mjs"
   },
   "dependencies": {
     "@bloret-crew/blora-design": "2.1.0",

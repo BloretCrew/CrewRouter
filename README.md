@@ -224,7 +224,7 @@ npm start          # 开发可用 npm run dev
 | [docs/integration-guide.md](docs/integration-guide.md) | 接入现有应用 |
 | [docs/sdk/README.md](docs/sdk/README.md) | SDK 总览（English） |
 | [docs/sdk/quickstart-node.md](docs/sdk/quickstart-node.md) | Node SDK 快速开始 |
-| [LOG_SPEC.md](LOG_SPEC.md) | 运行日志约定 |
+| [LOG_SPEC.md](docs/LOG_SPEC.md) | 运行日志约定 |
 
 ## 技术栈
 

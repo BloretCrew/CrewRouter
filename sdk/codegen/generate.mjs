@@ -40,6 +40,7 @@ const {
 const ROUTES_DIR = path.join(ROOT, 'server/routes');
 const OUT_MANIFEST = path.join(ROOT, 'sdk/contract/operations.json');
 const OUT_OPENAPI = path.join(ROOT, 'sdk/contract/openapi.json');
+const OUT_OPENAPI_DOCS = path.join(ROOT, 'docs/api/openapi.json');
 const OUT_TS = path.join(ROOT, 'sdk/typescript/src/generated/operations.ts');
 const OUT_PY = path.join(ROOT, 'sdk/python/src/crewrouter/generated/operations.py');
 const OUT_GO = path.join(ROOT, 'sdk/go/operations_gen.go');
@@ -599,6 +600,7 @@ function main() {
   const outputs = [
     [OUT_MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`],
     [OUT_OPENAPI, `${JSON.stringify(openapi, null, 2)}\n`],
+    [OUT_OPENAPI_DOCS, `${JSON.stringify(openapi, null, 2)}\n`],
     [OUT_TS, buildTypeScript(operations)],
     [OUT_PY, buildPython(operations)],
     [OUT_GO, buildGo(operations)],

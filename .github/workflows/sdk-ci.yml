@@ -1,0 +1,90 @@
+name: SDK CI
+
+on:
+  push:
+    paths:
+      - 'sdk/**'
+      - 'server/routes/**'
+      - 'server/constants/**'
+      - 'server/sdk/**'
+      - 'server/middleware/request-auth.js'
+      - 'server/utils/api-key-permissions.js'
+      - 'public/js/api-key-permissions.json'
+      - 'docs/sdk/**'
+      - 'docs/API.md'
+      - 'docs/api/**'
+      - 'docs/integration-guide.md'
+      - 'scripts/check-doc-links.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/sdk-ci.yml'
+  pull_request:
+    paths:
+      - 'sdk/**'
+      - 'server/routes/**'
+      - 'server/constants/**'
+      - 'server/sdk/**'
+      - 'server/middleware/request-auth.js'
+      - 'server/utils/api-key-permissions.js'
+      - 'public/js/api-key-permissions.json'
+      - 'docs/sdk/**'
+      - 'docs/API.md'
+      - 'docs/api/**'
+      - 'docs/integration-guide.md'
+      - 'scripts/check-doc-links.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/sdk-ci.yml'
+
+jobs:
+  contract:
+    name: Contract and embedded SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run sdk:check
+      - run: node server/scripts/test-console-route-auth-coverage.js
+      - run: npm run test:embedded-sdk
+      - run: npm run docs:check
+
+  node-sdk:
+    name: Node/TypeScript SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - run: npm ci --prefix sdk/typescript
+      - run: npm --prefix sdk/typescript test
+
+  python-sdk:
+    name: Python SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e "sdk/python[test]"
+      - run: python -m pytest sdk/python
+
+  go-sdk:
+    name: Go SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - working-directory: sdk/go
+        run: go test ./...
+      - working-directory: sdk/go
+        run: go vet ./...
