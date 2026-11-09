@@ -2481,6 +2481,15 @@ function getTrustedProxySetting(value) {
 
 app.set('trust proxy', getTrustedProxySetting(process.env.CR_TRUST_PROXY));
 
+// Stable request id for SDK error correlation. Clients may supply their own
+// X-Request-Id; otherwise generate one and echo it on every response.
+app.use((req, res, next) => {
+  const supplied = String(req.headers['x-request-id'] || '').trim();
+  req.crewRouterRequestId = /^[A-Za-z0-9._:-]{1,128}$/.test(supplied) ? supplied : crypto.randomUUID();
+  res.setHeader('X-CrewRouter-Request-Id', req.crewRouterRequestId);
+  next();
+});
+
 // 网关延迟指标起点：早于请求体解析，E2E 包含上传与反序列化耗时。
 app.use((req, res, next) => {
   const path = req.path || req.url || '';

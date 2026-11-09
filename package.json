@@ -61,7 +61,9 @@
     "test:popup-notices": "node --test server/scripts/test-popup-notices.js server/scripts/test-popup-notice-routes.js",
     "test:library-closed-keys": "node scripts/test-library-closed-keys.js",
     "test:library-closed-keys:browser": "node scripts/test-library-closed-keys-browser.js",
-    "money-precision:migrate": "node scripts/migrate-money-precision.js"
+    "money-precision:migrate": "node scripts/migrate-money-precision.js",
+    "sdk:generate": "node sdk/codegen/generate.mjs",
+    "sdk:check": "node sdk/codegen/generate.mjs --check"
   },
   "dependencies": {
     "@bloret-crew/blora-design": "2.1.0",
@@ -83,6 +85,7 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
+    "acorn": "^8.19.0",
     "esbuild": "^0.25.0",
     "javascript-obfuscator": "^4.1.1",
     "nodemon": "^3.1.14"

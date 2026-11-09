@@ -104,6 +104,36 @@ resp = client.chat.completions.create(
 )
 ```
 
+## SDK
+
+除了直接改 `base_url`，也可以使用 CrewRouter SDK 获得流式解析、统一错误、重试与管理接口封装。
+
+| 形态 | 包 | 状态 |
+|------|-----|------|
+| Node/TypeScript 客户端 | npm `crewrouter-sdk` | 0.1.0 可用 |
+| Python 客户端 | PyPI `crewrouter-sdk` | 规划中 |
+| Go 客户端 | `github.com/BloretCrew/CrewRouter/sdk/go` | 规划中 |
+| 可嵌入服务端 SDK | `crewrouter/embedded` | 规划中（Node） |
+
+```bash
+npm install crewrouter-sdk
+```
+
+```ts
+import { CrewRouter } from 'crewrouter-sdk';
+
+const client = new CrewRouter({
+  baseUrl: process.env.CREWROUTER_BASE_URL,
+  apiKey: process.env.CREWROUTER_API_KEY,
+});
+
+const response = await client.gateway.chat.completions.create({
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+所有 SDK 均与主项目一样使用 **GPL-3.0**。完整文档见 [docs/sdk/README.md](docs/sdk/README.md)。
+
 ## 快速开始
 
 ### 方式一：一键包（推荐）
@@ -189,8 +219,11 @@ npm start          # 开发可用 npm run dev
 |------|------|
 | [docs/deployment.md](docs/deployment.md) | 直接运行 / Docker / 更新 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 目录结构、路由与适配器 |
-| [docs/API.md](docs/API.md) | HTTP API |
+| [docs/API.md](docs/API.md) | HTTP API 索引与 OpenAPI |
+| [docs/api/reference.md](docs/api/reference.md) | 由路由生成的全量接口表 |
 | [docs/integration-guide.md](docs/integration-guide.md) | 接入现有应用 |
+| [docs/sdk/README.md](docs/sdk/README.md) | SDK 总览（English） |
+| [docs/sdk/quickstart-node.md](docs/sdk/quickstart-node.md) | Node SDK 快速开始 |
 | [LOG_SPEC.md](LOG_SPEC.md) | 运行日志约定 |
 
 ## 技术栈

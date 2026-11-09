@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { matchPermission } = require('../utils/api-key-permissions');
+const { SESSION_ONLY, PUBLIC_PREFIXES } = require('../constants/route-access');
 
 const ROUTES_DIR = path.resolve(__dirname, '../routes');
 
@@ -37,33 +38,6 @@ const MOUNTS = {
   'model-trace.js': ['/api/user/model-trace'],
 };
 
-const SESSION_ONLY = [
-  /^\/auth(?:\/|$)/,
-  /^\/api\/2fa(?:\/|$)/,
-  /^\/api\/passkey(?:\/|$)/,
-  /^\/api\/setup(?:\/|$)/,
-  /^\/api\/admin\/update(?:\/|$)/,
-  /^\/oauth\/authorize(?:\/|$)/,
-  /^\/oauth\/authorizations(?:\/|$)/,
-  /^\/api\/user\/model-trace(?:\/|$)/,
-];
-
-const PUBLIC = [
-  /^\/api\/i18n(?:\/|$)/,
-  /^\/api\/version(?:\/|$)/,
-  /^\/api\/config(?:\/|$)/,
-  /^\/api\/instance(?:\/|$)/,
-  /^\/api\/updates\/latest(?:\/|$)/,
-  /^\/api\/csrf-token(?:\/|$)/,
-  /^\/api\/login-report(?:\/|$)/,
-  /^\/api\/stats-report(?:\/|$)/,
-  /^\/api\/user\/docs-content(?:\/|$)/,
-  /^\/oauth\/token(?:\/|$)/,
-  /^\/oauth\/revoke(?:\/|$)/,
-  /^\/oauth\/desktop-session(?:\/|$)/,
-  /^\.well-known(?:\/|$)/,
-  /^\/store(?:\/|$)/,
-];
 
 function routePatterns(source) {
   const result = [];
@@ -80,7 +54,7 @@ function normalizedPath(prefix, route) {
 }
 
 function skipped(fullPath) {
-  return SESSION_ONLY.some((re) => re.test(fullPath)) || PUBLIC.some((re) => re.test(fullPath));
+  return SESSION_ONLY.some((re) => re.test(fullPath)) || PUBLIC_PREFIXES.some((re) => re.test(fullPath));
 }
 
 const missing = [];

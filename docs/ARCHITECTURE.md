@@ -7,7 +7,7 @@
 CrewRouter is an Express.js-based API gateway that provides a unified OpenAI-compatible API to access multiple upstream AI providers (OpenAI, Anthropic, DeepSeek, etc.). It includes user management, billing, rate limiting, team-based model access control, and a "Fusion" multi-model consensus system.
 
 **Tech Stack:**
-- **Runtime**: Node.js (>=16)
+- **Runtime**: Node.js (>=20)
 - **Framework**: Express.js 4
 - **Database**: PostgreSQL (via `pg` driver)
 - **Frontend**: Vanilla HTML/CSS/JavaScript
@@ -27,7 +27,7 @@ CrewRouter/
 │   │   └── database.js         # PostgreSQL connection pool
 │   ├── middleware/
 │   │   └── auth.js             # requireAuth, requireAdmin middleware
-│   ├── routes/                 # 13 route modules
+│   ├── routes/                 # 38 route modules; see routes/mounts.js for the full mount table
 │   │   ├── auth.js             # Login, logout, change password
 │   │   ├── api.js              # Core proxy: /v1/chat/completions
 │   │   ├── admin.js            # Admin CRUD for users, models, providers
@@ -159,10 +159,17 @@ Three authentication mechanisms:
 2. **API Key** (for programmatic access): Validated in `api.js:validateApiKey()`. Supports:
    - `X-API-Key` header
    - `Authorization: Bearer` header
-   - `?api_key=` query parameter
    - 60-second in-memory cache
 
-3. **OAuth**: Feishu/Lark (`server/routes/feishu.js`) and GitHub (`server/routes/oauth.js`)
+   Query-parameter keys (`?api_key=`) are **not** supported.
+
+3. **OAuth access token** (`crh_...`): Validated by `server/middleware/oauth-bearer.js`.
+   It is accepted only on gateway and client-event endpoints, is bound to an API
+   key, and never falls back to a browser session.
+
+4. **OAuth login providers**: Feishu/Lark (`server/routes/feishu.js`), PassPort
+   (`server/routes/passport-auth.js`) and the built-in OAuth 2.0 authorization
+   service (`server/routes/oauth.js`).
 
 Additional security: TOTP 2FA (`speakeasy`), WebAuthn/PassKeys (`@simplewebauthn/server`), bcrypt password hashing.
 
@@ -392,6 +399,33 @@ Pure vanilla HTML/CSS/JavaScript (no framework):
 7. **SSE streaming with backpressure**: Full backpressure handling with drain events, client disconnect detection, and proxy retry on 429.
 
 8. **Dynamic key refresh**: Providers can use sandboxed JavaScript scripts to refresh API keys periodically.
+
+---
+
+## SDK and Contract
+
+The repository ships a Node/TypeScript client SDK under `sdk/typescript` and
+generates a language-neutral operation catalog:
+
+- `server/routes/mounts.js` — declarative mount table (also used by the contract
+  generator and route coverage tests).
+- `server/constants/route-access.js` — session-only, public and gateway route
+  classification, dependency-free.
+- `sdk/codegen/generate.mjs` — parses Express routers with acorn, joins them with
+  `public/js/api-key-permissions.json`, and writes `sdk/contract/operations.json`,
+  `sdk/contract/openapi.json`, the TypeScript operation catalog and
+  `docs/api/reference.md`.
+- `npm run sdk:generate` / `npm run sdk:check` — regenerate or verify the
+  committed artifacts.
+
+Gateway methods (`chat.completions`, `messages`, `responses`) are hand-written
+for streaming. Management operations are generated and callable through
+`client.call(operationId, options)`; core resources have typed convenience
+wrappers. Session-only routes appear in the catalog as excluded and cannot be
+called with an API key.
+
+The embedded server SDK (`crewrouter/embedded`) is planned as a later phase and
+is documented in `docs/sdk/embedded-server.md`.
 
 ---
 
