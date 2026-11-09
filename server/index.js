@@ -2010,14 +2010,24 @@ async function ensureApiKeyCrewRouterCommands() {
 
 async function ensureApiKeyPermissions() {
   try {
-    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb`);
-    // 显式清理历史 NULL，避免被当成全权限。
-    await pool.query(`UPDATE api_keys SET permissions = '[]'::jsonb WHERE permissions IS NULL`);
+    const { defaultPermissions, DEFAULT_PERMISSION_IDS } = require('./utils/api-key-permissions');
+    const existing = await pool.query(
+      `SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'api_keys' AND column_name = 'permissions'`
+    );
+    if (existing.rows.length === 0) {
+      // 先允许 NULL，回填后再收紧；避免 ADD COLUMN DEFAULT 把旧 Key 静默清空。
+      await pool.query(`ALTER TABLE api_keys ADD COLUMN permissions JSONB`);
+    }
+    await pool.query(
+      `UPDATE api_keys SET permissions = $1::jsonb WHERE permissions IS NULL`,
+      [JSON.stringify(defaultPermissions())]
+    );
     await pool.query(`ALTER TABLE api_keys ALTER COLUMN permissions SET DEFAULT '[]'::jsonb`);
+    await pool.query(`ALTER TABLE api_keys ALTER COLUMN permissions SET NOT NULL`);
 
     // 一次性迁移：为所有历史 Key 打开网关权限（gateway.*），
     // 否则升级后所有存量 Key 都会因为权限为空而无法发起网关请求。
-    const { DEFAULT_PERMISSION_IDS } = require('./utils/api-key-permissions');
     const migrationKey = 'migration_open_api_key_gateway_permissions_v1';
     const migration = await pool.query('SELECT 1 FROM settings WHERE key = $1', [migrationKey]);
     if (migration.rows.length === 0) {
