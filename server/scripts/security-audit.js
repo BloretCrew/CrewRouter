@@ -9,6 +9,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { Client } = require('pg');
 const { HARNESS_SOURCES } = require('../utils/request-source');
+const { ALL_PERMISSION_IDS } = require('../utils/api-key-permissions');
 
 const REQUIRED_PUBLIC_TABLES = [
   'providers', 'users', 'user_teams', 'teams', 'team_models', 'models',
@@ -37,18 +38,19 @@ const RISK_COUNTS = {
   oauthTokens: ['orphanPrincipals', 'ownerMismatches', 'invalidKinds'],
   oauthCodes: ['orphanPrincipals', 'ownerMismatches'],
   oauthClients: ['invalidTypes', 'confidentialWithoutSecret', 'invalidScopeSets', 'invalidRedirectUris'],
+  apiKeyPermissions: ['invalidPermissionShape', 'unknownPermissions', 'adminPermissionsOnNonAdmins'],
   authInvites: ['orphanCreators', 'orphanTeams'],
   catalog: ['invalidIndexes', 'notReadyIndexes', 'unvalidatedConstraints'],
   sequences: ['behindCount'],
 };
-const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'], oauthTokens: ['oauth_tokens'], oauthCodes: ['oauth_auth_codes'], oauthClients: ['oauth_clients'], authInvites: ['auth_invites'] };
+const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'], oauthTokens: ['oauth_tokens'], oauthCodes: ['oauth_auth_codes'], oauthClients: ['oauth_clients'], apiKeyPermissions: ['api_keys'], authInvites: ['auth_invites'] };
 const OPTIONAL_CHECKS = ['plugins', 'balancePreconsumes', 'redemptionCodes', 'apiKeyMemberships', ...Object.keys(NEW_CHECK_TABLES)];
 const ROLE_FLAGS = ['superuser', 'createRole', 'createDatabase', 'replication', 'bypassRls', 'publicSchemaCreate', 'publicSchemaMemberCreate', 'publicSchemaOwner', 'databaseOwner'];
 
 const INFORMATIONAL_COUNTS = {
   identities: ['usersWithPasskeys', 'adminsWithPasskeys', 'twoFactorEnabledAdmins', 'temporaryTotpSecrets'],
   oauthTokens: ['activeAccessTokens', 'activeRefreshTokens'], oauthCodes: ['activeCodes'],
-  oauthClients: ['disabledClients'], authInvites: ['activeInvites'],
+  oauthClients: ['disabledClients'], apiKeyPermissions: ['emptyPermissions'], authInvites: ['activeInvites'],
 };
 
 function invalidCheckFields(checks) {
@@ -417,6 +419,22 @@ async function audit({ client: suppliedClient, configPath: suppliedConfigPath } 
           FROM public.${table} q LEFT JOIN public.api_keys k ON k.id=q.api_key_id
           LEFT JOIN public.models m ON m.id=q.model_id`;
         if (harness) params = [HARNESS_SOURCES];
+      } else if (section === 'apiKeyPermissions') {
+        sql = `SELECT count(*)::int AS total,
+          count(*) FILTER(WHERE jsonb_typeof(permissions) IS DISTINCT FROM 'array')::int AS "invalidPermissionShape",
+          count(*) FILTER(WHERE jsonb_typeof(permissions) = 'array' AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(permissions) p(id)
+             WHERE p.id <> ALL($1::text[])
+          ))::int AS "unknownPermissions",
+          count(*) FILTER(WHERE u.is_admin IS NOT TRUE
+            AND jsonb_typeof(permissions) = 'array' AND EXISTS (
+              SELECT 1 FROM jsonb_array_elements_text(permissions) p(id)
+               WHERE p.id LIKE 'admin.%'
+            ))::int AS "adminPermissionsOnNonAdmins",
+          count(*) FILTER(WHERE jsonb_typeof(permissions) = 'array'
+            AND jsonb_array_length(permissions) = 0)::int AS "emptyPermissions"
+          FROM public.api_keys ak JOIN public.users u ON u.id = ak.user_id`;
+        params = [ALL_PERMISSION_IDS];
       } else if (section === 'oauthClients') {
         sql = `SELECT count(*)::int AS total,
           count(*) FILTER(WHERE client_type IS NULL OR client_type NOT IN ('public','confidential'))::int AS "invalidTypes",

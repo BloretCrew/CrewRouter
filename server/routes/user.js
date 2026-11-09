@@ -399,9 +399,10 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
         && !(actor.key?.permissions || []).includes('keys.permissions')) {
       return res.status(403).json({ error: '没有修改密钥权限的权限', code: 'permission_denied' });
     }
-    // 未显式传权限时默认打开网关权限；显式传空数组视为用户主动关闭全部权限。
+    // 未显式传权限时：session 创建默认打开网关权限；Key 身份创建默认全关，
+    // 避免只有 keys.write 的 Key 通过新建 Key 获得自身没有的网关权限。
     const requestedPermissions = permissions === undefined
-      ? apiKeyPermissions.defaultPermissions()
+      ? (isKeyActor ? [] : apiKeyPermissions.defaultPermissions())
       : permissions;
     const grant = apiKeyPermissions.validateGrant(requestedPermissions, {
       isAdmin: req.authUser?.isAdmin === true,

@@ -29,11 +29,12 @@ function cleanChecks() {
     oauthTokens: { total: 0, orphanPrincipals: 0, ownerMismatches: 0, invalidKinds: 0, activeAccessTokens: 0, activeRefreshTokens: 0 },
     oauthCodes: { total: 0, orphanPrincipals: 0, ownerMismatches: 0, activeCodes: 0 },
     oauthClients: { total: 0, invalidTypes: 0, confidentialWithoutSecret: 0, invalidScopeSets: 0, invalidRedirectUris: 0, disabledClients: 0 },
+    apiKeyPermissions: { total: 0, invalidPermissionShape: 0, unknownPermissions: 0, adminPermissionsOnNonAdmins: 0, emptyPermissions: 0 },
     authInvites: { total: 0, orphanCreators: 0, orphanTeams: 0, activeInvites: 0 },
     catalog: { invalidIndexes: 0, notReadyIndexes: 0, unvalidatedConstraints: 0 },
     databaseRole: { name: 'offline-auditor', superuser: false, createRole: false, createDatabase: false, replication: false, bypassRls: false, publicSchemaCreate: false, publicSchemaMemberCreate: false, publicSchemaOwner: false, databaseOwner: false },
   };
-  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings', 'oauthTokens', 'oauthCodes', 'oauthClients', 'authInvites']) Object.assign(checks[section], {tableMissing:false, missingTables:[]});
+  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings', 'oauthTokens', 'oauthCodes', 'oauthClients', 'apiKeyPermissions', 'authInvites']) Object.assign(checks[section], {tableMissing:false, missingTables:[]});
   return checks;
 }
 
@@ -76,6 +77,7 @@ function fixture({ shapes = {}, missing = [], tablePresence = {}, readOnly = tru
       if (sql.includes('FROM public.oauth_tokens')) return result([checks.oauthTokens]);
       if (sql.includes('FROM public.oauth_auth_codes')) return result([checks.oauthCodes]);
       if (sql.includes('FROM public.oauth_clients')) return result([checks.oauthClients]);
+      if (sql.includes('AS "unknownPermissions"')) return result([checks.apiKeyPermissions]);
       if (sql.includes('FROM public.auth_invites')) return result([checks.authInvites]);
       if (sql.includes('AS "invalidIndexes"')) return result([checks.catalog]);
       if (sql.includes('FROM pg_trigger t')) return result(hooks);
@@ -250,13 +252,13 @@ test('兑换码历史关联新增风险字段进入退出码并对缺字段失�
 
 
 test('new aggregate checks fail closed and missing dependency pairs remain explicit', async () => {
-  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings', 'oauthTokens', 'oauthCodes', 'oauthClients', 'authInvites']) {
+  for (const section of ['apiKeyQueues', 'apiKeyHarness', 'promptRecords', 'promptBindings', 'oauthTokens', 'oauthCodes', 'oauthClients', 'apiKeyPermissions', 'authInvites']) {
     const checks = cleanChecks();
     checks[section].total = '0';
     const incomplete = await fixture({ checks }).run();
     assert.equal(incomplete.complete, false);
     assert.equal(auditExitCode(incomplete), 2);
-    for (const field of Object.keys(cleanChecks()[section]).filter(field => !['total', 'tableMissing', 'missingTables', 'activeAccessTokens', 'activeRefreshTokens', 'activeCodes', 'activeInvites', 'disabledClients'].includes(field))) {
+    for (const field of Object.keys(cleanChecks()[section]).filter(field => !['total', 'tableMissing', 'missingTables', 'activeAccessTokens', 'activeRefreshTokens', 'activeCodes', 'activeInvites', 'disabledClients', 'emptyPermissions'].includes(field))) {
       const bad = cleanChecks(); bad[section][field] = 1;
       assert.equal(auditExitCode(await fixture({ checks: bad }).run()), 1);
     }
