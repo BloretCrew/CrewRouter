@@ -233,8 +233,15 @@ func (c *Client) Request(ctx context.Context, method, path string, opts RequestO
 	if timeout == 0 {
 		timeout = defaultTimeoutFor(path)
 	}
-	requestCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	var requestCtx context.Context
+	if opts.ResponseType == "stream" {
+		// The caller owns the body; do not cancel the context on return.
+		requestCtx = ctx
+	} else {
+		var cancel context.CancelFunc
+		requestCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
 
 	retries := c.MaxRetries
 	if opts.MaxRetries != nil {
@@ -270,12 +277,6 @@ func (c *Client) Request(ctx context.Context, method, path string, opts RequestO
 		raw, err := c.HTTPClient.Do(req)
 		if err != nil {
 			if requestCtx.Err() == context.DeadlineExceeded {
-				if attempt < retries && canRetry {
-					if sleepErr := c.sleep(ctx, retryDelay(attempt, 0)); sleepErr != nil {
-						return nil, sleepErr
-					}
-					continue
-				}
 				return nil, &TimeoutError{Err: err}
 			}
 			if requestCtx.Err() == context.Canceled {
