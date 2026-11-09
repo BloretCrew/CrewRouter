@@ -131,7 +131,7 @@ async function testUserReadsAndMutations() {
         return { rows: personal ? rows : [rows[1]] };
       } };
       const res = response();
-      await handler('routes/user.js', 'get', route, pool)({ session: { user: { id: 7 } }, personalProviderManager: personal }, res);
+      await handler('routes/user.js', 'get', route, pool)({ session: { user: { id: 7 } }, authUser: { id: 7 }, personalProviderManager: personal }, res);
       assert.strictEqual(res.data.length, personal ? 3 : route === '/providers' ? 2 : 1);
     }
     for (const target of rows) {
@@ -146,7 +146,7 @@ async function testUserReadsAndMutations() {
         return { rows: [] };
       } };
       const res = response();
-      await handler('routes/user.js', 'put', '/providers/:id', pool)({ session: { user: { id: 7 } }, params: { id: target.id }, body: { name: 'edited' }, personalProviderManager: personal }, res);
+      await handler('routes/user.js', 'put', '/providers/:id', pool)({ session: { user: { id: 7 } }, authUser: { id: 7 }, params: { id: target.id }, body: { name: 'edited' }, personalProviderManager: personal }, res);
       assert.strictEqual(updated, personal || target.created_by === 7);
       assert.strictEqual(res.statusCode, updated ? 200 : 403);
     }
@@ -170,7 +170,7 @@ async function testModelOwnership() {
     assert.strictEqual(Boolean((await context.checkModelOwnership(7, 'model', false)).error), createdBy !== 7);
   }
   const publish = source.slice(source.indexOf("router.post('/models/:id/publish',"));
-  assert(publish.includes('checkModelOwnership(req.session.user.id, modelId)'));
+  assert(publish.includes('checkModelOwnership(req.authUser.id, modelId)'));
 }
 
 async function testAdminList() {

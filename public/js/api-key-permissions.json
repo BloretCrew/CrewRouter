@@ -804,6 +804,18 @@
                 "GET"
               ],
               "path": "/api/user/inject-prompts/my-keys"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/custom-instructions"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/custom-instructions/*"
             }
           ]
         },
@@ -1775,6 +1787,12 @@
                 "GET"
               ],
               "path": "/api/cache/status"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/v1/cache/status"
             }
           ]
         },
@@ -1789,6 +1807,12 @@
                 "POST"
               ],
               "path": "/api/cache/reset"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/v1/cache/reset"
             }
           ]
         }

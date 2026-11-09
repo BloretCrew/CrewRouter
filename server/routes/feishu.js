@@ -369,9 +369,10 @@ router.get('/feishu/callback', async (req, res) => {
           const rawKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
           const keyPrefix = rawKey.substring(0, 12);
           await pool.query(
-            `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name)
-             VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
-            [user.id, require('../utils/key-hash').sha256Hex(rawKey), rawKey, keyPrefix]
+            `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name, permissions)
+             VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5', $5::jsonb)`,
+            [user.id, require('../utils/key-hash').sha256Hex(rawKey), rawKey, keyPrefix,
+              JSON.stringify(require('../utils/api-key-permissions').defaultPermissions())]
           );
           Logger.info(`[飞书注册] 已为用户 ${feishuName} 创建默认 API Key`);
         } catch (keyErr) {

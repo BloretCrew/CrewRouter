@@ -14,6 +14,8 @@
     "test:oauth-bearer-policy": "node --test server/scripts/test-oauth-bearer-policy.js",
     "test:oauth-clients": "node --test server/scripts/test-oauth-clients.js",
     "test:oauth-clients-postgres": "node server/scripts/test-oauth-clients-postgres.js",
+    "test:api-key-permissions": "node --test server/scripts/test-api-key-permissions.js server/scripts/test-console-key-auth.js && node server/scripts/test-console-route-auth-coverage.js",
+    "test:csrf-boundaries": "node server/scripts/test-csrf-boundaries.js",
     "test:security-audit": "node --test server/scripts/test-security-audit.js && node server/scripts/test-security-audit-postgres.js",
     "test:security-guards": "node --test server/scripts/test-auth-guards.js server/scripts/test-incident-guard.js && node server/scripts/test-provider-manager-permissions.js && node server/scripts/test-batch-e-permissions.js",
     "test:public-schema-create": "node --test server/scripts/test-public-schema-create-postgres.js",

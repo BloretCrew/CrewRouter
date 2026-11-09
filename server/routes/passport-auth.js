@@ -94,8 +94,10 @@ async function verifyPassport(code) {
 async function seedPassportUser(client, user, username, invite = null) {
   const rawKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
   await client.query(
-    `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name) VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
-    [user.id, require('../utils/key-hash').sha256Hex(rawKey), rawKey, rawKey.substring(0, 12)]
+    `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name, permissions)
+     VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5', $5::jsonb)`,
+    [user.id, require('../utils/key-hash').sha256Hex(rawKey), rawKey, rawKey.substring(0, 12),
+      JSON.stringify(require('../utils/api-key-permissions').defaultPermissions())]
   );
   const defaultTeam = await client.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
   const selectedTeamId = invite?.team_id || defaultTeam.rows[0]?.id || null;

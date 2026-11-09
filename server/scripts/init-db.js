@@ -528,7 +528,9 @@ async function initDatabase() {
       { name: 'quota_warning_enabled', type: 'BOOLEAN DEFAULT TRUE' },
       { name: 'swallow_images', type: 'BOOLEAN DEFAULT FALSE' },
       { name: 'crewrouter_commands', type: 'BOOLEAN DEFAULT TRUE' },
-      { name: 'permissions', type: "JSONB NOT NULL DEFAULT '[]'::jsonb" }
+      // 不在这里给历史表加 NOT NULL DEFAULT，避免旧 Key 被静默清空；
+      // 服务启动迁移会先回填 NULL，再设置默认值。
+      { name: 'permissions', type: 'JSONB' }
     ];
     for (const col of apiKeyColumns) {
       const colCheck = await client.query(`

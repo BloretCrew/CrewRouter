@@ -1681,6 +1681,11 @@
           <blora-option value="720"><span data-i18n="30 天">30 天</span></blora-option>
         </blora-select>
       </div>
+      <div class="blora-field">
+        <label class="blora-field__label">权限</label>
+        <p class="ak-dialog-note" data-i18n="网关权限默认开启，可按需调整；未勾选任何权限的 Key 将无法调用对应接口。">网关权限默认开启，可按需调整；未勾选任何权限的 Key 将无法调用对应接口。</p>
+        <div id="apiKeyPermissionGroups" class="ak-dialog-stack"></div>
+      </div>
     </div>
     <div slot="footer" class="ak-dialog-actions">
       <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
@@ -1777,6 +1782,19 @@
     <div slot="footer" class="ak-dialog-actions">
       <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
       <button type="button" class="blora-button" onclick="app.saveKeyOptions()" data-variant="primary"><span data-i18n="保存">保存</span></button>
+    </div>
+  </blora-dialog>
+
+  <!-- API Key 权限管理模态框 -->
+  <blora-dialog id="keyPermissionsModal" class="lg-scope">
+    <span slot="title" data-i18n="API Key 权限管理">API Key 权限管理</span>
+    <div class="ak-dialog-stack">
+      <p class="ak-dialog-note" data-i18n="权限仅 owner 可修改；关闭全部权限后该 Key 将无法调用任何接口。">权限仅 owner 可修改；关闭全部权限后该 Key 将无法调用任何接口。</p>
+      <div id="keyPermissionGroups" class="ak-dialog-stack"></div>
+    </div>
+    <div slot="footer" class="ak-dialog-actions">
+      <button type="button" class="blora-button" data-variant="secondary" onclick="this.closest('blora-dialog').close()"><span data-i18n="取消">取消</span></button>
+      <button type="button" class="blora-button" onclick="app.saveKeyPermissions()" data-variant="primary"><span data-i18n="保存权限">保存权限</span></button>
     </div>
   </blora-dialog>
 
@@ -2237,7 +2255,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=shell-cmd-20260326"></script>
   <script type="module" src="/js/model-trace.js?v=lg-21"></script>
-  <script src="/js/app.js?v=lg-26-passkey-origin"></script>
+  <script src="/js/app.js?v=api-key-permissions-20261109"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

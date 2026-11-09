@@ -876,10 +876,12 @@ class ConsoleApp {
     const tokenDisplay = tokens >= 1000000
       ? (tokens / 1000000).toFixed(1) + 'M'
       : tokens >= 1000 ? (tokens / 1000).toFixed(1) + 'K' : String(tokens);
-    const fullKey = key.key_value || '';
+    const isOwner = key.is_owner !== false;
+    const fullKey = isOwner ? (key.key_value || '') : '';
     const maskedKey = fullKey
       ? (fullKey.length > 16 ? fullKey.slice(0, 10) + ' ··· ' + fullKey.slice(-4) : fullKey.slice(0, 12) + '····')
-      : '—';
+      : (isOwner ? '—' : t('仅发起者可见'));
+    const permissionCount = Array.isArray(key.permissions) ? key.permissions.length : 0;
     const modelDisplay = key.current_model_name || '';
     const queue = Array.isArray(key.model_queue) ? key.model_queue : [];
     const queueLen = queue.length;
@@ -901,6 +903,7 @@ class ConsoleApp {
       this._renderApiKeyChip(status.text, status.class === 'active' ? 'ok' : status.class === 'expiring' ? 'warn' : status.class === 'expired' ? 'danger' : 'muted'),
       key.key_type === 'co_key' ? this._renderApiKeyChip('Co-Key', 'info') : '',
       !isEnabled ? this._renderApiKeyChip(t('已禁用'), 'danger') : '',
+      this._renderApiKeyChip(permissionCount ? `${t('权限')} ${permissionCount}` : t('无权限'), permissionCount ? 'info' : 'danger'),
       this._renderApiKeyChip(sigLabel, sigKind),
       swallowOn ? this._renderApiKeyChip(t('吞图'), 'warn') : '',
       quotaWarningOn ? this._renderApiKeyChip(t('额度预警'), 'warn') : '',
@@ -909,18 +912,20 @@ class ConsoleApp {
     ].filter(Boolean).join('');
 
     const displayName = key.name || 'API Key';
-    const isOwner = key.is_owner !== false;
     const ownerName = key.owner?.username || '';
     const memberCount = Array.isArray(key.members) ? key.members.length : 0;
     const coKeyMeta = key.is_co_key
       ? `${'<span class="api-key-dot">·</span><span class="api-key-sub-muted">' + t('由')}${escapeHtml(ownerName)}${t('发起')}</span>`
       : (memberCount ? `<span class="api-key-dot">·</span><span class="api-key-sub-muted">Co-Key · ${memberCount}${t('位成员')}</span>` : '');
     const moreItems = [
-      { label: t('客户端配置'), onClick: `app.generateClaudeConfig(${key.id})` },
-      { label: t('额度脚本'), onClick: `app.generateUsageScript(${key.id})` },
+      ...(isOwner ? [
+        { label: t('客户端配置'), onClick: `app.generateClaudeConfig(${key.id})` },
+        { label: t('额度脚本'), onClick: `app.generateUsageScript(${key.id})` },
+      ] : []),
       { label: t('Fusion 配置'), onClick: `app.showKeyFusionConfig(${key.id})` },
       { label: t('选项'), onClick: `app.showKeyOptions(${key.id})` },
       { label: t('签名设置'), onClick: `app.showKeySignature(${key.id})` },
+      ...(isOwner ? [{ label: t('权限管理'), onClick: `app.showKeyPermissions(${key.id})` }] : []),
       { label: t('用量详情'), onClick: `window.location.href='/usage?keyId=${encodeURIComponent(String(key.id))}'` },
       ...(isOwner ? [
         { label: t('成员管理'), onClick: `app.showKeyMembers(${key.id})` },
@@ -972,7 +977,7 @@ class ConsoleApp {
 
         <div class="api-key-prefix">
           <code class="api-key-value" data-visible="false" data-fullkey="${escapeHtml(fullKey)}"
-                onclick="app.toggleKeyVisibility(this)" title="${t('点击显示/隐藏完整密钥')}">${escapeHtml(maskedKey)}</code>
+                ${fullKey ? `onclick="app.toggleKeyVisibility(this)" title="${t('点击显示/隐藏完整密钥')}"` : ''}>${escapeHtml(maskedKey)}</code>
           ${fullKey ? `<div class="api-key-secret-actions">
             <button type="button" class="blora-button copy-btn" data-variant="ghost" data-size="icon" aria-label="${t('显示/隐藏')}" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="${t('显示/隐藏')}">
               <span data-icon="eye" aria-hidden="true"></span>
