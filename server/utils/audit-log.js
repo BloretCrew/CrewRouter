@@ -192,8 +192,11 @@ function auditMiddleware(action, opts = {}) {
       const status = res.statusCode;
       if (onlySuccess && (status < 200 || status >= 300)) return;
 
-      const user = req.session?.user;
+      const user = req.authUser || req.session?.user;
       const details = detailsFrom ? safeCall(detailsFrom, req, res) : null;
+      const authDetails = req.authActor?.type === 'api_key'
+        ? { method: 'api_key', keyId: req.authActor.key?.id || null, keyName: req.authActor.key?.name || '', ownerUserId: req.authActor.key?.ownerUserId || null }
+        : { method: 'session' };
 
       logAction({
         userId: user?.id || null,
@@ -203,7 +206,7 @@ function auditMiddleware(action, opts = {}) {
         resourceType,
         resourceId: resourceIdFrom ? safeCall(resourceIdFrom, req, res) : null,
         description: descriptionFrom ? safeCall(descriptionFrom, req, res) : '',
-        details,
+        details: { ...(details && typeof details === 'object' && !Array.isArray(details) ? details : {}), auth: authDetails },
         ip: req.ip,
         userAgent: req.headers['user-agent'],
         status,

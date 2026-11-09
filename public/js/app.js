@@ -7650,14 +7650,96 @@ class ConsoleApp {
     }
   }
 
+  async loadApiKeyPermissionCatalog() {
+    if (this._apiKeyPermissionCatalog) return this._apiKeyPermissionCatalog;
+    if (!this._apiKeyPermissionCatalogPromise) {
+      this._apiKeyPermissionCatalogPromise = fetch('/js/api-key-permissions.json?v=1')
+        .then((res) => { if (!res.ok) throw new Error('permission catalog'); return res.json(); })
+        .then((data) => { this._apiKeyPermissionCatalog = data; return data; })
+        .catch((error) => { console.error('[API Key 权限] 加载失败:', error); return { groups: [] }; });
+    }
+    return this._apiKeyPermissionCatalogPromise;
+  }
+
+  renderApiKeyPermissionGroups(containerId, selected = [], { disabled = false } = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const selectedSet = new Set(selected || []);
+    const catalog = this._apiKeyPermissionCatalog || { groups: [] };
+    const html = (catalog.groups || []).map((group) => {
+      const items = (group.permissions || []).map((permission) => `
+        <blora-checkbox class="api-key-permission-check" value="${escapeHtml(permission.id)}"
+          label="${escapeHtml(permission.name)}" ${selectedSet.has(permission.id) ? 'checked' : ''} ${disabled ? 'disabled' : ''}></blora-checkbox>
+        <div class="ak-dialog-note" style="margin:-4px 0 8px 28px;">${escapeHtml(permission.description || permission.id)}</div>`).join('');
+      return `<fieldset class="blora-fieldset">
+        <legend class="blora-fieldset__legend">${escapeHtml(group.name)}</legend>
+        ${group.description ? `<p class="ak-dialog-note">${escapeHtml(group.description)}</p>` : ''}
+        ${items}
+      </fieldset>`;
+    }).join('');
+    container.innerHTML = html || '<p class="ak-dialog-note">权限目录加载失败，请刷新页面重试。</p>';
+  }
+
+  selectedApiKeyPermissions(containerId) {
+    return [...document.querySelectorAll(`#${containerId} .api-key-permission-check`)]
+      .filter((el) => el.checked)
+      .map((el) => el.getAttribute('value'))
+      .filter(Boolean);
+  }
+
+  defaultApiKeyPermissions(catalog = this._apiKeyPermissionCatalog) {
+    const gateway = (catalog?.groups || []).find((group) => group.id === 'gateway');
+    return gateway ? (gateway.permissions || []).map((permission) => permission.id) : [];
+  }
+
+  async openCreateApiKeyModal() {
+    const name = document.getElementById('apiKeyName');
+    if (name) name.value = '';
+    const expiry = document.getElementById('apiKeyExpiry');
+    if (expiry) expiry.value = 'never';
+    const catalog = await this.loadApiKeyPermissionCatalog();
+    this.renderApiKeyPermissionGroups('apiKeyPermissionGroups', this.defaultApiKeyPermissions(catalog));
+    this.showModal('createApiKeyModal');
+  }
+
+  async showKeyPermissions(keyId) {
+    const key = (this._lastApiKeys || []).find((item) => Number(item.id) === Number(keyId));
+    if (!key || key.is_owner === false) return;
+    this._currentPermissionsKeyId = keyId;
+    await this.loadApiKeyPermissionCatalog();
+    this.renderApiKeyPermissionGroups('keyPermissionGroups', Array.isArray(key.permissions) ? key.permissions : []);
+    this.showModal('keyPermissionsModal');
+  }
+
+  async saveKeyPermissions() {
+    const keyId = this._currentPermissionsKeyId;
+    if (!keyId) return;
+    const permissions = this.selectedApiKeyPermissions('keyPermissionGroups');
+    try {
+      const res = await fetch(`/api/user/api-keys/${keyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissions }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('保存失败'));
+      this.closeModals();
+      this.showToast(t('API Key 权限已保存'), 'success');
+      await this.loadApiKeys();
+    } catch (error) {
+      this.showToast(error.message || t('保存 API Key 权限失败'), 'error');
+    }
+  }
+
   async createApiKey() {
     const name = document.getElementById('apiKeyName').value;
     const expiresIn = document.getElementById('apiKeyExpiry').value;
+    const permissions = this.selectedApiKeyPermissions('apiKeyPermissionGroups');
     try {
       const res = await fetch('/api/user/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, expiresIn: expiresIn && expiresIn !== 'never' ? parseInt(expiresIn) : null })
+        body: JSON.stringify({ name, expiresIn: expiresIn && expiresIn !== 'never' ? parseInt(expiresIn) : null, permissions })
       });
       const data = await res.json();
       if (res.ok) {
@@ -7669,14 +7751,6 @@ class ConsoleApp {
     } catch (error) {
       alert(t('创建失败'));
     }
-  }
-
-  openCreateApiKeyModal() {
-    const name = document.getElementById('apiKeyName');
-    if (name) name.value = '';
-    const expiry = document.getElementById('apiKeyExpiry');
-    if (expiry) expiry.value = 'never';
-    this.showModal('createApiKeyModal');
   }
 
   async showKeyMembers(keyId) {

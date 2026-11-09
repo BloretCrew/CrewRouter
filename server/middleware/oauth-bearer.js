@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { ensureOAuthTables } = require('../routes/oauth');
+const { matchPermission } = require('../utils/api-key-permissions');
 
 function sha256Hex(s) {
   return crypto.createHash('sha256').update(s).digest('hex');
@@ -31,9 +32,27 @@ async function oauthBearer(req, res, next) {
     // 惰性解引用：本模块与 routes/api.js 存在加载环（api.js 挂载点引用了本模块），
     // 请求期再取 validateApiKey 可避开循环初始化拿到 undefined
     const { validateApiKey } = require('../routes/api');
-    return validateApiKey(req, res, next);
+    return validateApiKey(req, res, () => enforceKeyPermission(req, res, next));
   }
   return authenticateOAuthAccessToken(req, res, next);
+}
+
+function enforceKeyPermission(req, res, next) {
+  let pathname = String(req.originalUrl || req.url || req.path || '/');
+  try { pathname = new URL(pathname, 'http://local').pathname; } catch { /* keep original */ }
+  const permission = matchPermission(req.method, pathname);
+  // Gateway routes are all mapped; an unmapped gateway route should not silently
+  // bypass an explicitly configured key permission.
+  if (!permission) return next();
+  const granted = Array.isArray(req.apiUser?.permissions) ? req.apiUser.permissions : [];
+  if (!granted.includes(permission.id)) {
+    const message = `API Key 没有该权限: ${permission.id}`;
+    if (String(req.path || '').includes('/messages')) {
+      return res.status(403).json({ type: 'error', error: { type: 'permission_error', message, code: 'permission_denied' } });
+    }
+    return res.status(403).json({ error: { message, type: 'permission_error', code: 'permission_denied', permission: permission.id } });
+  }
+  return next();
 }
 
 module.exports = { oauthBearer };

@@ -107,7 +107,7 @@ function parsePayload(body, { requireName = false, partial = false } = {}) {
 // ---------- 当前用户的 Key 列表（绑定选择器用；仅自己的 Key，Co-Key 成员不可见他人 Key） ----------
 router.get('/inject-prompts/my-keys', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const result = await pool.query(
       `SELECT id, COALESCE(NULLIF(name, ''), 'API Key') AS name, key_prefix
          FROM api_keys
@@ -127,7 +127,7 @@ router.get('/inject-prompts/my-keys', requireAuth, async (req, res) => {
 // ---------- 列表 ----------
 router.get('/inject-prompts', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const result = await pool.query(
       `SELECT p.id, p.name, p.content, p.enabled, p.sort_order, p.created_at, p.updated_at,
               b.api_key_id, k.name AS key_name
@@ -172,7 +172,7 @@ router.get('/inject-prompts', requireAuth, async (req, res) => {
 // ---------- 新建 ----------
 router.post('/inject-prompts', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const parsed = parsePayload(req.body || {}, { requireName: true });
     if (parsed.error) return badRequest(res, parsed.error);
 
@@ -196,7 +196,7 @@ router.post('/inject-prompts', requireAuth, async (req, res) => {
 // ---------- 修改（名称/内容/启用） ----------
 router.put('/inject-prompts/:id(\\d+)', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const id = parseInt(req.params.id, 10);
     const parsed = parsePayload(req.body || {}, { partial: true });
     if (parsed.error) return badRequest(res, parsed.error);
@@ -232,7 +232,7 @@ router.put('/inject-prompts/:id(\\d+)', requireAuth, async (req, res) => {
 // ---------- 删除 ----------
 router.delete('/inject-prompts/:id(\\d+)', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const id = parseInt(req.params.id, 10);
     await withOwnedPrompt(userId, id, client =>
       client.query('DELETE FROM inject_prompts WHERE id = $1 AND user_id = $2', [id, userId]));
@@ -247,7 +247,7 @@ router.delete('/inject-prompts/:id(\\d+)', requireAuth, async (req, res) => {
 // ---------- 绑定 Key（空数组 = 全局） ----------
 router.put('/inject-prompts/:id(\\d+)/keys', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const id = parseInt(req.params.id, 10);
     const ids = parseKeyIds(req.body?.keyIds);
     await withOwnedPrompt(userId, id, async client => {
@@ -278,7 +278,7 @@ router.put('/inject-prompts/:id(\\d+)/keys', requireAuth, async (req, res) => {
 // ---------- 快捷开关 ----------
 router.put('/inject-prompts/:id(\\d+)/toggle', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const id = parseInt(req.params.id, 10);
     const item = await withOwnedPrompt(userId, id, async (client, prompt) => {
       const nextEnabled = req.body?.enabled !== undefined

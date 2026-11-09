@@ -2279,7 +2279,7 @@ router.post('/providers/quick-add', requireAuth, requireProviderManager, auditMi
 }), async (req, res) => {
   try {
     const result = await quickAddSystemProvider({
-      userId: req.session.user.id,
+      userId: req.authUser.id,
       text: req.body?.text,
     });
     req.quickAddProviderId = result.id;
@@ -3850,7 +3850,7 @@ router.get('/feishu-login', requireAuth, requireAdmin, async (req, res) => {
     const cfg = await getFeishuConfig();
     const view = toPublicAdminView(cfg, req);
     Logger.info(
-      `[飞书配置] 管理员 ${req.session.user?.username} 读取配置: ` +
+      `[飞书配置] 管理员 ${req.authUser?.username} 读取配置: ` +
       `enabled=${view.enabled}, hasAppId=${!!view.appId}, hasSecret=${view.hasAppSecret}, source=${view.source}`
     );
     res.json(view);
@@ -3889,7 +3889,7 @@ router.put('/feishu-login', requireAuth, requireAdmin, auditMiddleware(ACTIONS.A
     });
 
     Logger.info(
-      `[飞书配置] 管理员 ${req.session.user?.username} 更新飞书登录配置: ` +
+      `[飞书配置] 管理员 ${req.authUser?.username} 更新飞书登录配置: ` +
       `enabled=${saved.enabled}, appId=${saved.appId ? saved.appId.slice(0, 8) + '…' : '(空)'}, ` +
       `secretUpdated=${secretProvided}, tenantKey=${saved.tenantKey ? '已设置' : '未设置'}`
     );
@@ -3925,7 +3925,7 @@ const { createCodes, deleteUnusedCodes } = require('../utils/redemption-code-sec
 function redemptionCreateHandler(mode) {
   return async (req, res) => {
     try {
-      const codes = await createCodes(pool, req.body, req.session.user.id, { manual: mode === 'manual' });
+      const codes = await createCodes(pool, req.body, req.authUser.id, { manual: mode === 'manual' });
       if (mode === 'manual') return res.json(codes[0]);
       if (mode === 'batch') return res.json({ success: true, count: codes.length });
       return res.json({ success: true, codes });
@@ -4969,7 +4969,7 @@ router.get('/models/:id/uptime', requireAuth, requireProviderManager, async (req
 router.post('/models/:id/test', requireProviderManager, async (req, res) => {
   try {
     const { testModel } = require('../utils/model-test');
-    const result = await testModel(req.params.id, req.session.user.id);
+    const result = await testModel(req.params.id, req.authUser.id);
     res.json(result);
   } catch (error) {
     Logger.error('[管理员模型测试] 错误:', error);
@@ -4985,7 +4985,7 @@ router.post('/models/test-batch', requireProviderManager, async (req, res) => {
     if (!Array.isArray(modelIds) || modelIds.length === 0) {
       return res.status(400).json({ ok: false, error: '请提供 modelIds 数组' });
     }
-    const results = await testModelsBatch(modelIds, req.session.user.id);
+    const results = await testModelsBatch(modelIds, req.authUser.id);
     res.json({ results });
   } catch (error) {
     Logger.error('[管理员批量测试] 错误:', error);

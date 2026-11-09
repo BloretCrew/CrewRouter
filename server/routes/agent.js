@@ -222,14 +222,14 @@ async function continueManage(req, res, { thread, messages, model, claim }) {
         const saved = await client.query(
           `INSERT INTO agent_approvals (thread_id, user_id, tool_call_id, tool_name, arguments, status)
            VALUES ($1, $2, $3, $4, $5::jsonb, 'pending') RETURNING id`,
-          [thread.id, req.session.user.id, approval.tool_call_id, approval.tool_name, JSON.stringify(approval.arguments || {})]
+          [thread.id, req.authUser.id, approval.tool_call_id, approval.tool_name, JSON.stringify(approval.arguments || {})]
         );
         approvalId = saved.rows[0].id;
       }
     };
     if (usages.length) {
       await recordAgentUsage({
-        userId: req.session.user.id, modelConfig: model, requestType: 'agent_manage',
+        userId: req.authUser.id, modelConfig: model, requestType: 'agent_manage',
         attempts: usages.map(usage => usage.quotaAttempt).filter(Boolean),
         promptTokens: usages.reduce((sum, item) => sum + Number(item.prompt_tokens || 0), 0),
         completionTokens: usages.reduce((sum, item) => sum + Number(item.completion_tokens || 0), 0),
@@ -272,9 +272,9 @@ router.post('/images', requireAuth, async (req, res) => {
     if (!prompt || prompt.length > 4000) return res.status(400).json({ error: '请填写 4000 字以内的提示词' });
     const sizeCheck = assertImageSize(req.body?.size);
     if (!sizeCheck.ok) return res.status(sizeCheck.status).json({ error: sizeCheck.error });
-    const balance = await assertHasBalance(req.session.user.id);
+    const balance = await assertHasBalance(req.authUser.id);
     if (!balance.ok) return res.status(balance.status).json({ error: balance.error });
-    const model = await loadUsableModel(req.session.user.id, req.body?.model);
+    const model = await loadUsableModel(req.authUser.id, req.body?.model);
     const modelCheck = assertImageModel(model);
     if (!modelCheck.ok) return res.status(modelCheck.status).json({ error: modelCheck.error });
 
@@ -329,11 +329,11 @@ router.post('/images', requireAuth, async (req, res) => {
     let saved;
     const tokens = imageUsageTokens(usage);
     await recordAgentUsage({
-      userId: req.session.user.id, modelConfig: model, requestType: 'imagine',
+      userId: req.authUser.id, modelConfig: model, requestType: 'imagine',
       promptTokens: tokens.promptTokens, completionTokens: tokens.completionTokens,
       identity: identity.snapshot(), req,
       persist: async client => {
-        saved = await insertImage(client, { userId: req.session.user.id, modelId: model.id,
+        saved = await insertImage(client, { userId: req.authUser.id, modelId: model.id,
           prompt, size: sizeCheck.size, mime, bytes });
         if (!saved.ok) throw new Error(saved.error);
       }
@@ -360,7 +360,7 @@ router.get('/images', requireAuth, async (req, res) => {
       `SELECT id, model_id, prompt, size, mime, created_at
        FROM agent_images WHERE user_id = $1
        ORDER BY created_at DESC LIMIT 50`,
-      [req.session.user.id]
+      [req.authUser.id]
     );
     res.json(result.rows.map(row => ({ ...row, url: `/api/agent/images/${row.id}/content` })));
   } catch (err) {
@@ -371,7 +371,7 @@ router.get('/images', requireAuth, async (req, res) => {
 
 router.get('/images/:id/content', requireAuth, async (req, res) => {
   try {
-    const row = await getImageContent(pool, req.params.id, req.session.user.id);
+    const row = await getImageContent(pool, req.params.id, req.authUser.id);
     if (!row) return res.status(404).json({ error: '图片不存在' });
     res.setHeader('Content-Type', row.mime || 'application/octet-stream');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -389,7 +389,7 @@ router.get('/manage/threads', requireAuth, requireAdmin, async (req, res) => {
       `SELECT id, title, model_id, created_at, updated_at
        FROM agent_threads WHERE user_id = $1 AND mode = 'manage'
        ORDER BY updated_at DESC LIMIT 50`,
-      [req.session.user.id]
+      [req.authUser.id]
     );
     res.json(result.rows);
   } catch (err) {
@@ -406,7 +406,7 @@ router.get('/manage/threads/:id', requireAuth, requireAdmin, async (req, res) =>
     const thread = await client.query(
       `SELECT id, title, model_id, created_at, updated_at
        FROM agent_threads WHERE id = $1 AND user_id = $2 AND mode = 'manage'`,
-      [req.params.id, req.session.user.id]
+      [req.params.id, req.authUser.id]
     );
     if (!thread.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: '对话不存在' }); }
     const messages = await client.query(
@@ -419,7 +419,7 @@ router.get('/manage/threads/:id', requireAuth, requireAdmin, async (req, res) =>
        FROM agent_approvals
        WHERE thread_id = $1 AND user_id = $2 AND status = 'pending'
        ORDER BY id DESC LIMIT 1`,
-      [req.params.id, req.session.user.id]
+      [req.params.id, req.authUser.id]
     );
     await client.query('COMMIT');
     res.json({
@@ -439,9 +439,9 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
   try {
     const text = String(req.body?.text || '').trim();
     if (!text) return res.status(400).json({ error: '请输入内容' });
-    const balance = await assertHasBalance(req.session.user.id);
+    const balance = await assertHasBalance(req.authUser.id);
     if (!balance.ok) return res.status(balance.status).json({ error: balance.error });
-    const model = await loadUsableModel(req.session.user.id, req.body?.model);
+    const model = await loadUsableModel(req.authUser.id, req.body?.model);
     if (!model) return res.status(404).json({ error: '模型不存在或已禁用' });
     if (model.output_kind === 'image') return res.status(400).json({ error: '请选择对话模型' });
 
@@ -450,10 +450,10 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
     if (threadId) {
       const existing = await pool.query(
         `SELECT id, title FROM agent_threads WHERE id = $1 AND user_id = $2 AND mode = 'manage'`,
-        [threadId, req.session.user.id]
+        [threadId, req.authUser.id]
       );
       if (!existing.rows[0]) return res.status(404).json({ error: '对话不存在' });
-      claim = await claimThread(pool, threadId, req.session.user.id);
+      claim = await claimThread(pool, threadId, req.authUser.id);
       if (!claim) return res.status(409).json({ error: '对话正在处理中，请稍后重试' });
       const pending = await pool.query(
         `SELECT id FROM agent_approvals WHERE thread_id = $1 AND status = 'pending'`,
@@ -471,10 +471,10 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
       const created = await pool.query(
         `INSERT INTO agent_threads (user_id, mode, title, model_id)
          VALUES ($1, 'manage', $2, $3) RETURNING id`,
-        [req.session.user.id, title, model.id]
+        [req.authUser.id, title, model.id]
       );
       threadId = created.rows[0].id;
-      claim = await claimThread(pool, threadId, req.session.user.id);
+      claim = await claimThread(pool, threadId, req.authUser.id);
       if (!claim) return res.status(409).json({ error: '对话正在处理中，请稍后重试' });
     }
     messages.push({ role: 'user', content: text, tool_calls: null, tool_call_id: null, tool_name: null });
@@ -499,17 +499,17 @@ router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res)
        FROM agent_approvals a
        JOIN agent_threads t ON t.id = a.thread_id AND t.user_id = a.user_id
        WHERE a.id = $1 AND a.user_id = $2 AND a.status = 'pending'`,
-      [req.params.id, req.session.user.id]
+      [req.params.id, req.authUser.id]
     );
     const approval = approvalResult.rows[0];
     if (!approval) return res.status(404).json({ error: '审批不存在或已处理' });
-    const model = await loadUsableModel(req.session.user.id, approval.model_id);
+    const model = await loadUsableModel(req.authUser.id, approval.model_id);
     if (!model) return res.status(404).json({ error: '模型不存在或已禁用' });
-    claim = await claimThread(pool, approval.thread_id, req.session.user.id);
+    claim = await claimThread(pool, approval.thread_id, req.authUser.id);
     if (!claim) return res.status(409).json({ error: '对话正在处理中，请稍后重试' });
     const edition = await loadPersistedEdition(pool);
     const applied = await decideApproval(pool, { threadId: approval.thread_id,
-      approvalId: approval.id, userId: req.session.user.id, decision, edition: edition || 'personal', transactionClient: claim.client },
+      approvalId: approval.id, userId: req.authUser.id, decision, edition: edition || 'personal', transactionClient: claim.client },
     (db, call, contextDecision, ctx) => resolveToolDecision(db, call, contextDecision, ctx).then(redactSecrets));
     if (!applied) return res.status(404).json({ error: '审批不存在或已处理' });
     committedApproval = { id: approval.id, status: decision === 'allow' ? 'approved' : 'denied' };
@@ -517,8 +517,8 @@ router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res)
     if (decision === 'allow' && output && !output.error) {
       const action = approval.tool_name === 'set_provider_enabled' ? ACTIONS.ADMIN_PROVIDER_TOGGLE : ACTIONS.ADMIN_MODEL_UPDATE;
       try { await logAction({
-        userId: req.session.user.id,
-        username: req.session.user.username,
+        userId: req.authUser.id,
+        username: req.authUser.username,
         isAdmin: true,
         action,
         resourceType: approval.tool_name === 'set_provider_enabled' ? 'provider' : 'model',

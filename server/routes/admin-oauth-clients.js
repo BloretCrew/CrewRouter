@@ -88,7 +88,7 @@ function validateClientPayload(body, { creating }) {
 }
 
 function audit(req, action, clientId, details) {
-  const user = req.session?.user || {};
+  const user = req.authUser || req.session?.user || {};
   logAction({
     userId: user.id,
     username: user.username,

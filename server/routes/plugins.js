@@ -32,8 +32,8 @@ function createPluginsRoutes() {
 
   const registry = () => require('../plugins/registry');
   const logPluginAdminAction = (req, action, pluginId, description, details = null) => logAction({
-    userId: req.session.user.id,
-    username: req.session.user.username,
+    userId: req.authUser.id,
+    username: req.authUser.username,
     isAdmin: true,
     action,
     resourceType: 'plugin',
@@ -146,7 +146,7 @@ function createPluginsRoutes() {
             signal: AbortSignal.timeout(5000),
           });
         } catch (e) { /* 忽略 */ }
-        Logger.info(`[plugins-api] 插件 ${id} 已从商店安装并启用（管理员 ${req.session.user?.username}）`);
+        Logger.info(`[plugins-api] 插件 ${id} 已从商店安装并启用（管理员 ${req.authUser?.username}）`);
         res.json({ ok: true, id, name: manifest.name || id, version: manifest.version || '', reloadRequired: true });
       } finally {
         try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
@@ -234,7 +234,7 @@ function createPluginsRoutes() {
       await logPluginAdminAction(req, 'plugin.install', id,
         `安装插件「${manifest.name || id}」v${manifest.version || ''}`,
         { file: file.originalFilename || '' });
-      Logger.info(`[plugins-api] 插件 ${id} 已从 zip 安装（管理员 ${req.session.user.username}）`);
+      Logger.info(`[plugins-api] 插件 ${id} 已从 zip 安装（管理员 ${req.authUser.username}）`);
       res.json({ ok: true, id, name: manifest.name || id, version: manifest.version || '', reloadRequired: true });
     } catch (err) {
       Logger.error(`[plugins-api] 上传安装失败: ${err.message}`);
@@ -262,7 +262,7 @@ function createPluginsRoutes() {
       else await registry().disable(id);
       await logPluginAdminAction(req, 'plugin.toggle', id,
         `${next ? '启用' : '禁用'}插件「${id}」`, { enabled: next });
-      Logger.info(`[plugins-api] 插件 ${id} 已${next ? '启用' : '禁用'}（管理员 ${req.session.user?.username}）`);
+      Logger.info(`[plugins-api] 插件 ${id} 已${next ? '启用' : '禁用'}（管理员 ${req.authUser?.username}）`);
       res.json({ ok: true, enabled: next });
     } catch (err) {
       Logger.error(`[plugins-api] 启停失败: ${err.message}`);
@@ -357,7 +357,7 @@ function createPluginsRoutes() {
       }
       await logPluginAdminAction(req, 'plugin.uninstall', id,
         `卸载插件「${id}」（含磁盘目录清理）`);
-      Logger.info(`[plugins-api] 插件 ${id} 已卸载并清理目录（管理员 ${req.session.user?.username}）`);
+      Logger.info(`[plugins-api] 插件 ${id} 已卸载并清理目录（管理员 ${req.authUser?.username}）`);
       res.json({ ok: true, directoryCleaned: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -372,7 +372,7 @@ function createPluginsRoutes() {
   // 用户主题：返回个人选择、站点默认与可用列表；effective 为服务端解析后的生效主题
   publicRouter.get('/user-theme', requireAuth, async (req, res) => {
     try {
-      const uid = req.session.user.id;
+      const uid = req.authUser.id;
       const [u, d] = await Promise.all([
         pool.query('SELECT theme_id FROM users WHERE id = $1', [uid]),
         pool.query("SELECT value FROM settings WHERE key = 'default_theme'"),
@@ -405,7 +405,7 @@ function createPluginsRoutes() {
         if (!valid) return res.status(400).json({ error: '主题不存在或对应插件未启用' });
       }
       await pool.query('UPDATE users SET theme_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-        [req.session.user.id, themeId]);
+        [req.authUser.id, themeId]);
       res.json({ ok: true, themeId });
     } catch (err) {
       Logger.error(`[plugins-api] 保存用户主题失败: ${err.message}`);
@@ -426,10 +426,10 @@ function createPluginsRoutes() {
 
       // 路由鉴权：默认 user；admin 要求管理员；none 公开
       const routeAuth = findRouteAuth(reg, req.params.pluginId, req.method, rest);
-      if (routeAuth === 'admin' && !req.session.user?.isAdmin) {
+      if (routeAuth === 'admin' && !req.authUser?.isAdmin) {
         return res.status(403).json({ error: '无管理员权限' });
       }
-      if (routeAuth !== 'none' && !req.session.user) {
+      if (routeAuth !== 'none' && !req.authUser) {
         return res.status(401).json({ error: '请先登录' });
       }
 

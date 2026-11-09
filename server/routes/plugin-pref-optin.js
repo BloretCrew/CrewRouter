@@ -17,7 +17,7 @@ async function readOptinUsers(db = pool, lock = false) {
 router.get('/plugin-pref-optin', requireAuth, async (req, res) => {
   try {
     const users = await readOptinUsers();
-    res.json({ optedIn: users.has(Number(req.session.user.id)) });
+    res.json({ optedIn: users.has(Number(req.authUser.id)) });
   } catch (error) {
     Logger.error('[插件偏好授权] 读取失败:', error);
     res.status(500).json({ error: '读取授权状态失败' });
@@ -27,7 +27,7 @@ router.get('/plugin-pref-optin', requireAuth, async (req, res) => {
 // 设置当前用户是否授权插件读取偏好
 router.put('/plugin-pref-optin', requireAuth, async (req, res) => {
   try {
-    const userId = Number(req.session.user.id);
+    const userId = Number(req.authUser.id);
     const enabled = req.body?.enabled === true;
     const client = await pool.connect();
     try {

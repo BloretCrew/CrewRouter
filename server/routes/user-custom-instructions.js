@@ -54,7 +54,7 @@ router.get('/custom-instructions', requireAuth, async (req, res) => {
   try {
     await ensureIndex();
     const { days, maxRecords } = scanWindow();
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
 
     const page = clampInt(req.query.page, 1, 1e9, 1);
     const pageSize = clampInt(req.query.pageSize, 1, 200, 20);
@@ -105,7 +105,7 @@ router.get('/custom-instructions/:fingerprint', requireAuth, async (req, res) =>
   try {
     await ensureIndex();
     const { days, maxRecords } = scanWindow();
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const fingerprint = String(req.params.fingerprint || '').toLowerCase().trim();
     if (!/^[a-f0-9]{64}$/.test(fingerprint)) {
       return res.status(400).json({ error: '无效的指纹' });

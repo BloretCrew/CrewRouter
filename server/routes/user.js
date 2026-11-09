@@ -10,6 +10,7 @@ const config = require('../config-loader');
 const { fetchProvidersIndex, lookupProvider } = require('../provider-lookup');
 const proxyPool = require('../proxy-pool');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
+const apiKeyPermissions = require('../utils/api-key-permissions');
 const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone');
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
@@ -66,7 +67,7 @@ async function withApiKeyWrite(req, res, options, write) {
     await client.query('BEGIN');
     transactionOpen = true;
     await client.query('SELECT id FROM api_keys WHERE id = $1 FOR UPDATE', [req.params.id]);
-    const access = await getApiKeyAccess(client, req.params.id, req.session.user.id);
+    const access = await getApiKeyAccess(client, req.params.id, req.authUser.id);
     if (options.ownerOnly && !access?.is_owner) {
       reply.status(options.deniedStatus || 403).json({ error: options.deniedMessage || '仅发起者可管理成员' });
     } else if (!access) {
@@ -99,35 +100,35 @@ async function withApiKeyWrite(req, res, options, write) {
 router.get('/trace-sessions', requireAuth, async (req, res) => {
   try {
     const unviewed = String(req.query.unviewed || '') === '1';
-    const r = await pool.query(`SELECT ts.*, ak.name AS api_key_name FROM trace_sessions ts LEFT JOIN api_keys ak ON ak.id = ts.api_key_id WHERE ts.user_id = $1 AND ts.status = 'completed' ${unviewed ? 'AND ts.viewed_at IS NULL' : ''} ORDER BY ts.started_at DESC LIMIT 100`, [req.session.user.id]);
+    const r = await pool.query(`SELECT ts.*, ak.name AS api_key_name FROM trace_sessions ts LEFT JOIN api_keys ak ON ak.id = ts.api_key_id WHERE ts.user_id = $1 AND ts.status = 'completed' ${unviewed ? 'AND ts.viewed_at IS NULL' : ''} ORDER BY ts.started_at DESC LIMIT 100`, [req.authUser.id]);
     res.json(r.rows);
   } catch (e) { Logger.error('[跟踪报告列表] 错误:', e); res.status(500).json({ error: '服务器错误' }); }
 });
 
 router.get('/trace-sessions/:publicId', requireAuth, async (req, res) => {
   try {
-    const r = await pool.query(`UPDATE trace_sessions SET viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP) WHERE public_id = $1 AND user_id = $2 RETURNING *`, [req.params.publicId, req.session.user.id]);
+    const r = await pool.query(`UPDATE trace_sessions SET viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP) WHERE public_id = $1 AND user_id = $2 RETURNING *`, [req.params.publicId, req.authUser.id]);
     if (!r.rows.length) return res.status(404).json({ error: '报告不存在' });
     const events = await pool.query(`SELECT te.*, COALESCE(ur.requested_model, te.request_params->'model_identity'->>'requested_model') AS requested_model,
       COALESCE(ur.resolved_model, te.request_params->'model_identity'->>'resolved_model') AS resolved_model,
       COALESCE(ur.response_model, te.request_params->'model_identity'->>'response_model') AS response_model, ur.plugin_meta->'request_semantics' AS semantics
       FROM trace_events te
       LEFT JOIN usage_records ur ON ur.id = te.usage_record_id AND ur.user_id = $2
-      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id, req.session.user.id]);
+      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id, req.authUser.id]);
     res.json({ session: r.rows[0], events: events.rows });
   } catch (e) { Logger.error('[跟踪报告详情] 错误:', e); res.status(500).json({ error: '服务器错误' }); }
 });
 
 router.get('/trace-sessions/:publicId/export', requireAuth, async (req, res) => {
   try {
-    const r = await pool.query('SELECT * FROM trace_sessions WHERE public_id = $1 AND user_id = $2', [req.params.publicId, req.session.user.id]);
+    const r = await pool.query('SELECT * FROM trace_sessions WHERE public_id = $1 AND user_id = $2', [req.params.publicId, req.authUser.id]);
     if (!r.rows.length) return res.status(404).json({ error: '报告不存在' });
     const events = await pool.query(`SELECT te.*, COALESCE(ur.requested_model, te.request_params->'model_identity'->>'requested_model') AS requested_model,
       COALESCE(ur.resolved_model, te.request_params->'model_identity'->>'resolved_model') AS resolved_model,
       COALESCE(ur.response_model, te.request_params->'model_identity'->>'response_model') AS response_model
       FROM trace_events te
       LEFT JOIN usage_records ur ON ur.id = te.usage_record_id AND ur.user_id = $2
-      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id, req.session.user.id]);
+      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id, req.authUser.id]);
     const format = String(req.query.format || 'json').toLowerCase();
     if (format !== 'csv') return res.json({ session: r.rows[0], events: events.rows });
     const columns = ['id','created_at','ok','http_status','error','request_type','request_source','model_id','provider_id','tokens_used','prompt_tokens','completion_tokens','cached_tokens','weighted_tokens','cost','latency_ms','messages','response','reasoning_content','request_params','finish_reason','requested_model','resolved_model','response_model'];
@@ -189,7 +190,7 @@ router.get('/models', requireAuth, async (req, res) => {
        JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $1
        WHERE m.enabled = TRUE
        ORDER BY m.name`,
-      [req.session.user.id]
+      [req.authUser.id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -207,6 +208,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         ak.name,
         ak.key_prefix,
         ak.key_value,
+        ak.permissions,
         ak.custom_model_name,
         ak.current_model_id,
         ak.is_system,
@@ -313,8 +315,14 @@ router.get('/api-keys', requireAuth, async (req, res) => {
       WHERE ak.user_id = $1
          OR EXISTS (SELECT 1 FROM api_key_members mine WHERE mine.api_key_id = ak.id AND mine.user_id = $1)
       ORDER BY COALESCE(uko.sort_order, 2147483647) ASC, ak.created_at DESC
-    `, [req.session.user.id]);
-    res.json(result.rows);
+    `, [req.authUser.id]);
+    const canSeeSecret = req.authActor?.type !== 'api_key'
+      || (req.authActor.key?.permissions || []).includes('keys.secret');
+    res.json(result.rows.map((row) => ({
+      ...row,
+      permissions: Array.isArray(row.permissions) ? row.permissions : [],
+      key_value: row.is_owner === true && canSeeSecret ? row.key_value : null,
+    })));
   } catch (error) {
     Logger.error('[获取API密钥] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -333,7 +341,7 @@ router.put('/api-keys/reorder', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPD
     if (!orderedIds.length) {
       return res.status(400).json({ error: '请提供 Key 顺序' });
     }
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     await client.query('BEGIN');
     // 当前用户可见的全部 Key（自有 + Co-Key 成员）
     const visible = await client.query(`
@@ -365,7 +373,7 @@ router.put('/api-keys/reorder', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPD
       }
     }
     await client.query('COMMIT');
-    Logger.info(`[API Key 排序] 用户 ${req.session.user.username} 更新了 ${order} 个 Key 的个人顺序`);
+    Logger.info(`[API Key 排序] 用户 ${req.authUser.username} 更新了 ${order} 个 Key 的个人顺序`);
     res.json({ success: true });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -382,9 +390,26 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
   resourceIdFrom: (req, res) => res._logBody?.id,
   descriptionFrom: (req, res) => `创建 API Key「${req.body?.name || 'API Key'}」`,
 }), async (req, res) => {
-  const { name, expiresIn, customModelName } = req.body;
+  const { name, expiresIn, customModelName, permissions } = req.body;
 
   try {
+    const actor = req.authActor || { type: 'session', user: req.authUser, key: null };
+    const isKeyActor = actor.type === 'api_key';
+    if (isKeyActor && Array.isArray(permissions) && permissions.length > 0
+        && !(actor.key?.permissions || []).includes('keys.permissions')) {
+      return res.status(403).json({ error: '没有修改密钥权限的权限', code: 'permission_denied' });
+    }
+    // 未显式传权限时默认打开网关权限；显式传空数组视为用户主动关闭全部权限。
+    const requestedPermissions = permissions === undefined
+      ? apiKeyPermissions.defaultPermissions()
+      : permissions;
+    const grant = apiKeyPermissions.validateGrant(requestedPermissions, {
+      isAdmin: req.authUser?.isAdmin === true,
+      currentPermissions: isKeyActor ? (actor.key?.permissions || []) : null,
+      actorType: isKeyActor ? 'api_key' : 'session',
+    });
+    if (!grant.ok) return res.status(403).json({ error: grant.error, code: 'permission_denied' });
+
     const crypto = require('crypto');
     const hash = crypto.randomBytes(24).toString('hex');
     const rawKey = `sk-${hash}`;
@@ -398,8 +423,11 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     }
 
     const result = await pool.query(
-      'INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING id, name, key_prefix, key_value, custom_model_name, created_at, expires_at',
-      [req.session.user.id, keyHash, rawKey, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
+      `INSERT INTO api_keys
+         (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled, permissions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8::jsonb)
+       RETURNING id, name, key_prefix, key_value, custom_model_name, created_at, expires_at, permissions`,
+      [req.authUser.id, keyHash, rawKey, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5', JSON.stringify(grant.value)]
     );
 
     // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
@@ -409,8 +437,8 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
         await pluginHooks.apply('apikey:created', {}, {
           keyId: result.rows[0].id,
           keyPrefix: result.rows[0].key_prefix,
-          userId: req.session.user.id,
-          username: req.session.user.username,
+          userId: req.authUser.id,
+          username: req.authUser.username,
           name: name || 'API Key',
         });
       }
@@ -428,7 +456,7 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
 // Co-Key 成员管理：仅发起者可添加和移除成员。
 router.get('/api-keys/:id/members', requireAuth, async (req, res) => {
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const result = await pool.query(
       `SELECT u.id, u.username, u.email, akmem.created_at
@@ -507,7 +535,7 @@ router.delete('/api-keys/:id/members/me', requireAuth, auditMiddleware(ACTIONS.C
   resourceType: 'api_key',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `退出 Co-Key #${req.params.id}`,
-  detailsFrom: (req) => ({ member_user_id: req.session?.user?.id }),
+  detailsFrom: (req) => ({ member_user_id: req.authUser?.id }),
 }), async (req, res) => {
   try {
     return await withApiKeyWrite(req, res, { memberOnly: true }, async (db, res, invalidateAfterCommit) => {
@@ -517,13 +545,13 @@ router.delete('/api-keys/:id/members/me', requireAuth, auditMiddleware(ACTIONS.C
       );
       const key = keyResult.rows[0];
       if (!key) return res.status(404).json({ error: '密钥不存在' });
-      if (Number(key.user_id) === Number(req.session.user.id)) {
+      if (Number(key.user_id) === Number(req.authUser.id)) {
         return res.status(403).json({ error: '发起者不能退出自己的密钥，请使用成员管理或删除密钥' });
       }
 
       const result = await db.query(
         'DELETE FROM api_key_members WHERE api_key_id = $1 AND user_id = $2 RETURNING api_key_id',
-        [req.params.id, req.session.user.id]
+        [req.params.id, req.authUser.id]
       );
       if (result.rowCount === 0) return res.status(404).json({ error: '您不是该 Co-Key 的共同成员' });
       res.json({ success: true, api_key_id: result.rows[0].api_key_id });
@@ -545,7 +573,7 @@ router.delete('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_DELE
       const client = db;
       const owned = await client.query(
         'SELECT id, name FROM api_keys WHERE id = $1 AND user_id = $2 FOR UPDATE',
-        [req.params.id, req.session.user.id]
+        [req.params.id, req.authUser.id]
       );
       if (owned.rows.length === 0) {
         return res.status(404).json({ error: '密钥不存在或无权删除' });
@@ -556,7 +584,7 @@ router.delete('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_DELE
       }
       // 历史库可能仍是 RESTRICT 外键：先断开用量关联，再删密钥
       await client.query('UPDATE usage_records SET api_key_id = NULL WHERE api_key_id = $1', [req.params.id]);
-      await client.query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+      await client.query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [req.params.id, req.authUser.id]);
 
       invalidateAfterCommit(Number(req.params.id));
       res.json({ success: true });
@@ -572,11 +600,11 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
   resourceType: 'api_key',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `更新 API Key #${req.params.id} 设置`,
-  detailsFrom: (req) => ({ name: req.body?.name, custom_model_name: req.body?.customModelName }),
+  detailsFrom: (req) => ({ name: req.body?.name, custom_model_name: req.body?.customModelName, permissions: req.body?.permissions }),
 }), async (req, res) => {
-  const { customModelName, name } = req.body || {};
+  const { customModelName, name, permissions } = req.body || {};
   try {
-    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit, access) => {
       // CrewRouter 内部密钥受保护：禁止改名（含改出/改成 CrewRouter）
       const cur = await db.query('SELECT name FROM api_keys WHERE id = $1', [req.params.id]);
       if (/^crewrouter$/i.test(String(cur.rows[0]?.name || '')) && name !== undefined) {
@@ -604,6 +632,23 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
         sets.push(`custom_model_name = $${idx++}`);
         params.push(customModelName || 'claude-fable-5');
       }
+      if (permissions !== undefined) {
+        if (!access?.is_owner) {
+          return res.status(403).json({ error: '仅发起者可修改密钥权限', code: 'owner_required' });
+        }
+        const actor = req.authActor || { type: 'session', user: req.authUser, key: null };
+        if (actor.type === 'api_key' && !(actor.key?.permissions || []).includes('keys.permissions')) {
+          return res.status(403).json({ error: '没有修改密钥权限的权限', code: 'permission_denied' });
+        }
+        const grant = apiKeyPermissions.validateGrant(permissions, {
+          isAdmin: req.authUser?.isAdmin === true,
+          currentPermissions: actor.type === 'api_key' ? (actor.key?.permissions || []) : null,
+          actorType: actor.type === 'api_key' ? 'api_key' : 'session',
+        });
+        if (!grant.ok) return res.status(403).json({ error: grant.error, code: 'permission_denied' });
+        sets.push(`permissions = $${idx++}::jsonb`);
+        params.push(JSON.stringify(grant.value));
+      }
       if (!sets.length) {
         return res.status(400).json({ error: '无更新字段' });
       }
@@ -612,7 +657,7 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
       const result = await db.query(
         `UPDATE api_keys SET ${sets.join(', ')}
          WHERE id = $${idx}
-         RETURNING id, name, key_prefix, custom_model_name`,
+         RETURNING id, name, key_prefix, custom_model_name, permissions`,
         params
       );
       // 名称可能进入签名等缓存字段
@@ -628,7 +673,7 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
 // 获取单个API密钥的详细用量
 router.get('/api-keys/:id/usage', requireAuth, async (req, res) => {
   try {
-    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!keyAccess) return res.status(404).json({ error: '密钥不存在' });
 
     const result = await pool.query(`
@@ -658,7 +703,7 @@ const MAX_MODEL_QUEUE_SIZE = 10;
 // 获取 API Key 可用的模型列表（基于用户所在 Team）+ 有序队列
 router.get('/api-keys/:id/models', requireAuth, async (req, res) => {
   try {
-    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!keyAccess) return res.status(404).json({ error: '密钥不存在' });
 
     const apiKeyId = parseInt(req.params.id, 10);
@@ -822,7 +867,7 @@ async function assertOwnerCanUseModel(modelId, ownerUserId, db = pool) {
 // 获取 API Key 的 Harness 单独绑定
 router.get('/api-keys/:id/harness-models', requireAuth, async (req, res) => {
   try {
-    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const keyAccess = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!keyAccess) return res.status(404).json({ error: '密钥不存在' });
 
     const result = await pool.query(
@@ -928,7 +973,7 @@ router.put('/api-keys/:id/harness-models', requireAuth, auditMiddleware(ACTIONS.
 // 获取 API Key 的 Fusion 配置
 router.get('/api-keys/:id/fusion-config', requireAuth, async (req, res) => {
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
       'SELECT fusion_panel_models, fusion_judge_model_id, fusion_outer_model_id, fusion_enabled, fusion_synthesis_prompt_enabled FROM api_keys WHERE id = $1',
@@ -1026,7 +1071,7 @@ router.put('/api-keys/:id/fusion-config', requireAuth, auditMiddleware(ACTIONS.A
 // 获取 API Key 的签名配置
 router.get('/api-keys/:id/quota-warning', requireAuth, async (req, res) => {
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const result = await pool.query('SELECT quota_warning_enabled FROM api_keys WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: '密钥不存在' });
@@ -1060,7 +1105,7 @@ router.put('/api-keys/:id/quota-warning', requireAuth, auditMiddleware(ACTIONS.A
 
 router.get('/api-keys/:id/signature', requireAuth, async (req, res) => {
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
       `SELECT ak.signature_enabled, ak.signature_template,
@@ -1211,7 +1256,7 @@ router.put('/api-keys/:id/crewrouter-commands', requireAuth, auditMiddleware(ACT
 // 获取 API Key 定时配置
 router.get('/api-keys/:id/schedule', requireAuth, async (req, res) => {
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const result = await pool.query(
       `SELECT schedule_enabled, schedule_on_time, schedule_off_time, schedule_days, schedule_timezone
@@ -1284,8 +1329,9 @@ router.put('/api-keys/:id/schedule', requireAuth, auditMiddleware(ACTIONS.API_KE
 // 生成 Claude Code 配置
 router.get('/api-keys/:id/config', requireAuth, async (req, res) => {
   try {
-    const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
+    const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
+    if (access.is_owner !== true) return res.status(403).json({ error: '仅发起者可查看密钥明文' });
     const keyResult = await pool.query(
       'SELECT key_value, current_model_id FROM api_keys WHERE id = $1',
       [req.params.id]
@@ -1342,7 +1388,7 @@ router.get('/usage', requireAuth, async (req, res) => {
       GROUP BY DATE(created_at)
       ORDER BY date DESC
       LIMIT 30
-    `, [req.session.user.id]);
+    `, [req.authUser.id]);
     res.json(result.rows);
   } catch (error) {
     Logger.error('[获取使用统计] 错误:', error);
@@ -1356,7 +1402,7 @@ require('../utils/quota-cycle-analysis').registerQuotaCycleRoutes(router, pool, 
 router.get('/stats/provider-quota', requireAuth, requireProviderAccessContext, async (req, res) => {
   try {
     const { queryProviderQuotaOverview } = require('../utils/provider-quota-stats');
-    res.json(await queryProviderQuotaOverview(pool, req.query, 'user', req.session.user.id));
+    res.json(await queryProviderQuotaOverview(pool, req.query, 'user', req.authUser.id));
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ error: error.message });
     Logger.error('[供应商额度统计] 错误:', error);
@@ -1367,7 +1413,7 @@ router.get('/stats/provider-quota', requireAuth, requireProviderAccessContext, a
 router.get('/stats/provider-quota/history', requireAuth, requireProviderAccessContext, async (req, res) => {
   try {
     const { queryProviderQuotaHistory } = require('../utils/provider-quota-stats');
-    res.json(await queryProviderQuotaHistory(pool, req.query, 'user', req.session.user.id));
+    res.json(await queryProviderQuotaHistory(pool, req.query, 'user', req.authUser.id));
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ error: error.message });
     Logger.error('[供应商额度统计] 错误:', error);
@@ -1382,7 +1428,7 @@ router.get('/stats/multi-dimension', requireAuth, (req, res, next) => {
 }, async (req, res) => {
   try {
     const { queryMultiDimensionStats } = require('../utils/multi-dimension-stats');
-    res.json(await queryMultiDimensionStats(pool, req.query, 'user', req.session.user.id));
+    res.json(await queryMultiDimensionStats(pool, req.query, 'user', req.authUser.id));
   } catch (error) {
     if (error.status === 400 || error.message.startsWith('请选择') || error.message.startsWith('无效') || error.message.startsWith('时间范围')) {
       return res.status(400).json({ error: error.message });
@@ -1395,7 +1441,7 @@ router.get('/stats/multi-dimension', requireAuth, (req, res, next) => {
 router.get('/stats/latency', requireAuth, async (req, res) => {
   try {
     const { queryLatencyStats } = require('../utils/latency-stats');
-    res.json(await queryLatencyStats(pool, req.query, 'user', req.session.user.id));
+    res.json(await queryLatencyStats(pool, req.query, 'user', req.authUser.id));
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ error: error.message });
     if (error.status === 503) return res.status(503).json({ error: error.message });
@@ -1406,7 +1452,7 @@ router.get('/stats/latency', requireAuth, async (req, res) => {
 
 router.get('/stats', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const days = Math.min(parseInt(req.query.days) || 30, 365);
     const startDate = req.query.start;
     const endDate = req.query.end;
@@ -1674,7 +1720,7 @@ router.get('/stats', requireAuth, async (req, res) => {
 // 面向普通用户的项目工作统计：只查询后台已经持久化的分析结果。
 router.get('/project-stats', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 365);
     const params = [userId];
     let idx = 2;
@@ -1741,7 +1787,7 @@ router.get('/project-stats', requireAuth, async (req, res) => {
 router.get('/message-stats', requireAuth, async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 365);
-    const params = [req.session.user.id];
+    const params = [req.authUser.id];
     const where = ['user_id = $1'];
     let idx = 2;
     if (req.query.start && req.query.end) {
@@ -1770,7 +1816,7 @@ router.get('/message-stats', requireAuth, async (req, res) => {
     const { aggregateMessageStats } = require('../utils/message-analysis');
     const { getMessageAnalysisStatus } = require('../utils/message-analysis-store');
     const stats = aggregateMessageStats(result.rows.map(row => ({ ...row, analysis: row })));
-    const status = await getMessageAnalysisStatus(req.session.user.id);
+    const status = await getMessageAnalysisStatus(req.authUser.id);
     stats.summary.sampled = false;
     stats.summary.sample_size = result.rows.length;
     stats.summary.analysis_status = status;
@@ -1786,7 +1832,7 @@ router.get('/balance', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT balance, team_id, rate_limit_rpm, rate_limit_tpm FROM users WHERE id = $1',
-      [req.session.user.id]
+      [req.authUser.id]
     );
     const row = result.rows[0] || {};
     // 计算可退款余额：扣除手续费后的实际可退款金额
@@ -1794,7 +1840,7 @@ router.get('/balance', requireAuth, async (req, res) => {
       `SELECT COALESCE(SUM(amount / (1 + fee_rate)), 0) AS net_refundable
        FROM user_code_balances
        WHERE user_id = $1 AND amount > 0`,
-      [req.session.user.id]
+      [req.authUser.id]
     );
 
     // 获取用户所属 Team 的限额规则和当前用量
@@ -1817,13 +1863,13 @@ router.get('/balance', requireAuth, async (req, res) => {
             if (rule.rule_type === 'requests') {
               const r = await pool.query(
                 `SELECT COUNT(*)::int AS cnt FROM usage_records WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour' * $2`,
-                [req.session.user.id, hours]
+                [req.authUser.id, hours]
               );
               current = r.rows[0]?.cnt || 0;
             } else if (rule.rule_type === 'tokens') {
               const r = await pool.query(
                 `SELECT COALESCE(SUM(weighted_tokens), 0)::bigint AS cnt FROM usage_records WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour' * $2`,
-                [req.session.user.id, hours]
+                [req.authUser.id, hours]
               );
               current = parseInt(r.rows[0]?.cnt || 0);
             }
@@ -1853,29 +1899,17 @@ router.get('/balance', requireAuth, async (req, res) => {
   }
 });
 
-// cc-switch 用量查询（支持 API Key Bearer 认证）
-router.post('/usage', async (req, res) => {
+// cc-switch 用量查询（会话或 API Key 鉴权）
+router.post('/usage', requireAuth, async (req, res) => {
   try {
-    // 从 Bearer token 提取 API Key
-    let apiKey = req.headers['x-api-key'];
-    if (!apiKey && req.headers.authorization?.startsWith('Bearer ')) {
-      apiKey = req.headers.authorization.slice(7);
-    }
-    if (!apiKey) {
-      return res.status(401).json({ error: 'Missing API key' });
-    }
-
-    // 查找用户
-    const keyResult = await pool.query(
-      `SELECT u.id, u.username, u.balance, u.team_id
-       FROM api_keys ak JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_value = $1 OR ak.key_hash = $2`,
-      [apiKey, require('../utils/key-hash').sha256Hex(apiKey)]
+    const userResult = await pool.query(
+      'SELECT id, username, balance, team_id FROM users WHERE id = $1',
+      [req.authUser.id]
     );
-    if (keyResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid API key' });
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ error: '用户不存在' });
     }
-    const user = keyResult.rows[0];
+    const user = userResult.rows[0];
 
     // 获取用户 Team 规则和当前用量
     let groupInfo = null;
@@ -1955,7 +1989,7 @@ router.get('/code-balances', requireAuth, async (req, res) => {
        JOIN redemption_codes rc ON rc.id = ucb.code_id
        WHERE ucb.user_id = $1 AND ucb.amount > 0
        ORDER BY ucb.fee_rate DESC`,
-      [req.session.user.id]
+      [req.authUser.id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -1997,7 +2031,7 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
 
     // Build dynamic UPDATE — only set fields that were provided
     const sets = [];
-    const params = [req.session.user.id];
+    const params = [req.authUser.id];
     let idx = 2;
 
     if (email !== undefined) {
@@ -2027,10 +2061,10 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
       params
     );
 
-    if (email !== undefined) req.session.user.email = normalizedEmail;
-    if (avatar !== undefined) req.session.user.avatar = avatar;
-    if (api_signature_enabled !== undefined) req.session.user.api_signature_enabled = !!api_signature_enabled;
-    if (api_signature_template !== undefined) req.session.user.api_signature_template = api_signature_template;
+    if (email !== undefined) req.authUser.email = normalizedEmail;
+    if (avatar !== undefined) req.authUser.avatar = avatar;
+    if (api_signature_enabled !== undefined) req.authUser.api_signature_enabled = !!api_signature_enabled;
+    if (api_signature_template !== undefined) req.authUser.api_signature_template = api_signature_template;
 
     res.json({ success: true });
   } catch (error) {
@@ -2058,7 +2092,7 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
     await client.query('BEGIN');
 
     // 与余额扣款/退款保持 user → 余额明细的锁顺序，避免并发兑换与退款形成死锁。
-    const userLock = await client.query('SELECT id, refund_balance FROM users WHERE id = $1 FOR UPDATE', [req.session.user.id]);
+    const userLock = await client.query('SELECT id, refund_balance FROM users WHERE id = $1 FOR UPDATE', [req.authUser.id]);
     if (userLock.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(401).json({ error: '用户不存在，请重新登录' });
@@ -2101,7 +2135,7 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
         `SELECT COALESCE(SUM(amount), 0)::text AS total,
                 COUNT(*) FILTER (WHERE amount < 0 OR fee_rate < 0)::int AS invalid_count
          FROM user_code_balances WHERE user_id = $1`,
-        [req.session.user.id]
+        [req.authUser.id]
       );
       if (Number(detailState.rows[0].invalid_count || 0) > 0
           || compareMoney(detailState.rows[0].total, userLock.rows[0].refund_balance || 0) !== 0) {
@@ -2125,7 +2159,7 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
     // 检查该用户是否已兑换过此码
     const usedCheck = await client.query(
       'SELECT 1 FROM redemption_code_uses WHERE code_id = $1 AND user_id = $2',
-      [rc.id, req.session.user.id]
+      [rc.id, req.authUser.id]
     );
     if (usedCheck.rows.length > 0) {
       await client.query('ROLLBACK');
@@ -2141,21 +2175,21 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
          ON CONFLICT (user_id, code_id) DO UPDATE SET
            amount = user_code_balances.amount + EXCLUDED.amount,
            updated_at = CURRENT_TIMESTAMP`,
-        [req.session.user.id, rc.id, rc.amount, rc.fee_rate || 0]
+        [req.authUser.id, rc.id, rc.amount, rc.fee_rate || 0]
       );
       // 同步 users.refund_balance
       const refundSum = await client.query(
         'SELECT COALESCE(SUM(amount), 0)::text AS total FROM user_code_balances WHERE user_id = $1',
-        [req.session.user.id]
+        [req.authUser.id]
       );
       await client.query(
         'UPDATE users SET refund_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [refundSum.rows[0].total, req.session.user.id]
+        [refundSum.rows[0].total, req.authUser.id]
       );
     } else {
       await client.query(
         'UPDATE users SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [rc.amount, req.session.user.id]
+        [rc.amount, req.authUser.id]
       );
     }
 
@@ -2168,21 +2202,21 @@ router.post('/redeem', requireAuth, auditMiddleware(ACTIONS.USER_REDEEM, {
     // 记录该用户已使用此码
     await client.query(
       'INSERT INTO redemption_code_uses (code_id, user_id) VALUES ($1, $2)',
-      [rc.id, req.session.user.id]
+      [rc.id, req.authUser.id]
     );
 
     await client.query('COMMIT');
 
     // 获取新余额
-    const balanceResult = await pool.query('SELECT balance, refund_balance FROM users WHERE id = $1', [req.session.user.id]);
+    const balanceResult = await pool.query('SELECT balance, refund_balance FROM users WHERE id = $1', [req.authUser.id]);
     const newBalance = parseFloat(balanceResult.rows[0]?.balance || 0);
     const newRefundBalance = parseFloat(balanceResult.rows[0]?.refund_balance || 0);
 
     // 同步 session
-    req.session.user.balance = newBalance;
-    req.session.user.refund_balance = newRefundBalance;
+    req.authUser.balance = newBalance;
+    req.authUser.refund_balance = newRefundBalance;
 
-    Logger.info(`[兑换码] 用户 ${req.session.user.username} 使用了兑换码 ${rc.code}，面额 ¥${rc.amount}${rc.refundable ? ' (可退款)' : ''}`);
+    Logger.info(`[兑换码] 用户 ${req.authUser.username} 使用了兑换码 ${rc.code}，面额 ¥${rc.amount}${rc.refundable ? ' (可退款)' : ''}`);
     res.json({
       success: true,
       amount: parseFloat(rc.amount),
@@ -2301,7 +2335,7 @@ async function replaceLibraryOrder(client, userId, scope, { teamId, providerId, 
 // 获取当前用户的模型库（根据 user_teams 查询，按 Team 分组）
 router.get('/model-library', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     // 获取用户所在的所有 Team
     const userTeamsResult = await pool.query(
       `SELECT t.id, t.name, t.description, t.is_personal, t.is_default,
@@ -2540,7 +2574,7 @@ router.get('/model-library', requireAuth, async (req, res) => {
 // 全局搜索用户可见模型（避免前端为搜索展开全部供应商）
 router.get('/model-library/search', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
     const requestedLimit = parseInt(req.query.limit || '30', 10) || 30;
     const limit = Math.min(Math.max(requestedLimit, 1), 50);
@@ -2757,7 +2791,7 @@ router.get('/provider-tags', requireAuth, async (req, res) => {
 router.get('/team/:teamId/provider/:providerId/models', requireAuth, async (req, res) => {
   try {
     const { teamId, providerId } = req.params;
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
     const requestedLimit = parseInt(req.query.limit || '50', 10) || 50;
     const limit = Math.min(Math.max(requestedLimit, 1), 50);
@@ -2945,7 +2979,7 @@ router.get('/team/:teamId/provider/:providerId/models', requireAuth, async (req,
 
 // 保存模型库自定义排序
 router.put('/model-library/order', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const { scope, teamId, providerId, orderedIds } = req.body || {};
 
   if (!['team', 'provider', 'model'].includes(scope)) {
@@ -3015,7 +3049,7 @@ router.put('/model-library/order', requireAuth, async (req, res) => {
  * 会更新：各 Team 内供应商顺序 + 各供应商内模型顺序
  */
 router.put('/model-library/order/by-test', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const sort = String((req.body && req.body.sort) || 'test_latency_asc');
   const allowedSorts = new Set(['test_latency_asc', 'test_latency_desc', 'test_tps_desc']);
   if (!allowedSorts.has(sort)) {
@@ -3143,7 +3177,7 @@ router.put('/model-library/order/by-test', requireAuth, async (req, res) => {
 
 // 重置模型库自定义排序
 router.delete('/model-library/order', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const { scope = 'all', teamId, providerId } = req.query || {};
 
   if (!['all', 'team', 'provider', 'model'].includes(scope)) {
@@ -3213,7 +3247,7 @@ async function validateLibraryModelAccess(userId, teamId, providerId, modelId) {
 
 // 设置/取消模型库隐藏（供应商或模型）
 router.put('/model-library/hidden', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const { scope, teamId, providerId, modelId, hidden } = req.body || {};
 
   if (!['provider', 'model'].includes(scope)) {
@@ -3280,7 +3314,7 @@ router.put('/model-library/hidden', requireAuth, async (req, res) => {
 
 // 清除模型库隐藏偏好
 router.delete('/model-library/hidden', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const { scope = 'all', teamId, providerId } = req.query || {};
 
   if (!['all', 'provider', 'model'].includes(scope)) {
@@ -3325,7 +3359,7 @@ router.delete('/model-library/hidden', requireAuth, async (req, res) => {
 
 // 设置/取消模型库星标
 router.put('/model-library/star', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const { teamId, providerId, modelId, starred } = req.body || {};
 
   if (teamId == null || teamId === '' || !providerId || !modelId) {
@@ -3370,7 +3404,7 @@ router.put('/model-library/star', requireAuth, async (req, res) => {
 router.get('/models/:id/info', requireAuth, async (req, res) => {
   try {
     const modelId = req.params.id;
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
 
     // 权限校验：该模型必须属于用户所在某个 Team 的供应商，且 team_models 关联启用
     const accessResult = await pool.query(`
@@ -3474,7 +3508,7 @@ async function quotaSnapshotResponse(provider, cached, history) {
 
 router.get('/providers/quota', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
 
     const providersResult = await pool.query(`
       SELECT DISTINCT p.id, p.name, p.quota_last_ok, p.quota_last_result, p.quota_last_error, p.quota_last_checked_at
@@ -3503,7 +3537,7 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
 // 手动刷新供应商额度：实时调用上游，保存快照并返回最新结果
 router.post('/providers/quota/refresh', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
 
     const providersResult = await pool.query(`
       SELECT DISTINCT p.*
@@ -3548,7 +3582,7 @@ router.get('/current-model', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT current_model_id FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
-      [req.session.user.id]
+      [req.authUser.id]
     );
     const currentModelId = result.rows[0]?.current_model_id || null;
 
@@ -3600,7 +3634,7 @@ router.put('/current-model', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE
        JOIN team_models tm ON tm.team_id = ut.team_id
        WHERE ut.user_id = $1 AND tm.model_id = $2 AND tm.enabled = TRUE
        LIMIT 1`,
-      [req.session.user.id, modelId]
+      [req.authUser.id, modelId]
     );
     if (tmCheck.rows.length === 0) {
       return res.status(403).json({ error: '您所属的 Team 无权使用该模型' });
@@ -3609,7 +3643,7 @@ router.put('/current-model', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE
     // 更新所有该用户的 API Key 的 current_model_id
     await pool.query(
       'UPDATE api_keys SET current_model_id = $1 WHERE user_id = $2',
-      [modelId, req.session.user.id]
+      [modelId, req.authUser.id]
     );
 
     res.json({ success: true, model: modelCheck.rows[0] });
@@ -3628,7 +3662,7 @@ router.get('/providers', requireAuth, async (req, res) => {
         WHERE ($2::boolean OR enabled = TRUE)
           AND ($2::boolean OR created_by IS NULL OR created_by = $1)
         ORDER BY name`,
-      [req.session.user.id, req.personalProviderManager]
+      [req.authUser.id, req.personalProviderManager]
     );
     res.json(result.rows);
   } catch (error) {
@@ -3682,7 +3716,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
 
   try {
     // 生成供应商 ID
-    const providerId = `user_${req.session.user.id}_${Date.now()}`;
+    const providerId = `user_${req.authUser.id}_${Date.now()}`;
 
     // 检查 providers 表有哪些列
     const colCheck = await pool.query(
@@ -3709,7 +3743,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
     }
     if (colNames.includes('created_by')) {
       insertCols.push('created_by');
-      insertValues.push(req.personalProviderManager ? null : req.session.user.id);
+      insertValues.push(req.personalProviderManager ? null : req.authUser.id);
     }
     if (colNames.includes('endpoints') && Object.prototype.hasOwnProperty.call(req.body, 'endpoints')) {
       const normalized = normalizeEndpointsInput(req.body.endpoints, { baseUrl: base_url, format: format || 'openai' });
@@ -3741,7 +3775,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
         const models = modelsData.data || modelsData.models || [];
 
         // 获取用户的个人 Team
-        const personalTeam = await getUserPersonalTeam(req.session.user.id);
+        const personalTeam = await getUserPersonalTeam(req.authUser.id);
 
         // 检查 models 表有哪些列
         const modelColCheck = await pool.query(
@@ -3763,7 +3797,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
 
           if (modelColNames.includes('created_by')) {
             modelInsertCols.push('created_by');
-            modelInsertValues.push(req.personalProviderManager ? null : req.session.user.id);
+            modelInsertValues.push(req.personalProviderManager ? null : req.authUser.id);
           }
 
           const modelPlaceholders = modelInsertValues.map((_, i) => `$${i + 1}`).join(', ');
@@ -3781,7 +3815,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
           }
         }
 
-        Logger.info(`[用户添加供应商] 用户 ${req.session.user.username} 添加了供应商 ${providerId}，自动导入了 ${Math.min(models.length, 50)} 个模型`);
+        Logger.info(`[用户添加供应商] 用户 ${req.authUser.username} 添加了供应商 ${providerId}，自动导入了 ${Math.min(models.length, 50)} 个模型`);
       }
     } catch (modelErr) {
       Logger.warn(`[用户添加供应商] 获取模型列表失败:`, modelErr.message);
@@ -3814,7 +3848,7 @@ router.get('/my-providers', requireAuth, async (req, res) => {
          FROM providers
          WHERE created_by = $1
          ORDER BY created_at DESC`,
-        [req.session.user.id]
+        [req.authUser.id]
       );
     } else {
       // 如果没有 created_by 列，返回空
@@ -3852,7 +3886,7 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
     provider.api_key = decryptSecret(provider.api_key);
 
     // 检查权限：自己的供应商 或 全局已启用的供应商
-    const isOwner = provider.created_by === req.session.user.id;
+    const isOwner = provider.created_by === req.authUser.id;
     const isGlobalEnabled = !provider.created_by && provider.enabled;
     if (!req.personalProviderManager && !isOwner && !isGlobalEnabled) {
       return res.status(403).json({ error: '无权检测此供应商' });
@@ -3928,7 +3962,7 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
         req.personalProviderManager
           ? 'SELECT id FROM providers WHERE id = $1'
           : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
+        req.personalProviderManager ? [providerId] : [providerId, req.authUser.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权编辑此供应商' });
@@ -4010,7 +4044,7 @@ router.delete('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVID
         req.personalProviderManager
           ? 'SELECT id FROM providers WHERE id = $1'
           : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
+        req.personalProviderManager ? [providerId] : [providerId, req.authUser.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权删除此供应商' });
@@ -4028,7 +4062,7 @@ router.delete('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVID
     // 删除供应商
     await pool.query('DELETE FROM providers WHERE id = $1', [providerId]);
 
-    Logger.info(`[用户删除供应商] 用户 ${req.session.user.username} 删除了供应商 ${providerId}`);
+    Logger.info(`[用户删除供应商] 用户 ${req.authUser.username} 删除了供应商 ${providerId}`);
     res.json({ success: true });
   } catch (error) {
     Logger.error('[用户删除供应商] 错误:', error);
@@ -4094,7 +4128,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
         req.personalProviderManager
           ? 'SELECT * FROM providers WHERE id = $1'
           : 'SELECT * FROM providers WHERE id = $1 AND created_by = $2',
-        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
+        req.personalProviderManager ? [providerId] : [providerId, req.authUser.id]
       );
       if (result.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4133,7 +4167,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     const models = [...mergedModels.values()];
 
     // 获取用户的个人 Team
-    const personalTeam = await getUserPersonalTeam(req.session.user.id);
+    const personalTeam = await getUserPersonalTeam(req.authUser.id);
 
     // 检查 models 表有哪些列
     const modelColCheck = await pool.query(
@@ -4156,7 +4190,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
 
       if (modelColNames.includes('created_by')) {
         modelInsertCols.push('created_by');
-        modelInsertValues.push(req.session.user.id);
+        modelInsertValues.push(req.authUser.id);
       }
 
       const modelPlaceholders = modelInsertValues.map((_, i) => `$${i + 1}`).join(', ');
@@ -4176,7 +4210,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
       addedCount++;
     }
 
-    Logger.info(`[用户刷新模型] 用户 ${req.session.user.username} 刷新了供应商 ${providerId}，新增 ${addedCount} 个模型`);
+    Logger.info(`[用户刷新模型] 用户 ${req.authUser.username} 刷新了供应商 ${providerId}，新增 ${addedCount} 个模型`);
     res.json({ success: true, added: addedCount, total: models.length });
   } catch (error) {
     Logger.error('[用户刷新模型] 错误:', error);
@@ -4200,7 +4234,7 @@ router.get('/providers/:id/models', requireAuth, async (req, res) => {
         req.personalProviderManager
           ? 'SELECT id FROM providers WHERE id = $1'
           : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
+        req.personalProviderManager ? [providerId] : [providerId, req.authUser.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权访问此供应商' });
@@ -4242,7 +4276,7 @@ router.delete('/providers/:providerId/models/:modelId', requireAuth, async (req,
         req.personalProviderManager
           ? 'SELECT id FROM providers WHERE id = $1'
           : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
+        req.personalProviderManager ? [providerId] : [providerId, req.authUser.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4282,7 +4316,7 @@ router.post('/providers/:providerId/models/batch-delete', requireAuth, async (re
         req.personalProviderManager
           ? 'SELECT id FROM providers WHERE id = $1'
           : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
+        req.personalProviderManager ? [providerId] : [providerId, req.authUser.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4330,7 +4364,7 @@ router.post('/providers/:providerId/models/batch-update', requireAuth, async (re
         req.personalProviderManager
           ? 'SELECT id FROM providers WHERE id = $1'
           : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
+        req.personalProviderManager ? [providerId] : [providerId, req.authUser.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4367,7 +4401,7 @@ router.post('/providers/:providerId/models/batch-update', requireAuth, async (re
 
     const result = await pool.query(query, [...values, ...modelIds]);
 
-    Logger.info(`[批量更新模型] 用户 ${req.session.user.username} 更新了 ${result.rowCount} 个模型`);
+    Logger.info(`[批量更新模型] 用户 ${req.authUser.username} 更新了 ${result.rowCount} 个模型`);
     res.json({ success: true, updated: result.rowCount });
   } catch (error) {
     Logger.error('[批量更新模型] 错误:', error);
@@ -4424,14 +4458,14 @@ router.post('/models', requireAuth, async (req, res) => {
       req.personalProviderManager
         ? 'SELECT id FROM providers WHERE id = $1'
         : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-      req.personalProviderManager ? [provider] : [provider, req.session.user.id]
+      req.personalProviderManager ? [provider] : [provider, req.authUser.id]
     );
     if (providerCheck.rows.length === 0) {
       return res.status(403).json({ error: '只能使用您自己的供应商创建模型' });
     }
 
     // 获取用户的个人 Team
-    const personalTeam = await getUserPersonalTeam(req.session.user.id);
+    const personalTeam = await getUserPersonalTeam(req.authUser.id);
     if (!personalTeam && !req.personalProviderManager) {
       return res.status(404).json({ error: '未找到个人 Team，请联系管理员' });
     }
@@ -4464,7 +4498,7 @@ router.post('/models', requireAuth, async (req, res) => {
       model_price || 0, billing_mode || 'ratio',
       model_multiplier || 1.0, completion_multiplier || 1.0,
       upstreamModelId, thinking_model_id || '', non_thinking_model_id || '',
-      req.personalProviderManager ? null : req.session.user.id]);
+      req.personalProviderManager ? null : req.authUser.id]);
 
     // 添加到个人 Team
     if (personalTeam) await pool.query(
@@ -4472,7 +4506,7 @@ router.post('/models', requireAuth, async (req, res) => {
       [personalTeam.id, modelId]
     );
 
-    Logger.info(`[用户添加模型] 用户 ${req.session.user.username} 添加了模型 ${modelId}`);
+    Logger.info(`[用户添加模型] 用户 ${req.authUser.username} 添加了模型 ${modelId}`);
     res.json({ success: true, model_id: modelId });
   } catch (error) {
     Logger.error('[用户添加模型] 错误:', error);
@@ -4490,7 +4524,7 @@ router.put('/models/:id', requireAuth, auditMiddleware(ACTIONS.USER_MODEL_UPDATE
   const { series, description, input_price_per_1k_tokens, output_price_per_1k_tokens, cached_output_price_per_1k_tokens, reference_input_price_per_1k_tokens, reference_output_price_per_1k_tokens, rate_limit_rpm, rate_limit_tpm, icon_url, alias, completion_ratio, image_ratio, audio_ratio, model_price, billing_mode, model_multiplier, completion_multiplier, upstream_model_id, thinking_model_id, non_thinking_model_id, enabled } = req.body;
 
   try {
-    const ownership = await checkModelOwnership(req.session.user.id, modelId, req.personalProviderManager);
+    const ownership = await checkModelOwnership(req.authUser.id, modelId, req.personalProviderManager);
     if (ownership.error) {
       return res.status(ownership.status).json({ error: ownership.error });
     }
@@ -4518,7 +4552,7 @@ router.put('/models/:id', requireAuth, auditMiddleware(ACTIONS.USER_MODEL_UPDATE
       model_multiplier || 1.0, completion_multiplier || 1.0,
       upstreamModelId, thinking_model_id || '', non_thinking_model_id || '']);
 
-    Logger.info(`[用户编辑模型] 用户 ${req.session.user.username} 编辑了模型 ${modelId}`);
+    Logger.info(`[用户编辑模型] 用户 ${req.authUser.username} 编辑了模型 ${modelId}`);
     res.json({ success: true });
   } catch (error) {
     Logger.error('[用户编辑模型] 错误:', error);
@@ -4535,7 +4569,7 @@ router.delete('/models/:id', requireAuth, auditMiddleware(ACTIONS.USER_MODEL_DEL
   const modelId = req.params.id;
 
   try {
-    const ownership = await checkModelOwnership(req.session.user.id, modelId, req.personalProviderManager);
+    const ownership = await checkModelOwnership(req.authUser.id, modelId, req.personalProviderManager);
     if (ownership.error) {
       return res.status(ownership.status).json({ error: ownership.error });
     }
@@ -4543,7 +4577,7 @@ router.delete('/models/:id', requireAuth, auditMiddleware(ACTIONS.USER_MODEL_DEL
     // 删除模型（CASCADE 会自动清理 team_models 和 api_key_models）
     await pool.query('DELETE FROM models WHERE id = $1', [modelId]);
 
-    Logger.info(`[用户删除模型] 用户 ${req.session.user.username} 删除了模型 ${modelId}`);
+    Logger.info(`[用户删除模型] 用户 ${req.authUser.username} 删除了模型 ${modelId}`);
     res.json({ success: true });
   } catch (error) {
     Logger.error('[用户删除模型] 错误:', error);
@@ -4560,7 +4594,7 @@ router.post('/models/:id/publish', requireAuth, auditMiddleware(ACTIONS.USER_MOD
   const modelId = req.params.id;
 
   try {
-    const ownership = await checkModelOwnership(req.session.user.id, modelId);
+    const ownership = await checkModelOwnership(req.authUser.id, modelId);
     if (ownership.error) {
       return res.status(ownership.status).json({ error: ownership.error });
     }
@@ -4592,7 +4626,7 @@ router.post('/models/:id/publish', requireAuth, auditMiddleware(ACTIONS.USER_MOD
       [modelId]
     );
 
-    Logger.info(`[发布模型] 用户 ${req.session.user.username} 发布了模型 ${modelId} 到默认 Team`);
+    Logger.info(`[发布模型] 用户 ${req.authUser.username} 发布了模型 ${modelId} 到默认 Team`);
     res.json({ success: true });
   } catch (error) {
     Logger.error('[发布模型] 错误:', error);
@@ -4605,7 +4639,7 @@ router.post('/models/:id/publish', requireAuth, auditMiddleware(ACTIONS.USER_MOD
 // 获取用户个人 Team 的所有模型
 router.get('/my-team-models', requireAuth, async (req, res) => {
   try {
-    const personalTeam = await getUserPersonalTeam(req.session.user.id);
+    const personalTeam = await getUserPersonalTeam(req.authUser.id);
     if (!personalTeam) {
       return res.json([]);
     }
@@ -4642,7 +4676,7 @@ router.post('/my-team-models/batch-delete', requireAuth, async (req, res) => {
   }
 
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     let deleted = 0;
 
     for (const modelId of modelIds) {
@@ -4653,7 +4687,7 @@ router.post('/my-team-models/batch-delete', requireAuth, async (req, res) => {
       deleted++;
     }
 
-    Logger.info(`[批量删除个人模型] 用户 ${req.session.user.username} 删除了 ${deleted} 个模型`);
+    Logger.info(`[批量删除个人模型] 用户 ${req.authUser.username} 删除了 ${deleted} 个模型`);
     res.json({ success: true, deleted });
   } catch (error) {
     Logger.error('[批量删除个人模型] 错误:', error);
@@ -4672,7 +4706,7 @@ router.post('/my-team-models/batch-update', requireAuth, async (req, res) => {
   }
 
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const allowedFields = ['enabled', 'series', 'description', 'alias',
       'input_price_per_1k_tokens', 'output_price_per_1k_tokens',
       'cached_output_price_per_1k_tokens',
@@ -4709,7 +4743,7 @@ router.post('/my-team-models/batch-update', requireAuth, async (req, res) => {
       updated += result.rowCount;
     }
 
-    Logger.info(`[批量更新个人模型] 用户 ${req.session.user.username} 更新了 ${updated} 个模型`);
+    Logger.info(`[批量更新个人模型] 用户 ${req.authUser.username} 更新了 ${updated} 个模型`);
     res.json({ success: true, updated });
   } catch (error) {
     Logger.error('[批量更新个人模型] 错误:', error);
@@ -4729,7 +4763,7 @@ function csvEscapeUser(value) {
 
 router.get('/usage-logs', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = (page - 1) * limit;
@@ -4789,7 +4823,7 @@ router.get('/usage-logs', requireAuth, async (req, res) => {
 // 导出当前用户调用记录（CSV，最多 5 万条）
 router.get('/usage-logs/export', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const maxRows = Math.min(parseInt(req.query.limit) || 50000, 50000);
     const { where, params, idx: startIdx, fromSql } = buildUserUsageLogsFilter(userId, req.query);
     let idx = startIdx;
@@ -4888,7 +4922,7 @@ router.get('/usage-logs/export', requireAuth, async (req, res) => {
 // 获取当前用户单条调用记录详情（含 messages / response 大字段，仅限本人，须在 /export 之后注册）
 router.get('/usage-logs/:id', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const id = parseInt(req.params.id, 10);
     if (!Number.isFinite(id)) return res.status(400).json({ error: '无效的 ID' });
 
@@ -4951,7 +4985,7 @@ router.get('/usage-logs/:id', requireAuth, async (req, res) => {
 // 获取统计筛选选项（用户用过的模型、供应商、所属 Team）
 router.get('/stats/filters', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
 
     const [modelsRes, providersRes, teamsRes, sourcesRes] = await Promise.all([
       // 用户用过的模型（去重，取最新名称）
@@ -5014,7 +5048,7 @@ router.get('/leaderboard', requireAuth, async (req, res) => {
   try {
     const days = Math.max(1, parseInt(req.query.days) || 30);
     const sort = req.query.sort || 'tokens';
-    const currentUserId = req.session.user.id;
+    const currentUserId = req.authUser.id;
 
     // 白名单验证排序字段，防 SQL 注入
     const sortMap = {
@@ -5122,7 +5156,7 @@ router.get('/leaderboard', requireAuth, async (req, res) => {
 router.post('/models/:id/test', requireAuth, async (req, res) => {
   try {
     const { testModel } = require('../utils/model-test');
-    const result = await testModel(req.params.id, req.session.user.id);
+    const result = await testModel(req.params.id, req.authUser.id);
     res.json(result);
   } catch (error) {
     Logger.error('[模型测试] 错误:', error);
@@ -5138,7 +5172,7 @@ router.post('/models/test-batch', requireAuth, async (req, res) => {
     if (!Array.isArray(modelIds) || modelIds.length === 0) {
       return res.status(400).json({ ok: false, error: '请提供 modelIds 数组' });
     }
-    const results = await testModelsBatch(modelIds, req.session.user.id);
+    const results = await testModelsBatch(modelIds, req.authUser.id);
     res.json({ results });
   } catch (error) {
     Logger.error('[模型批量测试] 错误:', error);
@@ -5156,7 +5190,7 @@ router.get('/key-tags', requireAuth, async (req, res) => {
       FROM key_tags
       WHERE user_id = $1
       ORDER BY sort_order ASC, id ASC
-    `, [req.session.user.id]);
+    `, [req.authUser.id]);
     res.json(result.rows);
   } catch (error) {
     Logger.error('[获取标签] 错误:', error);
@@ -5172,14 +5206,14 @@ router.post('/key-tags', requireAuth, async (req, res) => {
     // 自动分配 sort_order
     const maxResult = await pool.query(
       `SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM key_tags WHERE user_id = $1`,
-      [req.session.user.id]
+      [req.authUser.id]
     );
     const sortOrder = maxResult.rows[0].next_order;
     const result = await pool.query(`
       INSERT INTO key_tags (user_id, name, color, sort_order)
       VALUES ($1, $2, $3, $4)
       RETURNING id, name, color, sort_order, created_at
-    `, [req.session.user.id, name.trim(), color || '#3b82f6', sortOrder]);
+    `, [req.authUser.id, name.trim(), color || '#3b82f6', sortOrder]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     if (error.code === '23505') { // unique violation
@@ -5199,7 +5233,7 @@ router.put('/key-tags/:id', requireAuth, async (req, res) => {
       UPDATE key_tags SET name = COALESCE($1, name), color = COALESCE($2, color)
       WHERE id = $3 AND user_id = $4
       RETURNING id, name, color, sort_order, created_at
-    `, [name ? name.trim() : null, color, id, req.session.user.id]);
+    `, [name ? name.trim() : null, color, id, req.authUser.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: '标签不存在' });
     res.json(result.rows[0]);
   } catch (error) {
@@ -5215,7 +5249,7 @@ router.delete('/key-tags/:id', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `DELETE FROM key_tags WHERE id = $1 AND user_id = $2 RETURNING id`,
-      [id, req.session.user.id]
+      [id, req.authUser.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: '标签不存在' });
     res.json({ success: true });
@@ -5237,7 +5271,7 @@ router.put('/key-tags/reorder', requireAuth, async (req, res) => {
     for (let i = 0; i < orderedIds.length; i++) {
       const r = await client.query(
         `UPDATE key_tags SET sort_order = $1 WHERE id = $2 AND user_id = $3`,
-        [i, orderedIds[i], req.session.user.id]
+        [i, orderedIds[i], req.authUser.id]
       );
       if (r.rowCount === 0) {
         throw { status: 404, message: `标签 ${orderedIds[i]} 不存在` };
@@ -5275,7 +5309,7 @@ router.put('/api-keys/:id/tags', requireAuth, auditMiddleware(ACTIONS.API_KEY_TA
       if (tagIds.length > 0) {
         const tagCheck = await client.query(
           `SELECT id FROM key_tags WHERE id = ANY($1) AND user_id = $2`,
-          [tagIds, req.session.user.id]
+          [tagIds, req.authUser.id]
         );
         if (tagCheck.rows.length !== tagIds.length) {
           return res.status(400).json({ error: '部分标签不存在或无权访问' });
@@ -5316,7 +5350,7 @@ router.get('/audit-logs', requireAuth, async (req, res) => {
     const resourceType = (req.query.resource_type || '').trim();
 
     const whereParts = ['user_id = $1'];
-    const params = [req.session.user.id];
+    const params = [req.authUser.id];
     let idx = 2;
     if (action) { whereParts.push(`action = $${idx++}`); params.push(action); }
     if (resourceType) { whereParts.push(`resource_type = $${idx++}`); params.push(resourceType); }

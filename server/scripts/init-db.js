@@ -500,7 +500,8 @@ async function initDatabase() {
         signature_enabled BOOLEAN DEFAULT NULL,
         signature_template TEXT DEFAULT NULL,
         swallow_images BOOLEAN DEFAULT FALSE,
-        crewrouter_commands BOOLEAN DEFAULT TRUE
+        crewrouter_commands BOOLEAN DEFAULT TRUE,
+        permissions JSONB NOT NULL DEFAULT '[]'::jsonb
       )
     `);
 
@@ -526,7 +527,8 @@ async function initDatabase() {
       { name: 'signature_template', type: 'TEXT DEFAULT NULL' },
       { name: 'quota_warning_enabled', type: 'BOOLEAN DEFAULT TRUE' },
       { name: 'swallow_images', type: 'BOOLEAN DEFAULT FALSE' },
-      { name: 'crewrouter_commands', type: 'BOOLEAN DEFAULT TRUE' }
+      { name: 'crewrouter_commands', type: 'BOOLEAN DEFAULT TRUE' },
+      { name: 'permissions', type: "JSONB NOT NULL DEFAULT '[]'::jsonb" }
     ];
     for (const col of apiKeyColumns) {
       const colCheck = await client.query(`

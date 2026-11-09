@@ -62,7 +62,7 @@ function resolvePlaygroundKeyAttempts(provider) {
 }
 
 router.post('/chat', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   let { model, messages, temperature, max_tokens, top_p, stream, thinking, thinking_budget, reasoning_effort } = req.body;
 
   if (!model || !messages || !Array.isArray(messages)) {
@@ -754,7 +754,7 @@ router.get('/thinking-capabilities', requireAuth, async (req, res) => {
 // 获取 PlayGround 历史记录
 router.get('/history', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = parseInt(req.query.offset) || 0;
     const model = req.query.model || null;
@@ -812,7 +812,7 @@ router.get('/history', requireAuth, async (req, res) => {
 // 获取单条 PlayGround 历史详情
 router.get('/history/:id', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const result = await pool.query(
       `SELECT id, model_id, requested_model, resolved_model, response_model, prompt_tokens, completion_tokens, tokens_used, cost,
               reasoning_content, request_params, finish_reason, response, messages,
@@ -854,7 +854,7 @@ router.get('/history/:id', requireAuth, async (req, res) => {
 // 从 PlayGround 历史列表隐藏（软删）：不删除 usage_records，调用记录/统计仍可见
 router.delete('/history/:id', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.authUser.id;
     const result = await pool.query(
       `UPDATE usage_records
        SET history_hidden = TRUE

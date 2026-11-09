@@ -111,7 +111,7 @@ function requestMiddleware(req, res, next) {
 
 function contextFor(state, options) {
   const req = state?.req || {};
-  const user = req.apiUser || req.session?.user || {};
+  const user = req.apiUser || req.authUser || req.session?.user || {};
   const { clientMetaFromReq } = require('./request-source');
   const source = clientMetaFromReq(req).requestSource;
   const identity = require('./session-identity').extractRequestIdentity(req, { requestSource: source });

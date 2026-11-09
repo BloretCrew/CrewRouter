@@ -631,7 +631,7 @@ function registerQuotaCycleRoutes(router, db, middleware, scope) {
   for (const [suffix, handler] of [['', queryQuotaCycles], ['/:id', queryQuotaCycle], ['/:id/intervals', queryQuotaIntervals], ['/:id/requests', queryQuotaRequests], ['/:id/export', exportQuotaCycle]]) {
     router.get(`/stats/provider-quota/cycles${suffix}`, ...middleware, async (req, res) => {
       try {
-        const userId = scope === 'user' ? req.session.user.id : undefined;
+        const userId = scope === 'user' ? req.authUser.id : undefined;
         const result = suffix ? await handler(db, req.params.id, req.query, scope, userId) : await handler(db, req.query, scope, userId);
         if (typeof result === 'string') return res.type('text/csv').attachment('quota-cycle.csv').send(result);
         res.json(result);

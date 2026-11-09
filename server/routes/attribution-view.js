@@ -20,7 +20,7 @@ function groupKey(row) {
 }
 
 router.get('/task-groups', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const days = daysParam(req.query.days);
   const taskId = String(req.query.taskId || '').trim();
   try {
@@ -108,7 +108,7 @@ function taskTreeKeyOf(row) {
 }
 
 router.get('/task-tree', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const days = daysParam(req.query.days);
   try {
     const result = await pool.query(`
@@ -201,7 +201,7 @@ router.get('/context-pressure', requireAuth, async (req, res) => {
           NULLIF(plugin_meta->'attribution'->>'thread_id', ''),
           NULLIF(plugin_meta->'attribution'->>'sessionId', '')
         ) = $2
-    `, [req.session.user.id, sessionId]);
+    `, [req.authUser.id, sessionId]);
     const row = result.rows[0] || {};
     const tokens = Number(row.tokens || 0);
     if (!tokens) return res.json({ pressureLevel: 'ok', estimatedWindowPct: 0, suggestion: '暂无足够用量数据，继续当前对话即可。' });

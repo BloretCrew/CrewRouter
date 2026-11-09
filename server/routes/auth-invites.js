@@ -51,7 +51,7 @@ router.post('/auth-invites', requireAdmin, async (req, res) => {
       `INSERT INTO auth_invites (token_hash, created_by, expires_at, max_uses, used_count, team_id)
        VALUES ($1, $2, $3, $4, 0, $5)
        RETURNING id, created_at, expires_at, max_uses, used_count, team_id`,
-      [hashToken(token), req.session.user.id, expiresAt, maxUses, team?.id || null]
+      [hashToken(token), req.authUser.id, expiresAt, maxUses, team?.id || null]
     );
     const origin = getPublicOrigin(req);
     const row = inserted.rows[0];

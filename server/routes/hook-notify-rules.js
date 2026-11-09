@@ -20,7 +20,7 @@ const EVENT_TYPE_SET = new Set(['session_start', 'session_end', 'tool_use', '*']
 // GET：返回 pushEnabled + 当前勾选集合（从规则行反推）
 router.get('/hook-notify-rules', requireAuth, async (req, res) => {
   try {
-    const uid = req.session.user.id;
+    const uid = req.authUser.id;
     const setting = await pool.query(
       'SELECT hook_notify_push_enabled FROM users WHERE id = $1', [uid]);
     const rules = await pool.query(
@@ -55,7 +55,7 @@ router.put('/hook-notify-rules/push-enabled', requireAuth, async (req, res) => {
     const enabled = req.body?.enabled === true;
     await pool.query(
       'UPDATE users SET hook_notify_push_enabled = $2 WHERE id = $1',
-      [req.session.user.id, enabled]
+      [req.authUser.id, enabled]
     );
     res.json({ success: true, pushEnabled: enabled });
   } catch (error) {
@@ -68,7 +68,7 @@ router.put('/hook-notify-rules/push-enabled', requireAuth, async (req, res) => {
 // 全删重建；harness/eventType 含 '*' 表示全部
 router.put('/hook-notify-rules/selection', requireAuth, async (req, res) => {
   try {
-    const uid = req.session.user.id;
+    const uid = req.authUser.id;
     let hs = Array.isArray(req.body?.harnesses) ? [...new Set(req.body.harnesses.filter(h => HARNESS_SET.has(h)))] : [];
     let ets = Array.isArray(req.body?.eventTypes) ? [...new Set(req.body.eventTypes.filter(e => EVENT_TYPE_SET.has(e)))] : [];
     hs = hs.length ? hs : ['*'];

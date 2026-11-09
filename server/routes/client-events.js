@@ -221,7 +221,7 @@ router.post('/', oauthBearer, async (req, res) => {
 });
 
 // ---------- 客户端能力与最近事件（只读、最小字段） ----------
-function clientEventsAuth(req, res, next) { if (req.session?.user) { req.apiUser = req.apiUser || { userId: req.session.user.id }; return next(); } return oauthBearer(req, res, next); }
+function clientEventsAuth(req, res, next) { if (req.authUser) { req.apiUser = req.apiUser || { userId: req.authUser.id }; return next(); } return oauthBearer(req, res, next); }
 router.get('/capabilities', clientEventsAuth, (req, res) => res.json({ helper: { event_schema: 1, events: Array.from(EVENT_TYPES) }, server: { event_schema: 1, remote_tests: true } }));
 router.get('/recent-events', clientEventsAuth, async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);

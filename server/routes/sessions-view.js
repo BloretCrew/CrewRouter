@@ -335,7 +335,7 @@ function extractCwd(messages) {
 // 按逻辑会话聚合（归因 sessionId → 无则回退「key + 小时窗」分桶）
 // ---------------------------------------------------------------------------
 router.get('/sessions', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const days = daysParam(req.query.days);
   const source = String(req.query.source || '').trim();
   const { page, pageSize, offset } = pageParams(req.query, DEFAULT_PAGE_SIZE);
@@ -537,7 +537,7 @@ function buildExcerpt(text, lowerKeyword) {
 }
 
 router.get('/sessions/search', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const q = String(req.query.q || '').trim().slice(0, 100);
   const days = searchDaysParam(req.query.days);
   if (!q) return res.status(400).json({ error: '缺少关键词' });
@@ -607,7 +607,7 @@ router.get('/sessions/search', requireAuth, async (req, res) => {
 // 展开成「截至每条时的完整消息数组」再走同一渲染逻辑，前端不改。
 // ---------------------------------------------------------------------------
 router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
-  const userId = req.session.user.id;
+  const userId = req.authUser.id;
   const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
   if (!sessionKey) return res.status(400).json({ error: '缺少 sessionKey' });
   const { page, pageSize, offset } = pageParams(req.query, DETAIL_PAGE_SIZE);
@@ -992,7 +992,7 @@ function buildSessionDigest(records) {
 // POST /:sessionKey/summary —— 生成并缓存（支持 ?stream=1 / Accept: text/event-stream 流式输出）
 router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
   try {
-    const uid = req.session.user.id;
+    const uid = req.authUser.id;
     const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
     if (!sessionKey) return res.status(400).json({ error: '缺少 sessionKey' });
     // 属主校验：该会话必须有当前用户的记录
@@ -1105,7 +1105,7 @@ router.get('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
     const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
     const r = await pool.query(
       'SELECT summary, created_at FROM session_summaries WHERE user_id = $1 AND session_key = $2',
-      [req.session.user.id, sessionKey]);
+      [req.authUser.id, sessionKey]);
     res.json({ sessionKey, summary: r.rows[0]?.summary || null, createdAt: r.rows[0]?.created_at || null });
   } catch (error) {
     Logger.error('[会话总结] 读取失败:', error);

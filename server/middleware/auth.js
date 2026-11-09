@@ -2,14 +2,31 @@ const { pool } = require('../models/database');
 const config = require('../config-loader');
 const { loadPersistedEdition, normalizeRuntime, normalizeEdition } = require('../utils/instance-edition');
 
-function sessionUserId(req) {
-  const value = req.session?.user?.id;
-  if (typeof value !== 'number' && (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))) return null;
-  return Number.isSafeInteger(Number(value)) && Number(value) > 0 ? value : null;
+function requestActor(req) {
+  if (req.authActor) return req.authActor;
+  if (req.session?.user) return { type: 'session', user: req.session.user, key: null };
+  return null;
 }
 
-// 检查用户是否已登录
+function sessionUserId(req) {
+  const value = req.authActor?.user?.id ?? req.session?.user?.id;
+  if (typeof value !== 'number' && (typeof value !== 'string' || !/^[1-9]\d*$/.test(value))) return null;
+  return Number.isSafeInteger(Number(value)) && Number(value) > 0 ? Number(value) : null;
+}
+
+// 检查用户是否已登录。Session 分支刷新管理员状态；API Key 分支使用请求期已加载的身份。
 async function requireAuth(req, res, next) {
+  const actor = requestActor(req);
+  if (!actor || !actor.user) {
+    return res.status(401).json({ error: '请先登录' });
+  }
+  if (actor.type === 'api_key') {
+    req.authUser = actor.user;
+    return next();
+  }
+  if (actor.type !== 'session') {
+    return res.status(401).json({ error: '请先登录' });
+  }
   const userId = sessionUserId(req);
   if (userId === null) {
     return res.status(401).json({ error: '请先登录' });
@@ -18,6 +35,7 @@ async function requireAuth(req, res, next) {
     const result = await pool.query('SELECT id, is_admin FROM users WHERE id = $1', [userId]);
     if (result.rows.length !== 1) return res.status(401).json({ error: '请先登录' });
     req.session.user.isAdmin = result.rows[0].is_admin === true;
+    req.authUser = req.session.user;
   } catch (err) {
     return res.status(503).json({ error: '权限暂不可用' });
   }
@@ -26,6 +44,20 @@ async function requireAuth(req, res, next) {
 
 // 检查用户是否是管理员，并从数据库读取最新权限
 async function requireAdmin(req, res, next) {
+  const actor = requestActor(req);
+  if (!actor || !actor.user) {
+    return res.status(401).json({ error: '请先登录' });
+  }
+  if (actor.type === 'api_key') {
+    if (actor.user.isAdmin !== true) {
+      return res.status(403).json({ error: '无管理员权限' });
+    }
+    req.authUser = actor.user;
+    return next();
+  }
+  if (actor.type !== 'session') {
+    return res.status(401).json({ error: '请先登录' });
+  }
   const userId = sessionUserId(req);
   if (userId === null) {
     return res.status(401).json({ error: '请先登录' });
@@ -36,6 +68,7 @@ async function requireAdmin(req, res, next) {
       return res.status(401).json({ error: '请先登录' });
     }
     req.session.user.isAdmin = result.rows[0].is_admin === true;
+    req.authUser = req.session.user;
     if (!req.session.user.isAdmin) {
       return res.status(403).json({ error: '无管理员权限' });
     }
@@ -54,12 +87,21 @@ async function isPersonalProviderInstance() {
 }
 
 async function requireProviderAccessContext(req, res, next) {
+  const actor = requestActor(req);
+  if (!actor || !actor.user) return res.status(401).json({ error: '请先登录' });
+  if (actor.type === 'api_key') {
+    req.authUser = actor.user;
+    req.personalProviderManager = await isPersonalProviderInstance();
+    return next();
+  }
+  if (actor.type !== 'session') return res.status(401).json({ error: '请先登录' });
   const userId = sessionUserId(req);
   if (userId === null) return res.status(401).json({ error: '请先登录' });
   try {
     const result = await pool.query('SELECT id, is_admin FROM users WHERE id = $1', [userId]);
     if (result.rows.length !== 1) return res.status(401).json({ error: '请先登录' });
     req.session.user.isAdmin = result.rows[0].is_admin === true;
+    req.authUser = req.session.user;
     req.personalProviderManager = await isPersonalProviderInstance();
   } catch (err) {
     return res.status(503).json({ error: '权限暂不可用' });

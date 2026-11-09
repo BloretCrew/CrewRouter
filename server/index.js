@@ -2008,6 +2008,40 @@ async function ensureApiKeyCrewRouterCommands() {
   }
 }
 
+async function ensureApiKeyPermissions() {
+  try {
+    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    // 显式清理历史 NULL，避免被当成全权限。
+    await pool.query(`UPDATE api_keys SET permissions = '[]'::jsonb WHERE permissions IS NULL`);
+    await pool.query(`ALTER TABLE api_keys ALTER COLUMN permissions SET DEFAULT '[]'::jsonb`);
+
+    // 一次性迁移：为所有历史 Key 打开网关权限（gateway.*），
+    // 否则升级后所有存量 Key 都会因为权限为空而无法发起网关请求。
+    const { DEFAULT_PERMISSION_IDS } = require('./utils/api-key-permissions');
+    const migrationKey = 'migration_open_api_key_gateway_permissions_v1';
+    const migration = await pool.query('SELECT 1 FROM settings WHERE key = $1', [migrationKey]);
+    if (migration.rows.length === 0) {
+      const updated = await pool.query(
+        `UPDATE api_keys
+            SET permissions = (
+              SELECT jsonb_agg(DISTINCT elem)
+                FROM jsonb_array_elements_text(COALESCE(permissions, '[]'::jsonb) || $1::jsonb) AS elem
+            )`,
+        [JSON.stringify(DEFAULT_PERMISSION_IDS)]
+      );
+      await pool.query(
+        `INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
+        [migrationKey, JSON.stringify({ updated: updated.rowCount, at: new Date().toISOString() })]
+      );
+      Logger.info(`[迁移] 已为 ${updated.rowCount} 个 API Key 打开网关权限（含 gateway.messages）`);
+    }
+    Logger.info('[迁移] api_keys 表 permissions 字段已就绪（网关权限默认开启）');
+  } catch (err) {
+    Logger.error(`[迁移] api_keys permissions 字段迁移跳过: ${err.message}`);
+    throw err;
+  }
+}
+
 // ========== 自动迁移：API Key 每用户独立排序表（Co-Key 顺序不共享） ==========
 async function ensureApiKeyUserOrders() {
   try {
@@ -2497,13 +2531,7 @@ if (isDemo) {
   }));
 }
 
-const { csrfProtection, csrfTokenRoute } = require('./middleware/csrf');
-app.locals.csrfAllowedOrigins = String(process.env.CR_CSRF_ALLOWED_ORIGINS || config.app?.publicOrigin || '')
-  .split(',').map(value => value.trim()).filter(Boolean);
-app.get('/api/csrf-token', csrfTokenRoute);
-app.use(csrfProtection);
-
-// 演示模式：自动填充 session 用户
+// 演示模式：自动填充 session 用户（必须在请求身份解析前）
 if (isDemo) {
   const { getUser } = require('./demo/data');
   app.use((req, res, next) => {
@@ -2517,6 +2545,16 @@ if (isDemo) {
 if (isDesktopLocal) {
   app.use(require('./utils/local-passport').localSessionGuard(pool));
 }
+
+const { resolveRequestAuth } = require('./middleware/request-auth');
+app.use(resolveRequestAuth);
+
+const { csrfProtection, csrfTokenRoute } = require('./middleware/csrf');
+app.locals.csrfAllowedOrigins = String(process.env.CR_CSRF_ALLOWED_ORIGINS || config.app?.publicOrigin || '')
+  .split(',').map(value => value.trim()).filter(Boolean);
+app.get('/api/csrf-token', csrfTokenRoute);
+app.use(csrfProtection);
+app.use(['/api', '/v1'], require('./middleware/api-key-permissions').requireApiKeyPermission);
 
 // 请求日志中间件
 const apiKeyUserCache = new Map(); // key -> { username, ts }
@@ -3032,6 +3070,7 @@ async function runPendingMigrations() {
     ensureApiKeyEnabledColumns,
     ensureApiKeySwallowImages,
     ensureApiKeyCrewRouterCommands,
+    ensureApiKeyPermissions,
     ensureApiKeySortOrder,
     ensureApiKeyUserOrders,
     ensureUsageRecordsApiKeyOnDeleteSetNull,

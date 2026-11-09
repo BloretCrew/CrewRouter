@@ -64,6 +64,7 @@ function fixture() {
   ].join('\n'), apiContext);
   const mocks = { crypto, '../models/database': { pool }, '../logger': Logger,
     '../routes/oauth': { ensureOAuthTables: async () => {} },
+    '../utils/api-key-permissions': { matchPermission: () => null },
     '../routes/api': { validateBoundApiKey: apiContext.validateBoundApiKey, validateApiKey() { throw new Error('unexpected raw-key fallback'); } },
   };
   const module = { exports: {} };

@@ -13,7 +13,7 @@ const Logger = require('../logger');
 // 获取预警设置
 router.get('/alert-settings', requireAuth, async (req, res) => {
   try {
-    const settings = await getUserAlertSettings(req.session.user.id);
+    const settings = await getUserAlertSettings(req.authUser.id);
     res.json(settings);
   } catch (error) {
     Logger.error('[预警设置] 获取失败:', error);
@@ -34,7 +34,7 @@ router.put('/alert-settings', requireAuth, async (req, res) => {
       return res.status(400).json({ error: '日用量预警阈值必须是非负数' });
     }
 
-    const success = await updateUserAlertSettings(req.session.user.id, {
+    const success = await updateUserAlertSettings(req.authUser.id, {
       alertEnabled,
       balanceThreshold,
       dailyUsageThreshold
@@ -55,7 +55,7 @@ router.put('/alert-settings', requireAuth, async (req, res) => {
 router.get('/alert-history', requireAuth, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
-    const history = await getAlertHistory(req.session.user.id, limit);
+    const history = await getAlertHistory(req.authUser.id, limit);
     res.json(history);
   } catch (error) {
     Logger.error('[预警历史] 获取失败:', error);
@@ -66,7 +66,7 @@ router.get('/alert-history', requireAuth, async (req, res) => {
 // 发送测试预警邮件
 router.post('/alert-settings/test', requireAuth, async (req, res) => {
   try {
-    const user = req.session.user;
+    const user = req.authUser;
     const { type = 'balance_low' } = req.body;
 
     let details = '';

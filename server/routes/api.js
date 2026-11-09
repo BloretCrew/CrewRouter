@@ -1403,7 +1403,7 @@ async function validateApiKey(req, res, next, boundKey = null) {
       ).catch(err => Logger.warn('[API密钥验证] 更新 last_used_at 失败:', err.message));
 
       // Keep this request's prompt snapshot out of the shared credential cache.
-      req.apiUser = { ...cached, injectPrompt };
+      req.apiUser = { ...cached, permissions: Array.isArray(cached.permissions) ? cached.permissions : [], injectPrompt };
       return next();
     }
 
@@ -1484,6 +1484,7 @@ async function validateApiKey(req, res, next, boundKey = null) {
       quotaWarningEnabled: keyData.quota_warning_enabled === true,
       keyName: keyData.name || '',
       enabled: keyData.enabled !== false,
+      permissions: Array.isArray(keyData.permissions) ? keyData.permissions : [],
       // 吞图：默认禁用；启用后客户端图片不转发给上游
       swallowImages: keyData.swallow_images === true,
       crewrouterCommands: keyData.crewrouter_commands !== false

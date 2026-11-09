@@ -18,7 +18,7 @@ const {
 
 router.get('/popup-notices', requireAuth, async (req, res) => {
   try {
-    res.json(await listUnseenForUser(req.session.user.id));
+    res.json(await listUnseenForUser(req.authUser.id));
   } catch (error) {
     Logger.error('[弹窗通知] 获取未读失败:', error);
     res.status(500).json({ error: '获取弹窗通知失败' });
@@ -33,7 +33,7 @@ router.post('/popup-notices/seen', requireAuth, async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
   try {
-    const marked = await markSeenForUser(req.session.user.id, ids);
+    const marked = await markSeenForUser(req.authUser.id, ids);
     res.json({ success: true, marked });
   } catch (error) {
     Logger.error('[弹窗通知] 标记已读失败:', error);

@@ -1,0 +1,1798 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "gateway",
+      "name": "模型网关",
+      "description": "通过 OpenAI / Anthropic 兼容端点调用模型。",
+      "permissions": [
+        {
+          "id": "gateway.chat",
+          "name": "Chat Completions",
+          "description": "调用 POST /v1/chat/completions",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/v1/chat/completions"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/chat/completions"
+            }
+          ]
+        },
+        {
+          "id": "gateway.messages",
+          "name": "Anthropic Messages",
+          "description": "调用 POST /v1/messages",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/v1/messages"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/messages"
+            }
+          ]
+        },
+        {
+          "id": "gateway.responses",
+          "name": "Responses API",
+          "description": "调用 POST /v1/responses",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/v1/responses"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/responses"
+            }
+          ]
+        },
+        {
+          "id": "gateway.models",
+          "name": "模型列表",
+          "description": "读取 GET /v1/models",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/v1/models"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/models"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "events",
+      "name": "客户端事件",
+      "description": "上报和查看客户端活动事件。",
+      "permissions": [
+        {
+          "id": "events.report",
+          "name": "事件上报",
+          "description": "上报客户端事件",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/client-events"
+            }
+          ]
+        },
+        {
+          "id": "events.read",
+          "name": "事件查看",
+          "description": "查看能力、最近事件和实时看板",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/client-events/capabilities"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/client-events/recent-events"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/client-events/live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "account",
+      "name": "账号与用量",
+      "description": "个人资料、余额、兑换和用量统计。",
+      "permissions": [
+        {
+          "id": "account.profile.read",
+          "name": "读取个人资料",
+          "description": "余额、当前模型、兑换余额、商品和文档",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/balance"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/current-model"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/code-balances"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/products"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/docs-content"
+            }
+          ]
+        },
+        {
+          "id": "account.profile.write",
+          "name": "修改个人资料",
+          "description": "设置、头像和当前模型",
+          "routes": [
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/settings"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/avatar"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/current-model"
+            }
+          ]
+        },
+        {
+          "id": "account.redeem",
+          "name": "兑换码与余额",
+          "description": "使用兑换码",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/redeem"
+            }
+          ]
+        },
+        {
+          "id": "usage.read",
+          "name": "读取用量与统计",
+          "description": "用量、统计、日志、会话和归因数据",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/usage"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/usage"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/stats"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/stats/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/project-stats"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/message-stats"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/usage-logs"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/usage-logs/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/trace-sessions"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/trace-sessions/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/leaderboard"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/stats/filters"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/task-groups"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/task-tree"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/context-pressure"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/audit-logs"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/sessions"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/sessions/search"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/sessions/*/messages"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/sessions/*/summary"
+            }
+          ]
+        },
+        {
+          "id": "usage.write",
+          "name": "生成会话总结",
+          "description": "触发会话总结等用量相关写操作",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/sessions/*/summary"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keys",
+      "name": "API Key 管理",
+      "description": "密钥、权限、Co-Key 成员和密钥标签。",
+      "permissions": [
+        {
+          "id": "keys.read",
+          "name": "读取密钥",
+          "description": "查看密钥元数据、配置和标签",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/api-keys"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/api-keys/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/key-tags"
+            }
+          ]
+        },
+        {
+          "id": "keys.write",
+          "name": "管理密钥",
+          "description": "创建、修改、删除、启停和排序密钥",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/api-keys"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/api-keys/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/api-keys/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/key-tags"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/key-tags/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/key-tags/*"
+            }
+          ]
+        },
+        {
+          "id": "keys.secret",
+          "name": "读取密钥明文",
+          "description": "显示、复制密钥和生成客户端配置",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/api-keys/*/config"
+            }
+          ]
+        },
+        {
+          "id": "keys.members",
+          "name": "Co-Key 成员管理",
+          "description": "查看、添加、移除 Co-Key 成员",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/api-keys/*/members"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/api-keys/*/members"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/api-keys/*/members/*"
+            }
+          ]
+        },
+        {
+          "id": "keys.permissions",
+          "name": "修改密钥权限",
+          "description": "修改 API Key 的权限集合（仅 owner）",
+          "routes": []
+        }
+      ]
+    },
+    {
+      "id": "models",
+      "name": "模型与供应商",
+      "description": "个人模型库和个人供应商。",
+      "permissions": [
+        {
+          "id": "models.read",
+          "name": "读取模型",
+          "description": "模型库、模型信息和可用模型",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/models"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/models/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/model-library"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/model-library/search"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/my-team-models"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/team/*/provider/*/models"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/providers/*/models"
+            }
+          ]
+        },
+        {
+          "id": "models.write",
+          "name": "管理模型",
+          "description": "创建、修改、删除、发布和测试模型",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/models"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/models/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/models/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/models/*/publish"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/models/*/test"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/models/test-batch"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/model-library/order"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/model-library/order/by-test"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/model-library/order"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/model-library/hidden"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/model-library/hidden"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/model-library/star"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/my-team-models/batch-delete"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/my-team-models/batch-update"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/providers/*/models/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/providers/*/models/batch-delete"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/providers/*/models/batch-update"
+            }
+          ]
+        },
+        {
+          "id": "providers.read",
+          "name": "读取供应商",
+          "description": "个人供应商、额度和模型列表",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/providers"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/providers/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/my-providers"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/provider-tags"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/providers/quota"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/providers/lookup-index"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/providers/lookup/*"
+            }
+          ]
+        },
+        {
+          "id": "providers.write",
+          "name": "管理供应商",
+          "description": "创建、修改、删除和刷新供应商",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/providers"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/providers/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/providers/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/providers/quota/refresh"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/providers/*/refresh-models"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "content",
+      "name": "会话与提示词",
+      "description": "对话历史和注入提示词。",
+      "permissions": [
+        {
+          "id": "conversations.read",
+          "name": "读取会话",
+          "description": "查看对话历史",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/conversations"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/conversations/*"
+            }
+          ]
+        },
+        {
+          "id": "conversations.write",
+          "name": "管理会话",
+          "description": "创建、修改、删除、分叉对话",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/conversations"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/conversations/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/conversations/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/conversations/*/messages"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/conversations/*/messages"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/conversations/*/fork"
+            }
+          ]
+        },
+        {
+          "id": "prompts.read",
+          "name": "读取注入提示词",
+          "description": "查看提示词和绑定 Key",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/inject-prompts"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/inject-prompts/my-keys"
+            }
+          ]
+        },
+        {
+          "id": "prompts.write",
+          "name": "管理注入提示词",
+          "description": "创建、修改、删除、绑定提示词",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/inject-prompts"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/inject-prompts/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/inject-prompts/*"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "name": "通知与插件偏好",
+      "description": "通知、Bark、hook 规则、弹窗和插件偏好。",
+      "permissions": [
+        {
+          "id": "notifications.read",
+          "name": "读取通知",
+          "description": "查看通知设置、历史、hook 规则和弹窗",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/notification-settings"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/notifications"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/alert-settings"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/alert-history"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/hook-notify-rules"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/popup-notices"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/user/plugin-pref-optin"
+            }
+          ]
+        },
+        {
+          "id": "notifications.write",
+          "name": "管理通知",
+          "description": "修改通知设置、标记已读、删除通知和 hook 规则",
+          "routes": [
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/notification-settings"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/notification-settings/test"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/notifications/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/notifications/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/user/notifications"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/alert-settings"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/alert-settings/test"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/hook-notify-rules/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/user/popup-notices/*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/user/plugin-pref-optin"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "plugins",
+      "name": "插件",
+      "description": "插件运行时和用户主题。",
+      "permissions": [
+        {
+          "id": "plugins.read",
+          "name": "读取插件",
+          "description": "读取插件运行时和用户主题",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/plugins/*"
+            }
+          ]
+        },
+        {
+          "id": "plugins.write",
+          "name": "写入插件",
+          "description": "调用插件自有写接口",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/plugins/*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/plugins/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/plugins/*"
+            },
+            {
+              "methods": [
+                "PATCH"
+              ],
+              "path": "/api/plugins/*"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "name": "工具",
+      "description": "Playground 和 Agent。",
+      "permissions": [
+        {
+          "id": "playground.use",
+          "name": "Playground",
+          "description": "使用 Playground 对话、诊断和历史",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/playground/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/playground/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/playground/*"
+            }
+          ]
+        },
+        {
+          "id": "agent.use",
+          "name": "Agent 图片",
+          "description": "上传和读取 Agent 图片",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/agent/images*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/agent/images*"
+            }
+          ]
+        },
+        {
+          "id": "agent.manage",
+          "name": "Agent 管理",
+          "description": "管理 Agent 线程、运行和审批（仅管理员）",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/agent/manage/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/agent/manage/*"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "name": "管理员",
+      "description": "管理员接口；仅 Key owner 是管理员时可用。",
+      "permissions": [
+        {
+          "id": "admin.users.read",
+          "name": "读取用户",
+          "description": "用户列表和兑换余额",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/users"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/users/*"
+            }
+          ]
+        },
+        {
+          "id": "admin.users.write",
+          "name": "管理用户",
+          "description": "修改用户和退款",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/users/*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/users/*"
+            }
+          ]
+        },
+        {
+          "id": "admin.teams.read",
+          "name": "读取团队",
+          "description": "团队、成员、规则和用户组",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/teams*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/user-groups*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/user-group-rules*"
+            }
+          ]
+        },
+        {
+          "id": "admin.teams.write",
+          "name": "管理团队",
+          "description": "创建、修改、删除团队和用户组",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/teams*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/teams*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/teams*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/user-groups*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/user-groups*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/user-groups*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/user-group-rules*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/user-group-rules*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/user-group-rules*"
+            }
+          ]
+        },
+        {
+          "id": "admin.models.read",
+          "name": "读取全局模型",
+          "description": "全局模型、模型库、系列图标和标签",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/models"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/models/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/model-library"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/series-icons"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/provider-tags"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/fusion-configs*"
+            }
+          ]
+        },
+        {
+          "id": "admin.models.write",
+          "name": "管理全局模型",
+          "description": "创建、修改、删除、测试和同步模型",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/models*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/models*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/models*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/series-icons*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/series-icons*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/provider-tags*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/provider-tags*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/provider-tags*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/fusion-configs*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/fusion-configs*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/fusion-configs*"
+            }
+          ]
+        },
+        {
+          "id": "admin.providers.read",
+          "name": "读取全局供应商",
+          "description": "全局供应商、额度、状态和 ping",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/providers"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/providers/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/providers/lookup-index"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/providers/refresh-status"
+            }
+          ]
+        },
+        {
+          "id": "admin.providers.write",
+          "name": "管理全局供应商",
+          "description": "创建、修改、删除、刷新、导入和代理池",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/providers*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/providers*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/providers*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/import-grok"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/import-codex"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/import-opencode"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/fetch-proxies-url"
+            }
+          ]
+        },
+        {
+          "id": "admin.stats.read",
+          "name": "读取全局统计",
+          "description": "全站统计、消息统计和 Fusion 用量",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/stats*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/message-stats"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/fusion-usage*"
+            }
+          ]
+        },
+        {
+          "id": "admin.audit.read",
+          "name": "读取审计与日志",
+          "description": "操作日志、用量日志、错误日志和导出",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/audit-logs"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/usage-logs*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/error-logs"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/export-usage"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/custom-instructions*"
+            }
+          ]
+        },
+        {
+          "id": "admin.settings.write",
+          "name": "修改系统设置",
+          "description": "设置、额度配置、数据保留和飞书登录",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/settings"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/request-quota-config"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/retention-config"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/retention/*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/feishu-login"
+            }
+          ]
+        },
+        {
+          "id": "admin.settings.read",
+          "name": "读取系统设置",
+          "description": "设置、额度配置、数据保留和飞书登录",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/settings"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/request-quota-config"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/retention-config"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/retention/tasks/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/feishu-login"
+            }
+          ]
+        },
+        {
+          "id": "admin.billing.read",
+          "name": "读取计费配置",
+          "description": "兑换码和商品",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/redemption-codes*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/products*"
+            }
+          ]
+        },
+        {
+          "id": "admin.billing.write",
+          "name": "管理计费配置",
+          "description": "创建、修改、删除兑换码和商品",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/redemption-codes*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/redemption-codes*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/redemption-codes*"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/products*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/products*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/products*"
+            }
+          ]
+        },
+        {
+          "id": "admin.plugins.read",
+          "name": "读取插件管理",
+          "description": "管理员插件列表和详情",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/plugins*"
+            }
+          ]
+        },
+        {
+          "id": "admin.plugins.write",
+          "name": "管理插件",
+          "description": "安装、启用、禁用和配置插件",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/plugins*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/plugins*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/plugins*"
+            }
+          ]
+        },
+        {
+          "id": "admin.oauth_clients.read",
+          "name": "读取 OAuth 应用",
+          "description": "管理员 OAuth 客户端列表",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/oauth-clients*"
+            }
+          ]
+        },
+        {
+          "id": "admin.oauth_clients.write",
+          "name": "管理 OAuth 应用",
+          "description": "创建、修改、轮换和删除 OAuth 客户端",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/oauth-clients*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/oauth-clients*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/oauth-clients*"
+            }
+          ]
+        },
+        {
+          "id": "admin.popups.read",
+          "name": "读取弹窗通知",
+          "description": "查看弹窗通知",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/popup-notices"
+            }
+          ]
+        },
+        {
+          "id": "admin.popups.write",
+          "name": "管理弹窗通知",
+          "description": "创建、修改、删除和重置弹窗",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/popup-notices*"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/popup-notices*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/admin/popup-notices*"
+            }
+          ]
+        },
+        {
+          "id": "admin.invites.read",
+          "name": "读取邀请",
+          "description": "查看邀请链接",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/auth-invites"
+            }
+          ]
+        },
+        {
+          "id": "admin.invites.write",
+          "name": "管理邀请",
+          "description": "创建和撤销邀请链接",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/auth-invites*"
+            }
+          ]
+        },
+        {
+          "id": "admin.cache.read",
+          "name": "读取缓存状态",
+          "description": "查看缓存统计",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/cache/status"
+            }
+          ]
+        },
+        {
+          "id": "admin.cache.write",
+          "name": "重置缓存",
+          "description": "重置缓存统计",
+          "adminOnly": true,
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/cache/reset"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

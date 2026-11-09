@@ -254,11 +254,11 @@ function createAvatarUploadHandler({ pool, logger, readImage = readAvatarUpload,
       controller.signal.throwIfAborted();
       const result = await pool.query(
         'UPDATE users SET avatar = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id',
-        [req.session.user.id, avatarUrl]
+        [req.authUser.id, avatarUrl]
       );
       if (result.rowCount !== 1) throw new AvatarUploadError('用户不存在，请重新登录', 401);
       controller.signal.throwIfAborted();
-      req.session.user.avatar = avatarUrl;
+      req.authUser.avatar = avatarUrl;
       res.json({ success: true, url: avatarUrl });
     } catch (error) {
       if (controller.signal.aborted || res.destroyed) return;

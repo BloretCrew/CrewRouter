@@ -34,6 +34,9 @@ function ensureCsrfToken(req) {
 
 function csrfProtection(req, res, next) {
   if (!req.session || SAFE_METHODS.has(req.method)) return next();
+  // Valid, request-scoped API Key authentication is not cookie-based. This is
+  // set by resolveRequestAuth only after the key passed lifecycle checks.
+  if (req.authActor?.type === 'api_key') return next();
   const path = String(req.path || '').toLowerCase().replace(/\/+$/, '');
   if (req.method === 'POST' && TOKEN_ENDPOINTS.has(path)) return next();
   const suppliedOrigin = getOrigin(req);
