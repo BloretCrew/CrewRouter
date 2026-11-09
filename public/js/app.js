@@ -236,6 +236,7 @@ class ConsoleApp {
       document.querySelectorAll('[data-page="myUpstream"] [data-i18n="我的上游"]').forEach(el => { el.dataset.i18n = '供应商管理'; el.textContent = t('供应商管理'); });
     }
     this.bindEvents();
+    document.addEventListener('i18n:ready', () => this.rerenderApiKeyPermissionPickers());
     this._bindHashRouting();
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseConsoleHash(location.hash);
@@ -7666,30 +7667,212 @@ class ConsoleApp {
     return this._apiKeyPermissionCatalogPromise;
   }
 
-  renderApiKeyPermissionGroups(containerId, selected = [], { disabled = false } = {}) {
+  _permissionPickerItems() {
+    const items = [];
+    for (const group of (this._apiKeyPermissionCatalog?.groups || [])) {
+      for (const permission of (group.permissions || [])) {
+        items.push({
+          ...permission,
+          groupId: group.id,
+          groupName: group.name,
+          groupDescription: group.description || '',
+        });
+      }
+    }
+    return items;
+  }
+
+  _permissionPickerFiltered(containerId) {
+    const state = this._permissionPickerStates?.get(containerId);
+    if (!state) return [];
+    const query = String(state.query || '').trim().toLowerCase();
+    return this._permissionPickerItems().filter((item) => {
+      if (state.group && item.groupId !== state.group) return false;
+      if (state.onlySelected && !state.selected.has(item.id)) return false;
+      if (!query) return true;
+      const haystack = [
+        item.id,
+        item.name,
+        item.description,
+        item.groupName,
+        t(item.name),
+        t(item.description || ''),
+        t(item.groupName),
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  _renderPermissionPickerBody(containerId) {
+    const container = document.getElementById(containerId);
+    const state = this._permissionPickerStates?.get(containerId);
+    if (!container || !state) return;
+    const items = this._permissionPickerFiltered(containerId);
+    const pages = Math.max(1, Math.ceil(items.length / state.pageSize));
+    state.page = Math.min(Math.max(1, state.page), pages);
+    const start = (state.page - 1) * state.pageSize;
+    const pageItems = items.slice(start, start + state.pageSize);
+
+    const list = container.querySelector('.ak-perm-list');
+    if (list) {
+      list.innerHTML = pageItems.length ? pageItems.map((permission) => `
+        <label class="ak-perm-item">
+          <input type="checkbox" class="ak-perm-check" data-perm-id="${escapeHtml(permission.id)}"
+            ${state.selected.has(permission.id) ? 'checked' : ''} ${state.disabled ? 'disabled' : ''}>
+          <span class="ak-perm-item__body">
+            <span class="ak-perm-item__head">
+              <strong>${escapeHtml(t(permission.name))}</strong>
+              <code>${escapeHtml(permission.id)}</code>
+              <span class="ak-perm-item__group">${escapeHtml(t(permission.groupName))}</span>
+            </span>
+            ${permission.description ? `<span class="ak-perm-item__desc">${escapeHtml(t(permission.description))}</span>` : ''}
+          </span>
+        </label>`).join('') : `<p class="ak-dialog-note">${escapeHtml(t('无匹配权限'))}</p>`;
+    }
+
+    const count = container.querySelector('.ak-perm-count');
+    if (count) count.textContent = t('已选 {count} 项', { count: state.selected.size });
+
+    const pager = container.querySelector('.ak-perm-pager');
+    if (pager) {
+      pager.innerHTML = `
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm"
+          data-perm-page="prev" ${state.page <= 1 ? 'disabled' : ''}>${escapeHtml(t('上一页'))}</button>
+        <span class="ak-perm-page-label">${escapeHtml(t('第 {page} / {pages} 页', { page: state.page, pages }))}</span>
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm"
+          data-perm-page="next" ${state.page >= pages ? 'disabled' : ''}>${escapeHtml(t('下一页'))}</button>
+        <select class="input ak-perm-size" aria-label="${escapeHtml(t('每页数量'))}">
+          ${[6, 8, 12, 20].map((size) => `<option value="${size}" ${state.pageSize === size ? 'selected' : ''}>${size}</option>`).join('')}
+        </select>`;
+    }
+  }
+
+  _wirePermissionPicker(containerId) {
+    const container = document.getElementById(containerId);
+    const state = this._permissionPickerStates?.get(containerId);
+    if (!container || !state) return;
+
+    container.oninput = (event) => {
+      if (!event.target.classList.contains('ak-perm-search')) return;
+      state.query = event.target.value;
+      state.page = 1;
+      this._renderPermissionPickerBody(containerId);
+    };
+    container.onchange = (event) => {
+      const target = event.target;
+      if (target.classList.contains('ak-perm-group')) {
+        state.group = target.value;
+        state.page = 1;
+        this._renderPermissionPickerBody(containerId);
+        return;
+      }
+      if (target.classList.contains('ak-perm-only-check')) {
+        state.onlySelected = target.checked;
+        state.page = 1;
+        this._renderPermissionPickerBody(containerId);
+        return;
+      }
+      if (target.classList.contains('ak-perm-size')) {
+        state.pageSize = Number(target.value) || 8;
+        state.page = 1;
+        this._renderPermissionPickerBody(containerId);
+        return;
+      }
+      if (target.classList.contains('ak-perm-check')) {
+        const id = target.getAttribute('data-perm-id');
+        if (!id) return;
+        if (target.checked) state.selected.add(id);
+        else state.selected.delete(id);
+        this._renderPermissionPickerBody(containerId);
+      }
+    };
+    container.onclick = (event) => {
+      const action = event.target.closest('[data-perm-action]')?.getAttribute('data-perm-action');
+      if (action) {
+        const filtered = this._permissionPickerFiltered(containerId);
+        const pageStart = (state.page - 1) * state.pageSize;
+        const pageItems = filtered.slice(pageStart, pageStart + state.pageSize);
+        if (action === 'select-page') pageItems.forEach((item) => state.selected.add(item.id));
+        if (action === 'clear-page') pageItems.forEach((item) => state.selected.delete(item.id));
+        if (action === 'select-filtered') filtered.forEach((item) => state.selected.add(item.id));
+        if (action === 'clear-all') state.selected.clear();
+        this._renderPermissionPickerBody(containerId);
+        return;
+      }
+      const page = event.target.closest('[data-perm-page]')?.getAttribute('data-perm-page');
+      if (page) {
+        state.page += page === 'next' ? 1 : -1;
+        this._renderPermissionPickerBody(containerId);
+      }
+    };
+  }
+
+  renderApiKeyPermissionGroups(containerId, selected = [], { disabled = false, pageSize = 8, preserve = null } = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const selectedSet = new Set(selected || []);
-    const catalog = this._apiKeyPermissionCatalog || { groups: [] };
-    const html = (catalog.groups || []).map((group) => {
-      const items = (group.permissions || []).map((permission) => `
-        <blora-checkbox class="api-key-permission-check" value="${escapeHtml(permission.id)}"
-          label="${escapeHtml(permission.name)}" ${selectedSet.has(permission.id) ? 'checked' : ''} ${disabled ? 'disabled' : ''}></blora-checkbox>
-        <div class="ak-dialog-note" style="margin:-4px 0 8px 28px;">${escapeHtml(permission.description || permission.id)}</div>`).join('');
-      return `<fieldset class="blora-fieldset">
-        <legend class="blora-fieldset__legend">${escapeHtml(group.name)}</legend>
-        ${group.description ? `<p class="ak-dialog-note">${escapeHtml(group.description)}</p>` : ''}
-        ${items}
-      </fieldset>`;
-    }).join('');
-    container.innerHTML = html || '<p class="ak-dialog-note">权限目录加载失败，请刷新页面重试。</p>';
+    const state = preserve && preserve.selected instanceof Set
+      ? {
+        selected: preserve.selected,
+        disabled: preserve.disabled === true,
+        pageSize: Number(preserve.pageSize) || pageSize,
+        page: preserve.page || 1,
+        query: preserve.query || '',
+        group: preserve.group || '',
+        onlySelected: preserve.onlySelected === true,
+      }
+      : {
+        selected: new Set(selected || []),
+        disabled: disabled === true,
+        pageSize: Number(pageSize) || 8,
+        page: 1,
+        query: '',
+        group: '',
+        onlySelected: false,
+      };
+    this._permissionPickerStates = this._permissionPickerStates || new Map();
+    this._permissionPickerStates.set(containerId, state);
+
+    const groups = this._apiKeyPermissionCatalog?.groups || [];
+    container.innerHTML = `
+      <div class="ak-perm-toolbar">
+        <input type="search" class="input ak-perm-search" value="${escapeHtml(state.query)}"
+          placeholder="${escapeHtml(t('搜索权限 ID、名称或说明'))}">
+        <select class="input ak-perm-group" aria-label="${escapeHtml(t('权限组'))}">
+          <option value="">${escapeHtml(t('全部权限组'))}</option>
+          ${groups.map((group) => `<option value="${escapeHtml(group.id)}" ${state.group === group.id ? 'selected' : ''}>${escapeHtml(t(group.name))}</option>`).join('')}
+        </select>
+        <label class="ak-perm-only">
+          <input type="checkbox" class="ak-perm-only-check" ${state.onlySelected ? 'checked' : ''}>
+          <span>${escapeHtml(t('仅显示已选'))}</span>
+        </label>
+        <span class="ak-perm-count"></span>
+      </div>
+      <div class="ak-perm-actions">
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-perm-action="select-page">${escapeHtml(t('全选当前页'))}</button>
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-perm-action="clear-page">${escapeHtml(t('清空当前页'))}</button>
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-perm-action="select-filtered">${escapeHtml(t('全选筛选结果'))}</button>
+        <button type="button" class="blora-button" data-variant="ghost" data-size="sm" data-perm-action="clear-all">${escapeHtml(t('清空全部'))}</button>
+      </div>
+      <div class="ak-perm-list"></div>
+      <div class="ak-perm-pager"></div>`;
+    this._wirePermissionPicker(containerId);
+    this._renderPermissionPickerBody(containerId);
+  }
+
+  rerenderApiKeyPermissionPickers() {
+    if (!this._permissionPickerStates) return;
+    for (const [containerId, state] of [...this._permissionPickerStates.entries()]) {
+      if (!document.getElementById(containerId)) {
+        this._permissionPickerStates.delete(containerId);
+        continue;
+      }
+      this.renderApiKeyPermissionGroups(containerId, [], { preserve: state });
+    }
   }
 
   selectedApiKeyPermissions(containerId) {
-    return [...document.querySelectorAll(`#${containerId} .api-key-permission-check`)]
-      .filter((el) => el.checked)
-      .map((el) => el.getAttribute('value'))
-      .filter(Boolean);
+    const state = this._permissionPickerStates?.get(containerId);
+    return state ? [...state.selected] : [];
   }
 
   defaultApiKeyPermissions(catalog = this._apiKeyPermissionCatalog) {

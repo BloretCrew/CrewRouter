@@ -295,7 +295,7 @@
 }
 
 /* ---------- 本页弹窗内部排版（弹窗会挂到 body，所以按弹窗 id 限定；外观由 .lg-scope 启用） ---------- */
-:is(#createApiKeyModal, #hookNotifySelectModal, #keyMembersModal, #keyOptionsModal, #keySignatureModal, #keyScheduleModal, #selectKeyModal) {
+:is(#createApiKeyModal, #hookNotifySelectModal, #keyMembersModal, #keyOptionsModal, #keyPermissionsModal, #keySignatureModal, #keyScheduleModal, #selectKeyModal) {
   & .ak-dialog-stack { display: flex; flex-direction: column; gap: 16px; }
   & .ak-dialog-note { margin: 0; color: var(--lg-fg-secondary); font-size: 13px; line-height: 1.55; }
   & .ak-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
@@ -468,3 +468,42 @@
 #keyModelsModal .model-test-badge.pass { background: color-mix(in srgb, var(--lg-green) 16%, transparent); color: var(--lg-green-ink); }
 #keyModelsModal .model-test-badge.fail { background: color-mix(in srgb, var(--lg-red) 14%, transparent); color: var(--lg-red-ink); }
 #createKeyTagPopover #keyTagPreviewDot { font-size: 10px; }
+
+/* ---------- API Key 权限选择器（搜索 / 分组筛选 / 分页） ---------- */
+.ak-perm-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.55fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+.ak-perm-toolbar .input { min-inline-size: 0; }
+.ak-perm-only { display: inline-flex; align-items: center; gap: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; white-space: nowrap; }
+.ak-perm-only input { inline-size: 15px; block-size: 15px; }
+.ak-perm-count { color: var(--lg-fg-secondary); font-size: 12.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ak-perm-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ak-perm-list { display: flex; flex-direction: column; gap: 4px; min-block-size: 120px; }
+.ak-perm-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--lg-radius-item);
+  background: var(--lg-group-bg);
+  cursor: pointer;
+}
+.ak-perm-item:hover { background: var(--lg-group-bg-hover, var(--lg-card-bg-hover)); }
+.ak-perm-item > input { margin-block-start: 3px; inline-size: 15px; block-size: 15px; flex: 0 0 auto; }
+.ak-perm-item__body { display: flex; flex-direction: column; gap: 3px; min-inline-size: 0; }
+.ak-perm-item__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; }
+.ak-perm-item__head strong { color: var(--lg-fg); font-size: 13.5px; font-weight: 600; }
+.ak-perm-item__head code { color: var(--lg-fg-secondary); font-family: var(--lg-font-mono); font-size: 11px; }
+.ak-perm-item__group { padding: 1px 7px; border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); color: var(--lg-fg-secondary); font-size: 10.5px; }
+.ak-perm-item__desc { color: var(--lg-fg-secondary); font-size: 12px; line-height: 1.5; }
+.ak-perm-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.ak-perm-pager .ak-perm-size { inline-size: auto; min-inline-size: 68px; block-size: 32px; padding-inline: 8px; font-size: 12px; }
+.ak-perm-page-label { color: var(--lg-fg-secondary); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) {
+  .ak-perm-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .ak-perm-toolbar .ak-perm-group { grid-column: 1 / -1; }
+  .ak-perm-toolbar .ak-perm-count { justify-self: end; }
+}
