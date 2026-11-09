@@ -9744,6 +9744,8 @@ async function(ctx) {
 
       // 飞书登录配置
       await this.loadFeishuLoginSettings();
+      // 自有 OAuth 应用
+      await this.loadOAuthClients();
     } catch (error) {
       console.error(t('加载设置失败:'), error);
     }
@@ -9889,6 +9891,206 @@ async function(ctx) {
       el.select();
       document.execCommand('copy');
       alert(t('回调地址已复制'));
+    }
+  }
+
+  // ===== OAuth 应用（自有 OAuth 授权服务） =====
+
+  async loadOAuthClients() {
+    const container = document.getElementById('oauthClientsList');
+    if (!container) return;
+    try {
+      const response = await fetch('/api/admin/oauth-clients');
+      if (!response.ok) {
+        setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:24px;">加载 OAuth 应用失败</p>');
+        return;
+      }
+      const data = await response.json();
+      this._oauthClients = Array.isArray(data.clients) ? data.clients : [];
+      this._oauthScopeOptions = Array.isArray(data.scopes) ? data.scopes : [];
+      this.renderOAuthClients();
+    } catch (error) {
+      console.error('[OAuth应用] 加载失败:', error);
+      setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:24px;">加载 OAuth 应用失败</p>');
+    }
+  }
+
+  renderOAuthClients() {
+    const container = document.getElementById('oauthClientsList');
+    if (!container) return;
+    const clients = this._oauthClients || [];
+    if (clients.length === 0) {
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:24px;">暂无 OAuth 应用</p>');
+      return;
+    }
+    const rows = clients.map((client) => {
+      const source = client.source === 'builtin' ? '内置' : (client.source === 'config' ? '配置文件' : '数据库');
+      const typeLabel = client.type === 'confidential' ? '机密客户端' : '公共客户端';
+      const scopes = (client.scopes || []).map((scope) => `<code>${escapeHtml(scope)}</code>`).join(' ');
+      const redirects = client.allow_loopback_any_path
+        ? '任意回环路径'
+        : `${(client.redirect_uris || []).length} 个`;
+      const status = client.enabled ? '<span style="color:var(--success);">启用</span>' : '<span style="color:var(--muted-foreground);">停用</span>';
+      const id = escapeHtml(client.client_id);
+      const actions = client.editable
+        ? `<button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.openOAuthClientDialog('${id}')">编辑</button>
+           <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.rotateOAuthClientSecret('${id}')">轮换密钥</button>
+           <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.deleteOAuthClient('${id}')">删除</button>`
+        : '<span style="color:var(--muted-foreground);font-size:12px;">只读</span>';
+      return `<tr>
+        <td><strong>${escapeHtml(client.name)}</strong><div style="font-size:12px;color:var(--muted-foreground);"><code>${id}</code></div></td>
+        <td>${typeLabel}<div style="font-size:12px;color:var(--muted-foreground);">${source}</div></td>
+        <td>${scopes || '-'}<div style="font-size:12px;color:var(--muted-foreground);">${redirects}</div></td>
+        <td>${client.has_secret ? `已设置 <code>${escapeHtml(client.secret_hint || '')}…</code>` : '不使用'}</td>
+        <td>${status}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+    setHTML(container, `<table>
+      <thead><tr><th>应用</th><th>类型</th><th>权限 / 回调</th><th>客户端密钥</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`);
+  }
+
+  openOAuthClientDialog(clientId = '') {
+    const existing = (this._oauthClients || []).find((client) => client.client_id === clientId) || null;
+    if (existing && !existing.editable) return;
+    const scopes = this._oauthScopeOptions || [];
+    const selectedScopes = new Set(existing?.scopes || ['gateway:invoke']);
+    const scopeHtml = scopes.map((item) => `<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <input type="checkbox" class="oauth-client-scope" value="${escapeHtml(item.scope)}" ${selectedScopes.has(item.scope) ? 'checked' : ''} style="margin-top:3px;">
+      <span><code>${escapeHtml(item.scope)}</code><br><small style="color:var(--muted-foreground);">${escapeHtml(item.description || '')}</small></span>
+    </label>`).join('');
+    const redirects = (existing?.redirect_uris || []).join('\n');
+    const content = `
+      <div class="setup-form" style="display:grid;gap:12px;">
+        <div class="form-group">
+          <label>应用名称 *</label>
+          <input id="oauthClientName" class="input" type="text" maxlength="120" value="${escapeHtml(existing?.name || '')}" placeholder="例如：公司内部工具">
+        </div>
+        <div class="form-group">
+          <label>客户端 ID（留空自动生成）</label>
+          <input id="oauthClientId" class="input" type="text" maxlength="128" value="${escapeHtml(existing?.client_id || '')}" placeholder="app_... / my-cli" ${existing ? 'disabled' : ''}>
+        </div>
+        <div class="form-group">
+          <label>客户端类型</label>
+          <select id="oauthClientType" class="input">
+            <option value="public" ${!existing || existing.type === 'public' ? 'selected' : ''}>公共客户端（原生应用 / CLI / SPA，无密钥，强制 PKCE）</option>
+            <option value="confidential" ${existing?.type === 'confidential' ? 'selected' : ''}>机密客户端（服务端应用，需要 client_secret）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>回调地址（每行一个）</label>
+          <textarea id="oauthClientRedirects" class="input" rows="4" placeholder="https://app.example.com/oauth/callback&#10;http://127.0.0.1/callback&#10;myapp://oauth/callback">${escapeHtml(redirects)}</textarea>
+          <small style="color:var(--muted-foreground);">HTTPS 地址精确匹配；回环地址忽略端口；自定义 scheme 仅用于公共客户端。</small>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="oauthClientAllowLoopback" ${existing?.allow_loopback_any_path ? 'checked' : ''}>
+            <span>允许任意回环路径（仅建议内置或受信任的原生客户端）</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>权限</label>
+          <div>${scopeHtml}</div>
+        </div>
+        <div class="form-group">
+          <label>说明</label>
+          <input id="oauthClientDescription" class="input" type="text" maxlength="500" value="${escapeHtml(existing?.description || '')}">
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="oauthClientEnabled" ${!existing || existing.enabled ? 'checked' : ''}>
+            <span>启用该应用</span>
+          </label>
+        </div>
+        ${existing ? '<small style="color:var(--muted-foreground);">保存时勾选“同时轮换密钥”可生成新的 client_secret，旧密钥立即失效。</small><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="oauthClientRotateSecret"><span>同时轮换客户端密钥</span></label>' : ''}
+      </div>`;
+    const footer = `<button type="button" class="blora-button" data-variant="primary" id="oauthClientSaveBtn">保存</button>`;
+    const modal = Dialog.showModal({ title: existing ? '编辑 OAuth 应用' : '新建 OAuth 应用', content, footer, width: 620 });
+    document.getElementById('oauthClientSaveBtn')?.addEventListener('click', async () => {
+      const redirectUris = (document.getElementById('oauthClientRedirects')?.value || '')
+        .split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+      const scopesSelected = [...document.querySelectorAll('.oauth-client-scope:checked')].map((el) => el.value);
+      const payload = {
+        name: (document.getElementById('oauthClientName')?.value || '').trim(),
+        type: document.getElementById('oauthClientType')?.value || 'public',
+        clientId: existing ? undefined : (document.getElementById('oauthClientId')?.value || '').trim(),
+        redirectUris,
+        allowLoopbackAnyPath: document.getElementById('oauthClientAllowLoopback')?.checked === true,
+        scopes: scopesSelected,
+        description: (document.getElementById('oauthClientDescription')?.value || '').trim(),
+        enabled: document.getElementById('oauthClientEnabled')?.checked === true,
+        rotateSecret: document.getElementById('oauthClientRotateSecret')?.checked === true,
+      };
+      const saved = await this.saveOAuthClient(existing?.client_id || '', payload);
+      if (saved) modal?.close?.();
+    });
+  }
+
+  async saveOAuthClient(clientId, payload) {
+    if (!payload.name) { alert('请填写应用名称'); return null; }
+    if (!payload.scopes.length) { alert('请至少选择一个权限'); return null; }
+    if (!payload.redirectUris.length && payload.allowLoopbackAnyPath !== true) { alert('请至少填写一个回调地址'); return null; }
+    try {
+      const response = await fetch(clientId ? `/api/admin/oauth-clients/${encodeURIComponent(clientId)}` : '/api/admin/oauth-clients', {
+        method: clientId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(data.error || '保存 OAuth 应用失败');
+        return null;
+      }
+      if (data.client_secret) this.showOAuthClientSecret(data.client_secret, data.warning);
+      await this.loadOAuthClients();
+      return data;
+    } catch (error) {
+      console.error('[OAuth应用] 保存失败:', error);
+      alert('保存 OAuth 应用失败');
+      return null;
+    }
+  }
+
+  showOAuthClientSecret(secret, warning) {
+    const content = `<div class="setup-form" style="display:grid;gap:12px;">
+      <p style="color:var(--destructive);margin:0;">${escapeHtml(warning || '客户端密钥只显示一次，请立即保存。')}</p>
+      <input id="oauthClientSecretValue" class="input" type="text" readonly value="${escapeHtml(secret)}" style="font-family:monospace;" onclick="this.select()">
+      <small style="color:var(--muted-foreground);">关闭后无法再次查看；丢失后只能轮换新密钥。</small>
+    </div>`;
+    const footer = `<button type="button" class="blora-button" data-variant="primary" id="oauthClientSecretCopyBtn">复制并关闭</button>`;
+    const modal = Dialog.showModal({ title: '客户端密钥', content, footer, width: 560 });
+    document.getElementById('oauthClientSecretCopyBtn')?.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(secret); } catch { /* ignore */ }
+      modal?.close?.();
+    });
+  }
+
+  async rotateOAuthClientSecret(clientId) {
+    if (!confirm(`确定轮换 ${clientId} 的客户端密钥？旧密钥会立即失效。`)) return;
+    try {
+      const response = await fetch(`/api/admin/oauth-clients/${encodeURIComponent(clientId)}/rotate-secret`, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { alert(data.error || '轮换客户端密钥失败'); return; }
+      this.showOAuthClientSecret(data.client_secret, data.warning);
+      await this.loadOAuthClients();
+    } catch (error) {
+      console.error('[OAuth应用] 轮换密钥失败:', error);
+      alert('轮换客户端密钥失败');
+    }
+  }
+
+  async deleteOAuthClient(clientId) {
+    if (!confirm(`确定删除 ${clientId}？该应用的授权码和全部令牌会立即失效。`)) return;
+    try {
+      const response = await fetch(`/api/admin/oauth-clients/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { alert(data.error || '删除 OAuth 应用失败'); return; }
+      await this.loadOAuthClients();
+    } catch (error) {
+      console.error('[OAuth应用] 删除失败:', error);
+      alert('删除 OAuth 应用失败');
     }
   }
 

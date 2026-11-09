@@ -12,6 +12,7 @@
   var formEl = document.getElementById('ocForm');
   var errorEl = document.getElementById('ocError');
   var appNameEl = document.getElementById('ocAppName');
+  var thirdPartyNoticeEl = document.getElementById('ocThirdPartyNotice');
   var scopeListEl = document.getElementById('ocScopeList');
   var keySelectEl = document.getElementById('ocApiKeySelect');
   var hiddenWrap = document.getElementById('ocHiddenFields');
@@ -95,6 +96,12 @@
         loadingEl.hidden = true;
         formEl.hidden = false;
         appNameEl.textContent = info.client && info.client.name ? info.client.name : (info.client && info.client.id) || '-';
+        if (thirdPartyNoticeEl && info.client && info.client.first_party !== true) {
+          thirdPartyNoticeEl.hidden = false;
+          if (info.redirectUri) {
+            thirdPartyNoticeEl.textContent = t('这是第三方应用，授权后将跳转到') + ' ' + info.redirectUri + '。' + t('请确认你信任该应用后再授权。');
+          }
+        }
         renderScopes(info.scopes);
         renderKeys(info.apiKeys, info.defaultApiKeyId);
         fillHiddenFields();

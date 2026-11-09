@@ -2794,6 +2794,7 @@ if (isDemo) {
   app.use('/api', require('./routes/auth-invites'));
   app.use('/api', require('./routes/api'));
   app.use('/api/admin', require('./routes/admin'));
+  app.use('/api/admin/oauth-clients', require('./routes/admin-oauth-clients'));
   app.use('/api/admin', require('./routes/admin-popup-notices'));
   app.use('/api/admin', require('./routes/admin-custom-instructions'));
   app.use('/api/admin/update', require('./routes/update'));

@@ -10,9 +10,11 @@
  *  - POST /oauth/token                            authorization_code + refresh_token 双 grant
  *  - GET  /.well-known/oauth-authorization-server RFC 8414 元数据
  *
- * 设计要点（见 .hermes/plans/20260824_oauth_server_plan_c.md）：
+ * 设计要点：
  *  - PKCE S256 强制，所有 client 不设例外
- *  - loopback 回调放开端口：^http://127\.0\.0\.1:\d+/（RFC 8252 惯例）
+ *  - 内置客户端沿用任意回环路径；注册客户端按登记的回调地址精确匹配，
+ *    回环地址忽略端口（RFC 8252），自定义 scheme 仅限公共客户端
+ *  - 公共客户端无 secret；机密客户端支持 client_secret_basic / client_secret_post
  *  - token 库内只存 sha256，原文仅签发响应出现一次
  *  - refresh 轮换 + 重用侦测：旧 refresh 第二次使用 → 吊销同链全部 token
  *    （access 行的 rotated_from 指向同批签发的 refresh 行，使链上遍历可覆盖每代 access）
@@ -27,6 +29,7 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { requireAuth } = require('../middleware/auth');
+const oauthClients = require('../utils/oauth-clients');
 
 const router = express.Router();
 
@@ -36,28 +39,6 @@ const REFRESH_TTL_SEC = 30 * 24 * 3600;    // refresh 30d
 const CODE_TTL_SEC = 10 * 60;              // 授权码 10min、一次性
 const OAUTH_TOKEN_PREFIX = 'crh_';
 const MAX_REVOKE_TOKEN_ROWS = 10_000;
-
-// loopback 回调放开端口（RFC 8252）；一期只有首方 client，不做第三方注册
-const LOOPBACK_REDIRECT_RE = /^http:\/\/127\.0\.0\.1:\d+\/.*/;
-
-// 首方 client 种子与其 scope 白名单（scope 枚举第三项 console:read 预留、暂无 client 使用）
-const FIRST_PARTY_CLIENTS = [
-  { client_id: 'crewrouter-desktop', name: 'CrewRouter Desktop', scopes: ['events:report'] },
-  { client_id: 'crewrouter-helper', name: 'CrewRouter Helper', scopes: ['events:report'] },
-  { client_id: 'crewrouter-cli', name: 'CrewRouter CLI', scopes: ['gateway:invoke'] },
-];
-
-function getClient(clientId) {
-  return FIRST_PARTY_CLIENTS.find((c) => c.client_id === clientId) || null;
-}
-
-/** 解析并校验 scope：空则取 client 默认全集；含白名单之外的项返回 null */
-function normalizeScope(scopeStr, client) {
-  const requested = String(scopeStr || '').split(/[\s+]+/).filter(Boolean);
-  const list = requested.length > 0 ? requested : client.scopes;
-  if (!list.every((s) => client.scopes.includes(s))) return null;
-  return list.join(' ');
-}
 
 // ---------- 静态页路径（开发 server/ 下 public 在上层；构建后 dist/ 内同级） ----------
 const PUBLIC_DIR = (() => {
@@ -108,12 +89,36 @@ async function ensureOAuthTables() {
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS oauth_clients (
-      client_id  TEXT PRIMARY KEY,
-      name       TEXT NOT NULL,
-      first_party BOOLEAN NOT NULL DEFAULT TRUE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      client_id      TEXT PRIMARY KEY,
+      name           TEXT NOT NULL,
+      first_party    BOOLEAN NOT NULL DEFAULT FALSE,
+      client_type    TEXT NOT NULL DEFAULT 'public',
+      redirect_uris  JSONB NOT NULL DEFAULT '[]'::jsonb,
+      scopes         JSONB NOT NULL DEFAULT '[]'::jsonb,
+      allow_loopback_any_path BOOLEAN NOT NULL DEFAULT FALSE,
+      secret_hash    TEXT,
+      secret_hint    TEXT,
+      description    TEXT NOT NULL DEFAULT '',
+      enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `);
+
+  // 兼容旧版 oauth_clients（只有 client_id / name / first_party）。
+  for (const statement of [
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS client_type TEXT NOT NULL DEFAULT 'public'`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS redirect_uris JSONB NOT NULL DEFAULT '[]'::jsonb`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS scopes JSONB NOT NULL DEFAULT '[]'::jsonb`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS allow_loopback_any_path BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS secret_hash TEXT`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS secret_hint TEXT`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE oauth_clients ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
+  ]) {
+    await pool.query(statement);
+  }
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS oauth_auth_codes (
@@ -149,12 +154,14 @@ async function ensureOAuthTables() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_oauth_tokens_rotated_from ON oauth_tokens (rotated_from)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_oauth_tokens_user ON oauth_tokens (user_id)`);
 
-  // 首方种子 client：存在即跳过
-  for (const c of FIRST_PARTY_CLIENTS) {
+  // 内置种子 client：存在即跳过；实际校验始终以代码内置定义为准。
+  for (const c of oauthClients.BUILTIN_CLIENTS) {
     await pool.query(
-      `INSERT INTO oauth_clients (client_id, name, first_party) VALUES ($1, $2, TRUE)
+      `INSERT INTO oauth_clients
+         (client_id, name, first_party, client_type, redirect_uris, scopes, allow_loopback_any_path, enabled, description)
+       VALUES ($1, $2, TRUE, 'public', '[]'::jsonb, $3::jsonb, TRUE, TRUE, $4)
        ON CONFLICT (client_id) DO NOTHING`,
-      [c.client_id, c.name]
+      [c.client_id, c.name, JSON.stringify(c.scopes), c.description || '']
     );
   }
 
@@ -165,13 +172,13 @@ async function ensureOAuthTables() {
 }
 
 // ---------- authorize 参数校验（GET 页面 / info / approve 共用） ----------
-function validateAuthorizeParams(query) {
-  const client = getClient(query.client_id);
-  if (!client) return { error: 'invalid_client' };
+async function validateAuthorizeParams(query) {
+  const client = await oauthClients.resolveClient(pool, config, query.client_id);
+  if (!client || client.enabled === false) return { error: 'invalid_client' };
   if (query.response_type && query.response_type !== 'code') return { error: 'unsupported_response_type' };
-  const redirectUri = String(query.redirect_uri || '');
-  if (!LOOPBACK_REDIRECT_RE.test(redirectUri)) return { error: 'invalid_redirect_uri' };
-  const scope = normalizeScope(query.scope, client);
+  const redirectUri = oauthClients.matchRedirectUri(client, String(query.redirect_uri || ''));
+  if (!redirectUri) return { error: 'invalid_redirect_uri' };
+  const scope = oauthClients.normalizeScopeRequest(query.scope, client);
   if (!scope) return { error: 'invalid_scope' };
   const challenge = String(query.code_challenge || '');
   if (!challenge) return { error: 'invalid_request' };
@@ -213,7 +220,7 @@ function renderAuthorizeError(res, desc) {
 // ---------- 授权入口（控制台 session 即 SSO） ----------
 router.get('/oauth/authorize', requireAuthHtml, async (req, res) => {
   await ensureOAuthTables();
-  const v = validateAuthorizeParams(req.query);
+  const v = await validateAuthorizeParams(req.query);
   if (v.error) {
     Logger.warn(`[OAuth授权] 参数校验失败: ${v.error} client=${req.query.client_id}`);
     return renderAuthorizeError(res, '授权链接无效或已过期，请从客户端重新发起。');
@@ -225,7 +232,7 @@ router.get('/oauth/authorize', requireAuthHtml, async (req, res) => {
 // ---------- 确认页数据：应用名 / scope / 该用户的 API Key 列表 ----------
 router.get('/oauth/authorize/info', requireAuth, async (req, res) => {
   await ensureOAuthTables();
-  const v = validateAuthorizeParams(req.query);
+  const v = await validateAuthorizeParams(req.query);
   if (v.error) {
     return res.status(400).json({ ok: false, error: v.error });
   }
@@ -234,7 +241,13 @@ router.get('/oauth/authorize/info', requireAuth, async (req, res) => {
     [req.session.user.id]
   );
   res.json({
-    client: { id: v.client.client_id, name: v.client.name },
+    client: {
+      id: v.client.client_id,
+      name: v.client.name,
+      type: v.client.type,
+      first_party: v.client.first_party === true,
+      description: v.client.description || '',
+    },
     scopes: v.scope.split(/\s+/),
     redirectUri: v.redirectUri,
     state: v.state,
@@ -248,7 +261,7 @@ router.post('/oauth/authorize/approve', requireAuth, async (req, res) => {
   await ensureOAuthTables();
   const body = req.body || {};
   const decision = body.decision === 'deny' ? 'deny' : 'approve';
-  const v = validateAuthorizeParams(body);
+  const v = await validateAuthorizeParams(body);
   if (v.error) {
     Logger.warn(`[OAuth授权] approve 参数校验失败: ${v.error} user=${req.session.user.id}`);
     return renderAuthorizeError(res, '授权请求参数无效，请从客户端重新发起。');
@@ -396,11 +409,22 @@ function sendTokenError(res, error, description) {
   return res.status(400).json({ error, ...(description ? { error_description: description } : {}) });
 }
 
+function sendClientAuthError(res, client) {
+  if (client && client.type === 'confidential') {
+    res.set('WWW-Authenticate', 'Basic realm="CrewRouter OAuth"');
+  }
+  return res.status(401).json({ error: 'invalid_client' });
+}
+
 // ---------- Desktop Web Session 交换（一次性授权码 + PKCE） ----------
 router.post('/oauth/desktop-session', async (req, res) => {
   await ensureOAuthTables();
   const { code, client_id: clientId, code_verifier: verifier } = req.body || {};
   if (!code || clientId !== 'crewrouter-desktop' || !verifier) return sendTokenError(res, 'invalid_request');
+  const client = await oauthClients.resolveClient(pool, config, clientId);
+  if (!client || client.enabled === false || client.type !== 'public' || client.client_id !== 'crewrouter-desktop') {
+    return sendClientAuthError(res, client);
+  }
   const found = await pool.query('SELECT * FROM oauth_auth_codes WHERE code = $1', [String(code)]);
   const row = found.rows[0];
   if (!row || row.client_id !== clientId) return sendTokenError(res, 'invalid_grant');
@@ -422,10 +446,10 @@ router.post('/oauth/token', async (req, res) => {
     await ensureOAuthTables();
     const p = req.body || {};
     if (p.grant_type === 'authorization_code') {
-      return await handleAuthorizationCodeGrant(p, res);
+      return await handleAuthorizationCodeGrant(p, req, res);
     }
     if (p.grant_type === 'refresh_token') {
-      return await handleRefreshTokenGrant(p, res);
+      return await handleRefreshTokenGrant(p, req, res);
     }
     return sendTokenError(res, 'unsupported_grant_type');
   } catch (error) {
@@ -434,10 +458,17 @@ router.post('/oauth/token', async (req, res) => {
   }
 });
 
-async function handleAuthorizationCodeGrant(p, res) {
-  const { code, client_id: clientId, code_verifier: verifier } = p;
+async function handleAuthorizationCodeGrant(p, req, res) {
+  const { code, code_verifier: verifier } = p;
+  const credentials = oauthClients.clientCredentials(req, p);
+  const clientId = credentials.clientId;
   if (!code || !clientId || !verifier) {
     return sendTokenError(res, 'invalid_request', 'code / client_id / code_verifier 均为必填');
+  }
+
+  const client = await oauthClients.resolveClient(pool, config, clientId);
+  if (!client || client.enabled === false || !oauthClients.authenticateClient(client, req, p)) {
+    return sendClientAuthError(res, client);
   }
 
   const found = await pool.query(`SELECT * FROM oauth_auth_codes WHERE code = $1`, [String(code)]);
@@ -472,11 +503,22 @@ async function handleAuthorizationCodeGrant(p, res) {
   });
 }
 
-async function handleRefreshTokenGrant(p, res) {
+async function handleRefreshTokenGrant(p, req, res) {
   const presented = p.refresh_token;
-  const clientId = p.client_id;
+  const credentials = oauthClients.clientCredentials(req, p);
+  const clientId = credentials.clientId;
   if (!presented || !clientId) {
     return sendTokenError(res, 'invalid_request', 'refresh_token / client_id 均为必填');
+  }
+
+  const client = await oauthClients.resolveClient(pool, config, clientId);
+  if (client) {
+    if (client.enabled === false || !oauthClients.authenticateClient(client, req, p)) {
+      return sendClientAuthError(res, client);
+    }
+  } else {
+    // 兼容注册表出现前签发的旧授权链；令牌本身仍是凭证。
+    Logger.warn(`[OAuth授权] 未知客户端刷新令牌（兼容旧授权）: client=${clientId}`);
   }
 
   const hash = sha256Hex(String(presented));
@@ -584,11 +626,19 @@ router.get('/oauth/authorizations', requireAuth, async (req, res) => {
       [req.session.user.id]
     );
 
-    const clientName = (cid) => getClient(cid)?.name || cid;
+    const clientIds = [...new Set(r.rows.map((row) => row.client_id).filter(Boolean))];
+    const clientNames = new Map(await Promise.all(clientIds.map(async (clientId) => {
+      try {
+        const client = await oauthClients.resolveClient(pool, config, clientId);
+        return [clientId, client?.name || clientId];
+      } catch {
+        return [clientId, clientId];
+      }
+    })));
     const authorizations = r.rows.map((row) => ({
       id: row.root_id,
       client_id: row.client_id,
-      client_name: clientName(row.client_id),
+      client_name: clientNames.get(row.client_id) || row.client_id,
       scope: row.scope || '',
       api_key_id: row.api_key_id,
       api_key_name: row.api_key_name || '',
@@ -659,8 +709,8 @@ router.get('/.well-known/oauth-authorization-server', (req, res) => {
     response_types: ['code'],
     grant_types: ['authorization_code', 'refresh_token'],
     code_challenge_methods: ['S256'],
-    token_endpoint_auth_method: 'none',
-    scopes_supported: ['events:report', 'gateway:invoke', 'console:read'],
+    token_endpoint_auth_methods_supported: ['none', 'client_secret_basic', 'client_secret_post'],
+    scopes_supported: Object.keys(oauthClients.SCOPE_DEFINITIONS),
   });
 });
 

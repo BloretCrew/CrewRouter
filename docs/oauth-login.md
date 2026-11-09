@@ -8,7 +8,7 @@
 | 1 | Bloret PassPort 主登录 | 用户 → CrewRouter | CrewRouter 是 OAuth 客户端 | Personal / Desktop Local 唯一登录方式；Team 可选 |
 | 2 | 飞书企业登录 | 用户 → CrewRouter | CrewRouter 是 OAuth 客户端 | Team 实例可选；与密码登录并存 |
 | 3 | 插件商店 PassPort | 商店访客 → CrewRouter 商店 | CrewRouter 商店是 OAuth 客户端 | 仅 `demo: true` 时挂载，身份与主站隔离 |
-| 4 | CrewRouter OAuth 2.0 授权服务 | CLI / Desktop / Helper → CrewRouter | CrewRouter 是授权服务器 | 正式；PKCE + 授权码 + 刷新令牌 |
+| 4 | CrewRouter OAuth 2.0 授权服务 | CLI / Desktop / Helper / 第三方应用 → CrewRouter | CrewRouter 是授权服务器 | 正式；PKCE + 授权码 + 刷新令牌 |
 | — | 旧版 GitHub 登录 | 用户 → CrewRouter | 原 OAuth 客户端 | 已停用，路由固定返回 410 |
 | 附 | 上游供应商 OAuth Token | CrewRouter → 上游供应商 | 用于额度查询/调用，不是用户登录 | 管理端导入 `auth.json`，不在 CrewRouter 内走登录流程 |
 
@@ -276,27 +276,84 @@
 ## 5. CrewRouter 自有 OAuth 2.0 授权服务
 
 实现：`server/routes/oauth.js`，非 demo 模式下挂载在根路径 `app.use('/', require('./routes/oauth'))`。
-它**不是**用户登录入口，而是让已经登录控制台的用户给 CLI / Desktop / Helper 等首方客户端授权，客户端拿到绑定到某个 API Key 的访问令牌。
+它**不是**用户登录入口，而是让已经登录控制台的用户给 CLI / Desktop / Helper 以及第三方应用授权，客户端拿到绑定到某个 API Key 的访问令牌。
 
-### 5.1 客户端与 scope
+### 5.1 客户端注册表与 scope
 
-首方客户端在代码中硬编码种子（`oauth_clients` 表也会写入，但校验使用内存常量）：
+客户端有三个来源，按优先级合并（`server/utils/oauth-clients.js`）：
 
-| client_id | 名称 | 允许 scope |
-| --- | --- | --- |
-| `crewrouter-desktop` | CrewRouter Desktop | `events:report` |
-| `crewrouter-helper` | CrewRouter Helper | `events:report` |
-| `crewrouter-cli` | CrewRouter CLI | `gateway:invoke` |
+1. **内置客户端**：代码内定义，始终优先，后台不可编辑；
+2. **`config.oauth.clients`**：部署时声明，只读；
+3. **`oauth_clients` 表**：管理员在后台创建，可编辑、轮换密钥、删除。
+
+内置客户端：
+
+| client_id | 名称 | 类型 | 允许 scope | 回调策略 |
+| --- | --- | --- | --- | --- |
+| `crewrouter-desktop` | CrewRouter Desktop | 公共 | `events:report` | 任意 loopback 路径 |
+| `crewrouter-helper` | CrewRouter Helper | 公共 | `events:report` | 任意 loopback 路径 |
+| `crewrouter-cli` | CrewRouter CLI | 公共 | `gateway:invoke` | 任意 loopback 路径 |
+
+第三方客户端分两类：
+
+- **公共客户端（public）**：原生应用、CLI、SPA；无 client_secret，强制 PKCE；可登记 loopback、自定义 scheme 或 HTTPS 回调。
+- **机密客户端（confidential）**：服务端应用；必须提供 client_secret，支持 `client_secret_basic` 与 `client_secret_post`；仍强制 PKCE。
+
+回调地址规则：
+
+- 登记的 HTTPS 地址按协议、主机、端口、路径、查询串精确匹配；
+- 回环地址（`127.0.0.1`、`localhost`、`[::1]`）只允许 `http:`，并忽略端口，以兼容 RFC 8252 的动态端口；
+- 自定义 scheme（如 `myapp://oauth/callback`）按完整地址精确匹配，且必须带 authority；仅建议公共客户端使用；
+- 拒绝非回环 `http:`、`javascript:`、`data:`、`file:`、带凭据或 fragment 的地址；
+- 内置客户端保留原有行为：任意 `http://127.0.0.1|localhost|[::1]:<port>/<path>`。
 
 scope：
 
-| scope | 含义 | 使用端点 |
-| --- | --- | --- |
-| `events:report` | 上报客户端使用事件 | `POST /api/client-events` |
-| `gateway:invoke` | 通过网关调用模型 | `/v1/*` 网关端点 |
-| `console:read` | 预留，暂无客户端使用 | — |
+| scope | 含义 | 使用端点 | 可分配给第三方 |
+| --- | --- | --- | --- |
+| `events:report` | 上报客户端使用事件 | `POST /api/client-events` | 是 |
+| `gateway:invoke` | 通过网关调用模型 | `/v1/*` 网关端点 | 是 |
+| `console:read` | 预留，暂无客户端使用 | — | 否 |
 
-客户端均为公共客户端（`token_endpoint_auth_method=none`），不校验 client secret；安全边界来自 PKCE、loopback 回调和用户授权。
+管理接口（仅管理员）：
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/admin/oauth-clients` | 列出内置、配置和数据库客户端 |
+| POST | `/api/admin/oauth-clients` | 创建客户端；机密客户端返回一次性 `client_secret` |
+| PUT | `/api/admin/oauth-clients/:clientId` | 更新；可同时轮换密钥 |
+| POST | `/api/admin/oauth-clients/:clientId/rotate-secret` | 轮换机密客户端密钥 |
+| DELETE | `/api/admin/oauth-clients/:clientId` | 删除客户端，并吊销其授权码与全部令牌 |
+
+`config.oauth.clients` 示例：
+
+```json
+{
+  "oauth": {
+    "clients": [
+      {
+        "clientId": "my-web-app",
+        "name": "My Web App",
+        "type": "confidential",
+        "secret": "replace-with-at-least-32-random-characters",
+        "scopes": ["gateway:invoke"],
+        "redirectUris": ["https://app.example.com/oauth/callback"],
+        "enabled": true
+      },
+      {
+        "clientId": "my-cli",
+        "name": "My CLI",
+        "type": "public",
+        "scopes": ["gateway:invoke"],
+        "redirectUris": ["http://127.0.0.1/callback"],
+        "enabled": true
+      }
+    ]
+  }
+}
+```
+
+> `config.oauth.clients` 中的 `secret` 是明文配置项，应与 `config.json` 一同保护，且至少 32 个字符；后台创建的客户端只保存 SHA-256 哈希和 6 位提示。
 
 ### 5.2 端点
 
@@ -312,12 +369,18 @@ scope：
 | POST | `/oauth/revoke` | RFC 7009 风格吊销；未知 token 返回 200 |
 | GET | `/.well-known/oauth-authorization-server` | RFC 8414 元数据 |
 
+补充：
+
+- `/oauth/authorize/info` 额外返回 `client.type`、`client.first_party`、`client.description`；确认页对非首方客户端显示“第三方应用”警告和实际回调地址。
+- `/oauth/token` 支持公共客户端（无密钥）和机密客户端（`client_secret_basic` 或 `client_secret_post`）。注册表出现前签发的旧 refresh 令牌仍允许按原 `client_id` 刷新，日志会记录“未知客户端”警告。
+- 元数据公布 `token_endpoint_auth_methods_supported`（`none`、`client_secret_basic`、`client_secret_post`）。
+
 ### 5.3 授权码流程
 
 1. `GET /oauth/authorize` 参数校验：
-   - `client_id` 必须是三个首方客户端之一；
+   - `client_id` 必须能解析到已启用客户端（内置、配置或数据库）；
    - `response_type` 缺省或 `code`；
-   - `redirect_uri` 必须是 `^http://127.0.0.1:\d+/...`（RFC 8252 loopback，仅 `127.0.0.1`，不支持 `localhost`/`[::1]`）；
+   - `redirect_uri` 按该客户端的回调策略匹配：内置客户端允许任意 loopback 路径；注册客户端精确匹配登记地址，回环地址忽略端口；
    - `scope` 必须是该客户端白名单子集；为空时取客户端默认全集；
    - `code_challenge` 必填；`code_challenge_method` 缺省或 `S256`。
    - 未登录的 HTML 导航跳 `/?error=login_required`。
@@ -391,7 +454,7 @@ scope：
 
 `ensureOAuthTables()` 在首次使用时懒建，不修改 `init-db.js`：
 
-- `oauth_clients`：client_id、name、first_party、created_at；写入三个首方种子。
+- `oauth_clients`：client_id、name、first_party、client_type、redirect_uris、scopes、allow_loopback_any_path、secret_hash、secret_hint、description、enabled、created_at、updated_at；写入三个内置种子。旧表会在首次使用时自动补齐新增列。
 - `oauth_auth_codes`：code、client_id、user_id、api_key_id、scope、code_challenge、expires_at、used；超过 1 天的过期码会清理。
 - `oauth_tokens`：id、token_hash（唯一）、user_id、api_key_id、client_id、scope、kind（`access`/`refresh`）、expires_at、revoked、rotated_from、created_at、last_used_at。
 - 索引：`expires_at`、`rotated_from`、`user_id`。
@@ -411,9 +474,11 @@ scope：
 - 确认页：`public/pages/oauth-consent.html` + `public/js/oauth-consent.js`
   - 读取 URL 参数，请求 `/oauth/authorize/info`；
   - 展示客户端名、scope 说明、API Key 选择；
+  - 非首方客户端显示第三方警告和实际回调地址；
   - 用原生表单 POST `/oauth/authorize/approve`，隐藏域回填全部授权参数；
   - scope 文案：`events:report` = 上报客户端使用事件，`gateway:invoke` = 通过网关调用模型接口，`console:read` = 读取控制台数据（预留）。
 - 授权管理：`public/js/app.js` 的 `loadAuthorizations()` / `revokeAuthorization()`，调用 `/oauth/authorizations` 与 `/oauth/authorizations/revoke`。
+- 应用管理：管理后台「系统设置 → 登录与认证 → OAuth 应用」可创建、编辑、轮换密钥和删除数据库客户端；内置与配置文件客户端显示为只读。客户端密钥只在创建或轮换后显示一次。
 - Demo 模式使用 `server/demo/oauth.js` 返回只读示例授权列表，吊销只返回成功。
 
 ### 5.8 内部 OAuth 令牌
@@ -426,6 +491,86 @@ scope：
 - 内存缓存 5 分钟，使用前仍会查库确认未吊销未过期；
 - 并发签发用 `pendingTokens` 去重；
 - 主要用途：会话总结（`server/routes/sessions-view.js`）调用本地 `/v1/chat/completions`，避免读取 API Key 明文。
+
+### 5.9 第三方应用接入示例
+
+**公共客户端（原生 / CLI）**
+
+1. 管理员在「OAuth 应用」创建公共客户端，登记回调，例如 `http://127.0.0.1/callback` 或 `myapp://oauth/callback`。
+2. 生成 PKCE：
+   - `code_verifier`：43–128 位随机字符串；
+   - `code_challenge = base64url(SHA-256(code_verifier))`。
+3. 打开授权页：
+
+```text
+https://your-router/oauth/authorize
+  ?client_id=app_xxx
+  &response_type=code
+  &redirect_uri=http://127.0.0.1/callback
+  &scope=gateway%3Ainvoke
+  &state=<random>
+  &code_challenge=<challenge>
+  &code_challenge_method=S256
+```
+
+4. 用户同意后，回调地址收到 `code` 和 `state`。
+5. 换令牌：
+
+```bash
+curl -X POST https://your-router/oauth/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=authorization_code' \
+  -d 'code=<code>' \
+  -d 'client_id=app_xxx' \
+  -d 'code_verifier=<verifier>'
+```
+
+**机密客户端（服务端 Web）**
+
+- 创建时选择 `confidential`，保存返回的 `client_secret`（只显示一次）；
+- 换令牌时使用 Basic 认证或表单字段：
+
+```bash
+curl -X POST https://your-router/oauth/token \
+  -u 'app_xxx:<client_secret>' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=authorization_code' \
+  -d 'code=<code>' \
+  -d 'redirect_uri=https://app.example.com/oauth/callback' \
+  -d 'code_verifier=<verifier>'
+
+# 或
+curl -X POST https://your-router/oauth/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=authorization_code' \
+  -d 'client_id=app_xxx' \
+  -d 'client_secret=<client_secret>' \
+  -d 'code=<code>' \
+  -d 'code_verifier=<verifier>'
+```
+
+**刷新**
+
+```bash
+curl -X POST https://your-router/oauth/token \
+  -u 'app_xxx:<client_secret>' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=refresh_token' \
+  -d 'refresh_token=<refresh_token>'
+```
+
+公共客户端刷新时不带 `client_secret`，但仍需带 `client_id`。刷新令牌每次轮换，旧 refresh 再次使用会吊销整条授权链。
+
+**调用网关**
+
+```bash
+curl https://your-router/v1/chat/completions \
+  -H "Authorization: Bearer crh_..." \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"...","messages":[{"role":"user","content":"hello"}]}'
+```
+
+访问令牌绑定用户在授权时选择的 API Key；额度、模型授权、限流和签名策略都按该 Key 执行。
 
 ---
 
@@ -521,8 +666,11 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 | Access 有效期 | 24 小时 |
 | Refresh 有效期 | 30 天 |
 | 授权码有效期 | 10 分钟，一次性 |
-| 客户端 | 代码内硬编码三个首方客户端 |
-| 回调 | 仅 `http://127.0.0.1:<port>/...` |
+| 客户端来源 | 内置三个首方客户端 + `config.oauth.clients` + `oauth_clients` 表 |
+| 客户端类型 | 公共（无密钥、强制 PKCE）/ 机密（client_secret） |
+| 客户端认证 | `none`、`client_secret_basic`、`client_secret_post` |
+| 回调 | 内置：任意 loopback 路径；注册：登记地址精确匹配，回环地址忽略端口 |
+| 管理接口 | `/api/admin/oauth-clients`（仅管理员） |
 
 ---
 
@@ -536,6 +684,7 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 | 令牌只存哈希 | `oauth_tokens.token_hash = SHA-256(token)`；明文只在签发响应出现一次 |
 | refresh 轮换与重用检测 | 旧 refresh 再次使用或已有子代 refresh → 吊销整条链 |
 | 吊销串行化 | advisory lock + 事务；上限 10,000 行；失败返回 503 |
+| 客户端注册与认证 | 内置优先；配置/数据库客户端校验启用状态、类型、登记回调与 scope；机密客户端恒时比较 secret 哈希 |
 | scope 校验 | `oauthBearer` 按端点要求 `events:report` 或 `gateway:invoke` |
 | 复用 Key 策略 | OAuth 通过 `validateBoundApiKey` 走普通 Key 的额度、限流、模型授权、签名等全部检查 |
 | 凭据校验 | 拒绝模板值、空白、控制字符、历史泄露 Secret；商店会话密钥至少 32 字节 |
@@ -555,6 +704,8 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 | 测试 | 覆盖内容 |
 | --- | --- |
 | `server/scripts/test-oauth-bearer-policy.js` | OAuth access token 的 Key 所有人、禁用/过期、scope、额度、策略字段；OAuth 不进入 Key 缓存 |
+| `server/scripts/test-oauth-clients.js` | 客户端注册表、回调 URI 策略、scope 子集、公共/机密客户端认证、配置与数据库客户端合并 |
+| `server/scripts/test-oauth-clients-postgres.js` | 隔离 PostgreSQL：旧表升级、创建/列出/更新/轮换/删除、停用与轮换时吊销令牌 |
 | `server/scripts/test-oauth-revocation-security.js` | 吊销链向上/向下遍历、跨用户隔离、环、10,000 行上限、并发轮换、503 语义、token 对事务回滚 |
 | `server/scripts/test-passport-login-security.js` | state、回调、凭据缺失、认证模式、重定向来源 |
 | `server/scripts/test-passport-credentials.js` | 凭据校验、模板/历史 Secret 拒绝、空环境变量行为 |
@@ -572,6 +723,8 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 `package.json` 中可直接运行的相关脚本：
 
 - `npm run test:oauth-bearer-policy`
+- `npm run test:oauth-clients`
+- `npm run test:oauth-clients-postgres`（需要本机 `initdb` / `pg_ctl`）
 - `npm run test:passkey-security`（认证安全相关，含 PassKey 与登录会话）
 - `npm run test:security-guards`（认证守卫相关）
 - `npm run audit:blora-pages`（扫描包含 `oauth-consent` 在内的全部公开页面）
@@ -584,6 +737,7 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 - 过期边界已修正：无效日期或 `expires_at <= now` 均拒绝。
 - PassKey 登录曾绕过实例登录方式策略与本地 TOTP；已在 PassKey 的 options/verify 阶段检查实例认证方式，并在启用 2FA 时要求二次验证。
 - 审计记录：`audit/security-passport-review-2026-10-25.md`、`audit/security-passkey-oauth-review-2026-10-25.md`。
+- `security-audit.js` 现在也会统计 `oauth_clients`：非法客户端类型、机密客户端缺少密钥、scope/回调 JSON 形状异常；停用客户端数量作为信息项。
 
 ---
 
@@ -596,7 +750,7 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 5. **商店仅在 Demo 模式可用**：`app.use('/store', createStoreRoutes())` 位于 `if (isDemo)` 内；非 demo 部署不会暴露商店 OAuth。
 6. **商店 GET 交换会暴露 `app_secret` 到查询串**：这是历史契约；若提供方支持 POST，应优先迁移，但当前代码没有自动重试或回退。
 7. **提供方是否保留 `redirect_uri` 上的 state 未验证**：代码同时把 state 放在 `state` 参数和回调 URI 中，兼容两种行为；跨实例的一次性仍依赖 IdP 的一次性 code。
-8. **OAuth 服务只支持 loopback `127.0.0.1`**：`localhost`、`[::1]` 或自定义 scheme 不在白名单；只支持三个硬编码首方客户端，没有动态客户端注册。
+8. **当前不支持的能力**：没有 RFC 7591 动态客户端注册（需管理员在后台或配置文件中登记）；没有 Device Authorization Grant（无浏览器/SSH 场景仍需 loopback 回调）；不签发 `id_token`，不是 OpenID Connect；未为浏览器 SPA 配置 CORS，SPA 建议使用后端代理或原生客户端模式。
 9. **`console:read` 是预留 scope**：元数据会公布，但没有客户端使用，也没有对应端点校验。
 10. **Desktop 官方登录与商店耦合**：`helper_login=1` 的实例列表按访问者 IP/设备弱关联，不要求商店 PassPort 会话；这是有意设计，但需要理解其隐私与冒用边界。
 
@@ -612,8 +766,11 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 | 飞书登录 | `server/routes/feishu.js`、`server/utils/feishu-config.js`、`public/pages/feishu-bind.html` |
 | 商店 PassPort | `server/routes/store.js`、`server/store/passport.js`、`server/store/session.js`、`server/utils/passport-store-state.js` |
 | 自有 OAuth 服务 | `server/routes/oauth.js`、`server/middleware/oauth-bearer.js` |
+| OAuth 客户端注册表 | `server/utils/oauth-clients.js` |
+| OAuth 客户端管理 API | `server/routes/admin-oauth-clients.js` |
 | OAuth 确认页 | `public/pages/oauth-consent.html`、`public/js/oauth-consent.js` |
 | OAuth 授权管理 UI | `public/js/app.js`（`loadAuthorizations`、`revokeAuthorization`） |
+| OAuth 应用管理 UI | `public/pages/admin.html`、`public/js/admin.js`（`loadOAuthClients`、`openOAuthClientDialog`） |
 | Desktop 官方站登录 | `CrewRouter-Desktop/src/app/official-login.js`、`CrewRouter-Desktop/src/redirect-flow.js`、`CrewRouter-Desktop/docs/remote-redirect.md` |
 | 内部 OAuth | `server/utils/internal-oauth.js`、`server/routes/sessions-view.js` |
 | 旧 GitHub 登录 | `server/routes/oauth-github.js` |

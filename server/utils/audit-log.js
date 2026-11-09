@@ -91,6 +91,7 @@ const ACTIONS = {
   ADMIN_PRODUCT: 'admin.product',
   ADMIN_SETTINGS: 'admin.settings',
   ADMIN_FEISHU: 'admin.feishu',
+  ADMIN_OAUTH_CLIENT: 'admin.oauth_client',
   ADMIN_FUSION_CONFIG: 'admin.fusion_config',
   ADMIN_PROVIDER_TAG: 'admin.provider_tag',
   ADMIN_POPUP_NOTICE: 'admin.popup_notice',

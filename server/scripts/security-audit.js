@@ -17,7 +17,7 @@ const REQUIRED_PUBLIC_TABLES = [
 const OPTIONAL_PUBLIC_TABLES = [
   'balance_preconsumes', 'redemption_code_uses', 'api_key_members', 'plugins',
   'api_key_models', 'api_key_harness_models', 'inject_prompts', 'inject_prompt_key_bindings',
-  'oauth_tokens', 'oauth_auth_codes', 'auth_invites',
+  'oauth_tokens', 'oauth_auth_codes', 'oauth_clients', 'auth_invites',
 ];
 
 const RISK_COUNTS = {
@@ -36,17 +36,19 @@ const RISK_COUNTS = {
   promptBindings: ['orphanBindings', 'crossOwnerBindings', 'duplicateBindings'],
   oauthTokens: ['orphanPrincipals', 'ownerMismatches', 'invalidKinds'],
   oauthCodes: ['orphanPrincipals', 'ownerMismatches'],
+  oauthClients: ['invalidTypes', 'confidentialWithoutSecret', 'invalidScopeSets', 'invalidRedirectUris'],
   authInvites: ['orphanCreators', 'orphanTeams'],
   catalog: ['invalidIndexes', 'notReadyIndexes', 'unvalidatedConstraints'],
   sequences: ['behindCount'],
 };
-const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'], oauthTokens: ['oauth_tokens'], oauthCodes: ['oauth_auth_codes'], authInvites: ['auth_invites'] };
+const NEW_CHECK_TABLES = { apiKeyQueues: ['api_key_models'], apiKeyHarness: ['api_key_harness_models'], promptRecords: ['inject_prompts'], promptBindings: ['inject_prompts', 'inject_prompt_key_bindings'], oauthTokens: ['oauth_tokens'], oauthCodes: ['oauth_auth_codes'], oauthClients: ['oauth_clients'], authInvites: ['auth_invites'] };
 const OPTIONAL_CHECKS = ['plugins', 'balancePreconsumes', 'redemptionCodes', 'apiKeyMemberships', ...Object.keys(NEW_CHECK_TABLES)];
 const ROLE_FLAGS = ['superuser', 'createRole', 'createDatabase', 'replication', 'bypassRls', 'publicSchemaCreate', 'publicSchemaMemberCreate', 'publicSchemaOwner', 'databaseOwner'];
 
 const INFORMATIONAL_COUNTS = {
   identities: ['usersWithPasskeys', 'adminsWithPasskeys', 'twoFactorEnabledAdmins', 'temporaryTotpSecrets'],
-  oauthTokens: ['activeAccessTokens', 'activeRefreshTokens'], oauthCodes: ['activeCodes'], authInvites: ['activeInvites'],
+  oauthTokens: ['activeAccessTokens', 'activeRefreshTokens'], oauthCodes: ['activeCodes'],
+  oauthClients: ['disabledClients'], authInvites: ['activeInvites'],
 };
 
 function invalidCheckFields(checks) {
@@ -415,6 +417,15 @@ async function audit({ client: suppliedClient, configPath: suppliedConfigPath } 
           FROM public.${table} q LEFT JOIN public.api_keys k ON k.id=q.api_key_id
           LEFT JOIN public.models m ON m.id=q.model_id`;
         if (harness) params = [HARNESS_SOURCES];
+      } else if (section === 'oauthClients') {
+        sql = `SELECT count(*)::int AS total,
+          count(*) FILTER(WHERE client_type IS NULL OR client_type NOT IN ('public','confidential'))::int AS "invalidTypes",
+          count(*) FILTER(WHERE client_type = 'confidential'
+            AND (secret_hash IS NULL OR btrim(secret_hash) = ''))::int AS "confidentialWithoutSecret",
+          count(*) FILTER(WHERE jsonb_typeof(scopes) IS DISTINCT FROM 'array')::int AS "invalidScopeSets",
+          count(*) FILTER(WHERE jsonb_typeof(redirect_uris) IS DISTINCT FROM 'array')::int AS "invalidRedirectUris",
+          count(*) FILTER(WHERE enabled = FALSE)::int AS "disabledClients"
+          FROM public.oauth_clients`;
       } else if (section === 'oauthTokens' || section === 'oauthCodes') {
         const tokens = section === 'oauthTokens';
         const table = tokens ? 'oauth_tokens' : 'oauth_auth_codes';

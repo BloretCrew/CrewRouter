@@ -1300,7 +1300,7 @@
             <button type="button" class="settings-category-card" data-admin-settings-category="appearance"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/paintpalette?color=black" alt="" data-sf-name="paintpalette"><span><strong><span data-i18n="外观">外观</span></strong><small><span data-i18n="默认主题与界面外观">默认主题与界面外观</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="updates"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/arrow.clockwise?color=black" alt="" data-sf-name="arrow.clockwise"><span><strong><span data-i18n="版本与更新">版本与更新</span></strong><small><span data-i18n="检查版本与一键更新">检查版本与一键更新</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="retention"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/archivebox?color=black" alt="" data-sf-name="archivebox"><span><strong><span data-i18n="数据保留">数据保留</span></strong><small><span data-i18n="压缩、清理与聚合策略">压缩、清理与聚合策略</span></small></span><span class="settings-category-arrow">›</span></button>
-            <button type="button" class="settings-category-card" data-admin-settings-category="auth"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/person.badge.key?color=black" alt="" data-sf-name="person.badge.key"><span><strong><span data-i18n="登录与认证">登录与认证</span></strong><small><span data-i18n="飞书登录与邀请链接">飞书登录与邀请链接</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="auth"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/person.badge.key?color=black" alt="" data-sf-name="person.badge.key"><span><strong><span data-i18n="登录与认证">登录与认证</span></strong><small><span data-i18n="飞书登录、OAuth 应用与邀请链接">飞书登录、OAuth 应用与邀请链接</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="network"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/globe?color=black" alt="" data-sf-name="globe"><span><strong><span data-i18n="网络">网络</span></strong><small><span data-i18n="代理地址与代理池">代理地址与代理池</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="popups"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/bell?color=black" alt="" data-sf-name="bell"><span><strong><span data-i18n="弹窗通知">弹窗通知</span></strong><small><span data-i18n="向用户广播一次性弹窗">向用户广播一次性弹窗</span></small></span><span class="settings-category-arrow">›</span></button>
           </div>
@@ -1539,6 +1539,16 @@
               <button type="button" class="blora-button" id="feishuSaveBtn" onclick="adminApp.saveFeishuLoginSettings()" data-variant="primary"><span data-i18n="保存飞书配置">保存飞书配置</span></button>
             </div>
           </form>
+        </div>
+
+        <!-- OAuth 应用（自有 OAuth 授权服务） -->
+        <div class="content-section admin-settings-section admin-settings-category-auth" id="oauthClientsSection">
+          <h2><span data-i18n="OAuth 应用">OAuth 应用</span></h2>
+          <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="供 Desktop、Helper、CLI 及第三方应用通过 OAuth 2.0 + PKCE 授权访问网关。内置客户端不可编辑；配置文件声明的客户端只读。">供 Desktop、Helper、CLI 及第三方应用通过 OAuth 2.0 + PKCE 授权访问网关。内置客户端不可编辑；配置文件声明的客户端只读。</span></p>
+          <div class="admin-filter-bar">
+            <button class="blora-button" type="button" data-variant="primary" onclick="adminApp.openOAuthClientDialog()"><span data-i18n="新建 OAuth 应用">新建 OAuth 应用</span></button>
+          </div>
+          <div id="oauthClientsList" class="users-table"></div>
         </div>
 
         <!-- 系统单代理设置 -->
@@ -2648,7 +2658,7 @@
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script type="module" src="/js/model-trace.js?v=lg-21"></script>
-  <script src="/js/admin.js?v=lg-24"></script>
+  <script src="/js/admin.js?v=oauth-clients-20261109"></script>
   <script src="/js/admin-library-i18n.js?v=admin-library-20261014"></script>
   <script src="/js/admin-library-console-view.js?v=lg-25"></script>
   <script src="/js/admin-model-library.js?v=lg-25"></script>
