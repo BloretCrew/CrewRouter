@@ -14,6 +14,9 @@ const { createCrewRouter } = require('crewrouter/embedded');
 
 const cr = createCrewRouter({
   configPath: './crewrouter.config.json', // or config: { ... }
+  session: false,
+  features: ['gateway', 'management', 'events'],
+  console: false,
   migrate: false,
   backgroundTasks: false,
   plugins: false,
@@ -36,12 +39,23 @@ await cr.stop();
 | --- | --- | --- |
 | `config` | — | Config object; written to a private temp file before modules load |
 | `configPath` | auto-discovery | Existing JSON config file |
+| `pool` | owned | External pg Pool; `stop()` does not end it |
+| `session` | `false` | `false`/`"none"`, `"memory"`, `"pg"`, or an express-session store |
+| `features` | `gateway, management, events` | Array of feature ids, or `"all"` |
+| `console` | `false` | Serve pages/static and mount console-only routes |
+| `oauthRoutes` | `false` | Add or remove the `oauth` feature |
 | `migrate` | `false` | Run startup database init/migrations |
 | `backgroundTasks` | `false` | Key refresh, key/quota schedulers, message analysis, stats reporter, aggregation |
 | `plugins` | `false` | Load the plugin registry |
 | `store` | `false` | Initialize the plugin store tables |
 | `handleSignals` | `false` | Install SIGINT/SIGTERM handlers |
 | `start({ port, host, listen, ... })` | — | `listen: false` performs startup without listening; per-start overrides for `migrate`, `backgroundTasks`, `plugins`, `store`, `handleSignals` |
+
+Feature ids: `gateway`, `management`, `events`, `tools`, `console`, `oauth`,
+`plugins`, `public`. Core middleware (body parsing, auth resolution, CSRF,
+permissions, `/api/version`, `/api/config`, `/api/instance`) is always mounted.
+`public` (i18n) is always mounted. Feature gating applies to non-demo mode;
+demo mode uses its own fixture routes.
 
 `createCrewRouter` returns:
 
@@ -53,18 +67,15 @@ await cr.stop();
 | `start(options?)` | Resolves with the HTTP server |
 | `stop()` | Closes HTTP, stops tracked timers, flushes quota data and closes the pool |
 
-## Unsupported options (throw)
+## Validation
 
-The preview throws `ERR_CREWROUTER_UNSUPPORTED_OPTION` for:
+The preview rejects invalid configurations before loading any CrewRouter module:
 
-- `pool` — external pg Pool injection
-- `session` — session store selection
-- `features` — feature presets
-- `console` — console/static page toggling
-- `oauthRoutes` — OAuth authorization-server toggling
-- `basePath` — sub-path mounting
-
-The full phase-2 design will add these; see the table in the repository plan.
+- `basePath` → `ERR_CREWROUTER_BASE_PATH_UNSUPPORTED`
+- `pool` without a `query()` function → `ERR_CREWROUTER_INVALID_POOL`
+- `session` not in `false`/`"none"`/`"memory"`/`"pg"`/store → `ERR_CREWROUTER_INVALID_SESSION`
+- `features` not an array or `"all"` → `ERR_CREWROUTER_INVALID_FEATURES`
+- A second instance → `ERR_CREWROUTER_MULTIPLE_INSTANCES`
 
 ## Limitations
 
@@ -74,11 +85,13 @@ The full phase-2 design will add these; see the table in the repository plan.
 - **One instance per process.** Config, the pg pool and the plugin registry are
   process globals. A second `createCrewRouter` throws
   `ERR_CREWROUTER_MULTIPLE_INSTANCES`.
-- **Configuration is frozen on first load.** Pass `config`/`configPath` when you
-  create the instance, before requiring any CrewRouter module.
-- **The console is always mounted.** The preview cannot disable static pages,
-  auth, setup, 2FA or passkey routes.
-- **No external pool.** `stop()` closes the pool created from the config.
+- **Configuration and options are frozen on first load.** Pass `config`,
+  `configPath`, `pool`, `session`, `features` and `console` when you create the
+  instance, before requiring any CrewRouter module. Per-`start` overrides are
+  limited to `migrate`, `backgroundTasks`, `plugins`, `store` and
+  `handleSignals`.
+- **Feature gating is not applied in demo mode.** Demo uses fixture routes for
+  the console showcase.
 - **Background task shutdown is partial.** Default is off. If enabled, tracked
   timers are cleared on `stop()`, but not every subsystem exposes a stop hook.
 - **PostgreSQL required** outside demo mode. For a first-time database, pass
@@ -102,6 +115,9 @@ async function main() {
       loginReport: { enabled: false },
     },
     migrate: true,
+    session: false,
+    features: ['gateway', 'management', 'events'],
+    console: false,
     backgroundTasks: false,
     plugins: false,
     store: false,

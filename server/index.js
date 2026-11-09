@@ -15,7 +15,16 @@ let PgSession;
 if (!isDemo) {
   PgSession = require('connect-pg-simple')(session);
 }
-const { pool } = require('./models/database');
+const database = require('./models/database');
+const { pool } = database;
+const embedRuntime = require('./runtime');
+
+// Embedding feature/session flags. CLI leaves these null and gets everything.
+const enabledFeatures = Array.isArray(embedRuntime.features) ? new Set(embedRuntime.features) : null;
+const featureEnabled = (name) => !enabledFeatures || enabledFeatures.has(name);
+const consoleEnabled = featureEnabled('console') && embedRuntime.console !== false;
+const sessionMode = embedRuntime.session == null ? (isDemo ? 'memory' : 'pg') : embedRuntime.session;
+const sessionEnabled = sessionMode !== false && sessionMode !== 'none';
 const Logger = require('./logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -2517,41 +2526,39 @@ app.use((err, req, res, next) => {
 });
 
 // 会话配置
-if (isDemo) {
-  // 演示模式：使用内存会话存储
-  app.use(session({
-    secret: config.app.sessionSecret,
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 1天
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/'
-    }
-  }));
-} else {
-  app.use(session({
-    store: new PgSession({
+if (sessionEnabled) {
+  const memoryMode = isDemo || sessionMode === 'memory';
+  const store = memoryMode
+    ? undefined
+    : (typeof sessionMode === 'object' ? sessionMode : new PgSession({
       pool: pool,
       tableName: 'user_sessions',
-      createTableIfMissing: true
-    }),
+      createTableIfMissing: true,
+    }));
+  app.use(session({
+    ...(store ? { store } : {}),
     secret: config.app.sessionSecret,
     resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30天
-      httpOnly: true,
-      secure: 'auto', // 仅在 HTTPS 下启用
-      sameSite: 'lax',
-      path: '/'
-    }
+    saveUninitialized: memoryMode,
+    cookie: memoryMode
+      ? {
+        maxAge: 24 * 60 * 60 * 1000, // 1天
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+      }
+      : {
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30天
+        httpOnly: true,
+        secure: 'auto', // 仅在 HTTPS 下启用
+        sameSite: 'lax',
+        path: '/',
+      },
   }));
 }
 
 // 演示模式：自动填充 session 用户（必须在请求身份解析前）
-if (isDemo) {
+if (isDemo && sessionEnabled) {
   const { getUser } = require('./demo/data');
   app.use((req, res, next) => {
     if (!req.session.user) {
@@ -2561,7 +2568,7 @@ if (isDemo) {
   });
 }
 
-if (isDesktopLocal) {
+if (isDesktopLocal && sessionEnabled) {
   app.use(require('./utils/local-passport').localSessionGuard(pool));
 }
 
@@ -2650,10 +2657,12 @@ app.use((req, res, next) => {
 });
 
 // 静态文件（开发环境禁用强缓存）
-app.use(express.static(PUBLIC_DIR, { etag: false, maxAge: 0 }));
+if (consoleEnabled) {
+  app.use(express.static(PUBLIC_DIR, { etag: false, maxAge: 0 }));
 
-// 官方 Blora 资源映射：生产路由与 smoke test 共用同一资源模块。
-app.use('/blora', createBloraResourceRouter());
+  // 官方 Blora 资源映射：生产路由与 smoke test 共用同一资源模块。
+  app.use('/blora', createBloraResourceRouter());
+}
 
 // 版本号接口（无需认证）
 app.get('/api/version', (req, res) => {
@@ -2741,6 +2750,7 @@ app.get('/api/updates/latest', (req, res) => {
   }
 });
 
+if (consoleEnabled) {
 // 页面路由
 app.get('/showcase', (req, res) => {
   if (!isDemo) return res.status(404).json({ error: 'not_found' });
@@ -2810,6 +2820,7 @@ if (isDemo) {
     res.sendFile(path.join(PUBLIC_DIR, 'pages/data.html'));
   });
 }
+}
 
 // 路由
 if (isDemo) {
@@ -2841,63 +2852,44 @@ if (isDemo) {
   // 统计信息上报接收端：落库真实上报，/data 页读 overview（不再使用假数据）
   app.use('/api/stats-report', require('./routes/stats-report'));
 } else {
-  app.use('/api', require('./routes/setup'));
-  app.use('/api/i18n', require('./routes/i18n'));
-  app.use('/auth', require('./routes/auth'));
-  // GitHub 登录路由（从旧 oauth.js 拆出，自有 OAuth 服务见 routes/oauth.js）
-  app.use('/auth/github-legacy', require('./routes/oauth-github'));
-  app.use('/auth', require('./routes/feishu'));
-  app.use('/auth', require('./routes/passport-auth'));
-  app.use('/api', require('./routes/auth-invites'));
-  app.use('/api', require('./routes/api'));
-  app.use('/api/admin', require('./routes/admin'));
-  app.use('/api/admin/oauth-clients', require('./routes/admin-oauth-clients'));
-  app.use('/api/admin', require('./routes/admin-popup-notices'));
-  app.use('/api/admin', require('./routes/admin-custom-instructions'));
-  app.use('/api/admin/update', require('./routes/update'));
-  app.use('/api/admin', require('./routes/teams'));
-  app.use('/api/user/model-trace', require('./routes/model-trace').getRouter());
-  app.use('/api/user', require('./routes/user'));
-  app.use('/api/user', require('./routes/balance-alert'));
-  app.use('/api/user', require('./routes/notifications'));
-  app.use('/api/user', require('./routes/popup-notices'));
-  app.use('/api/user', require('./routes/plugin-pref-optin'));
-  app.use('/api/user', require('./routes/hook-notify-rules'));
-  // 用户级自定义提示词（每人仅见自己的；admin 全站视图走 /api/admin/custom-instructions）
-  app.use('/api/user', require('./routes/user-custom-instructions'));
-  app.use('/api/user', require('./routes/attribution-view'));
-  // 会话 Tab 只读视图（归因聚合 + 消息时间线，严格 user_id 隔离，demo 不挂载）
-  app.use('/api/user', require('./routes/sessions-view'));
-  // 注入提示词（请求侧 system 注入配置，demo 不挂载）
-  app.use('/api/user', require('./routes/inject-prompts'));
-  // 客户端事件上报（hook → 实时活动看板）
-  app.use('/api/client-events', require('./routes/client-events'));
-  app.use('/api/playground', require('./routes/playground'));
-  app.use('/api/conversations', require('./routes/conversations'));
-  app.use('/api/agent', require('./routes/agent'));
-  app.use('/api/2fa', require('./routes/two-factor'));
-  app.use('/api/passkey', require('./routes/passkey'));
-  // 自有 OAuth 2.0 授权服务（PKCE；含 /.well-known 元数据，故挂根路径；demo 不挂载）
-  app.use('/', require('./routes/oauth'));
+  const { REAL_MOUNTS } = require('./routes/mounts');
+  const moduleCache = new Map();
+  let pluginRoutes = null;
 
-  // OpenAI 兼容路由（根路径，供 SDK 直接使用）
-  const apiRoutes = require('./routes/api');
-  app.use('/v1', apiRoutes);
+  const loadMountRouter = (entry) => {
+    if (entry.factory === 'getRouter') {
+      return require('./routes/model-trace').getRouter();
+    }
+    if (entry.factory && entry.factory.startsWith('createPluginsRoutes')) {
+      if (!pluginRoutes) pluginRoutes = require('./routes/plugins').createPluginsRoutes();
+      return entry.factory.endsWith('adminRouter') ? pluginRoutes.adminRouter : pluginRoutes.publicRouter;
+    }
+    if (moduleCache.has(entry.module)) return moduleCache.get(entry.module);
+    const router = require(path.join(__dirname, 'routes', entry.module));
+    moduleCache.set(entry.module, router);
+    return router;
+  };
 
-  // 插件系统：管理 API、运行时清单、插件自有 API 与静态资源
-  const { createPluginsRoutes } = require('./routes/plugins');
-  const { adminRouter, publicRouter } = createPluginsRoutes();
-  app.use('/api/admin/plugins', adminRouter);
-  app.use('/api/plugins', publicRouter);
-  app.use('/plugins', (req, res, next) => {
-    // /plugins/<pluginId>/<entry>：仅已启用插件的目录可读
-    const parts = req.path.split('/').filter(Boolean);
-    const pluginId = parts[0];
-    const registry = require('./plugins/registry');
-    if (!pluginId || !registry.isLoaded(pluginId)) return res.status(404).end();
-    req.url = '/' + parts.slice(1).join('/');
-    express.static(path.join(registry.PLUGINS_DIR, pluginId))(req, res, next);
-  });
+  for (const entry of REAL_MOUNTS) {
+    if (entry.runtime !== 'index') continue;
+    // Public metadata/i18n stays available to hosts even with a reduced feature set.
+    if (entry.feature !== 'public' && !featureEnabled(entry.feature)) continue;
+    if (entry.feature === 'console' && !consoleEnabled) continue;
+    app.use(entry.mount, loadMountRouter(entry));
+  }
+
+  // 插件系统：插件自有静态资源（管理/公共 API 已由挂载表处理）
+  if (featureEnabled('plugins')) {
+    app.use('/plugins', (req, res, next) => {
+      // /plugins/<pluginId>/<entry>：仅已启用插件的目录可读
+      const parts = req.path.split('/').filter(Boolean);
+      const pluginId = parts[0];
+      const registry = require('./plugins/registry');
+      if (!pluginId || !registry.isLoaded(pluginId)) return res.status(404).end();
+      req.url = '/' + parts.slice(1).join('/');
+      express.static(path.join(registry.PLUGINS_DIR, pluginId))(req, res, next);
+    });
+  }
 }
 
 // 插件商店（第三期）：独立于网关核心，仅 demo: true 时启用
@@ -3327,9 +3319,9 @@ async function stopServer() {
     // quota-data may not be loaded in demo mode
   }
   try {
-    await pool.end();
+    if (database.ownsPool) await pool.end();
   } catch (_) {
-    // pool may already be closed
+    // pool may already be closed or owned by the embedded host
   }
 }
 

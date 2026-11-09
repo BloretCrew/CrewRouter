@@ -6,7 +6,7 @@ const path = require('path');
 
 let instance = null;
 
-const UNSUPPORTED_OPTIONS = ['pool', 'session', 'features', 'console', 'oauthRoutes'];
+const ALL_FEATURES = ['gateway', 'management', 'events', 'tools', 'console', 'oauth', 'plugins', 'public'];
 
 /**
  * Create an in-process CrewRouter instance.
@@ -17,6 +17,11 @@ const UNSUPPORTED_OPTIONS = ['pool', 'session', 'features', 'console', 'oauthRou
  * @param {object} options
  * @param {object} [options.config]      Config object (written to a private temp file)
  * @param {string} [options.configPath]  Existing config file
+ * @param {object} [options.pool]        External pg Pool (not ended by stop())
+ * @param {false|'none'|'memory'|'pg'|object} [options.session] Session mode (default false)
+ * @param {string[]|'all'} [options.features] Feature ids (default gateway, management, events)
+ * @param {boolean} [options.console]    Serve pages/static and console routes (default false)
+ * @param {boolean} [options.oauthRoutes] Add/remove the oauth feature (default false)
  * @param {boolean} [options.migrate]    Run startup migrations (default false)
  * @param {boolean} [options.backgroundTasks] Start schedulers/key refresh (default false)
  * @param {boolean} [options.plugins]    Load plugins (default false)
@@ -39,14 +44,22 @@ function createCrewRouter(options = {}) {
     error.code = 'ERR_CREWROUTER_BASE_PATH_UNSUPPORTED';
     throw error;
   }
-  for (const key of UNSUPPORTED_OPTIONS) {
-    if (options[key] !== undefined) {
-      const error = new Error(
-        `ERR_CREWROUTER_UNSUPPORTED_OPTION: "${key}" is not supported by the preview embedded SDK`,
-      );
-      error.code = 'ERR_CREWROUTER_UNSUPPORTED_OPTION';
-      throw error;
-    }
+  if (options.pool && typeof options.pool.query !== 'function') {
+    const error = new Error('ERR_CREWROUTER_INVALID_POOL: options.pool must expose a query() function');
+    error.code = 'ERR_CREWROUTER_INVALID_POOL';
+    throw error;
+  }
+  if (options.session !== undefined
+      && options.session !== false
+      && options.session !== 'none'
+      && options.session !== 'memory'
+      && options.session !== 'pg'
+      && (typeof options.session !== 'object' || options.session === null)) {
+    const error = new Error(
+      'ERR_CREWROUTER_INVALID_SESSION: session must be false, "none", "memory", "pg", or an express-session store',
+    );
+    error.code = 'ERR_CREWROUTER_INVALID_SESSION';
+    throw error;
   }
 
   let tempDir = null;
@@ -59,8 +72,31 @@ function createCrewRouter(options = {}) {
     process.env.CR_CONFIG_PATH = configPath;
   }
 
-  // These flags must be set before server/index.js (and therefore config-loader)
-  // is required. config-loader freezes its result on first load.
+  if (options.features !== undefined && options.features !== 'all' && !Array.isArray(options.features)) {
+    const error = new Error('ERR_CREWROUTER_INVALID_FEATURES: features must be an array or "all"');
+    error.code = 'ERR_CREWROUTER_INVALID_FEATURES';
+    throw error;
+  }
+
+  // These flags must be set before server/index.js (and therefore config-loader,
+  // database and the route modules) is required.
+  const runtime = require('../runtime');
+  runtime.externalPool = options.pool || null;
+  runtime.ownsPool = !options.pool;
+  runtime.session = options.session === undefined ? false : options.session;
+
+  let features;
+  if (options.features === 'all') features = [...ALL_FEATURES];
+  else if (Array.isArray(options.features)) features = options.features.filter((feature) => ALL_FEATURES.includes(feature));
+  else features = ['gateway', 'management', 'events'];
+  if (options.oauthRoutes === true && !features.includes('oauth')) features.push('oauth');
+  if (options.oauthRoutes === false) features = features.filter((feature) => feature !== 'oauth');
+  const consoleEnabled = options.console !== undefined ? options.console === true : features.includes('console');
+  if (consoleEnabled && !features.includes('console')) features.push('console');
+  if (!consoleEnabled) features = features.filter((feature) => feature !== 'console');
+  runtime.features = features;
+  runtime.console = consoleEnabled;
+
   process.env.CR_EMBEDDED = '1';
   process.env.CR_SKIP_AUTOSTART = '1';
 

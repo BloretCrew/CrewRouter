@@ -767,7 +767,7 @@ setInterval(() => {
       rateLimitStore.delete(key);
     }
   }
-}, 60000);
+}, 60000).unref?.();
 
 // API Key 验证缓存（性能优化：减少数据库查询）
 const apiKeyCache = new Map();
@@ -781,7 +781,7 @@ setInterval(() => {
       apiKeyCache.delete(key);
     }
   }
-}, 60000);
+}, 60000).unref?.();
 
 // 获取缓存的 API Key 验证结果
 function getCachedApiKey(apiKey) {

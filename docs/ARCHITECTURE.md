@@ -424,12 +424,12 @@ for streaming. Management operations are generated and callable through
 wrappers. Session-only routes appear in the catalog as excluded and cannot be
 called with an API key.
 
-The embedded server SDK (`crewrouter/embedded`) is available as a limited
-preview: it mounts the app in-process with `createCrewRouter`, supports
-`config`/`configPath`, `migrate`, `backgroundTasks`, `plugins`, `store` and
-`handleSignals`, and is documented in `docs/sdk/embedded-server.md`. External
-pools, session-store selection, feature presets, sub-path mounting and console
-toggling are later work.
+The embedded server SDK (`crewrouter/embedded`) is available as a preview: it
+mounts the app in-process with `createCrewRouter` and supports `config` /
+`configPath`, an external pg Pool, session modes (`false`, `memory`, `pg`, or a
+store), feature presets, console/static toggling, `migrate`, `backgroundTasks`,
+`plugins`, `store` and `handleSignals`. Sub-path mounting and multiple instances
+per process remain unsupported. See `docs/sdk/embedded-server.md`.
 
 ---
 

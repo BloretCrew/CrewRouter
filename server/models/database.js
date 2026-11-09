@@ -1,4 +1,5 @@
 const config = require('../config-loader');
+const runtime = require('../runtime');
 const Logger = require('../logger');
 const { APP_TIMEZONE, ensureProcessTimezone } = require('../utils/timezone');
 
@@ -8,6 +9,7 @@ ensureProcessTimezone();
 const isDemo = config.demo === true;
 
 let pool;
+let ownsPool = true;
 
 if (isDemo) {
   // 演示模式：导出模拟 pool，不连接数据库
@@ -17,6 +19,11 @@ if (isDemo) {
     on: () => {},
   };
   Logger.info('[数据库] 演示模式，跳过数据库连接');
+} else if (runtime.externalPool) {
+  // Embedded hosts may supply their own pool before this module is loaded.
+  pool = runtime.externalPool;
+  ownsPool = false;
+  Logger.info('[数据库] 使用嵌入宿主提供的外部连接池');
 } else {
   const { Pool } = require('pg');
   pool = new Pool({
@@ -38,4 +45,4 @@ if (isDemo) {
   Logger.info(`[数据库] 会话时区: ${APP_TIMEZONE}`);
 }
 
-module.exports = { pool };
+module.exports = { pool, ownsPool };

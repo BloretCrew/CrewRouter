@@ -44,6 +44,9 @@ test('embedded instance serves /api/version and stops cleanly', async () => {
     assert.equal(payload.name, CONFIG.app.name);
     assert.match(response.headers.get('x-crewrouter-request-id') || '', /^[A-Za-z0-9._:-]+$/);
     assert.equal(server.listening, true);
+
+    const consoleResponse = await fetch(`${base}/console`);
+    assert.equal(consoleResponse.status, 404);
   } finally {
     await cr.stop();
   }
@@ -95,11 +98,17 @@ test('basePath is rejected', () => {
   );
 });
 
-test('unsupported preview options are rejected', () => {
-  for (const key of ['pool', 'session', 'features', 'console', 'oauthRoutes']) {
-    assert.throws(
-      () => createCrewRouter(options({ [key]: false })),
-      /ERR_CREWROUTER_UNSUPPORTED_OPTION/,
-    );
-  }
+test('invalid preview options are rejected', () => {
+  assert.throws(
+    () => createCrewRouter(options({ pool: {} })),
+    /ERR_CREWROUTER_INVALID_POOL/,
+  );
+  assert.throws(
+    () => createCrewRouter(options({ session: 'bad' })),
+    /ERR_CREWROUTER_INVALID_SESSION/,
+  );
+  assert.throws(
+    () => createCrewRouter(options({ features: 'bad' })),
+    /ERR_CREWROUTER_INVALID_FEATURES/,
+  );
 });
