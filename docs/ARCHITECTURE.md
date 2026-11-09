@@ -424,6 +424,10 @@ for streaming. Management operations are generated and callable through
 wrappers. Session-only routes appear in the catalog as excluded and cannot be
 called with an API key.
 
+Three SDKs read the same fixtures in `sdk/contract/conformance/cases.json`
+(request construction, auth headers, query serialization, error normalization,
+SSE parsing and retry policy); run them with `npm run sdk:conformance`.
+
 The embedded server SDK (`crewrouter/embedded`) is available as a preview: it
 mounts the app in-process with `createCrewRouter` and supports `config` /
 `configPath`, an external pg Pool, session modes (`false`, `memory`, `pg`, or a

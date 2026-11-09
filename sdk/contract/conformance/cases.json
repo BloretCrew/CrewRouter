@@ -1,0 +1,147 @@
+{
+  "transport": [
+    {
+      "name": "gateway chat bearer",
+      "authStyle": "bearer",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "claude-fable-5",
+        "messages": [{ "role": "user", "content": "hi" }]
+      },
+      "response": {
+        "status": 200,
+        "json": { "id": "chatcmpl-1" },
+        "headers": {
+          "x-crewrouter-request-id": "req-1",
+          "x-crewrouter-signature": "sig"
+        }
+      },
+      "expect": {
+        "path": "/v1/chat/completions",
+        "authorization": "Bearer sk-test",
+        "contentType": "application/json",
+        "body": {
+          "model": "claude-fable-5",
+          "messages": [{ "role": "user", "content": "hi" }]
+        },
+        "requestId": "req-1",
+        "signature": "sig"
+      }
+    },
+    {
+      "name": "x-api-key and query arrays",
+      "authStyle": "x-api-key",
+      "method": "GET",
+      "path": "/api/user/api-keys/42/models",
+      "query": { "days": 7, "tag": ["a", "b"] },
+      "response": { "status": 200, "json": { "data": [] } },
+      "expect": {
+        "path": "/api/user/api-keys/42/models",
+        "query": "days=7&tag=a&tag=b",
+        "xApiKey": "sk-test"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "management permission",
+      "status": 403,
+      "headers": { "x-crewrouter-request-id": "req-e1" },
+      "body": {
+        "error": "API Key 没有该权限: keys.read",
+        "code": "permission_denied",
+        "permission": "keys.read"
+      },
+      "expect": {
+        "status": 403,
+        "code": "permission_denied",
+        "permission": "keys.read",
+        "protocol": "management",
+        "requestId": "req-e1"
+      }
+    },
+    {
+      "name": "anthropic authentication",
+      "status": 401,
+      "body": {
+        "type": "error",
+        "error": { "type": "authentication_error", "message": "bad key" }
+      },
+      "expect": {
+        "status": 401,
+        "type": "authentication_error",
+        "message": "bad key",
+        "protocol": "anthropic"
+      }
+    },
+    {
+      "name": "openai server error",
+      "status": 500,
+      "body": {
+        "error": { "type": "server_error", "message": "boom" }
+      },
+      "expect": {
+        "status": 500,
+        "type": "server_error",
+        "message": "boom",
+        "protocol": "openai"
+      }
+    }
+  ],
+  "sse": {
+    "path": "/v1/chat/completions",
+    "chunks": [
+      "data: {\"choices\":[{\"delta\":{\"content\":\"你",
+      "好\"}}]}\n\n",
+      ": keep-alive\n\n",
+      "event: message_delta\ndata: {\"delta\":{\"stop_reason\":\"end_turn\"}}\n\n",
+      "data: [DONE]\n\n"
+    ],
+    "expect": [
+      {
+        "event": "",
+        "data": "{\"choices\":[{\"delta\":{\"content\":\"你好\"}}]}",
+        "done": false
+      },
+      {
+        "event": "message_delta",
+        "data": "{\"delta\":{\"stop_reason\":\"end_turn\"}}",
+        "done": false
+      },
+      { "event": "", "data": "[DONE]", "done": true }
+    ]
+  },
+  "retry": [
+    {
+      "name": "get retries 429 then 200",
+      "method": "GET",
+      "path": "/v1/models",
+      "maxRetries": 2,
+      "responses": [
+        {
+          "status": 429,
+          "headers": { "retry-after": "0" },
+          "json": { "error": "slow down" }
+        },
+        { "status": 200, "json": { "object": "list", "data": [] } }
+      ],
+      "expect": { "status": 200, "attempts": 2 }
+    },
+    {
+      "name": "post does not retry by default",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "body": { "messages": [] },
+      "maxRetries": 2,
+      "responses": [
+        {
+          "status": 429,
+          "headers": { "retry-after": "0" },
+          "json": { "error": "slow down" }
+        }
+      ],
+      "expect": { "errorStatus": 429, "attempts": 1 }
+    }
+  ]
+}

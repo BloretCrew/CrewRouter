@@ -79,6 +79,18 @@ const providers = await client.call('admin.providers.list');
 3. **Session-only endpoints are not callable with an API key.** They are excluded
    from generated methods. See [management-api.md](./management-api.md).
 
+## Cross-language conformance
+
+All three SDKs read the same fixtures in
+[`sdk/contract/conformance/cases.json`](../../sdk/contract/conformance/cases.json).
+They cover request construction, auth headers, query serialization, error
+normalization, SSE parsing and retry policy.
+
+```bash
+npm run sdk:conformance          # Node + Python + Go
+npm run sdk:conformance -- --lang=node
+```
+
 ## Documentation map
 
 | Document | Contents |
