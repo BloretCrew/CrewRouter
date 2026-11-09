@@ -2978,6 +2978,9 @@ async function ensureInjectPromptsTable() {
 // 启动服务器
 const PORT = config.app.port || 20002;
 let instanceEdition = null;
+let httpServer = null;
+const backgroundHandles = [];
+let modelTraceInitialized = false;
 
 async function ensureInstanceEdition() {
   if (isDemo) return null;
@@ -3150,8 +3153,13 @@ function isRetryableStartupDbError(err) {
     || /lock timeout|could not obtain lock|canceling statement due to lock timeout/i.test(msg);
 }
 
-async function startServer() {
-  if (!isDemo) {
+async function startServer(options = {}) {
+  const embedded = process.env.CR_EMBEDDED === '1';
+  const migrate = options.migrate !== false;
+  const backgroundTasks = options.backgroundTasks !== false;
+  const handleSignals = options.handleSignals !== undefined ? options.handleSignals !== false : !embedded;
+
+  if (!isDemo && migrate) {
     // 首次运行必须先完成建表 + 迁移，再对外提供服务（含 OOBE）
     const maxAttempts = 4;
     let lastErr;
@@ -3163,16 +3171,20 @@ async function startServer() {
         await runPendingMigrations();
         await ensureInstanceEdition();
         // 插件系统：表结构就绪后扫描并加载已启用插件
-        try {
-          await require('./plugins/registry').init();
-        } catch (err) {
-          Logger.error(`[plugins] 初始化失败: ${err.message}`);
+        if (options.plugins !== false) {
+          try {
+            await require('./plugins/registry').init();
+          } catch (err) {
+            Logger.error(`[plugins] 初始化失败: ${err.message}`);
+          }
         }
         // 插件商店（第三期）：初始化 plugin_store_* 表 + 演示数据（不影响系统表）
-        try {
-          await require('./store/store').init({ seedDemo: config.store && config.store.seedDemo !== false });
-        } catch (err) {
-          Logger.error(`[store] 插件商店初始化失败: ${err.message}`);
+        if (options.store !== false) {
+          try {
+            await require('./store/store').init({ seedDemo: config.store && config.store.seedDemo !== false });
+          } catch (err) {
+            Logger.error(`[store] 插件商店初始化失败: ${err.message}`);
+          }
         }
         Logger.success('[启动] 数据库已就绪，可以接受请求');
         lastErr = null;
@@ -3197,71 +3209,137 @@ async function startServer() {
         }
         Logger.error(`[启动] 数据库初始化/迁移失败: ${err.message}`);
         Logger.error('[启动] 拒绝启动 HTTP 服务，请检查数据库配置后重试');
+        if (embedded) throw err;
         process.exit(1);
       }
     }
     if (lastErr) {
       Logger.error(`[启动] 数据库初始化/迁移失败: ${lastErr.message}`);
       Logger.error('[启动] 拒绝启动 HTTP 服务，请检查数据库配置后重试');
+      if (embedded) throw lastErr;
       process.exit(1);
     }
 
-    await require('./routes/model-trace').getRouter().initialize();
-    const stopModelTrace = () => require('./routes/model-trace').getRouter().shutdown().catch(() => {});
-    process.once('SIGTERM', stopModelTrace);
-    process.once('SIGINT', stopModelTrace);
+    if (backgroundTasks) {
+      await require('./routes/model-trace').getRouter().initialize();
+      modelTraceInitialized = true;
+      if (handleSignals) {
+        const stopModelTrace = () => require('./routes/model-trace').getRouter().shutdown().catch(() => {});
+        process.once('SIGTERM', stopModelTrace);
+        process.once('SIGINT', stopModelTrace);
+      }
 
-    // schema 就绪后再启动依赖表结构的后台任务
-    try {
-      const keyRefresher = require('./key-refresher');
-      await keyRefresher.initAll();
-    } catch (err) {
-      Logger.error(`[KeyRefresher] 启动失败: ${err.message}`);
-    }
-    setInterval(runApiKeyScheduler, 60000);
-    setTimeout(runApiKeyScheduler, 5000);
-    // 从商店安装的插件：每日检查是否有更新（仅实例侧；由配置控制是否开启）
-    try {
-      require('./utils/plugin-store-updater').start();
-    } catch (err) {
-      Logger.warn(`[插件商店更新检测] 启动失败: ${err.message}`);
-    }
-    try {
-      const { startQuotaScheduler } = require('./utils/provider-quota');
-      startQuotaScheduler();
-      require('./utils/request-quota-capture').startWorker();
-    } catch (err) {
-      Logger.warn(`[额度定时查询] 调度器启动失败: ${err.message}`);
-    }
-    try {
-      const { startMessageAnalysisWorker } = require('./utils/message-analysis-store');
-      startMessageAnalysisWorker({ intervalMs: 5000, batchSize: 50 });
-    } catch (err) {
-      Logger.warn(`[消息分析] 后台扫描器启动失败: ${err.message}`);
-    }
-    try {
-      const { startStatsReporter } = require('./utils/stats-reporter');
-      startStatsReporter();
-    } catch (err) {
-      Logger.warn(`[统计上报] 定时器启动失败: ${err.message}`);
+      // schema 就绪后再启动依赖表结构的后台任务
+      try {
+        const keyRefresher = require('./key-refresher');
+        await keyRefresher.initAll();
+      } catch (err) {
+        Logger.error(`[KeyRefresher] 启动失败: ${err.message}`);
+      }
+      backgroundHandles.push(setInterval(runApiKeyScheduler, 60000));
+      backgroundHandles.push(setTimeout(runApiKeyScheduler, 5000));
+      // 从商店安装的插件：每日检查是否有更新（仅实例侧；由配置控制是否开启）
+      try {
+        require('./utils/plugin-store-updater').start();
+      } catch (err) {
+        Logger.warn(`[插件商店更新检测] 启动失败: ${err.message}`);
+      }
+      try {
+        const { startQuotaScheduler } = require('./utils/provider-quota');
+        startQuotaScheduler();
+        require('./utils/request-quota-capture').startWorker();
+      } catch (err) {
+        Logger.warn(`[额度定时查询] 调度器启动失败: ${err.message}`);
+      }
+      try {
+        const { startMessageAnalysisWorker } = require('./utils/message-analysis-store');
+        startMessageAnalysisWorker({ intervalMs: 5000, batchSize: 50 });
+      } catch (err) {
+        Logger.warn(`[消息分析] 后台扫描器启动失败: ${err.message}`);
+      }
+      try {
+        const { startStatsReporter } = require('./utils/stats-reporter');
+        startStatsReporter();
+      } catch (err) {
+        Logger.warn(`[统计上报] 定时器启动失败: ${err.message}`);
+      }
     }
   }
 
-  app.listen(PORT, () => {
-    Logger.success(`${config.app.name} API 服务运行于 http://localhost:${PORT}`);
-    // Phase 1：每日聚合调度（数据保留系统）
-    try {
-      const agg = require('./utils/usage-agg');
-      agg.startDailyAggScheduler();
-      agg.startRetentionScheduler();
-      Logger.info('[每日聚合] 调度器已启动');
-      Logger.info('[保留调度] 调度器已启动（每日 04:05）');
-    } catch (err) {
-      Logger.warn(`[每日聚合] 调度器启动失败: ${err.message}`);
-    }
+  if (options.listen === false) return null;
+
+  const port = options.port !== undefined ? options.port : PORT;
+  const host = options.host;
+  return new Promise((resolve, reject) => {
+    const onListening = () => {
+      const address = httpServer.address();
+      const actualPort = address && typeof address === 'object' ? address.port : port;
+      Logger.success(`${config.app.name} API 服务运行于 http://${host || 'localhost'}:${actualPort}`);
+      // Phase 1：每日聚合调度（数据保留系统）
+      if (backgroundTasks) {
+        try {
+          const agg = require('./utils/usage-agg');
+          agg.startDailyAggScheduler();
+          agg.startRetentionScheduler();
+          Logger.info('[每日聚合] 调度器已启动');
+          Logger.info('[保留调度] 调度器已启动（每日 04:05）');
+        } catch (err) {
+          Logger.warn(`[每日聚合] 调度器启动失败: ${err.message}`);
+        }
+      }
+      resolve(httpServer);
+    };
+    httpServer = host ? app.listen(port, host, onListening) : app.listen(port, onListening);
+    httpServer.once('error', reject);
   });
 }
 
-startServer();
+async function stopServer() {
+  if (httpServer) {
+    const server = httpServer;
+    httpServer = null;
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+  for (const handle of backgroundHandles.splice(0)) {
+    try {
+      clearInterval(handle);
+      clearTimeout(handle);
+    } catch (_) {
+      // ignore
+    }
+  }
+  try {
+    if (modelTraceInitialized) {
+      await require('./routes/model-trace').getRouter().shutdown();
+      modelTraceInitialized = false;
+    }
+  } catch (_) {
+    // model-trace may not have been initialized
+  }
+  try {
+    const quotaPath = require.resolve('./utils/quota-data');
+    if (require.cache[quotaPath]) {
+      const quota = require(quotaPath);
+      if (typeof quota.stopQuotaData === 'function') await quota.stopQuotaData();
+    }
+  } catch (_) {
+    // quota-data may not be loaded in demo mode
+  }
+  try {
+    await pool.end();
+  } catch (_) {
+    // pool may already be closed
+  }
+}
+
+if (!process.env.CR_SKIP_AUTOSTART) {
+  startServer().catch((err) => {
+    Logger.error(`[启动] ${err && err.message ? err.message : err}`);
+    process.exit(1);
+  });
+}
 
 module.exports = app;
+module.exports.startServer = startServer;
+module.exports.stopServer = stopServer;

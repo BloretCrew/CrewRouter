@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crewrouter-sdk"
+version = "0.1.0"
+description = "CrewRouter SDK for the OpenAI/Anthropic-compatible gateway and management API"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "GPL-3.0" }
+authors = [{ name = "BloretCrew" }]
+keywords = ["crewrouter", "openai", "anthropic", "gateway", "sdk"]
+dependencies = ["httpx>=0.27"]
+
+[project.urls]
+Homepage = "https://github.com/BloretCrew/CrewRouter"
+Documentation = "https://github.com/BloretCrew/CrewRouter/tree/main/docs/sdk"
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crewrouter"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

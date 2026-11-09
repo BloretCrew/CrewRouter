@@ -44,13 +44,15 @@ const client = new OpenAI({
 The request body `model` is normally ignored; routing comes from the API key
 binding. See [docs/sdk/gateway.md](./sdk/gateway.md).
 
-## 2. Use the CrewRouter Node SDK
+## 2. Use a CrewRouter SDK
 
 Use this when you want streaming helpers, typed errors, retries, and management
 API access in one client.
 
 ```bash
-npm install crewrouter-sdk
+npm install crewrouter-sdk          # Node/TypeScript
+pip install crewrouter-sdk          # Python
+go get github.com/BloretCrew/CrewRouter/sdk/go
 ```
 
 ```ts

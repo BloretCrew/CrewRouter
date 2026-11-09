@@ -86,7 +86,8 @@ async function flushQuotaData() {
 }
 
 // Periodic flush
-setInterval(flushQuotaData, FLUSH_INTERVAL);
+const flushTimer = setInterval(flushQuotaData, FLUSH_INTERVAL);
+if (flushTimer.unref) flushTimer.unref();
 
 // Graceful shutdown：flush 后必须退出，否则 SIGINT/SIGTERM 处理器会吞掉默认终止行为，
 // 进程带着监听端口继续存活（MCSM 优雅重启卡 busy 的根因）
@@ -101,8 +102,20 @@ async function shutdown(signal) {
   } catch (err) { /* flushQuotaData 内部已捕获 */ }
   process.exit(0);
 }
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+// Embedded hosts own their process lifecycle; never install exit handlers there.
+if (process.env.CR_EMBEDDED !== '1') {
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+async function stopQuotaData() {
+  clearInterval(flushTimer);
+  try {
+    await flushQuotaData();
+  } catch (err) {
+    // flushQuotaData already logs and re-buffers failures
+  }
+}
 
 /**
  * Get buffered quota data for a specific user (performance optimization).
@@ -125,4 +138,4 @@ function getUserQuotaBuffer(userId) {
   return entries;
 }
 
-module.exports = { recordQuotaData, flushQuotaData, quotaBuffer, getUserQuotaBuffer };
+module.exports = { recordQuotaData, flushQuotaData, stopQuotaData, quotaBuffer, getUserQuotaBuffer };

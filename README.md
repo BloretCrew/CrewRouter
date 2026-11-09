@@ -111,9 +111,9 @@ resp = client.chat.completions.create(
 | 形态 | 包 | 状态 |
 |------|-----|------|
 | Node/TypeScript 客户端 | npm `crewrouter-sdk` | 0.1.0 可用 |
-| Python 客户端 | PyPI `crewrouter-sdk` | 规划中 |
-| Go 客户端 | `github.com/BloretCrew/CrewRouter/sdk/go` | 规划中 |
-| 可嵌入服务端 SDK | `crewrouter/embedded` | 规划中（Node） |
+| Python 客户端 | PyPI `crewrouter-sdk` | 0.1.0 可用 |
+| Go 客户端 | `github.com/BloretCrew/CrewRouter/sdk/go` | 0.1.0 可用 |
+| 可嵌入服务端 SDK | `crewrouter/embedded` | 预览可用（Node） |
 
 ```bash
 npm install crewrouter-sdk

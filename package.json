@@ -3,6 +3,21 @@
   "version": "1.0.0",
   "description": "CrewRouter - AI API 网关平台",
   "main": "server/index.js",
+  "exports": {
+    ".": "./server/index.js",
+    "./embedded": "./server/sdk/embedded.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "server/**/*.js",
+    "public/**",
+    "lang/**",
+    "plugins/**",
+    "config.example.json",
+    "LICENSE",
+    "README.md",
+    "docs/sdk/**"
+  ],
   "scripts": {
     "test:usage-write": "node --test server/scripts/test-token-normalize.js server/scripts/test-usage-write-guards.js",
     "test:usage-repair": "node --test server/scripts/test-usage-timestamp-repair.js",
@@ -63,7 +78,8 @@
     "test:library-closed-keys:browser": "node scripts/test-library-closed-keys-browser.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js",
     "sdk:generate": "node sdk/codegen/generate.mjs",
-    "sdk:check": "node sdk/codegen/generate.mjs --check"
+    "sdk:check": "node sdk/codegen/generate.mjs --check",
+    "test:embedded-sdk": "node --test server/scripts/test-embedded-sdk.js"
   },
   "dependencies": {
     "@bloret-crew/blora-design": "2.1.0",

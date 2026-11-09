@@ -1,109 +1,136 @@
-# Embedded server SDK (planned)
+# Embedded server SDK (preview)
 
-> **Status: Phase 2, not yet available in the 0.1.0 client SDK.** This page
-> defines the intended contract so integrators can review it before the refactor
-> lands. The runtime entry point below does not exist yet.
+The embedded form runs CrewRouter in-process inside a Node/Express application.
+A **preview** is available from `crewrouter/embedded`. It is intentionally
+limited; the full feature-preset design is a later phase.
 
-The embedded form lets a Node/Express application run the CrewRouter gateway and
-management API in-process instead of deploying a separate service.
+> **License:** GPL-3.0. Embedding links the CrewRouter server code into your
+> process. Distributing the combined application triggers GPL-3.0 obligations.
 
-## Intended entry point
+## Preview entry point
 
 ```js
 const { createCrewRouter } = require('crewrouter/embedded');
 
 const cr = createCrewRouter({
   configPath: './crewrouter.config.json', // or config: { ... }
-  pool: externalPgPool,                   // optional; owned pool is created if omitted
-  ownsPool: false,
-  session: false,                         // default for embedding
-  migrations: false,                      // 'full' | 'schema' | false
-  features: ['core', 'gateway', 'management', 'events'],
-  console: false,
+  migrate: false,
+  backgroundTasks: false,
   plugins: false,
   store: false,
-  oauthRoutes: false,
-  backgroundTasks: false,
   handleSignals: false,
 });
 
-await cr.start({ listen: { port: 0, host: '127.0.0.1' } });
-// or mount cr.app in the host Express app:
+const server = await cr.start({ port: 0, host: '127.0.0.1' });
+console.log(server.address());
+
+// Mount the Express app in a host if you prefer not to listen here:
 // app.use('/', cr.app);
 
 await cr.stop();
 ```
 
-## Why the API is shaped this way
+## Supported options
 
-- `createCrewRouter` configures config/pool **before** loading route modules,
-  because existing CrewRouter modules read a frozen config and a global pool.
-- `start()` is separate from construction so a host can mount the app or perform
-  its own readiness checks first.
-- `stop()` is explicit: the embedding host owns process signals.
-- Features are opt-in: an embedded gateway usually does not need the console,
-  plugin store or OAuth authorization server.
-
-## Options
-
-| Option | Embedded default | Description |
+| Option | Default | Description |
 | --- | --- | --- |
-| `config` | — | Config object. `CR_*` environment variables still override. |
-| `configPath` | auto-discovery | JSON config file |
-| `pool` | owned | External main PostgreSQL pool |
-| `ownsPool` | `false` when `pool` is passed | Whether `stop()` ends the pool |
-| `session` | `false` | `pg`, `memory`, an external store, or `false` |
-| `migrations` | `false` | `full`, `schema`, or `false` |
-| `features` | `core,gateway,management,events` | Mounted feature set |
-| `console` | `false` | Static pages, auth, setup, 2FA, passkey, update |
-| `plugins` | `false` | Plugin registry and plugin routes |
-| `store` | `false` | Plugin store (demo only in CLI) |
-| `oauthRoutes` | `false` | `/oauth/*` and `/.well-known/*` authorization server |
-| `backgroundTasks` | `false` | Key refresh, schedulers, stats, aggregation |
+| `config` | — | Config object; written to a private temp file before modules load |
+| `configPath` | auto-discovery | Existing JSON config file |
+| `migrate` | `false` | Run startup database init/migrations |
+| `backgroundTasks` | `false` | Key refresh, key/quota schedulers, message analysis, stats reporter, aggregation |
+| `plugins` | `false` | Load the plugin registry |
+| `store` | `false` | Initialize the plugin store tables |
 | `handleSignals` | `false` | Install SIGINT/SIGTERM handlers |
-| `basePath` | unsupported | Passing a value throws |
+| `start({ port, host, listen, ... })` | — | `listen: false` performs startup without listening; per-start overrides for `migrate`, `backgroundTasks`, `plugins`, `store`, `handleSignals` |
 
-## Feature presets
+`createCrewRouter` returns:
 
-| Feature | Routes / behavior |
+| Member | Description |
 | --- | --- |
-| `core` | Body parsing, auth resolution, CSRF, permission middleware, `/api/version`, `/api/config`, `/api/instance` |
-| `gateway` | `/v1` and `/api` completions/models/cache |
-| `management` | `/api/user/*`, `/api/admin/*`, teams, notifications, conversations, prompts, playground, agent |
-| `events` | `/api/client-events` |
-| `console` | Static assets, pages, auth, setup, 2FA, passkey, update |
-| `oauthRoutes` | OAuth authorization server |
-| `plugins` | Plugin admin/public APIs and static assets |
-| `store` | Plugin store |
+| `app` | Express application |
+| `config` | Resolved (frozen) config object |
+| `server` | The HTTP server after `start()`, otherwise `null` |
+| `start(options?)` | Resolves with the HTTP server |
+| `stop()` | Closes HTTP, stops tracked timers, flushes quota data and closes the pool |
 
-## Lifecycle
+## Unsupported options (throw)
 
-1. `createCrewRouter(options)` resolves config, logger, pool and session, then
-   builds the Express app. It does not connect to PostgreSQL, start timers or
-   listen.
-2. `start({ listen? })` optionally runs migrations, initializes edition/plugins,
-   starts enabled background tasks and optionally listens.
-3. `stop()` closes the HTTP server, stops background tasks in reverse order,
-   flushes buffered quota data, and closes the pool if owned. It is idempotent.
+The preview throws `ERR_CREWROUTER_UNSUPPORTED_OPTION` for:
 
-## Limitations (first version)
+- `pool` — external pg Pool injection
+- `session` — session store selection
+- `features` — feature presets
+- `console` — console/static page toggling
+- `oauthRoutes` — OAuth authorization-server toggling
+- `basePath` — sub-path mounting
+
+The full phase-2 design will add these; see the table in the repository plan.
+
+## Limitations
 
 - **Root mount only.** Static assets, cookies, OAuth callbacks and CSRF assume
-  `/`. Mounting at `/crewrouter` is not supported; use a reverse proxy to strip
-  the prefix.
+  `/`. Mounting at `/crewrouter` is not supported; strip the prefix with nginx or
+  another reverse proxy.
 - **One instance per process.** Config, the pg pool and the plugin registry are
   process globals. A second `createCrewRouter` throws
   `ERR_CREWROUTER_MULTIPLE_INSTANCES`.
-- **No host session reuse.** CrewRouter installs its own session middleware, or
-  runs without sessions when `session: false`.
-- **No session-only routes in API-key mode.** If you disable sessions, routes
-  such as 2FA, passkey and setup are not usable; they are part of the `console`
-  feature anyway.
-- **PostgreSQL required.** Demo mode is the only database-free mode.
-- **Express 4 hosts.** Express 5 is not validated in the first version.
+- **Configuration is frozen on first load.** Pass `config`/`configPath` when you
+  create the instance, before requiring any CrewRouter module.
+- **The console is always mounted.** The preview cannot disable static pages,
+  auth, setup, 2FA or passkey routes.
+- **No external pool.** `stop()` closes the pool created from the config.
+- **Background task shutdown is partial.** Default is off. If enabled, tracked
+  timers are cleared on `stop()`, but not every subsystem exposes a stop hook.
+- **PostgreSQL required** outside demo mode. For a first-time database, pass
+  `migrate: true`.
+- **Express 4 hosts.** Express 5 is not validated.
 
-## GPL-3.0
+## Example: host Express app
 
-The embedded SDK links the CrewRouter server code, which is GPL-3.0. If you
-distribute an application that embeds it, the combined work is subject to
-GPL-3.0. This is not legal advice; review the license before distributing.
+```js
+const express = require('express');
+const { createCrewRouter } = require('crewrouter/embedded');
+
+async function main() {
+  const host = express();
+  const cr = createCrewRouter({
+    config: {
+      app: { name: 'My Gateway', host: '127.0.0.1', port: 0, sessionSecret: process.env.SESSION_SECRET },
+      database: { host: 'localhost', port: 5432, name: 'crewrouter', user: 'crewrouter', password: process.env.DB_PASSWORD },
+      edition: 'personal',
+      statsReport: { enabled: false },
+      loginReport: { enabled: false },
+    },
+    migrate: true,
+    backgroundTasks: false,
+    plugins: false,
+    store: false,
+    handleSignals: false,
+  });
+
+  // Run startup work (migrations, edition, optional plugins/tasks) without
+  // listening, then mount the app in the host server.
+  await cr.start({ listen: false });
+
+  host.use('/', cr.app);
+  const server = host.listen(3000, () => console.log('host listening'));
+  process.once('SIGTERM', async () => {
+    server.close();
+    await cr.stop();
+  });
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+```
+
+## Verification
+
+```bash
+npm run test:embedded-sdk
+```
+
+The test covers start/serve/stop, one-instance enforcement, `basePath`
+rejection and unsupported-option rejection.

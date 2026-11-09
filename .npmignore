@@ -1,0 +1,6 @@
+server/scripts/test-*
+server/protocol/test/
+server/license/
+updates/
+audit/
+log/

@@ -8,8 +8,8 @@ consistent way to call both surfaces.
 
 | Form | What it does | Status |
 | --- | --- | --- |
-| **Client SDK** | Calls a running CrewRouter instance over HTTP: gateway + full management API. | Node/TypeScript available (0.1.0). Python and Go are next. |
-| **Embeddable server SDK** | Mounts the CrewRouter gateway inside a Node/Express application. | Planned (Phase 2); see [embedded-server.md](./embedded-server.md). |
+| **Client SDK** | Calls a running CrewRouter instance over HTTP: gateway + full management API. | Node/TypeScript, Python and Go available (0.1.0). |
+| **Embeddable server SDK** | Mounts the CrewRouter gateway inside a Node/Express application. | Preview available; see [embedded-server.md](./embedded-server.md). |
 
 The embeddable form is Node-only because CrewRouter itself is a Node/Express +
 PostgreSQL service. Python and Go applications use the client SDK; running the
@@ -20,9 +20,9 @@ full gateway from Python/Go requires a sidecar process.
 | Language | Package | Notes |
 | --- | --- | --- |
 | Node/TypeScript | npm `crewrouter-sdk` | Zero runtime dependencies, Node >= 20, ESM + CJS + types |
-| Python | PyPI `crewrouter-sdk` (import `crewrouter`) | Planned |
-| Go | `github.com/BloretCrew/CrewRouter/sdk/go` | Planned |
-| Node embedded | `crewrouter/embedded` | Planned |
+| Python | PyPI `crewrouter-sdk` (import `crewrouter`) | Sync + async, `httpx`, Python >= 3.9 |
+| Go | `github.com/BloretCrew/CrewRouter/sdk/go` | Standard library only, Go 1.22+ |
+| Node embedded | `crewrouter/embedded` | Preview, limited options |
 
 All packages are GPL-3.0, matching the main project. See
 [licensing.md](./licensing.md).
@@ -84,6 +84,8 @@ const providers = await client.call('admin.providers.list');
 | Document | Contents |
 | --- | --- |
 | [quickstart-node.md](./quickstart-node.md) | Install, configure, gateway/streaming/management examples |
+| [quickstart-python.md](./quickstart-python.md) | Python sync/async client examples |
+| [quickstart-go.md](./quickstart-go.md) | Go client, context and streaming examples |
 | [gateway.md](./gateway.md) | Endpoints, model routing, SSE, signatures, limits |
 | [authentication.md](./authentication.md) | Bearer, `x-api-key`, OAuth, permissions, session-only routes |
 | [management-api.md](./management-api.md) | Full API coverage, `call`, path/query/body, uploads, downloads |

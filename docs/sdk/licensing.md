@@ -3,9 +3,9 @@
 CrewRouter and all SDK packages in this repository are **GPL-3.0**. This includes:
 
 - The Node/TypeScript client SDK (`sdk/typescript`)
-- The planned Python client SDK (`sdk/python`)
-- The planned Go client SDK (`sdk/go`)
-- The embedded server SDK (`crewrouter/embedded`)
+- The Python client SDK (`sdk/python`)
+- The Go client SDK (`sdk/go`)
+- The embedded server SDK (`crewrouter/embedded`, preview)
 
 There is no separate MIT/Apache license for the SDK packages. Each package
 contains a copy of the GPL-3.0 license text.
