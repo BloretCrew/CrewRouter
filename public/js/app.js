@@ -7703,6 +7703,28 @@ class ConsoleApp {
     });
   }
 
+  _permissionPickerGroupSidebarHtml(containerId) {
+    const state = this._permissionPickerStates?.get(containerId);
+    if (!state) return '';
+    const items = this._permissionPickerItems();
+    const groups = this._apiKeyPermissionCatalog?.groups || [];
+    const countFor = (groupId) => {
+      const groupItems = groupId ? items.filter((item) => item.groupId === groupId) : items;
+      const selected = groupItems.filter((item) => state.selected.has(item.id)).length;
+      return { selected, total: groupItems.length };
+    };
+    const all = countFor('');
+    const groupButton = (id, name, counts) => `
+      <button type="button" class="ak-perm-group-item ${state.group === id ? 'active' : ''}" data-perm-group="${escapeHtml(id)}">
+        <span class="ak-perm-group-name">${escapeHtml(name)}</span>
+        <span class="ak-perm-group-count">${counts.selected}/${counts.total}</span>
+      </button>`;
+    return [
+      groupButton('', t('全部权限'), all),
+      ...groups.map((group) => groupButton(group.id, t(group.name), countFor(group.id))),
+    ].join('');
+  }
+
   _renderPermissionPickerBody(containerId) {
     const container = document.getElementById(containerId);
     const state = this._permissionPickerStates?.get(containerId);
@@ -7712,6 +7734,9 @@ class ConsoleApp {
     state.page = Math.min(Math.max(1, state.page), pages);
     const start = (state.page - 1) * state.pageSize;
     const pageItems = items.slice(start, start + state.pageSize);
+
+    const sidebar = container.querySelector('.ak-perm-sidebar');
+    if (sidebar) sidebar.innerHTML = this._permissionPickerGroupSidebarHtml(containerId);
 
     const list = container.querySelector('.ak-perm-list');
     if (list) {
@@ -7742,7 +7767,7 @@ class ConsoleApp {
         <button type="button" class="blora-button" data-variant="secondary" data-size="sm"
           data-perm-page="next" ${state.page >= pages ? 'disabled' : ''}>${escapeHtml(t('下一页'))}</button>
         <select class="input ak-perm-size" aria-label="${escapeHtml(t('每页数量'))}">
-          ${[6, 8, 12, 20].map((size) => `<option value="${size}" ${state.pageSize === size ? 'selected' : ''}>${size}</option>`).join('')}
+          ${[6, 8, 10, 12, 20].map((size) => `<option value="${size}" ${state.pageSize === size ? 'selected' : ''}>${size}</option>`).join('')}
         </select>`;
     }
   }
@@ -7787,6 +7812,13 @@ class ConsoleApp {
       }
     };
     container.onclick = (event) => {
+      const group = event.target.closest('[data-perm-group]')?.getAttribute('data-perm-group');
+      if (group !== undefined) {
+        state.group = group || '';
+        state.page = 1;
+        this._renderPermissionPickerBody(containerId);
+        return;
+      }
       const action = event.target.closest('[data-perm-action]')?.getAttribute('data-perm-action');
       if (action) {
         const filtered = this._permissionPickerFiltered(containerId);
@@ -7807,7 +7839,7 @@ class ConsoleApp {
     };
   }
 
-  renderApiKeyPermissionGroups(containerId, selected = [], { disabled = false, pageSize = 8, preserve = null } = {}) {
+  renderApiKeyPermissionGroups(containerId, selected = [], { disabled = false, pageSize = 8, layout = 'compact', preserve = null } = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const state = preserve && preserve.selected instanceof Set
@@ -7819,6 +7851,7 @@ class ConsoleApp {
         query: preserve.query || '',
         group: preserve.group || '',
         onlySelected: preserve.onlySelected === true,
+        layout: preserve.layout || layout,
       }
       : {
         selected: new Set(selected || []),
@@ -7828,33 +7861,40 @@ class ConsoleApp {
         query: '',
         group: '',
         onlySelected: false,
+        layout,
       };
     this._permissionPickerStates = this._permissionPickerStates || new Map();
     this._permissionPickerStates.set(containerId, state);
 
     const groups = this._apiKeyPermissionCatalog?.groups || [];
-    container.innerHTML = `
-      <div class="ak-perm-toolbar">
-        <input type="search" class="input ak-perm-search" value="${escapeHtml(state.query)}"
-          placeholder="${escapeHtml(t('搜索权限 ID、名称或说明'))}">
-        <select class="input ak-perm-group" aria-label="${escapeHtml(t('权限组'))}">
+    const groupSelect = state.layout === 'compact'
+      ? `<select class="input ak-perm-group" aria-label="${escapeHtml(t('权限组'))}">
           <option value="">${escapeHtml(t('全部权限组'))}</option>
           ${groups.map((group) => `<option value="${escapeHtml(group.id)}" ${state.group === group.id ? 'selected' : ''}>${escapeHtml(t(group.name))}</option>`).join('')}
-        </select>
+        </select>`
+      : '';
+    const toolbar = `
+      <div class="ak-perm-toolbar ${state.layout === 'sidebar' ? 'ak-perm-toolbar--sidebar' : ''}">
+        <input type="search" class="input ak-perm-search" value="${escapeHtml(state.query)}"
+          placeholder="${escapeHtml(t('搜索权限 ID、名称或说明'))}">
+        ${groupSelect}
         <label class="ak-perm-only">
           <input type="checkbox" class="ak-perm-only-check" ${state.onlySelected ? 'checked' : ''}>
           <span>${escapeHtml(t('仅显示已选'))}</span>
         </label>
         <span class="ak-perm-count"></span>
-      </div>
+      </div>`;
+    const actions = `
       <div class="ak-perm-actions">
         <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-perm-action="select-page">${escapeHtml(t('全选当前页'))}</button>
         <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-perm-action="clear-page">${escapeHtml(t('清空当前页'))}</button>
         <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-perm-action="select-filtered">${escapeHtml(t('全选筛选结果'))}</button>
         <button type="button" class="blora-button" data-variant="ghost" data-size="sm" data-perm-action="clear-all">${escapeHtml(t('清空全部'))}</button>
-      </div>
-      <div class="ak-perm-list"></div>
-      <div class="ak-perm-pager"></div>`;
+      </div>`;
+    const content = `${toolbar}${actions}<div class="ak-perm-list"></div><div class="ak-perm-pager"></div>`;
+    container.innerHTML = state.layout === 'sidebar'
+      ? `<div class="ak-perm-layout"><div class="ak-perm-sidebar"></div><div class="ak-perm-main">${content}</div></div>`
+      : content;
     this._wirePermissionPicker(containerId);
     this._renderPermissionPickerBody(containerId);
   }
@@ -7886,7 +7926,7 @@ class ConsoleApp {
     const expiry = document.getElementById('apiKeyExpiry');
     if (expiry) expiry.value = 'never';
     const catalog = await this.loadApiKeyPermissionCatalog();
-    this.renderApiKeyPermissionGroups('apiKeyPermissionGroups', this.defaultApiKeyPermissions(catalog));
+    this.renderApiKeyPermissionGroups('apiKeyPermissionGroups', this.defaultApiKeyPermissions(catalog), { layout: 'compact' });
     this.showModal('createApiKeyModal');
   }
 
@@ -7895,7 +7935,7 @@ class ConsoleApp {
     if (!key || key.is_owner === false) return;
     this._currentPermissionsKeyId = keyId;
     await this.loadApiKeyPermissionCatalog();
-    this.renderApiKeyPermissionGroups('keyPermissionGroups', Array.isArray(key.permissions) ? key.permissions : []);
+    this.renderApiKeyPermissionGroups('keyPermissionGroups', Array.isArray(key.permissions) ? key.permissions : [], { layout: 'sidebar', pageSize: 10 });
     this.showModal('keyPermissionsModal');
   }
 

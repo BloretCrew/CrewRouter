@@ -507,3 +507,61 @@
   .ak-perm-toolbar .ak-perm-group { grid-column: 1 / -1; }
   .ak-perm-toolbar .ak-perm-count { justify-self: end; }
 }
+
+/* ---------- 权限管理弹窗：左侧分组 + 右侧内容 ---------- */
+.ak-perm-layout {
+  display: grid;
+  grid-template-columns: minmax(170px, 210px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+}
+.ak-perm-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--lg-radius-card);
+  background: var(--lg-group-bg);
+  max-block-size: 470px;
+  overflow-y: auto;
+}
+.ak-perm-group-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  inline-size: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--lg-radius-item);
+  background: transparent;
+  color: var(--lg-fg-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: start;
+  cursor: pointer;
+  appearance: none;
+}
+.ak-perm-group-item:hover { background: var(--lg-card-bg-hover); color: var(--lg-fg); }
+.ak-perm-group-item.active { background: var(--lg-accent-tint); color: var(--lg-accent-ink); font-weight: 600; }
+.ak-perm-group-name { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ak-perm-group-count { flex: 0 0 auto; color: var(--lg-fg-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ak-perm-group-item.active .ak-perm-group-count { color: inherit; opacity: .8; }
+.ak-perm-main { display: flex; flex-direction: column; gap: 10px; min-inline-size: 0; }
+.ak-perm-toolbar--sidebar { grid-template-columns: minmax(0, 1fr) auto auto; }
+#keyPermissionsModal .ak-perm-list { max-block-size: 390px; overflow-y: auto; }
+@media (max-width: 700px) {
+  .ak-perm-layout { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .ak-perm-sidebar {
+    flex-direction: row;
+    max-block-size: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 5px;
+  }
+  .ak-perm-group-item { inline-size: auto; flex: 0 0 auto; white-space: nowrap; }
+  .ak-perm-group-name { max-inline-size: 130px; }
+  .ak-perm-toolbar--sidebar { grid-template-columns: minmax(0, 1fr) auto; }
+  .ak-perm-toolbar--sidebar .ak-perm-count { grid-column: 1 / -1; justify-self: end; }
+}
+#createApiKeyModal .ak-perm-list { max-block-size: 300px; overflow-y: auto; }

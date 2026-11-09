@@ -3451,5 +3451,6 @@
   "仅发起者可见": "Visible to owner only",
   "调用 POST /v1/chat/completions": "Call POST /v1/chat/completions",
   "调用 POST /v1/messages": "Call POST /v1/messages",
-  "调用 POST /v1/responses": "Call POST /v1/responses"
+  "调用 POST /v1/responses": "Call POST /v1/responses",
+  "全部权限": "All permissions"
 }
