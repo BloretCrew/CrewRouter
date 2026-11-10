@@ -1088,213 +1088,8 @@ function safeParseJson(str, fallback = {}) {
   }
 }
 
-/** 吞图：启用后不把客户端图片转发给上游，并在 message 中注入提示 */
-const SWALLOW_IMAGE_NOTICE = '**⚠️ 您已启用吞图，您本次提交的图片不会转发给上游供应商。**';
-const SWALLOW_IMAGE_PART_TYPES = new Set(['image', 'image_url', 'input_image']);
-
-function isSwallowImagePart(part) {
-  if (!part || typeof part !== 'object') return false;
-  if (SWALLOW_IMAGE_PART_TYPES.has(part.type)) return true;
-  return false;
-}
-
-function makeSwallowTextPart(style = 'openai') {
-  if (style === 'responses') return { type: 'input_text', text: SWALLOW_IMAGE_NOTICE };
-  // openai / anthropic 均使用 type:text
-  return { type: 'text', text: SWALLOW_IMAGE_NOTICE };
-}
-
-/**
- * 从 content 中移除图片块。
- * @param {string|Array|*} content
- * @param {'openai'|'anthropic'|'responses'} style
- * @returns {{ content: any, stripped: boolean }}
- */
-function stripImagesFromContent(content, style = 'openai') {
-  if (content == null) return { content, stripped: false };
-  if (typeof content === 'string') return { content, stripped: false };
-  if (!Array.isArray(content)) return { content, stripped: false };
-
-  let stripped = false;
-  const kept = [];
-  for (const part of content) {
-    if (isSwallowImagePart(part)) {
-      stripped = true;
-      continue;
-    }
-    // tool_result 内嵌 content 也可能含图
-    if (part && typeof part === 'object' && part.type === 'tool_result' && Array.isArray(part.content)) {
-      const nested = stripImagesFromContent(part.content, style);
-      if (nested.stripped) {
-        stripped = true;
-        kept.push({ ...part, content: nested.content });
-        continue;
-      }
-    }
-    kept.push(part);
-  }
-
-  if (!stripped) return { content, stripped: false };
-
-  // 若清空后无任何块，保留空数组由上层注入提示
-  if (kept.length === 0) return { content: [], stripped: true };
-  if (kept.length === 1 && kept[0].type === 'text' && style !== 'responses') {
-    return { content: kept[0].text || '', stripped: true };
-  }
-  if (kept.length === 1 && (kept[0].type === 'input_text' || kept[0].type === 'text') && style === 'responses') {
-    // Responses 用户消息通常保持数组结构
-    return { content: kept, stripped: true };
-  }
-  return { content: kept, stripped: true };
-}
-
-function injectSwallowNoticeIntoMessage(msg, style = 'openai') {
-  if (!msg || typeof msg !== 'object') return msg;
-  const content = msg.content;
-  if (content == null || content === '' || (Array.isArray(content) && content.length === 0)) {
-    return { ...msg, content: style === 'responses' ? [makeSwallowTextPart('responses')] : SWALLOW_IMAGE_NOTICE };
-  }
-  if (typeof content === 'string') {
-    if (content.includes(SWALLOW_IMAGE_NOTICE)) return msg;
-    return { ...msg, content: `${content}\n\n${SWALLOW_IMAGE_NOTICE}` };
-  }
-  if (Array.isArray(content)) {
-    const noticePart = makeSwallowTextPart(style);
-    // 避免重复注入
-    const already = content.some(p => p && p.text === SWALLOW_IMAGE_NOTICE);
-    if (already) return msg;
-    return { ...msg, content: [...content, noticePart] };
-  }
-  return { ...msg, content: SWALLOW_IMAGE_NOTICE };
-}
-
-/**
- * 从 Chat / Anthropic messages 中剥离图片并注入提示。
- * @returns {{ messages: Array, strippedCount: number }}
- */
-function applySwallowImagesToMessages(messages, style = 'openai') {
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return { messages, strippedCount: 0 };
-  }
-
-  let strippedCount = 0;
-  let injectIdx = -1;
-  const result = messages.map((msg, idx) => {
-    if (!msg || typeof msg !== 'object') return msg;
-    const { content, stripped } = stripImagesFromContent(msg.content, style);
-    if (!stripped) return msg;
-    strippedCount += 1;
-    // 优先注入到最近一条 user 消息；否则注入到最后一条被剥离的消息
-    if (msg.role === 'user' || injectIdx < 0) injectIdx = idx;
-    return { ...msg, content };
-  });
-
-  if (strippedCount > 0 && injectIdx >= 0) {
-    result[injectIdx] = injectSwallowNoticeIntoMessage(result[injectIdx], style);
-  }
-
-  return { messages: result, strippedCount };
-}
-
-/**
- * 从 Responses API input 中剥离图片并注入提示。
- * @returns {{ input: any, strippedCount: number }}
- */
-function applySwallowImagesToResponsesInput(input) {
-  if (input == null) return { input, strippedCount: 0 };
-  if (typeof input === 'string') return { input, strippedCount: 0 };
-  if (!Array.isArray(input)) return { input, strippedCount: 0 };
-
-  let strippedCount = 0;
-  let injectIdx = -1;
-  const result = [];
-
-  for (let idx = 0; idx < input.length; idx++) {
-    const item = input[idx];
-    if (!item || typeof item !== 'object') {
-      result.push(item);
-      continue;
-    }
-
-    // 顶层 input_image 项直接丢弃
-    if (item.type === 'input_image' || item.type === 'image_url' || item.type === 'image') {
-      strippedCount += 1;
-      injectIdx = result.length; // 标记在后续注入点附近
-      continue;
-    }
-
-    if (Array.isArray(item.content)) {
-      const { content, stripped } = stripImagesFromContent(item.content, 'responses');
-      if (stripped) {
-        strippedCount += 1;
-        const role = item.role || (item.type === 'message' ? 'user' : undefined);
-        const next = { ...item, content };
-        result.push(next);
-        if (role === 'user' || injectIdx < 0) injectIdx = result.length - 1;
-        continue;
-      }
-    }
-
-    result.push(item);
-  }
-
-  if (strippedCount > 0) {
-    if (injectIdx >= 0 && injectIdx < result.length) {
-      result[injectIdx] = injectSwallowNoticeIntoMessage(result[injectIdx], 'responses');
-    } else {
-      // 全部是顶层图片被丢弃时，补一条 user 文本提示
-      result.push({
-        type: 'message',
-        role: 'user',
-        content: [makeSwallowTextPart('responses')]
-      });
-    }
-  }
-
-  return { input: result, strippedCount };
-}
-
-/**
- * 若 API Key 启用吞图，则改写请求体中的图片相关字段。
- * 返回是否实际剥离了图片。
- */
-function applySwallowImagesIfEnabled(req) {
-  if (!req?.apiUser?.swallowImages) return false;
-
-  let totalStripped = 0;
-
-  if (Array.isArray(req.body?.messages)) {
-    const style = isAnthropicApiPath(req) ? 'anthropic' : 'openai';
-    const { messages, strippedCount } = applySwallowImagesToMessages(req.body.messages, style);
-    if (strippedCount > 0) {
-      req.body.messages = messages;
-      totalStripped += strippedCount;
-    }
-  }
-
-  if (req.body?.input != null) {
-    const { input, strippedCount } = applySwallowImagesToResponsesInput(req.body.input);
-    if (strippedCount > 0) {
-      req.body.input = input;
-      totalStripped += strippedCount;
-    }
-  }
-
-  // Anthropic system 也可能是含图的 content 数组（极少见）
-  if (Array.isArray(req.body?.system)) {
-    const { content, stripped } = stripImagesFromContent(req.body.system, 'anthropic');
-    if (stripped) {
-      // system 中剥离图片后若为空则置空字符串
-      req.body.system = Array.isArray(content) && content.length === 0 ? '' : content;
-      totalStripped += 1;
-    }
-  }
-
-  if (totalStripped > 0) {
-    Logger.info(`[吞图] 已剥离图片: key=${req.apiUser.keyName || req.apiUser.keyId}, messages/parts=${totalStripped}, path=${req.path}`);
-  }
-  return totalStripped > 0;
-}
+const swallowImages = require('../utils/swallow-images');
+const { applySwallowImagesIfEnabled } = swallowImages;
 
 /**
  * 将 OpenAI 多模态 content（string | array）转为 Anthropic content
@@ -7630,6 +7425,12 @@ async function handleGeminiGenerateContent(req, res, action) {
     if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
     if (out?.body !== undefined) req.body = out.body;
   }
+  if (req.apiUser?.swallowImages) {
+    const stripped = swallowImages.applySwallowImagesToGeminiBody(req.body);
+    if (stripped > 0) {
+      Logger.info(`[吞图] 已剥离图片: key=${req.apiUser.keyName || req.apiUser.keyId}, parts=${stripped}, path=${req.path}`);
+    }
+  }
   const stream = action === 'streamGenerateContent';
   if (action !== 'generateContent' && action !== 'streamGenerateContent') {
     return googleError.sendGoogleError(res, 400, `Unsupported model method: ${action}`, { reason: 'INVALID_ARGUMENT' });
@@ -7665,6 +7466,12 @@ async function handleInteractionsCreate(req, res) {
     const out = await pluginHooks.apply('gateway:requestReceived', { body: req.body }, { model: requestedModel || null, requestType: 'interactions' });
     if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
     if (out?.body !== undefined) req.body = out.body;
+  }
+  if (req.apiUser?.swallowImages) {
+    const stripped = swallowImages.applySwallowImagesToInteractionsBody(req.body);
+    if (stripped > 0) {
+      Logger.info(`[吞图] 已剥离图片: key=${req.apiUser.keyName || req.apiUser.keyId}, path=${req.path}`);
+    }
   }
 
   let historySteps = [];
