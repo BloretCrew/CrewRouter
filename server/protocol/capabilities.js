@@ -62,8 +62,37 @@ const ProviderQuirks = Object.freeze({
   })
 });
 
-class ProtocolCapabilityError extends Error {
-  constructor(message, details = {}) {
+const MediaCapability = Object.freeze({
+  SUPPORTED: 'supported',
+  DEGRADE: 'degrade'
+});
+
+// 图片来源/目标的实际表达能力。DEGRADE 表示会转成文本占位符或丢弃
+// 目标协议没有等价物的字段（例如 OpenAI Chat 的 file_id）。
+const MediaQuirks = Object.freeze({
+  openai: Object.freeze({
+    input: Object.freeze({ image: 'supported', document: 'degrade', audio: 'supported', video: 'degrade' }),
+    output: Object.freeze({ image: 'degrade', document: 'degrade', audio: 'degrade', video: 'degrade' })
+  }),
+  anthropic: Object.freeze({
+    input: Object.freeze({ image: 'supported', document: 'supported', audio: 'degrade', video: 'degrade' }),
+    output: Object.freeze({ image: 'degrade', document: 'degrade', audio: 'degrade', video: 'degrade' })
+  }),
+  responses: Object.freeze({
+    input: Object.freeze({ image: 'supported', document: 'supported', audio: 'degrade', video: 'degrade' }),
+    output: Object.freeze({ image: 'degrade', document: 'degrade', audio: 'degrade', video: 'degrade' })
+  }),
+  gemini: Object.freeze({
+    input: Object.freeze({ image: 'supported', document: 'supported', audio: 'supported', video: 'supported' }),
+    output: Object.freeze({ image: 'supported', document: 'supported', audio: 'supported', video: 'supported' })
+  }),
+  interactions: Object.freeze({
+    input: Object.freeze({ image: 'supported', document: 'supported', audio: 'supported', video: 'supported' }),
+    output: Object.freeze({ image: 'supported', document: 'supported', audio: 'supported', video: 'supported' })
+  })
+});
+
+class ProtocolCapabilityError extends Error {  constructor(message, details = {}) {
     super(message);
     this.name = 'ProtocolCapabilityError';
     this.code = details.code || Reject.UNSUPPORTED_TRANSFORM;
@@ -76,9 +105,9 @@ class ProtocolCapabilityError extends Error {
 function getDialectCapability(dialect) {
   const quirks = ProviderQuirks[dialect];
   if (!quirks) {
-    return { dialect, status: Capability.REJECT, reason: Reject.UNKNOWN_DIALECT, quirks: null };
+    return { dialect, status: Capability.REJECT, reason: Reject.UNKNOWN_DIALECT, quirks: null, media: null };
   }
-  return { dialect, status: Capability.SUPPORTED, reason: null, quirks };
+  return { dialect, status: Capability.SUPPORTED, reason: null, quirks, media: MediaQuirks[dialect] || null };
 }
 
 function getBridgeCapability(sourceDialect, targetDialect) {
@@ -113,6 +142,8 @@ function rejectUnsupported(sourceDialect, targetDialect, reason) {
 
 module.exports = {
   ProviderQuirks,
+  MediaCapability,
+  MediaQuirks,
   Capability,
   Degrade,
   Reject,

@@ -757,3 +757,17 @@ test('assistant media becomes output_text in Responses output', () => {
   assert.equal(result.output[0].content[0].text, '[media omitted: image/png, 3 bytes]');
   assert.equal(JSON.stringify(result).includes('input_image'), false);
 });
+
+test('media capability matrix documents per-dialect normalization', () => {
+  assert.equal(protocol.MediaQuirks.openai.input.image, 'supported');
+  assert.equal(protocol.MediaQuirks.openai.input.document, 'degrade');
+  assert.equal(protocol.MediaQuirks.openai.output.image, 'degrade');
+  assert.equal(protocol.MediaQuirks.anthropic.input.document, 'supported');
+  assert.equal(protocol.MediaQuirks.anthropic.output.image, 'degrade');
+  assert.equal(protocol.MediaQuirks.responses.input.image, 'supported');
+  assert.equal(protocol.MediaQuirks.gemini.input.audio, 'supported');
+  assert.equal(protocol.MediaQuirks.gemini.output.image, 'supported');
+  assert.equal(protocol.getDialectCapability('openai').media.input.image, 'supported');
+  assert.equal(protocol.getDialectCapability('unknown').media, null);
+  assert.equal(protocol.featureCompat.media, 'normalized-with-text-placeholders');
+});

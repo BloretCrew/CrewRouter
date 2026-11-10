@@ -14,6 +14,7 @@ const featureCompat = Object.freeze({
   scope: 'server/protocol',
   apiHotPath: false,
   dialects: Object.freeze({ openai: 'full', anthropic: 'full', responses: 'full', gemini: 'full', interactions: 'full' }),
+  media: 'normalized-with-text-placeholders',
   compatibility: Object.freeze({ getTransform: true, registerTransform: true })
 });
 
