@@ -46,10 +46,19 @@ function normalizeUsageTokens(usage, providerFormat = 'openai') {
     cachedTokens = cacheRead;
     cacheCreationTokens = cacheCreation;
   } else if (providerFormat === 'gemini') {
-    // Gemini: usage_metadata.cached_content_token_count
-    promptTokens = normalizeTokenCount(usage.prompt_tokens ?? usage.input_tokens, 'prompt_tokens');
-    completionTokens = normalizeTokenCount(usage.completion_tokens ?? usage.output_tokens, 'completion_tokens');
-    cachedTokens = normalizeTokenCount(usage.cached_content_token_count ?? usage.cached_tokens, 'cached_tokens');
+    // Gemini: usageMetadata uses camelCase; some adapters expose snake_case.
+    promptTokens = normalizeTokenCount(
+      usage.promptTokenCount ?? usage.prompt_tokens ?? usage.input_tokens, 'prompt_tokens'
+    );
+    const candidates = usage.candidatesTokenCount ?? usage.completion_tokens;
+    const thoughts = usage.thoughtsTokenCount ?? 0;
+    completionTokens = normalizeTokenCount(
+      candidates == null ? (usage.output_tokens ?? 0) : normalizeTokenCount(candidates, 'candidatesTokenCount') + normalizeTokenCount(thoughts, 'thoughtsTokenCount'),
+      'completion_tokens'
+    );
+    cachedTokens = normalizeTokenCount(
+      usage.cachedContentTokenCount ?? usage.cached_content_token_count ?? usage.cached_tokens, 'cached_tokens'
+    );
   } else {
     // OpenAI: usage.prompt_tokens_details.cached_tokens
     promptTokens = normalizeTokenCount(usage.prompt_tokens ?? usage.input_tokens, 'prompt_tokens');

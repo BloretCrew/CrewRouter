@@ -100,7 +100,7 @@ async function main() {
 
     // Verify every actual gateway model execution and Fusion streaming synthesis
     // uses the scoped resolver; metadata-only billing lookups are intentionally separate.
-    assert.equal((fixtures.source.api.match(/getModelConfig\(queueModelId, req\.apiUser\.userId\)/g) || []).length, 3);
+    assert.equal((fixtures.source.api.match(/getModelConfig\(queueModelId, req\.apiUser\.userId\)/g) || []).length, 5);
     const processSource = fixtures.source.fusion.slice(fixtures.source.fusion.indexOf('async function processFusion('));
     assert(processSource.indexOf('await assertModelAccessForUser([], requestUserId)') < processSource.indexOf('await getFusionConfig('));
     assert.match(fixtures.source.fusion, /getModelConfig\(modelId, options\.requestUserId \?\? null\)/);

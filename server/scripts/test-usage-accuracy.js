@@ -129,8 +129,8 @@ async function main() {
   // 配额内 cost=0 落库：INSERT 前置实扣值（realDeduct），锁内重查有偏差时由 balance 回填最终值
   const balanceSrc = fs.readFileSync(path.join(__dirname, '../utils/balance.js'), 'utf8');
   const preDeductCalls = apiSrc.split('pointsCost: pointsToDeduct, pointsToDeduct: realDeduct })').length - 1;
-  assert.strictEqual(preDeductCalls, 8, 'all recordUsageAndDeduct callers pass pre-decided realDeduct');
-  assert.strictEqual((apiSrc.match(/const realDeduct = await calculatePointsToDeduct\(/g) || []).length, 8);
+  assert.strictEqual(preDeductCalls, 9, 'all recordUsageAndDeduct callers pass pre-decided realDeduct');
+  assert.strictEqual((apiSrc.match(/const realDeduct = await calculatePointsToDeduct\(/g) || []).length, 9);
   assert.ok(balanceSrc.includes('UPDATE usage_records SET cost = $1 WHERE id = $2'));
   assert.ok(balanceSrc.includes('return { ok: true, pointsToDeduct: points }'));
   ok('api billing inserts pre-decided realDeduct with in-lock cost backfill');

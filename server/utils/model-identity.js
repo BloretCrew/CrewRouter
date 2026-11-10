@@ -23,7 +23,7 @@ function createModelIdentity(requestedModel, resolvedModel) {
       let candidate = null;
       if (type === 'message_start') candidate = normalizeModel(value.message?.model);
       else if (typeof type === 'string' && type.startsWith('response.')) candidate = normalizeModel(value.response?.model);
-      else if (!type || type === 'message' || type === 'response') candidate = normalizeModel(value.model);
+      else if (!type || type === 'message' || type === 'response') candidate = normalizeModel(value.model || value.modelVersion);
       if (candidate) responseModel = candidate;
       if (type === 'response.completed' || type === 'response.incomplete' || type === 'message_stop') frozen = true;
     },

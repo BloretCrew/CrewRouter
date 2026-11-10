@@ -172,9 +172,9 @@ test('actual retry helper discards failed attempt and records final encoded body
   assert.deepEqual(requestContext.modelIdentity.snapshot(), { requested_model: 'client', resolved_model: 'plugin-route', response_model: 'final-upstream' });
 });
 
-test('all eight existing usage INSERTs append identity with matching placeholders; fusion has no fabricated model', () => {
+test('all nine existing usage INSERTs append identity with matching placeholders; fusion has no fabricated model', () => {
   const inserts = [...source.matchAll(/usageQuery: `INSERT INTO usage_records \((.*?)\)\s+VALUES \((.*?)\) RETURNING id`, usageValues: \[(.*?)\], userId:/gs)];
-  assert.equal(inserts.length, 8);
+  assert.equal(inserts.length, 9);
   for (const [, columns, placeholders, values] of inserts) {
     assert.equal(columns.split(',').length, placeholders.split(',').length);
     assert.ok(columns.includes('requested_model, resolved_model, response_model'));
@@ -186,8 +186,8 @@ test('all eight existing usage INSERTs append identity with matching placeholder
   const req = { _requestedModel: 'fusion', _upstreamAttemptContext: { modelIdentity: createModelIdentity('fusion', 'child') } };
   req._upstreamAttemptContext.modelIdentity.observe({ model: 'child-response' });
   assert.deepEqual(Array.from(context.modelIdentityValues(req, true)), ['fusion', null, null]);
-  assert.equal((source.match(/proxyPool\.proxyFetch\(/g) || []).length, 1);
-  assert.equal((source.match(/await fetchWithModelIdentity\(/g) || []).length, 6);
+  assert.equal((source.match(/proxyPool\.proxyFetch\(/g) || []).length, 2);
+  assert.equal((source.match(/await fetchWithModelIdentity\(/g) || []).length, 7);
 });
 
 test('existing error detail retains identity without changing error message or number of records', () => {
@@ -217,6 +217,9 @@ function loadProxyMatrix(wire) {
     wireShapes: require('../protocol/wire-shapes'),
     normalizeMessageRole: role => role,
     convertOpenAIContentToAnthropic: value => value,
+    isOpenCodeUpstream: () => false,
+    openCodeSessionValue: () => '',
+    sanitizeOpenAIMessages: messages => messages,
     pluginHooks: { hasSubscribers: () => false, applyFinalResponseHeaders: async () => {} },
     proxyPool: {
       proxyFetch: async () => new Response(wire), getProxyAgent: async () => null,

@@ -13,7 +13,9 @@ router.use((req, res, next) => {
     recordEvent(req, {
       ok: res.statusCode < 400,
       httpStatus: res.statusCode,
-      requestType: req.path.includes('responses') ? 'responses' : (req.path.includes('messages') ? 'anthropic' : 'chat'),
+      requestType: req.path.includes('interactions') ? 'interactions'
+        : (req.path.startsWith('/models/') || req.path.includes(':generateContent') || req.path.includes(':streamGenerateContent') ? 'gemini'
+          : (req.path.includes('responses') ? 'responses' : (req.path.includes('messages') ? 'anthropic' : 'chat'))),
       usageRecordId: req._usageRecordId || null,
       requestParams: { model_identity: req._upstreamAttemptContext?.modelIdentity?.snapshot() || { requested_model: require('../utils/model-identity').normalizeModel(req._requestedModel), resolved_model: null, response_model: null } },
       requestSource: req._clientMetaSnapshot?.requestSource,
@@ -111,6 +113,13 @@ const { createRequestLifecycle, combineAbortSignals, waitForResponseDrain } = re
 const { canRetryUpstreamError } = require('../utils/upstream-retry-policy');
 const protocolBridge = require('../protocol/bridge');
 const wireShapes = require('../protocol/wire-shapes');
+const bridgeProxy = require('../gateway/bridge-proxy');
+const { createStreamWriter } = require('../protocol/stream-writers');
+const geminiCodec = require('../protocol/gemini');
+const interactionsCodec = require('../protocol/interactions');
+const geminiSignatures = require('../utils/gemini-signatures');
+const googleError = require('../utils/google-error');
+const interactionStore = require('../store/gemini-interactions');
 const { createModelIdentity, observeModelResponse } = require('../utils/model-identity');
 const {
   USAGE_METRIC_COLUMNS,
@@ -1009,12 +1018,31 @@ function isAnthropicApiPath(req) {
   return p === '/messages' || p.endsWith('/messages');
 }
 
+function isGeminiApiPath(req) {
+  const base = String(req.baseUrl || '');
+  const p = String(req.path || req.url || '').split('?')[0];
+  if (base === '/v1beta' || base.endsWith('/v1beta')) return true;
+  if (p === '/interactions' || p.startsWith('/interactions/')) return true;
+  if (p.startsWith('/models/')) return true;
+  return false;
+}
+
 /**
  * 按目标 API 格式构造标准错误响应体
  * OpenAI: { error: { type, message, code? } }
  * Anthropic: { type: "error", error: { type, message } }
  */
 function buildApiErrorBody(req, type, message, extra = {}) {
+  if (isGeminiApiPath(req)) {
+    if (/invalid api key/i.test(String(message || '')) || type === 'invalid_api_key') {
+      return googleError.googleErrorBody(400, 'API key not valid. Please pass a valid API key.', { reason: 'API_KEY_INVALID' });
+    }
+    const status = type === 'rate_limit_error' || type === 'insufficient_quota' || type === 'quota_exceeded' ? 429
+      : (type === 'permission_error' || extra.code === 'key_disabled' ? 403
+        : (type === 'authentication_error' ? 401
+          : (type === 'not_found_error' ? 404 : 500)));
+    return googleError.googleErrorBody(status, message, { reason: extra.code });
+  }
   if (isAnthropicApiPath(req)) {
     // Anthropic 标准错误类型；非标准类型映射到最接近的官方类型
     const anthropicTypeMap = {
@@ -1326,7 +1354,7 @@ function normalizeMessageRole(role) {
 
 // 验证API密钥中间件（带缓存优化；按路径返回 OpenAI/Anthropic 标准错误形）
 async function validateApiKey(req, res, next, boundKey = null) {
-  let apiKey = req.headers['x-api-key'];
+  let apiKey = req.headers['x-api-key'] || req.headers['x-goog-api-key'];
   // 支持 Authorization: Bearer xxx 格式
   if (!apiKey && req.headers.authorization) {
     const auth = req.headers.authorization;
@@ -1334,10 +1362,18 @@ async function validateApiKey(req, res, next, boundKey = null) {
       apiKey = auth.slice(7);
     }
   }
+  // Gemini 客户端允许 ?key=；仅限 Gemini 路径，避免其它协议把密钥放进 URL。
+  if (!apiKey && isGeminiApiPath(req) && typeof req.query?.key === 'string') {
+    apiKey = req.query.key;
+  }
 
   const sendAuthError = (status, type, message, extra = {}) => {
-    Logger.warn(`[API密钥验证] 拒绝请求: status=${status}, type=${type}, path=${req.path}, anthropic=${isAnthropicApiPath(req)}`);
-    return res.status(status).json(buildApiErrorBody(req, type, message, extra));
+    Logger.warn(`[API密钥验证] 拒绝请求: status=${status}, type=${type}, path=${req.path}, anthropic=${isAnthropicApiPath(req)}, gemini=${isGeminiApiPath(req)}`);
+    const gemini = isGeminiApiPath(req);
+    const statusCode = gemini && /invalid api key/i.test(String(message || ''))
+      ? 400
+      : (gemini && type === 'key_disabled' ? 403 : status);
+    return res.status(statusCode).json(buildApiErrorBody(req, type, message, extra));
   };
 
   if (!apiKey) {
@@ -1595,7 +1631,7 @@ function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provi
   if (provider.forward_headers !== false) {
     // 永不转发的敏感/传输层头
     const denied = new Set([
-      'authorization', 'x-api-key', 'api-key', 'proxy-authorization',
+      'authorization', 'x-api-key', 'x-goog-api-key', 'api-key', 'proxy-authorization',
       'host', 'cookie', 'set-cookie', 'origin', 'referer',
       'content-type', 'content-length', 'transfer-encoding',
       'connection', 'upgrade', 'keep-alive', 'expect',
@@ -2273,6 +2309,272 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
   });
   return { ...normalized, content: storedContent, metrics: metricsSnapshot };
 }
+
+/**
+ * Generic protocol bridge proxy.
+ *
+ * Decodes the client body to canonical IR, encodes it for `provider.format`,
+ * then decodes the upstream response/stream back to IR and writes it in the
+ * client dialect. Used by the Gemini/Interactions inbound routes and by
+ * OpenAI/Anthropic/Responses clients routed to a Gemini provider.
+ */
+async function proxyViaBridge({ provider, model, body, sourceDialect, clientDialect, stream, res, req, options = {} }) {
+  const format = String(provider.format || 'openai');
+  const suppressErrorResponse = !!options.suppressErrorResponse;
+  const requestType = options.requestType || clientDialect;
+  const startTime = Date.now();
+  const ir = protocolBridge.decodeRequest(sourceDialect, { ...(body || {}), model, stream });
+  if (options.injectPrompt) injectPromptIntoIr(ir, options.injectPrompt);
+  const scrubPrompt = options.scrubPrompt || options.injectPrompt || '';
+  await bridgeProxy.materializeMedia(ir, provider, {
+    fetchImpl: (url, init) => proxyPool.proxyFetch(url, init)
+  });
+  const serverTools = ir.passthrough?.gemini?.serverTools || ir.passthrough?.interactions?.serverTools;
+  if (Array.isArray(serverTools) && serverTools.length && format !== 'gemini') {
+    const error = new Error('Gemini server-side tools can only target a Gemini upstream');
+    error.code = 'unsupported_server_tool';
+    error.status = 400;
+    throw error;
+  }
+  if (ir.passthrough?.gemini?.cachedContent && format !== 'gemini') {
+    const error = new Error('Gemini cachedContent can only target a Gemini upstream');
+    error.code = 'unsupported_cached_content';
+    error.status = 400;
+    throw error;
+  }
+  const modalities = ir.passthrough?.gemini?.generationConfigExtras?.responseModalities;
+  if (Array.isArray(modalities) && modalities.some(mode => String(mode).toUpperCase() !== 'TEXT') && format !== 'gemini') {
+    const error = new Error('Non-text Gemini responseModalities can only target a Gemini upstream');
+    error.code = 'unsupported_response_modality';
+    error.status = 400;
+    throw error;
+  }
+  geminiSignatures.attachToRequest(ir);
+  const upstreamBody = bridgeProxy.buildUpstreamPayload(provider, ir, { stream });
+  const endpoint = bridgeProxy.buildUpstreamEndpoint(provider, model, { stream, action: options.upstreamAction });
+  const headers = buildUpstreamHeaders(provider, req, { 'Content-Type': 'application/json' }, format);
+  Object.assign(headers, bridgeProxy.providerAuthHeaders(provider));
+  if (format === 'anthropic' && !headers['anthropic-version']) headers['anthropic-version'] = '2023-06-01';
+
+  const attempt = getRequestMetrics(req).beginAttempt({
+    stream: !!stream, model, providerId: provider.id, format
+  });
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
+  Logger.info(`[Bridge] provider=${provider.id}(${provider.name}) ${sourceDialect}->${format}->${clientDialect} stream=${!!stream} url=${endpoint.url} model=${model}`);
+
+  let response;
+  try {
+    response = await fetchWithModelIdentity(endpoint.url, {
+      quotaProvider: provider,
+      quotaKey: provider.api_key,
+      method: 'POST',
+      headers,
+      body: JSON.stringify(upstreamBody),
+      signal: combineAbortSignals(
+        AbortSignal.timeout(stream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT),
+        req._requestLifecycle?.signal,
+        req._interactionController?.signal
+      ),
+      agent: proxyInfo?.agent,
+      requestContext: req._upstreamAttemptContext
+    });
+  } catch (error) {
+    try { attempt.finish({ completed: false }); } catch { /* ignore */ }
+    throw error;
+  }
+
+  if (!response) {
+    return respondProxyError(res, 502, clientErrorBody(clientDialect, 502, 'Upstream request failed: no response'), {
+      suppressErrorResponse, retryable: false
+    });
+  }
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    let upstreamError = null;
+    try { upstreamError = JSON.parse(text); } catch { /* keep text */ }
+    const errorBody = clientErrorBody(clientDialect, response.status, upstreamError?.error?.message || text || response.statusText, {
+      upstream: upstreamError,
+      upstreamFormat: format
+    });
+    Logger.error(`[Bridge] upstream error provider=${provider.id} status=${response.status} body=${String(text).slice(0, 500)}`);
+    return respondProxyError(res, response.status, errorBody, {
+      suppressErrorResponse,
+      retryable: isRetryableUpstreamStatus(response.status)
+    });
+  }
+
+  if (stream) {
+    const alt = options.clientAlt === 'json' ? 'json' : 'sse';
+    if (clientDialect === 'gemini' && alt === 'json') {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    } else {
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    }
+    res.setHeader('Cache-Control', 'no-cache, no-store');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    forwardUpstreamHeaders(res, response.headers);
+    res.setHeader('Content-Type', clientDialect === 'gemini' && alt === 'json'
+      ? 'application/json; charset=utf-8'
+      : 'text/event-stream; charset=utf-8');
+    res.flushHeaders();
+
+    const writeWithDrain = async (data) => {
+      if (res.writableEnded) return;
+      const ok = res.write(data);
+      if (!ok) await waitForResponseDrain(res, req._requestLifecycle?.signal);
+    };
+    const writer = createStreamWriter(clientDialect, {
+      model,
+      id: options.clientResponseId,
+      alt,
+      write: writeWithDrain
+    });
+    let lastUsage;
+    let lastFinish;
+    let content = '';
+    try {
+      if (writer.start) await writer.start();
+      for await (const event of bridgeProxy.readUpstreamEvents(response, format, { signal: req._requestLifecycle?.signal })) {
+        geminiSignatures.rememberBlocks(event.delta?.blocks);
+        scrubPromptFromBlocks(event.delta?.blocks, scrubPrompt);
+        for (const block of event.delta?.blocks || []) {
+          if (block.type === 'text') content += block.text || '';
+        }
+        if (event.usage) lastUsage = event.usage;
+        if (event.finishReason) lastFinish = event.finishReason;
+        await writer.push(event);
+      }
+      await writer.end({ finishReason: lastFinish || 'stop', usage: lastUsage });
+    } catch (error) {
+      Logger.warn(`[Bridge] stream error: ${error.message}`);
+      try { await writer.error(error); } catch { /* ignore */ }
+    } finally {
+      if (!res.writableEnded) res.end();
+    }
+    const usage = lastUsage || writer.getUsage() || {};
+    const metrics = attempt.finish({
+      promptTokens: usage.inputTokens || 0,
+      completionTokens: usage.outputTokens || 0,
+      completed: true
+    });
+    return {
+      promptTokens: usage.inputTokens || 0,
+      completionTokens: usage.outputTokens || 0,
+      cachedTokens: usage.cachedInputTokens || 0,
+      content,
+      metrics,
+      interactionSteps: writer.getSteps ? writer.getSteps() : undefined
+    };
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    return respondProxyError(res, 502, clientErrorBody(clientDialect, 502, 'Upstream returned invalid JSON'), {
+      suppressErrorResponse, retryable: false
+    });
+  }
+  const irResponse = bridgeProxy.decodeUpstreamResponse(format, data);
+  geminiSignatures.rememberBlocks(irResponse.message?.blocks);
+  scrubPromptFromBlocks(irResponse.message?.blocks, scrubPrompt);
+  if (options.clientResponseId) irResponse.id = options.clientResponseId;
+  if (!irResponse.model) irResponse.model = model;
+  if (clientDialect === 'gemini' && !irResponse.id) irResponse.id = `resp_${Date.now().toString(36)}`;
+  if (clientDialect === 'interactions') {
+    irResponse.id = options.clientResponseId || irResponse.id || interactionStore.newInteractionId();
+    irResponse.created = new Date().toISOString();
+    irResponse.updated = irResponse.created;
+  }
+  const out = protocolBridge.encodeResponse(clientDialect, irResponse);
+  forwardUpstreamHeaders(res, response.headers);
+  res.json(out);
+  const usage = irResponse.usage || {};
+  const metrics = attempt.finish({
+    promptTokens: usage.inputTokens || 0,
+    completionTokens: usage.outputTokens || 0,
+    completed: true
+  });
+  return {
+    promptTokens: usage.inputTokens || 0,
+    completionTokens: usage.outputTokens || 0,
+    cachedTokens: usage.cachedInputTokens || 0,
+    content: irText(irResponse.message?.blocks),
+    metrics,
+    response: out,
+    irResponse
+  };
+}
+
+function irText(blocks) {
+  return (blocks || []).filter(block => block.type === 'text').map(block => block.text || '').join('');
+}
+
+function injectPromptIntoIr(ir, prompt) {
+  const text = String(prompt || '');
+  if (!text) return ir;
+  const message = { role: 'user', blocks: [{ type: 'text', text }] };
+  const messages = ir.messages || [];
+  const firstUser = messages.findIndex(item => item.role === 'user');
+  if (firstUser === -1) messages.push(message);
+  else messages.splice(firstUser, 0, message);
+  ir.messages = messages;
+  return ir;
+}
+
+function scrubPromptFromBlocks(blocks, prompt) {
+  if (!prompt) return blocks;
+  for (const block of blocks || []) {
+    if (block?.type === 'text' && typeof block.text === 'string') {
+      block.text = block.text.split(prompt).join('');
+    }
+  }
+  return blocks;
+}
+
+async function streamBridgeAsClient({ response, upstreamFormat, clientDialect, req, res, id, model, write, alt }) {
+  const writer = createStreamWriter(clientDialect, { model, id, alt, write });
+  let usage;
+  let finishReason;
+  let content = '';
+  if (writer.start) await writer.start();
+  for await (const event of bridgeProxy.readUpstreamEvents(response, upstreamFormat, { signal: req._requestLifecycle?.signal })) {
+    geminiSignatures.rememberBlocks(event.delta?.blocks);
+    scrubPromptFromBlocks(event.delta?.blocks, req.apiUser?.injectPrompt);
+    for (const block of event.delta?.blocks || []) {
+      if (block.type === 'text') content += block.text || '';
+    }
+    if (event.usage) usage = event.usage;
+    if (event.finishReason) finishReason = event.finishReason;
+    await writer.push(event);
+  }
+  await writer.end({ finishReason: finishReason || 'stop', usage });
+  return {
+    promptTokens: usage?.inputTokens || 0,
+    completionTokens: usage?.outputTokens || 0,
+    cachedTokens: usage?.cachedInputTokens || 0,
+    content,
+    interactionSteps: writer.getSteps ? writer.getSteps() : undefined
+  };
+}
+
+function clientErrorBody(dialect, status, message, options = {}) {
+  if (dialect === 'gemini') {
+    const upstream = options.upstream;
+    if (upstream && upstream.error && upstream.error.status) return upstream;
+    return googleError.googleErrorBody(status, message, { reason: upstream?.error?.code || upstream?.error?.type });
+  }
+  if (dialect === 'interactions') {
+    return { error: { code: status === 429 ? 'rate_limit' : 'server_error', message } };
+  }
+  if (dialect === 'anthropic') {
+    return { type: 'error', error: { type: status === 429 ? 'rate_limit_error' : 'api_error', message } };
+  }
+  return { error: { message, type: status === 429 ? 'rate_limit_error' : 'server_error' } };
+}
+
 
 // 转发到上游 Anthropic 格式
 async function proxyAnthropic(provider, model, body, stream, res, req, options = {}) {
@@ -3150,7 +3452,7 @@ async function handleChatCompletion(req, res) {
       const chatEndpoints = endpointCandidatesFor(provider, 'chat');
       Logger.info(`[Chat] 转发到上游 attempt=${i + 1}/${modelQueue.length}: provider=${provider.id}(${provider.name}), format=${provider.format}, url=${cleanBaseUrl(provider.base_url)}, endpoints=${chatEndpoints.length}, model=${model}, keys=${normalizeProviderKeyEntries(provider).length || 1}`);
       if (chatEndpoints.length === 0) {
-        throw Object.assign(new Error('Gemini provider protocol is not supported by this gateway yet.'), {
+        throw Object.assign(new Error(`Provider format ${provider.format} is unsupported for Chat Completions.`), {
           code: 'unsupported_provider_format',
           status: 501
         });
@@ -3159,10 +3461,17 @@ async function handleChatCompletion(req, res) {
         providerWithKey = pwk;
         const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
         if (pwk.format === 'gemini') {
-          const error = new Error('Gemini provider protocol is not supported by this gateway yet.');
-          error.code = 'unsupported_provider_format';
-          error.status = 501;
-          throw error;
+          return proxyViaBridge({
+            provider: pwk,
+            model,
+            body,
+            sourceDialect: 'openai',
+            clientDialect: 'openai',
+            stream: !!stream,
+            res,
+            req,
+            options: { suppressErrorResponse: keyOpts.suppressErrorResponse, requestType: 'chat', scrubPrompt: req.apiUser?.injectPrompt || '' }
+          });
         }
         if (pwk.format === 'responses') {
           return proxyChatToResponses(pwk, model, body, !!stream, res, req, proxyOpts);
@@ -3861,7 +4170,20 @@ async function handleAnthropicMessage(req, res) {
         async (pwk, keyOpts) => {
           providerWithKey = pwk;
           const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
-          if (pwk.format === 'gemini' || pwk.format === 'responses') {
+          if (pwk.format === 'gemini') {
+            return proxyViaBridge({
+              provider: pwk,
+              model,
+              body: anthropicBody,
+              sourceDialect: 'anthropic',
+              clientDialect: 'anthropic',
+              stream: !!stream,
+              res,
+              req,
+              options: { suppressErrorResponse: keyOpts.suppressErrorResponse, requestType: 'anthropic', scrubPrompt: req.apiUser?.injectPrompt || '' }
+            });
+          }
+          if (pwk.format === 'responses') {
             const error = new Error(`Provider format ${pwk.format} is unsupported for Anthropic Messages.`);
             error.code = 'unsupported_provider_format';
             error.status = 501;
@@ -5917,16 +6239,6 @@ async function handleResponses(req, res) {
   const body = req.body;
   let { model, input, stream, temperature, max_output_tokens, top_p, tools, tool_choice, text, reasoning } = body;
 
-  // 未实现 Gemini 原生协议时必须显式拒绝，不能落入 OpenAI 兼容分支。
-  const configuredProviderFormats = await pool.query(
-    `SELECT DISTINCT p.format FROM models m JOIN providers p ON p.id = m.provider
-     WHERE m.id = $1 OR m.alias = $1 OR m.upstream_model_id = $1`,
-    [model]
-  );
-  if (configuredProviderFormats.rows.some(row => row.format === 'gemini')) {
-    return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
-  }
-
   // 注入提示词：放入 Responses input 首条 user 前的 meta user；无配置时请求保持原样
   if (req.apiUser.injectPrompt) {
     body.input = responsesAppend(body.input, req.apiUser.injectPrompt);
@@ -6052,10 +6364,6 @@ async function handleResponses(req, res) {
     // 非流式：在此循环内直接尝试上游并支持回退
     if (!stream) {
       // === 多端点：原生 Responses 透传优先，失败回退到同供应商其他端点（含转换格式）===
-      if (provider.format === 'gemini' && endpointCandidatesFor(provider, 'responses').length === 0) {
-        return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
-      }
-
       const runNativeResponses = async (pwk, keyOpts) => {
         const url = upstreamUrl(cleanBaseUrl(pwk.base_url), '/responses');
         const headers = buildUpstreamHeaders(pwk, req, { 'Content-Type': 'application/json' }, 'responses');
@@ -6168,6 +6476,24 @@ async function handleResponses(req, res) {
           providerWithKey = pwk;
           const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
           if (pwk.format === 'responses') return runNativeResponses(pwk, keyOpts);
+          if (pwk.format === 'gemini') {
+            return proxyViaBridge({
+              provider: pwk,
+              model: upstreamModel,
+              body: chatBody,
+              sourceDialect: 'openai',
+              clientDialect: 'responses',
+              stream: false,
+              res,
+              req,
+              options: {
+                suppressErrorResponse: keyOpts.suppressErrorResponse,
+                requestType: 'responses',
+                clientResponseId: respId,
+                scrubPrompt: req.apiUser?.injectPrompt || ''
+              }
+            });
+          }
           if (pwk.format === 'anthropic') {
             return proxyAnthropicForResponses(pwk, upstreamModel, chatBody, res, req, respId, body, proxyOpts);
           }
@@ -6642,17 +6968,23 @@ async function handleResponses(req, res) {
         const hasMoreEndpoints = ei < streamCandidates.length - 1;
         beginEndpointAttempt(req, provider, endpoint, ei, streamCandidates.length, 'responses');
         const isAnthropic = endpoint.format === 'anthropic';
-        const url = upstreamUrl(cleanBaseUrl(endpoint.url), isAnthropic ? '/messages' : '/chat/completions');
+        const isGemini = endpoint.format === 'gemini';
+        const url = isGemini
+          ? bridgeProxy.buildUpstreamEndpoint(endpointProvider, upstreamModel, { stream: true }).url
+          : upstreamUrl(cleanBaseUrl(endpoint.url), isAnthropic ? '/messages' : '/chat/completions');
         const headers = isAnthropic
           ? buildUpstreamHeaders(endpointProvider, req, { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' })
-          : buildUpstreamHeaders(endpointProvider, req, { 'Content-Type': 'application/json' });
+          : buildUpstreamHeaders(endpointProvider, req, { 'Content-Type': 'application/json' }, isGemini ? 'gemini' : undefined);
         if (endpointProvider.api_key) {
           if (isAnthropic) headers['x-api-key'] = endpointProvider.api_key;
+          else if (isGemini) headers['x-goog-api-key'] = endpointProvider.api_key;
           else headers['Authorization'] = `Bearer ${endpointProvider.api_key}`;
         }
-        const upstreamPayload = isAnthropic
-          ? protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks })
-          : chatBody;
+        const upstreamPayload = isGemini
+          ? bridgeProxy.buildUpstreamPayload(endpointProvider, protocolBridge.decodeRequest('openai', chatBody), { stream: true })
+          : (isAnthropic
+            ? protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks })
+            : chatBody);
         streamAttempt = getRequestMetrics(req).beginAttempt({
           stream: true, model: upstreamModel, providerId: endpointProvider.id, format: endpoint.format
         });
@@ -6708,11 +7040,22 @@ async function handleResponses(req, res) {
       res.setHeader('X-Accel-Buffering', 'no');
       forwardUpstreamHeaders(res, response.headers);
       res.flushHeaders();
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      result = streamEndpoint?.format === 'anthropic'
-        ? await streamAnthropicAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain)
-        : await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain);
+      const reader = streamEndpoint?.format === 'gemini' ? null : response.body.getReader();
+      const decoder = streamEndpoint?.format === 'gemini' ? null : new TextDecoder();
+      result = streamEndpoint?.format === 'gemini'
+        ? await streamBridgeAsClient({
+          response,
+          upstreamFormat: 'gemini',
+          clientDialect: 'responses',
+          req,
+          res,
+          id: respId,
+          model: upstreamModel,
+          write: writeWithDrain
+        })
+        : (streamEndpoint?.format === 'anthropic'
+          ? await streamAnthropicAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain)
+          : await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain));
 
       const streamMetrics = streamAttempt.finish({
         promptTokens: result?.promptTokens,
@@ -6726,7 +7069,19 @@ async function handleResponses(req, res) {
       // 兜底也走端点回退，确保多端点供应商不会退回只读主端点的旧路径。
       const fallbackEndpoint = endpointCandidatesFor(provider, 'responses')[0];
       const fallbackProvider = fallbackEndpoint ? makeEndpointProvider(provider, fallbackEndpoint) : provider;
-      if (fallbackProvider.format === 'anthropic') {
+      if (fallbackProvider.format === 'gemini') {
+        result = await proxyViaBridge({
+          provider: fallbackProvider,
+          model: upstreamModel,
+          body: chatBody,
+          sourceDialect: 'openai',
+          clientDialect: 'responses',
+          stream: false,
+          res,
+          req,
+          options: { requestType: 'responses', clientResponseId: respId, scrubPrompt: req.apiUser?.injectPrompt || '' }
+        });
+      } else if (fallbackProvider.format === 'anthropic') {
         result = await proxyAnthropicForResponses(fallbackProvider, upstreamModel, chatBody, res, req, respId, body);
       } else {
         result = await proxyOpenAIForResponses(fallbackProvider, upstreamModel, chatBody, res, req, respId, body);
@@ -6857,8 +7212,594 @@ router.post('/cache/reset', requireAuth, requireAdmin, (req, res) => {
   }
 });
 
-// 导出缓存失效函数与路由解析供其他模块 / 测试使用
+// ========== Gemini / Interactions 入站协议 ==========
+
+function estimateBridgePromptTokens(body) {
+  const text = JSON.stringify(body || {});
+  let ascii = 0;
+  let nonAscii = 0;
+  for (const char of text) {
+    if (char.charCodeAt(0) < 128) ascii += 1;
+    else nonAscii += 1;
+  }
+  return Math.max(1, Math.ceil(ascii / 4 + nonAscii));
+}
+
+function sendBridgeError(res, clientDialect, status, message, options = {}) {
+  if (res.headersSent) {
+    try { res.destroy(); } catch { /* ignore */ }
+    return;
+  }
+  if (clientDialect === 'gemini') {
+    return googleError.sendGoogleError(res, status, message, options);
+  }
+  if (clientDialect === 'interactions') {
+    return res.status(status).json({
+      error: {
+        code: options.code || (status === 429 ? 'rate_limit' : (status === 404 ? 'not_found' : 'invalid_request')),
+        message
+      }
+    });
+  }
+  return res.status(status).json(clientErrorBody(clientDialect, status, message, options));
+}
+
+function checkBridgeRateLimits(req, modelConfig, upstreamModel, estimatedTokens) {
+  const modelRpm = modelConfig.rate_limit_rpm || 0;
+  const modelTpm = modelConfig.rate_limit_tpm || 0;
+  const userRpm = req.apiUser.userRateLimitRpm || 0;
+  const userTpm = req.apiUser.userRateLimitTpm || 0;
+  const effectiveRpm = (modelRpm > 0 && userRpm > 0) ? Math.min(modelRpm, userRpm) : (modelRpm || userRpm);
+  const effectiveTpm = (modelTpm > 0 && userTpm > 0) ? Math.min(modelTpm, userTpm) : (modelTpm || userTpm);
+  if (effectiveRpm > 0) {
+    const check = checkRateLimit(`rpm:${req.apiUser.userId}:${upstreamModel}`, effectiveRpm, 0, 0);
+    if (check.limited) return check.reason;
+  }
+  if (effectiveTpm > 0) {
+    const check = checkRateLimit(`tpm:${req.apiUser.userId}:${upstreamModel}`, 0, effectiveTpm, Math.ceil(estimatedTokens));
+    if (check.limited) return check.reason;
+  }
+  return null;
+}
+
+async function recordBridgeUsage(req, { modelConfig, provider, queueModelId, result, requestType, latencyMs, requestBody }) {
+  const totalTokens = (result.promptTokens || 0) + (result.completionTokens || 0);
+  let weightedTokens = 0;
+  let pointsCost = 0;
+  if (totalTokens > 0) {
+    const calculated = calculateCost(modelConfig, result);
+    weightedTokens = calculated.weightedTokens;
+    pointsCost = calculated.pointsCost;
+  }
+  if (pointsCost <= 0 && totalTokens <= 0) return;
+  try {
+    const pointsToDeduct = await adjustBillingCost(weightedTokens, pointsCost, {
+      userId: req.apiUser.userId,
+      teamId: req.apiUser.teamId,
+      model: modelConfig.id || queueModelId,
+      provider: provider?.id || null,
+      requestType
+    });
+    const realDeduct = await calculatePointsToDeduct({
+      userId: req.apiUser.userId,
+      teamId: req.apiUser.teamId,
+      weightedTokens,
+      pointsCost: pointsToDeduct
+    });
+    const pluginMeta = await buildUsagePluginMeta({
+      userId: req.apiUser.userId,
+      model: modelConfig.id || queueModelId,
+      provider: provider?.id || null,
+      requestType,
+      apiKeyId: req.apiUser.keyId
+    }, requestBody?.contents ?? requestBody?.input ?? requestBody, requestBody?.systemInstruction ?? requestBody?.system_instruction, req);
+    const localModelId = modelConfig.id || queueModelId;
+    const usageResult = await recordUsageAndDeduct({
+      pool,
+      usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+         cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model, ${USAGE_METRIC_COLUMNS})
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [
+        req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+        result.promptTokens || 0, result.completionTokens || 0,
+        result.cachedTokens || 0, weightedTokens,
+        provider?.id || null, requestType,
+        JSON.stringify(requestBody?.contents ?? requestBody?.input ?? null),
+        result.content || null, realDeduct,
+        latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+        pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId,
+      teamId: req.apiUser.teamId,
+      weightedTokens,
+      pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+    if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+    req._usageRecordId = usageResult.id || null;
+    recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
+  } catch (error) {
+    Logger.error(`[Bridge/${requestType}] 用量记录错误:`, error);
+    if (error.billingFailure) throw error;
+  }
+}
+
+async function runBridgeModelQueue({
+  req, res, sourceDialect, clientDialect, body, stream, clientAlt, clientResponseId,
+  requestType, upstreamAction, onSuccess
+}) {
+  const resolved = resolveModelQueueForRequest(req.apiUser, req);
+  const modelQueue = resolved.queue;
+  if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
+    sendBridgeError(res, clientDialect, 403, 'One or more API Key model bindings are no longer authorized.', {
+      reason: 'PERMISSION_DENIED'
+    });
+    return null;
+  }
+  if (!modelQueue.length) {
+    sendBridgeError(res, clientDialect, 400, 'No model selected. Please select a model from the model library first.', {
+      reason: 'INVALID_ARGUMENT'
+    });
+    return null;
+  }
+  const estimatedTokens = estimateBridgePromptTokens(body);
+  let lastError = null;
+
+  for (let i = 0; i < modelQueue.length; i += 1) {
+    req._upstreamAttemptContext.modelIdentity = null;
+    const queueModelId = modelQueue[i];
+    const hasMore = i < modelQueue.length - 1;
+    const modelConfig = await getModelConfig(queueModelId, req.apiUser.userId);
+    if (!modelConfig) {
+      lastError = { status: 404, message: `Model '${queueModelId}' not found` };
+      if (hasMore) continue;
+      break;
+    }
+    const upstreamModel = modelConfig.upstream_model_id || modelConfig.id;
+    const rateLimited = checkBridgeRateLimits(req, modelConfig, upstreamModel, estimatedTokens);
+    if (rateLimited) {
+      sendBridgeError(res, clientDialect, 429, rateLimited, { reason: 'RESOURCE_EXHAUSTED' });
+      return null;
+    }
+    const provider = await getProviderForRequest(modelConfig.provider);
+    if (!provider) {
+      lastError = { status: 500, message: 'Provider not configured' };
+      if (hasMore) continue;
+      break;
+    }
+
+    req.apiUser._inputPrice = modelConfig.input_price_per_1k_tokens || 0;
+    req.apiUser._outputPrice = modelConfig.output_price_per_1k_tokens || 0;
+    const liveCallStart = Date.now();
+    try {
+      const result = await runWithEndpointFallback(
+        provider, req, res, hasMore, clientDialect === 'interactions' ? 'interactions' : clientDialect,
+        async (pwk, keyOpts) => proxyViaBridge({
+          provider: pwk,
+          model: upstreamModel,
+          body,
+          sourceDialect,
+          clientDialect,
+          stream,
+          res,
+          req,
+          options: {
+            suppressErrorResponse: keyOpts.suppressErrorResponse,
+            clientAlt,
+            clientResponseId,
+            requestType,
+            upstreamAction,
+            injectPrompt: req.apiUser?.injectPrompt || ''
+          }
+        })
+      );
+
+      if (isProxyErrorResult(result)) {
+        lastError = { status: result.status, body: result.body, retryable: result.retryable };
+        if (hasMore && result.retryable && !res.headersSent) continue;
+        if (!res.headersSent) {
+          if (clientDialect === 'gemini' || clientDialect === 'interactions') return null;
+          return res.status(result.status || 502).json(result.body);
+        }
+        return null;
+      }
+      if (!result) {
+        if (res.headersSent) return null;
+        lastError = { status: 502, message: 'upstream_error' };
+        if (hasMore) continue;
+        break;
+      }
+
+      recordModelCall(modelConfig.id || queueModelId, true);
+      recordLiveCallTest(modelConfig.id || queueModelId, {
+        ok: true,
+        latency_ms: Date.now() - liveCallStart,
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens
+      });
+      await recordBridgeUsage(req, {
+        modelConfig,
+        provider,
+        queueModelId,
+        result,
+        requestType,
+        latencyMs: Date.now() - liveCallStart,
+        requestBody: body
+      });
+      if (onSuccess) await onSuccess({ result, modelConfig, provider, upstreamModel, queueModelId });
+      return result;
+    } catch (error) {
+      const status = Number.isInteger(error?.status)
+        ? error.status
+        : (isUpstreamTimeoutError(error) ? 504 : 502);
+      lastError = { status, message: error.message || 'upstream_error', error };
+      recordModelCall(modelConfig.id || queueModelId, false);
+      captureCallError(req, {
+        modelId: modelConfig.id || queueModelId,
+        providerId: provider.id,
+        requestType,
+        status,
+        error,
+        latencyMs: Date.now() - liveCallStart,
+        isFinal: !hasMore
+      });
+      if (res.headersSent) return null;
+      if (hasMore && canRetryUpstreamError(error, req._upstreamAttemptContext)) continue;
+      break;
+    }
+  }
+
+  if (lastError && !res.headersSent) {
+    const status = lastError.status || 502;
+    const message = lastError.message || lastError.body?.error?.message || 'Upstream request failed';
+    if (lastError.body && (clientDialect === 'gemini' || clientDialect === 'interactions')) {
+      if (clientDialect === 'gemini') {
+        return res.status(status).json(lastError.body);
+      }
+      return res.status(status).json(lastError.body);
+    }
+    sendBridgeError(res, clientDialect, status, message, { reason: lastError.error?.code });
+  }
+  return null;
+}
+
+function normalizeInteractionInputSteps(input) {
+  if (input === undefined || input === null) return [];
+  if (typeof input === 'string') return [{ type: 'user_input', content: [{ type: 'text', text: input }] }];
+  if (Array.isArray(input)) {
+    const allContent = input.length > 0 && input.every(item => item && typeof item === 'object' && interactionsCodec.CONTENT_TYPES.has(item.type));
+    if (allContent) return [{ type: 'user_input', content: input }];
+    return input;
+  }
+  if (typeof input === 'object') {
+    if (interactionsCodec.CONTENT_TYPES.has(input.type)) return [{ type: 'user_input', content: [input] }];
+    if (interactionsCodec.STEP_TYPES.has(input.type)) return [input];
+  }
+  return [];
+}
+
+function geminiModelResource(id) {
+  const raw = String(id || '').replace(/^models\//, '');
+  return {
+    name: `models/${raw}`,
+    baseModelId: raw,
+    version: '001',
+    displayName: raw,
+    description: 'CrewRouter model binding',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    supportedGenerationMethods: ['generateContent', 'streamGenerateContent', 'countTokens']
+  };
+}
+
+async function listGeminiModels(req) {
+  let ids = Array.isArray(req.apiUser?.modelQueue) ? req.apiUser.modelQueue.slice() : [];
+  if (req.apiUser?.currentModelId) ids.push(req.apiUser.currentModelId);
+  if (!ids.length) {
+    try {
+      const result = await pool.query("SELECT value FROM settings WHERE key = 'model_list'");
+      const configured = result.rows[0]?.value;
+      ids = Array.isArray(configured) ? configured.slice() : ['crew-router'];
+    } catch {
+      ids = ['crew-router'];
+    }
+  }
+  const unique = [...new Set(ids.map(id => String(id || '').trim()).filter(Boolean))];
+  if (pluginHooks.hasSubscribers('models:list')) {
+    try {
+      const out = await pluginHooks.apply('models:list', {
+        models: unique.map(id => ({ id, object: 'model', owned_by: 'crewrouter' }))
+      }, { requestType: 'gemini' });
+      if (Array.isArray(out?.models)) ids = out.models.map(model => model.id).filter(Boolean);
+    } catch (error) {
+      Logger.warn('[Gemini models:list] 钩子异常:', error.message);
+    }
+  }
+  const finalIds = [...new Set((Array.isArray(ids) ? ids : unique).map(id => String(id || '').trim()).filter(Boolean))];
+  return finalIds.map(geminiModelResource);
+}
+
+function parseGeminiModelAction(req) {
+  const raw = String(req.params[0] || '').replace(/^\/+/, '');
+  let decoded = raw;
+  try { decoded = decodeURIComponent(raw); } catch { /* keep raw */ }
+  const colon = decoded.lastIndexOf(':');
+  if (colon === -1) return { model: decoded, action: '' };
+  return { model: decoded.slice(0, colon), action: decoded.slice(colon + 1) };
+}
+
+async function handleGeminiModels(req, res) {
+  try {
+    const models = await listGeminiModels(req);
+    return res.json({ models });
+  } catch (error) {
+    Logger.error('[Gemini/models] 错误:', error);
+    return googleError.sendGoogleError(res, 500, 'Internal error');
+  }
+}
+
+async function handleGeminiModelGet(req, res) {
+  try {
+    const raw = String(req.params[0] || '').replace(/^\/+/, '');
+    let decodedRaw = raw;
+    try { decodedRaw = decodeURIComponent(raw); } catch { /* keep raw */ }
+    const id = decodedRaw.replace(/^models\//, '');
+    const models = await listGeminiModels(req);
+    const model = models.find(item => item.baseModelId === id || item.name === `models/${id}`);
+    if (!model) return googleError.sendGoogleError(res, 404, `Model '${id}' not found`, { reason: 'NOT_FOUND' });
+    return res.json(model);
+  } catch (error) {
+    Logger.error('[Gemini/models/:id] 错误:', error);
+    return googleError.sendGoogleError(res, 500, 'Internal error');
+  }
+}
+
+function estimateGeminiCount(ir) {
+  let tokens = 0;
+  for (const message of ir.messages || []) {
+    for (const block of message.blocks || []) {
+      if (block.type === 'text' || block.type === 'thinking') {
+        const text = block.text || block.thinking || '';
+        let ascii = 0;
+        let nonAscii = 0;
+        for (const char of text) {
+          if (char.charCodeAt(0) < 128) ascii += 1;
+          else nonAscii += 1;
+        }
+        tokens += Math.ceil(ascii / 4 + nonAscii);
+      } else if (block.type === 'media' || block.type === 'image') {
+        tokens += 258;
+      }
+    }
+  }
+  tokens += Math.ceil(JSON.stringify(ir.tools || []).length / 4);
+  return Math.max(1, tokens);
+}
+
+async function handleGeminiCountTokens(req, res) {
+  if (!await refreshApiUserForRequest(req, res)) return;
+  try {
+    const resolved = resolveModelQueueForRequest(req.apiUser, req);
+    const queueModelId = resolved.queue[0];
+    if (!queueModelId) {
+      return googleError.sendGoogleError(res, 400, 'No model selected. Please select a model from the model library first.', { reason: 'INVALID_ARGUMENT' });
+    }
+    const modelConfig = await getModelConfig(queueModelId, req.apiUser.userId);
+    const provider = modelConfig ? await getProviderForRequest(modelConfig.provider) : null;
+    const endpoint = provider ? endpointCandidatesFor(provider, 'gemini').find(item => item.format === 'gemini') : null;
+    if (provider && endpoint) {
+      const endpointProvider = makeEndpointProvider(provider, endpoint);
+      const upstreamModel = modelConfig.upstream_model_id || modelConfig.id;
+      const url = bridgeProxy.buildUpstreamEndpoint(endpointProvider, upstreamModel, { action: 'countTokens' }).url;
+      const headers = buildUpstreamHeaders(endpointProvider, req, { 'Content-Type': 'application/json' }, 'gemini');
+      Object.assign(headers, bridgeProxy.providerAuthHeaders(endpointProvider));
+      const response = await fetchWithModelIdentity(url, {
+        quotaProvider: endpointProvider,
+        quotaKey: endpointProvider.api_key,
+        method: 'POST',
+        headers,
+        body: JSON.stringify(req.body || {}),
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
+        requestContext: req._upstreamAttemptContext
+      });
+      if (response?.ok) {
+        const data = await response.json();
+        return res.json(data);
+      }
+      const text = response ? await response.text().catch(() => '') : '';
+      return googleError.sendGoogleError(res, response?.status || 502, text || 'Upstream countTokens failed', { reason: 'UPSTREAM_ERROR' });
+    }
+    const ir = protocolBridge.decodeRequest('gemini', {
+      ...(req.body?.generateContentRequest || req.body || {}),
+      model: queueModelId
+    });
+    const totalTokens = estimateGeminiCount(ir);
+    return res.json({
+      totalTokens,
+      promptTokensDetails: [{ modality: 'TEXT', tokenCount: totalTokens }]
+    });
+  } catch (error) {
+    Logger.error('[Gemini/countTokens] 错误:', error);
+    return googleError.sendGoogleError(res, 500, 'Internal error');
+  }
+}
+
+async function handleGeminiGenerateContent(req, res, action) {
+  if (!await refreshApiUserForRequest(req, res)) return;
+  const parsed = parseGeminiModelAction(req);
+  const requestedModel = parsed.model || req.body?.model;
+  if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = requestedModel;
+  req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel };
+  if (pluginHooks.hasSubscribers('gateway:requestReceived')) {
+    const out = await pluginHooks.apply('gateway:requestReceived', { body: req.body }, { model: requestedModel || null, requestType: 'gemini' });
+    if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
+    if (out?.body !== undefined) req.body = out.body;
+  }
+  const stream = action === 'streamGenerateContent';
+  if (action !== 'generateContent' && action !== 'streamGenerateContent') {
+    return googleError.sendGoogleError(res, 400, `Unsupported model method: ${action}`, { reason: 'INVALID_ARGUMENT' });
+  }
+  const alt = req.query?.alt === undefined ? 'json' : String(req.query.alt);
+  if (stream && !['sse', 'json'].includes(alt)) {
+    return googleError.sendGoogleError(res, 400, "alt must be 'sse' or 'json'", { reason: 'INVALID_ARGUMENT' });
+  }
+  await runBridgeModelQueue({
+    req,
+    res,
+    sourceDialect: 'gemini',
+    clientDialect: 'gemini',
+    body: { ...(req.body || {}), model: requestedModel },
+    stream,
+    clientAlt: alt,
+    requestType: 'gemini'
+  });
+}
+
+async function handleInteractionsCreate(req, res) {
+  if (!await refreshApiUserForRequest(req, res)) return;
+  const requestedModel = req.body?.model;
+  if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = requestedModel;
+  req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel };
+  if (req.body?.background === true) {
+    return sendBridgeError(res, 'interactions', 400, 'background execution is not supported by this gateway', { code: 'unsupported' });
+  }
+  if (req.body?.agent) {
+    return sendBridgeError(res, 'interactions', 400, 'managed agents are not supported by this gateway', { code: 'unsupported' });
+  }
+  if (pluginHooks.hasSubscribers('gateway:requestReceived')) {
+    const out = await pluginHooks.apply('gateway:requestReceived', { body: req.body }, { model: requestedModel || null, requestType: 'interactions' });
+    if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
+    if (out?.body !== undefined) req.body = out.body;
+  }
+
+  let historySteps = [];
+  const previousId = req.body?.previous_interaction_id;
+  if (previousId) {
+    const previous = await interactionStore.getInteraction(previousId, req.apiUser.userId, pool);
+    if (!previous) {
+      return sendBridgeError(res, 'interactions', 404, `Interaction '${previousId}' not found`, { code: 'not_found' });
+    }
+    if (previous.status === 'in_progress') {
+      return sendBridgeError(res, 'interactions', 409, 'Previous interaction is still in progress', { code: 'failed_precondition' });
+    }
+    historySteps = [
+      ...(Array.isArray(previous.request_steps) ? previous.request_steps : []),
+      ...(Array.isArray(previous.response_steps) ? previous.response_steps : [])
+    ];
+  }
+  const requestSteps = normalizeInteractionInputSteps(req.body?.input);
+  const bodyForProxy = {
+    ...(req.body || {}),
+    input: [...historySteps, ...requestSteps]
+  };
+  delete bodyForProxy.previous_interaction_id;
+  const storeEnabled = req.body?.store !== false;
+  const clientResponseId = interactionStore.newInteractionId();
+  const interactionController = new AbortController();
+  const unregisterActive = interactionStore.registerActive(clientResponseId, req.apiUser.userId, interactionController);
+  req._interactionController = interactionController;
+
+  let result;
+  try {
+    result = await runBridgeModelQueue({
+    req,
+    res,
+    sourceDialect: 'interactions',
+    clientDialect: 'interactions',
+    body: bodyForProxy,
+    stream: !!req.body?.stream,
+    clientResponseId,
+    requestType: 'interactions',
+    onSuccess: async ({ result: outcome }) => {
+      if (!storeEnabled || !outcome) return;
+      const responseSteps = outcome.irResponse?.message
+        ? interactionsCodec.blocksToSteps(outcome.irResponse.message.blocks)
+        : (outcome.interactionSteps || []);
+      const status = outcome.response?.status
+        || (responseSteps.some(step => step.type === 'function_call') ? 'requires_action' : 'completed');
+      try {
+        await interactionStore.createInteraction({
+          id: clientResponseId,
+          userId: req.apiUser.userId,
+          apiKeyId: req.apiUser.keyId,
+          modelId: req._requestedModel || requestedModel,
+          providerId: outcome.provider?.id || null,
+          status,
+          store: true,
+          previousInteractionId: previousId || null,
+          requestSteps,
+          responseSteps,
+          usage: outcome.response?.usage || (outcome.result ? {
+            total_input_tokens: outcome.result.promptTokens || 0,
+            total_output_tokens: outcome.result.completionTokens || 0,
+            total_cached_tokens: outcome.result.cachedTokens || 0,
+            total_tokens: (outcome.result.promptTokens || 0) + (outcome.result.completionTokens || 0)
+          } : null)
+        }, pool);
+      } catch (error) {
+        Logger.error('[Interactions] 保存会话失败:', error.message);
+      }
+    }
+    });
+  } finally {
+    unregisterActive();
+    if (req._interactionController === interactionController) req._interactionController = null;
+  }
+  return result;
+}
+
+async function handleInteractionsGet(req, res) {
+  try {
+    const row = await interactionStore.getInteraction(req.params.id, req.apiUser.userId, pool);
+    if (!row) return sendBridgeError(res, 'interactions', 404, `Interaction '${req.params.id}' not found`, { code: 'not_found' });
+    const created = row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString();
+    const updated = row.updated_at instanceof Date ? row.updated_at.toISOString() : new Date(row.updated_at).toISOString();
+    return res.json({
+      id: row.id,
+      object: 'interaction',
+      status: row.status,
+      created,
+      updated,
+      model: row.model_id,
+      steps: [...(row.request_steps || []), ...(row.response_steps || [])],
+      ...(row.usage ? { usage: row.usage } : {}),
+      ...(row.previous_interaction_id ? { previous_interaction_id: row.previous_interaction_id } : {})
+    });
+  } catch (error) {
+    Logger.error('[Interactions/GET] 错误:', error);
+    return sendBridgeError(res, 'interactions', 500, 'Internal error', { code: 'internal' });
+  }
+}
+
+async function handleInteractionsDelete(req, res) {
+  try {
+    const deleted = await interactionStore.deleteInteraction(req.params.id, req.apiUser.userId, pool);
+    if (!deleted) return sendBridgeError(res, 'interactions', 404, `Interaction '${req.params.id}' not found`, { code: 'not_found' });
+    return res.json({});
+  } catch (error) {
+    Logger.error('[Interactions/DELETE] 错误:', error);
+    return sendBridgeError(res, 'interactions', 500, 'Internal error', { code: 'internal' });
+  }
+}
+
+async function handleInteractionsCancel(req, res) {
+  try {
+    const aborted = interactionStore.abortActive(req.params.id, req.apiUser.userId);
+    if (aborted) return res.json({});
+    const row = await interactionStore.getInteraction(req.params.id, req.apiUser.userId, pool);
+    if (!row) return sendBridgeError(res, 'interactions', 404, `Interaction '${req.params.id}' not found`, { code: 'not_found' });
+    return sendBridgeError(res, 'interactions', 409, 'Interaction is not running', { code: 'failed_precondition' });
+  } catch (error) {
+    Logger.error('[Interactions/cancel] 错误:', error);
+    return sendBridgeError(res, 'interactions', 500, 'Internal error', { code: 'internal' });
+  }
+}
+
+
 module.exports = router;
+module.exports.handleGeminiModels = handleGeminiModels;
+module.exports.handleGeminiModelGet = handleGeminiModelGet;
+module.exports.handleGeminiGenerateContent = handleGeminiGenerateContent;
+module.exports.handleGeminiCountTokens = handleGeminiCountTokens;
+module.exports.handleInteractionsCreate = handleInteractionsCreate;
+module.exports.handleInteractionsGet = handleInteractionsGet;
+module.exports.handleInteractionsDelete = handleInteractionsDelete;
+module.exports.handleInteractionsCancel = handleInteractionsCancel;
 module.exports.invalidateUserApiKeyCache = invalidateUserApiKeyCache;
 module.exports.invalidateApiKeyCacheByKeyId = invalidateApiKeyCacheByKeyId;
 module.exports.resolveModelQueue = resolveModelQueue;

@@ -1,6 +1,6 @@
 # Gateway semantics
 
-CrewRouter exposes three protocol entries and one model-list entry:
+CrewRouter exposes the OpenAI, Anthropic and Gemini protocol entries plus model lists:
 
 | Endpoint | Client protocol | Typical use |
 | --- | --- | --- |
@@ -8,13 +8,18 @@ CrewRouter exposes three protocol entries and one model-list entry:
 | `POST /v1/messages` | Anthropic Messages | Anthropic SDKs and Claude Code |
 | `POST /v1/responses` | OpenAI Responses | Codex and Responses clients |
 | `GET /v1/models` | OpenAI Models | List the models visible to this key |
+| `POST /v1beta/models/{model}:generateContent` | Gemini generateContent | google-genai SDK and Gemini CLI |
+| `POST /v1beta/models/{model}:streamGenerateContent` | Gemini streaming | Gemini SSE clients |
+| `POST /v1beta/models/{model}:countTokens` | Gemini token count | Token estimation / native count |
+| `GET /v1beta/models` | Gemini Models | Gemini model discovery |
+| `POST /v1beta/interactions` | Gemini Interactions API | New google-genai interactions |
 
-The same handlers are also mounted under `/api` (`/api/chat/completions`,
-`/api/messages`, `/api/responses`, `/api/models`). The SDK uses `/v1` for gateway
-calls and `/api` for management calls.
+The same handlers are also mounted under `/api` for the OpenAI/Anthropic/Responses
+entries. Gemini and Interactions endpoints are also exposed under `/v1`.
 
 CrewRouter converts between protocols as needed. A client using the OpenAI shape
-can be routed to an Anthropic upstream and vice versa.
+can be routed to an Anthropic or Gemini upstream, and Gemini clients can be
+served by OpenAI / Anthropic / Responses / Gemini upstreams.
 
 ## `model` is normally ignored
 
@@ -36,7 +41,7 @@ or `client.call('admin.models.list')` for that.
 
 ## Streaming
 
-All three protocol entries support SSE when the request sets `stream: true`.
+All protocol entries support SSE when the request sets `stream: true`.
 The SDK exposes typed async iterables:
 
 ```ts
@@ -50,6 +55,9 @@ for await (const event of client.gateway.chat.completions.stream(body)) {
 Anthropic streams use `event:` fields (`message_start`, `content_block_delta`,
 `message_delta`, `message_stop`, and so on). Responses streams use
 `response.created`, `response.output_text.delta`, `response.completed`, etc.
+Gemini `streamGenerateContent?alt=sse` uses data-only frames and no `[DONE]`;
+Interactions streams use `interaction.created`, `step.start`, `step.delta`,
+`step.stop`, `interaction.completed` and a final `done` / `[DONE]`.
 The parser preserves the raw `event`, `data` and `parsed` values, so unknown
 event types are not lost.
 

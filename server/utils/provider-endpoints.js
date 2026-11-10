@@ -6,11 +6,13 @@
  * - 额度 / 密钥刷新脚本 / quota 身份等辅助路径保持只用主端点
  */
 
-const SUPPORTED_FORMATS = new Set(['openai', 'anthropic', 'responses']);
+const SUPPORTED_FORMATS = new Set(['openai', 'anthropic', 'responses', 'gemini']);
 const CLIENT_NATIVE_FORMAT = Object.freeze({
   chat: 'openai',
   anthropic: 'anthropic',
-  responses: 'responses'
+  responses: 'responses',
+  gemini: 'gemini',
+  interactions: 'gemini'
 });
 // /v1/messages 只能转换到 OpenAI Chat 或直连 Anthropic，responses 上游没有对应转换器
 const PROTOCOL_DENY_FORMATS = Object.freeze({
@@ -25,6 +27,9 @@ const RETRYABLE_STATUS = new Set([408, 429]);
 
 function normalizeFormat(format) {
   const value = String(format || '').trim().toLowerCase();
+  if (value === 'google' || value === 'google-gemini' || value === 'gemini-native' || value === 'gemini-generate-content' || value === 'generativelanguage') {
+    return 'gemini';
+  }
   return SUPPORTED_FORMATS.has(value) ? value : '';
 }
 
@@ -130,7 +135,7 @@ function countProviderEndpoints(provider) {
 /**
  * 按客户端协议挑选可尝试的端点：过滤停用/不支持，去重，原生格式稳定置前。
  * @param {object} provider
- * @param {'chat'|'anthropic'|'responses'} clientProtocol
+ * @param {'chat'|'anthropic'|'responses'|'gemini'|'interactions'} clientProtocol
  */
 function endpointCandidatesFor(provider, clientProtocol) {
   const denied = PROTOCOL_DENY_FORMATS[clientProtocol] || null;
@@ -214,7 +219,7 @@ function normalizeEndpointsInput(raw, primary = {}) {
       return;
     }
     if (!format) {
-      errors.push({ index, field: 'format', message: '端点格式仅支持 openai / anthropic / responses' });
+      errors.push({ index, field: 'format', message: '端点格式仅支持 openai / anthropic / responses / gemini' });
       return;
     }
     const key = endpointKey(url.toLowerCase(), format);

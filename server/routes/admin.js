@@ -2958,9 +2958,11 @@ async function fetchUpstreamModelsFromBase(provider, baseUrlRaw, apiKey) {
     return { ok: false, error: '供应商未配置 Base URL', status: 400 };
   }
 
+  const isGemini = ['gemini', 'google'].includes(String(provider.format || '').toLowerCase());
   const headers = { 'Content-Type': 'application/json' };
   if (apiKey) {
-    headers['Authorization'] = `Bearer ${apiKey}`;
+    if (isGemini) headers['x-goog-api-key'] = apiKey;
+    else headers['Authorization'] = `Bearer ${apiKey}`;
   }
 
   const candidateUrls = [];
@@ -2976,9 +2978,9 @@ async function fetchUpstreamModelsFromBase(provider, baseUrlRaw, apiKey) {
     .replace(/\/(chat\/completions|completions|messages|responses|embeddings)\/?$/, '')
     .replace(/\/+$/, '');
 
-  candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
+  candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models', isGemini ? '/v1beta' : '/v1'));
   if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
-    candidateUrls.push(`${cleanBaseUrl}/models`);
+    candidateUrls.push(`${cleanBaseUrl}/${isGemini ? 'v1beta/' : ''}models`);
   }
   const uniqueUrls = [...new Set(candidateUrls)];
 
@@ -3023,8 +3025,8 @@ async function fetchUpstreamModelsFromBase(provider, baseUrlRaw, apiKey) {
       }
 
       const models = (data.data || data.models || []).map(m => ({
-        id: m.id,
-        name: m.name || m.id
+        id: isGemini ? String(m.name || m.id || '').replace(/^models\//, '') : m.id,
+        name: m.displayName || m.name || m.id
       }));
 
       attempt.success = true;
@@ -4223,16 +4225,21 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
         'groq': 'https://api.groq.com',
       };
       let baseUrl = '';
+      let importedFormat = 'openai';
       for (const [k, url] of Object.entries(providerHints)) {
-        if (config[k] && config[k].key) { baseUrl = url; break; }
+        if (config[k] && config[k].key) {
+          baseUrl = url;
+          importedFormat = k === 'google' ? 'gemini' : (k === 'anthropic' ? 'anthropic' : 'openai');
+          break;
+        }
       }
 
       const existing = await pool.query('SELECT id FROM providers WHERE id = $1', [effectiveProviderId]);
       await pool.query(`
         INSERT INTO providers (id, name, base_url, api_key, format, enabled)
-        VALUES ($1, $2, $3, $4, 'openai', TRUE)
-        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_url = EXCLUDED.base_url, api_key = EXCLUDED.api_key
-      `, [effectiveProviderId, providerName, baseUrl, encryptSecret(keys[0])]);
+        VALUES ($1, $2, $3, $4, $5, TRUE)
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_url = EXCLUDED.base_url, api_key = EXCLUDED.api_key, format = EXCLUDED.format
+      `, [effectiveProviderId, providerName, baseUrl, encryptSecret(keys[0]), importedFormat]);
 
       if (existing.rows.length > 0) updated++; else created++;
     }
@@ -4303,6 +4310,11 @@ async function findAvailableProviders() {
 // 根据供应商格式构建正确的 API URL
 function buildProviderApiUrl(provider) {
   const base = cleanBaseUrl(provider.base_url);
+  if (['gemini', 'google'].includes(String(provider.format || '').toLowerCase())) {
+    const error = new Error('AI 脚本分析暂不支持 Gemini 供应商');
+    error.code = 'unsupported_provider_format';
+    throw error;
+  }
   if (provider.format === 'anthropic') {
     return { url: upstreamUrl(base, '/messages'), isAnthropic: true };
   }

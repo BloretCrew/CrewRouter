@@ -7,7 +7,7 @@
   const bool = value => value === true || value === 'true' || value === 1;
   const button = (action, label, id = '') => `<button type="button" class="blora-button aml-button" data-variant="secondary" data-size="sm" data-action="${action}" data-id="${esc(id)}">${html(label)}</button>`;
   const icon = '<span class="ml-collapse-icon aml-chevron" aria-hidden="true"><svg class="collapse-icon" width="14" height="14" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-  const formatLabel = format => ({ openai: 'Chat Completions', responses: 'Responses', anthropic: 'Anthropic' }[String(format || '').toLowerCase()] || format || '');
+  const formatLabel = format => ({ openai: 'Chat Completions', responses: 'Responses', anthropic: 'Anthropic', gemini: 'Gemini' }[String(format || '').toLowerCase()] || format || '');
 
   function menu(items, label = '更多操作') {
     return `<blora-dropdown class="library-more-menu" align="end"><button slot="trigger" type="button" class="blora-button library-more-trigger ml-library-more-trigger" data-variant="outline" data-size="sm" aria-label="${html(label)}">${html(label)}⌄</button>${items.map(([action, name, id = '']) => `<blora-dropdown-item value="admin-library:${esc(encodeURIComponent(JSON.stringify([action, id])))}">${html(name)}</blora-dropdown-item>`).join('')}</blora-dropdown>`;

@@ -7,7 +7,7 @@ const transforms = {
   'openai->anthropic': require('./openai-to-anthropic')
 };
 
-const detectedDialects = new Set(['openai', 'anthropic', 'responses', 'gemini']);
+const detectedDialects = new Set(['openai', 'anthropic', 'responses', 'gemini', 'interactions']);
 
 function getTransform(sourceFormat, targetFormat) {
   const key = `${sourceFormat}->${targetFormat}`;

@@ -18,7 +18,7 @@
 [![最新正式版](https://img.shields.io/github/v/release/BloretCrew/CrewRouter?label=%E6%9C%80%E6%96%B0%E6%AD%A3%E5%BC%8F%E7%89%88)](https://github.com/BloretCrew/CrewRouter/releases)
 ![Docker](https://img.shields.io/badge/Docker-detritalw%2Fcrewrouter-2496ED?logo=docker&logoColor=white)
 
-**团队级 AI 模型统一网关** · OpenAI / Anthropic 双协议 · 自托管
+**团队级 AI 模型统一网关** · OpenAI / Anthropic / Gemini 多协议 · 自托管
 
 [演示控制台](https://crewrouter.bloret.net/) · [部署指南](docs/deployment.md) · [架构说明](docs/ARCHITECTURE.md) · [API 文档](docs/API.md)
 
@@ -44,14 +44,14 @@
 
 ## 它是什么
 
-CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic 兼容端点**。团队成员只拿网关下发的 Key，用 Claude Code、Codex、Cursor、OpenCode、Cherry Studio 等工具时，只需改 `base_url`。供应商密钥留在网关里，成员有使用权、没有所有权。
+CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic / Gemini 兼容端点**。团队成员只拿网关下发的 Key，用 Claude Code、Codex、Cursor、OpenCode、Cherry Studio、Gemini CLI 等工具时，只需改 `base_url`。供应商密钥留在网关里，成员有使用权、没有所有权。
 
-应用 → **CrewRouter** → OpenAI / Anthropic / DeepSeek / 更多…
+应用 → **CrewRouter** → OpenAI / Anthropic / Gemini / DeepSeek / 更多…
 
 ## 核心功能
 
-- [x] **多供应商聚合** — OpenAI、Anthropic、DeepSeek 等，一个端点全部接入
-- [x] **协议自动转换** — OpenAI ↔ Anthropic 双向转换，用 OpenAI SDK 调 Claude，或反过来
+- [x] **多供应商聚合** — OpenAI、Anthropic、Gemini、DeepSeek 等，一个端点全部接入
+- [x] **协议自动转换** — OpenAI / Anthropic / Gemini generateContent / Interactions 双向转换，Gemini 客户端可调其它上游，OpenAI/Anthropic 客户端也可调 Gemini 上游
 - [x] **智能路由** — 按团队分配模型，支持别名、上游映射和自定义规则
 - [x] **Fusion 模式** — 同一请求并发多个模型，裁判模型评估并综合最优回答
 - [x] **实时统计** — 请求量、Token、延迟、成本；按模型 / Key / 时间下钻
@@ -79,7 +79,7 @@ CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic 兼�
 
 只需更换 `base_url`，无需改业务代码：
 
-Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · 以及一切走 OpenAI Chat Completions / OpenAI Responses/ Anthropic Messages 协议的工具，以及安装了对应插件的任意客户端
+Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · Gemini CLI / google-genai（Native Gemini + Interactions） · 以及一切走 OpenAI Chat Completions / OpenAI Responses / Anthropic Messages / Gemini generateContent 协议的工具，以及安装了对应插件的任意客户端
 
 ```bash
 # 只需更换 base_url

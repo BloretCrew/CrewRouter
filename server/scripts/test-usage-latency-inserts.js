@@ -16,7 +16,7 @@ function count(source, pattern) {
 
 test('every gateway usage insert carries latency metric columns and values', () => {
   const inserts = count(apiSource, /INSERT INTO usage_records/g);
-  assert.equal(inserts, 8, 'gateway usage insert count changed; update metrics wiring');
+  assert.equal(inserts, 9, 'gateway usage insert count changed; update metrics wiring');
   assert.ok(count(apiSource, /USAGE_METRIC_COLUMNS/g) >= inserts, 'each insert needs the metric columns');
   assert.ok(count(apiSource, /usageMetricPlaceholders\(/g) >= inserts, 'each insert needs metric placeholders');
   assert.ok(count(apiSource, /usageMetricValues\(/g) >= inserts, 'each insert needs metric values');

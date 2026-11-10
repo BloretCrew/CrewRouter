@@ -49,7 +49,15 @@ const ProviderQuirks = Object.freeze({
     temperature: Capability.SUPPORTED,
     system: Capability.SUPPORTED,
     developer: Capability.DEGRADE,
-    stream_usage: Capability.DEGRADE,
+    stream_usage: Capability.SUPPORTED,
+    reasoning_effort: Capability.DEGRADE
+  }),
+  interactions: Object.freeze({
+    max_completion_tokens: Capability.DEGRADE,
+    temperature: Capability.DEGRADE,
+    system: Capability.SUPPORTED,
+    developer: Capability.DEGRADE,
+    stream_usage: Capability.SUPPORTED,
     reasoning_effort: Capability.DEGRADE
   })
 });

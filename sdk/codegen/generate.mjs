@@ -426,7 +426,7 @@ function buildOpenApi(operations) {
     info: {
       title: 'CrewRouter API',
       version: '0.1.0',
-      description: 'OpenAI/Anthropic-compatible model gateway plus management API.',
+      description: 'OpenAI/Anthropic/Gemini-compatible model gateway plus management API.',
     },
     servers: [{ url: 'https://your-host', description: 'CrewRouter instance' }],
     components: {

@@ -47,6 +47,13 @@ function enforceKeyPermission(req, res, next) {
   const granted = Array.isArray(req.apiUser?.permissions) ? req.apiUser.permissions : [];
   if (!granted.includes(permission.id)) {
     const message = `API Key 没有该权限: ${permission.id}`;
+    const geminiPath = String(req.baseUrl || '') === '/v1beta'
+      || String(req.path || '').startsWith('/interactions')
+      || String(req.path || '').startsWith('/models/');
+    if (geminiPath) {
+      const { googleErrorBody } = require('../utils/google-error');
+      return res.status(403).json(googleErrorBody(403, message, { reason: 'PERMISSION_DENIED' }));
+    }
     if (String(req.path || '').includes('/messages')) {
       return res.status(403).json({ type: 'error', error: { type: 'permission_error', message, code: 'permission_denied' } });
     }

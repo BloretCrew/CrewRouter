@@ -9,7 +9,7 @@ const { encryptSecret } = require('./secret-crypto');
 const { normalizeKeysInput, toStorageFields } = require('./provider-keys');
 
 const MAX_INPUT_CHARS = 20000;
-const FORMATS = new Set(['openai', 'anthropic', 'responses']);
+const FORMATS = new Set(['openai', 'anthropic', 'responses', 'gemini']);
 const ENDPOINT_SUFFIX = /\/(?:chat\/completions|completions|messages|responses|models)$/i;
 
 class QuickAddError extends Error {
@@ -40,7 +40,7 @@ function buildQuickAddPrompt(text) {
     '- name: 供应商显示名称。文本没有名称时，根据域名给出简短名称。',
     '- base_url: API 根地址，必须以 http:// 或 https:// 开头。去掉末尾的 /chat/completions、/messages、/responses、/models 等具体端点，保留 /v1 这类版本前缀。',
     '- api_key: API 密钥原文。没有则为空字符串。不要编造，不要加 Bearer 前缀。',
-    '- format: openai、anthropic、responses 三者之一。Claude/Anthropic Messages 用 anthropic；OpenAI Responses API 用 responses；其余用 openai。',
+    '- format: openai、anthropic、responses、gemini 四者之一。Claude/Anthropic Messages 用 anthropic；OpenAI Responses API 用 responses；Google Gemini generateContent 用 gemini；其余用 openai。',
     '- models_url: 单独的模型列表地址；没有则为空字符串。',
     '- notes: 不超过 200 字的补充说明；没有则为空字符串。',
     '如果无法识别 base_url，输出 {"error":"无法从内容中识别供应商 API 地址"}。',
@@ -141,7 +141,9 @@ function normalizeFormat(raw, baseUrl, sourceUrl = '') {
   if (text === 'anthropic' || text === 'claude' || text === 'anthropic-messages' || text === 'messages') return 'anthropic';
   if (text === 'responses' || text === 'response' || text === 'openai-responses') return 'responses';
   if (text === 'openai' || text === 'chat' || text === 'chat-completions' || text === 'openai-chat') return 'openai';
+  if (text === 'gemini' || text === 'google' || text === 'google-gemini' || text === 'gemini-native' || text === 'generatecontent' || text === 'google-generative-language') return 'gemini';
   const hint = `${sourceUrl} ${baseUrl}`;
+  if (/generativelanguage\.googleapis\.com|gemini/i.test(hint)) return 'gemini';
   if (/anthropic|claude|\/messages\b/i.test(hint)) return 'anthropic';
   if (/\/responses\b/i.test(hint)) return 'responses';
   return 'openai';

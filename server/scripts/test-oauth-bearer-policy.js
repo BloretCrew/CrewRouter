@@ -54,12 +54,13 @@ function fixture() {
     loadModelQueueForKey: async () => ['model'], loadHarnessModelsForKey: async () => ({ codex: 'model' }),
     getAuthorizedModelIds: async () => new Set(state.denyModel ? [] : ['model', 'denied']),
     buildInjectedPrompt: async () => 'offline-prompt',
+    googleError: { googleErrorBody: (code, message, options = {}) => ({ error: { code, message, status: options.status || 'UNKNOWN' } }) },
   };
   vm.createContext(apiContext);
   vm.runInContext([
     declaration('ApiKeyLifecycleError', 'class'),
     declaration('validateApiKey', 'async function'), declaration('refreshApiUserModelAuthorization', 'async function'),
-    ...['isAnthropicApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),
+    ...['isAnthropicApiPath', 'isGeminiApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),
     'this.validateBoundApiKey = (req,res,next,binding) => validateApiKey(req,res,next,binding);',
   ].join('\n'), apiContext);
   const mocks = { crypto, '../models/database': { pool }, '../logger': Logger,

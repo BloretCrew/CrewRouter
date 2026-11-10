@@ -1879,7 +1879,7 @@
       <div class="blora-field"><span class="blora-field__label">供应商</span><div id="selectedProviderDisplay" class="up-readonly"></div></div>
       <div id="customProviderFields" class="up-dialog-stack" style="display:none;">
         <blora-field label="Base URL"><input type="text" id="providerBaseUrl" required></blora-field>
-        <div class="blora-field"><label class="blora-field__label" for="providerFormat">API 格式</label><blora-select id="providerFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select></div>
+        <div class="blora-field"><label class="blora-field__label" for="providerFormat">API 格式</label><blora-select id="providerFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option><blora-option value="gemini">Gemini (generateContent)</blora-option></blora-select></div>
       </div>
       <blora-field label="API Key" hint="可留空，保存后稍后补全"><input type="password" id="providerApiKey" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）" autocomplete="new-password" form="providerForm"></blora-field>
     </div>
@@ -1903,7 +1903,7 @@
       <div class="blora-field"><span class="blora-field__label">供应商名称</span><div id="editProviderName" class="up-readonly"></div></div>
       <blora-field label="Base URL"><input type="text" id="editProviderBaseUrl"></blora-field>
       <blora-field label="API Key" hint="留空则不更新"><input type="password" id="editProviderApiKey" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm"></blora-field>
-      <div class="blora-field"><label class="blora-field__label" for="editProviderFormat">API 格式</label><blora-select id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select></div>
+      <div class="blora-field"><label class="blora-field__label" for="editProviderFormat">API 格式</label><blora-select id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option><blora-option value="gemini">Gemini (generateContent)</blora-option></blora-select></div>
       <div class="blora-field">
         <span class="blora-field__label">附加端点（可选）</span>
         <div class="up-dialog-hint" style="font-size:12px;line-height:1.6;margin-bottom:8px;">

@@ -56,13 +56,14 @@ function fixture() {
     loadHarnessModelsForKey: async () => ({}),
     buildInjectedPrompt: async () => { if (state.disableDuringColdLoad) state.enabled = false; return null; },
     checkQuotaRules: () => { throw new Error('Unexpected quota access'); },
+    googleError: { googleErrorBody: (code, message, options = {}) => ({ error: { code, message, status: options.status || 'UNKNOWN' } }) },
     require: () => { state.downstream++; throw new Error('Unexpected downstream dependency'); },
   };
   const functions = [
     declaration('ApiKeyLifecycleError', 'class'),
     ...['refreshApiUserModelAuthorization', 'refreshApiUserForRequest', 'validateApiKey',
       'handleChatCompletion', 'handleAnthropicMessage', 'handleResponses'].map(name => declaration(name, 'async function')),
-    ...['isAnthropicApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),
+    ...['isAnthropicApiPath', 'isGeminiApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),
   ].join('\n');
   vm.createContext(sandbox);
   vm.runInContext(`${functions}\nthis.fixtureFunctions = { validateApiKey, refreshApiUserForRequest, handleChatCompletion, handleAnthropicMessage, handleResponses };`, sandbox);

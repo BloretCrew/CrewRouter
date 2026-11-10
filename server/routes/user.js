@@ -4079,6 +4079,16 @@ async function fetchModelsFromBase(provider, baseUrlRaw, headers) {
   const baseUrl = baseUrlRaw?.replace(/\/+$/, '');
   if (!baseUrl) return null;
   const customModelsUrl = provider.models_url?.replace(/\/+$/, '') || '';
+  const isGemini = ['gemini', 'google'].includes(String(provider.format || '').toLowerCase());
+  if (isGemini && headers) {
+    const auth = String(headers.Authorization || '');
+    if (auth.startsWith('Bearer ')) {
+      delete headers.Authorization;
+      headers['x-goog-api-key'] = auth.slice('Bearer '.length);
+    } else if (!headers['x-goog-api-key'] && provider.api_key) {
+      headers['x-goog-api-key'] = decryptSecret(provider.api_key);
+    }
+  }
 
   const candidateUrls = [];
   if (customModelsUrl) {
@@ -4087,9 +4097,9 @@ async function fetchModelsFromBase(provider, baseUrlRaw, headers) {
   const cleanBaseUrl = normalizeUpstreamBaseUrl(baseUrl)
     .replace(/\/(completions|embeddings)\/?$/i, '')
     .replace(/\/+$/, '');
-  candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
+  candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models', isGemini ? '/v1beta' : '/v1'));
   if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
-    candidateUrls.push(`${cleanBaseUrl}/models`);
+    candidateUrls.push(`${cleanBaseUrl}/${isGemini ? 'v1beta/' : ''}models`);
   }
 
   for (const modelsUrl of [...new Set(candidateUrls)]) {
@@ -4104,7 +4114,15 @@ async function fetchModelsFromBase(provider, baseUrlRaw, headers) {
       if (!response.ok) continue;
       const data = await response.json();
       const models = data.data || data.models || [];
-      if (models.length > 0) return models;
+      if (models.length > 0) {
+        return isGemini
+          ? models.map(m => ({
+            ...m,
+            id: String(m.name || m.id || '').replace(/^models\//, ''),
+            name: m.displayName || m.name || m.id
+          }))
+          : models;
+      }
     } catch (e) {
       Logger.warn(`[用户刷新模型] ${modelsUrl} 失败: ${e.message}`);
     }

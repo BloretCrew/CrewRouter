@@ -9525,7 +9525,7 @@ ${extractorBody}
       this._editProviderEndpoints = (Array.isArray(provider.endpoints) ? provider.endpoints : [])
         .map(e => ({
           url: String(e?.url || ''),
-          format: ['openai', 'anthropic', 'responses'].includes(e?.format) ? e.format : 'openai',
+          format: ['openai', 'anthropic', 'responses', 'gemini'].includes(e?.format) ? e.format : 'openai',
           enabled: e?.enabled !== false,
           label: String(e?.label || ''),
         }));
@@ -9587,7 +9587,7 @@ ${extractorBody}
     const list = document.getElementById('editProviderEndpointsList');
     if (!list) return;
     const items = Array.isArray(this._editProviderEndpoints) ? this._editProviderEndpoints : [];
-    const formatOptions = (selected) => ['openai', 'anthropic', 'responses']
+    const formatOptions = (selected) => ['openai', 'anthropic', 'responses', 'gemini']
       .map(f => `<option value="${f}"${f === selected ? ' selected' : ''}>${f}</option>`).join('');
     setHTML(list, items.map((item, index) => `
       <div class="blora-field${item.enabled === false ? ' is-disabled' : ''}" data-edit-endpoint-index="${index}" style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px;${item.enabled === false ? 'opacity:.55;' : ''}">        <div style="flex:1 1 100%;">

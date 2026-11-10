@@ -53,6 +53,8 @@ const REAL_MOUNTS = [
   { id: 'passkey', mount: '/api/passkey', module: './passkey', feature: 'console', runtime: 'index' },
   { id: 'oauth', mount: '/', module: './oauth', feature: 'oauth', runtime: 'index' },
   { id: 'api-v1', mount: '/v1', module: './api', feature: 'gateway', runtime: 'index', sameInstance: 'api-core' },
+  { id: 'gemini-v1beta', mount: '/v1beta', module: './gemini', feature: 'gateway', runtime: 'index' },
+  { id: 'gemini-v1', mount: '/v1', module: './gemini', feature: 'gateway', runtime: 'index' },
   { id: 'admin-plugins', mount: '/api/admin/plugins', module: './plugins', feature: 'plugins', runtime: 'index', factory: 'createPluginsRoutes:adminRouter' },
   { id: 'public-plugins', mount: '/api/plugins', module: './plugins', feature: 'plugins', runtime: 'index', factory: 'createPluginsRoutes:publicRouter' },
 ];

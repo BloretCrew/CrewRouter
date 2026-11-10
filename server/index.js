@@ -2054,6 +2054,25 @@ async function ensureApiKeyPermissions() {
       );
       Logger.info(`[迁移] 已为 ${updated.rowCount} 个 API Key 打开网关权限（含 gateway.messages）`);
     }
+
+    // 增量授权：Gemini / Interactions 权限加入默认网关组后，为存量 Key 补齐。
+    const migrationKeyV2 = 'migration_open_api_key_gateway_permissions_v2';
+    const migrationV2 = await pool.query('SELECT 1 FROM settings WHERE key = $1', [migrationKeyV2]);
+    if (migrationV2.rows.length === 0) {
+      const updatedV2 = await pool.query(
+        `UPDATE api_keys
+            SET permissions = (
+              SELECT jsonb_agg(DISTINCT elem)
+                FROM jsonb_array_elements_text(COALESCE(permissions, '[]'::jsonb) || $1::jsonb) AS elem
+            )`,
+        [JSON.stringify(DEFAULT_PERMISSION_IDS)]
+      );
+      await pool.query(
+        'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING',
+        [migrationKeyV2, JSON.stringify({ updated: updatedV2.rowCount, at: new Date().toISOString() })]
+      );
+      Logger.info(`[迁移] 已为 ${updatedV2.rowCount} 个 API Key 补齐 gateway.gemini 权限`);
+    }
     Logger.info('[迁移] api_keys 表 permissions 字段已就绪（网关权限默认开启）');
   } catch (err) {
     Logger.error(`[迁移] api_keys permissions 字段迁移跳过: ${err.message}`);
@@ -2580,7 +2599,7 @@ app.locals.csrfAllowedOrigins = String(process.env.CR_CSRF_ALLOWED_ORIGINS || co
   .split(',').map(value => value.trim()).filter(Boolean);
 app.get('/api/csrf-token', csrfTokenRoute);
 app.use(csrfProtection);
-app.use(['/api', '/v1'], require('./middleware/api-key-permissions').requireApiKeyPermission);
+app.use(['/api', '/v1', '/v1beta'], require('./middleware/api-key-permissions').requireApiKeyPermission);
 
 // 请求日志中间件
 const apiKeyUserCache = new Map(); // key -> { username, ts }
@@ -2840,7 +2859,7 @@ if (isDemo) {
     next();
   });
   // 演示模式下禁用 /v1 API 代理
-  app.use('/v1', (req, res) => {
+  app.use(['/v1', '/v1beta'], (req, res) => {
     res.status(403).json({
       error: { message: '演示模式下 API 访问已禁用', type: 'demo_mode_restricted' }
     });
@@ -2909,7 +2928,7 @@ app.use('/v1', (req, res) => {
   }
 
   // 检测常见拼写
-  const validPaths = ['/v1/chat/completions', '/v1/messages', '/v1/models', '/v1/responses'];
+  const validPaths = ['/v1/chat/completions', '/v1/messages', '/v1/models', '/v1/responses', '/v1/interactions'];
   const cleanPath = url.split('?')[0];
   if (!validPaths.includes(cleanPath)) {
     const suggest = validPaths.find(p => {
@@ -2929,6 +2948,14 @@ app.use('/v1', (req, res) => {
       type: 'invalid_request_error',
       ...(hints.length ? { hint: hints } : {})
     }
+  });
+});
+
+// /v1beta 路由 404 诊断（Gemini 错误包络）
+app.use('/v1beta', (req, res) => {
+  const { sendGoogleError } = require('./utils/google-error');
+  return sendGoogleError(res, 404, `No route found: ${req.method} ${req.originalUrl.split('?')[0]}`, {
+    reason: 'NOT_FOUND'
   });
 });
 
@@ -3161,6 +3188,7 @@ async function startServer(options = {}) {
         const { initDatabase } = require('./scripts/init-db');
         await initDatabase();
         await runPendingMigrations();
+        await require('./store/gemini-interactions').cleanupExpired(pool).catch(() => {});
         await ensureInstanceEdition();
         // 插件系统：表结构就绪后扫描并加载已启用插件
         if (options.plugins !== false) {

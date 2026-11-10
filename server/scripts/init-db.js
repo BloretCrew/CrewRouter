@@ -799,6 +799,31 @@ async function initDatabase() {
       }
     }
 
+    // Gemini Interactions 会话状态（previous_interaction_id / GET / DELETE）
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS gemini_interactions (
+        id TEXT PRIMARY KEY,
+        user_id BIGINT NOT NULL,
+        api_key_id BIGINT,
+        model_id TEXT,
+        provider_id BIGINT,
+        status TEXT NOT NULL,
+        store BOOLEAN NOT NULL DEFAULT TRUE,
+        previous_interaction_id TEXT,
+        request_steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+        response_steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+        usage JSONB,
+        error JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        expires_at TIMESTAMPTZ
+      )
+    `);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_gemini_interactions_user_created ON gemini_interactions (user_id, created_at DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_gemini_interactions_previous ON gemini_interactions (previous_interaction_id)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_gemini_interactions_expires ON gemini_interactions (expires_at)');
+    Logger.info('[数据库初始化] 表 gemini_interactions 已就绪');
+
     // 创建应用配置表
     await client.query(`
       CREATE TABLE IF NOT EXISTS settings (

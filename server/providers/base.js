@@ -20,7 +20,8 @@ class BaseProviderAdapter {
    * @returns {'openai' | 'anthropic' | 'gemini' | 'responses'}
    */
   getApiFormat() {
-    return this.provider.format || 'openai';
+    const format = this.provider.format || 'openai';
+    return format === 'google' ? 'gemini' : format;
   }
 
   /**
@@ -84,7 +85,7 @@ class BaseProviderAdapter {
         fullUrl = upstreamUrl(baseUrl, '/messages');
         break;
       case 'gemini':
-        fullUrl = upstreamUrl(baseUrl, `/models/${encodeURIComponent(model)}:generateContent`, '/v1beta');
+        fullUrl = upstreamUrl(baseUrl, `/models/${String(model).split('/').map(encodeURIComponent).join('/')}:generateContent`, '/v1beta');
         break;
       case 'responses':
         fullUrl = upstreamUrl(baseUrl, '/responses');
@@ -111,6 +112,16 @@ class BaseProviderAdapter {
    * @returns {string} 完整的请求 URL
    */
   async buildStreamUrl(model) {
+    if (this.getApiFormat() === 'gemini') {
+      const baseUrl = this.provider.base_url.replace(/\/$/, '');
+      const { upstreamUrl, validateUrl } = require('../utils/url-validator');
+      const url = upstreamUrl(baseUrl, `/models/${String(model).split('/').map(encodeURIComponent).join('/')}:streamGenerateContent?alt=sse`, '/v1beta');
+      const result = await validateUrl(url, { allowPrivate: false });
+      if (!result.ok) {
+        throw new Error(`[SSRF] URL 校验失败: ${result.error} (base_url: ${baseUrl})`);
+      }
+      return url;
+    }
     return this.buildUrl(model);
   }
 

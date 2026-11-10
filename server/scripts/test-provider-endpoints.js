@@ -57,7 +57,7 @@ test('去重：与主端点相同的附加端点被丢弃（大小写不敏感�
   assert.deepEqual(list.map(e => e.format), ['openai', 'anthropic']);
 });
 
-test('gemini 与未知格式被丢弃', () => {
+test('gemini 格式被保留，未知格式被丢弃', () => {
   const list = normalizeProviderEndpoints({
     ...baseProvider,
     endpoints: [
@@ -68,6 +68,7 @@ test('gemini 与未知格式被丢弃', () => {
   });
   assert.deepEqual(list.map(e => [e.url, e.format]), [
     ['https://api.example.com/v1', 'openai'],
+    ['https://a.example.com', 'gemini'],
     ['https://c.example.com', 'anthropic'],
   ]);
 });
@@ -149,8 +150,8 @@ test('normalizeEndpointsInput 拒绝非数组、超长、非法 URL 与格式', 
   assert.equal(badUrl.ok, false);
   assert.deepEqual(badUrl.errors[0], { index: 0, field: 'url', message: '端点 URL 需以 http:// 或 https:// 开头' });
 
-  const badFormat = normalizeEndpointsInput([{ url: 'https://a.example.com', format: 'gemini' }]);
-  assert.deepEqual(badFormat.errors[0], { index: 0, field: 'format', message: '端点格式仅支持 openai / anthropic / responses' });
+  const badFormat = normalizeEndpointsInput([{ url: 'https://a.example.com', format: 'nonsense' }]);
+  assert.deepEqual(badFormat.errors[0], { index: 0, field: 'format', message: '端点格式仅支持 openai / anthropic / responses / gemini' });
 
   const tooLong = normalizeEndpointsInput([{ url: `https://a.example.com/${'x'.repeat(600)}`, format: 'openai' }]);
   assert.equal(tooLong.ok, false);

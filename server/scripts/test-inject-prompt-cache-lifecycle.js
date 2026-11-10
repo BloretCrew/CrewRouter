@@ -16,7 +16,7 @@ const middleware = source.slice(middlewareStart, middlewareEnd);
 function worker(state) {
   const key = { id: 1, user_id: 10, username: 'owner', enabled: true };
   const context = vm.createContext({
-    Map, Date, setInterval() {}, sha256Hex: value => value,
+    Map, Date, setInterval() { return { unref() {} }; }, sha256Hex: value => value,
     Logger: { debug() {}, warn() {}, error() {} },
     pluginHooks: { hasSubscribers: () => false },
     isAnthropicApiPath: () => false,

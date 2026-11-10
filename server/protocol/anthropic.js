@@ -12,6 +12,18 @@ function decodeBlock(block) {
   if (block.type === 'text') return { type: 'text', text: block.text || '', cacheControl: block.cache_control, passthrough };
   if (block.type === 'thinking' || block.type === 'redacted_thinking') return { type: 'thinking', thinking: block.thinking || '', data: block.data, signature: block.signature, redacted: block.type === 'redacted_thinking', passthrough };
   if (block.type === 'image') return { type: 'image', source: block.source, cacheControl: block.cache_control, passthrough };
+  if (block.type === 'document') {
+    const source = block.source || {};
+    return {
+      type: 'media', mediaType: 'document',
+      mimeType: source.media_type || source.mime_type || 'application/pdf',
+      data: source.type === 'base64' ? source.data : undefined,
+      fileUri: source.type === 'url' ? source.url : undefined,
+      fileId: source.type === 'file' ? source.file_id : undefined,
+      cacheControl: block.cache_control,
+      passthrough
+    };
+  }
   if (block.type === 'tool_use') return { type: 'tool_call', id: block.id, name: block.name, input: block.input || {}, cacheControl: block.cache_control, passthrough };
   if (block.type === 'tool_result') return { type: 'tool_result', toolCallId: block.tool_use_id, content: decodeContent(block.content), isError: block.is_error, cacheControl: block.cache_control, passthrough };
   return { type: 'raw', value: block };
@@ -27,6 +39,27 @@ function encodeBlock(block) {
   if (block.type === 'text') value = { type: 'text', text: block.text || '' };
   else if (block.type === 'thinking') value = block.redacted ? { type: 'redacted_thinking', data: block.data ?? '' } : { type: 'thinking', thinking: block.thinking || '', ...(block.signature !== undefined ? { signature: block.signature } : {}) };
   else if (block.type === 'image') value = { type: 'image', source: block.source };
+  else if (block.type === 'media') {
+    if (block.mediaType === 'image') {
+      value = {
+        type: 'image',
+        source: block.fileUri
+          ? { type: 'url', url: block.fileUri }
+          : { type: 'base64', media_type: block.mimeType || 'image/png', data: block.data || '' }
+      };
+    } else if (block.mediaType === 'document') {
+      value = {
+        type: 'document',
+        source: block.fileUri
+          ? { type: 'url', url: block.fileUri }
+          : (block.fileId
+            ? { type: 'file', file_id: block.fileId }
+            : { type: 'base64', media_type: block.mimeType || 'application/pdf', data: block.data || '' })
+      };
+    } else {
+      return null;
+    }
+  }
   else if (block.type === 'tool_call') value = { type: 'tool_use', id: block.id, name: block.name, input: block.input || {} };
   else if (block.type === 'tool_result') value = { type: 'tool_result', tool_use_id: block.toolCallId, content: encodeContent(block.content || []), ...(block.isError !== undefined ? { is_error: block.isError } : {}) };
   else if (block.type === 'raw') return block.value;
@@ -59,7 +92,14 @@ function decodeRequest(body) {
     messages: [...decodeSystem(body.system), ...(body.messages || []).map(decodeMessage)],
     tools: (body.tools || []).map(tool => ({ name: tool.name, description: tool.description, inputSchema: tool.input_schema || {}, cacheControl: tool.cache_control, passthrough: { anthropic: omitKnown(tool, new Set(['name', 'description', 'input_schema', 'cache_control'])) } })),
     toolChoice: body.tool_choice,
-    parameters: { maxTokens: body.max_tokens, maxTokensField: 'max_tokens', temperature: body.temperature, topP: body.top_p, topK: body.top_k, stop: body.stop_sequences, stream: body.stream, streamUsage: body.stream ? true : undefined, thinking: body.thinking },
+    parameters: {
+      maxTokens: body.max_tokens, maxTokensField: 'max_tokens', temperature: body.temperature,
+      topP: body.top_p, topK: body.top_k, stop: body.stop_sequences, stream: body.stream,
+      streamUsage: body.stream ? true : undefined, thinking: body.thinking,
+      responseFormat: body.output_config?.format,
+      responseSchema: body.output_config?.format?.schema,
+      responseMimeType: body.output_config?.format?.type === 'json_schema' ? 'application/json' : undefined
+    },
     passthrough: { anthropic: omitKnown(body, REQUEST_KEYS) }
   };
 }
@@ -78,8 +118,23 @@ function encodeRequest(ir) {
   if (p.topK !== undefined) body.top_k = p.topK;
   if (p.stop !== undefined) body.stop_sequences = Array.isArray(p.stop) ? p.stop : [p.stop];
   if (p.stream !== undefined) body.stream = p.stream;
-  if (p.thinking !== undefined) body.thinking = p.thinking;
-  else if (p.reasoningEffort !== undefined) body.thinking = { type: 'enabled', budget_tokens: { low: 1024, medium: 4096, high: 8192 }[p.reasoningEffort] || 4096 };
+  if (p.thinking !== undefined) {
+    const budget = Number(p.thinking.budget_tokens);
+    body.thinking = {
+      type: p.thinking.type || 'enabled',
+      ...(Number.isFinite(budget) && p.thinking.type !== 'disabled' ? { budget_tokens: Math.max(1024, budget) } : {})
+    };
+  } else if (p.reasoningEffort !== undefined) body.thinking = { type: 'enabled', budget_tokens: { low: 1024, medium: 4096, high: 8192 }[p.reasoningEffort] || 4096 };
+  if (p.responseFormat !== undefined) {
+    body.output_config = { ...(body.output_config || {}), format: p.responseFormat };
+  } else if (p.responseSchema) {
+    body.output_config = {
+      ...(body.output_config || {}),
+      format: { type: 'json_schema', schema: p.responseSchema }
+    };
+  } else if (p.responseMimeType === 'application/json') {
+    body.output_config = { ...(body.output_config || {}), format: { type: 'json_object' } };
+  }
   if (ir.tools?.length) body.tools = ir.tools.map(tool => withPassthrough({ name: tool.name, description: tool.description, input_schema: tool.inputSchema || {}, ...(tool.cacheControl !== undefined ? { cache_control: tool.cacheControl } : {}) }, tool.passthrough?.anthropic));
   if (ir.toolChoice !== undefined) {
     if (ir.toolChoice === 'auto') body.tool_choice = { type: 'auto' };
@@ -93,12 +148,17 @@ function encodeRequest(ir) {
 
 function decodeUsage(usage) {
   if (!usage) return undefined;
-  return { inputTokens: usage.input_tokens || 0, outputTokens: usage.output_tokens || 0, cachedInputTokens: usage.cache_read_input_tokens || 0, cacheCreationInputTokens: usage.cache_creation_input_tokens || 0, passthrough: { anthropic: omitKnown(usage, new Set(['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens'])) } };
+  const cacheRead = usage.cache_read_input_tokens || 0;
+  const cacheCreation = usage.cache_creation_input_tokens || 0;
+  const input = usage.input_tokens || 0;
+  return { inputTokens: input + cacheRead + cacheCreation, outputTokens: usage.output_tokens || 0, cachedInputTokens: cacheRead, cacheCreationInputTokens: cacheCreation, passthrough: { anthropic: omitKnown(usage, new Set(['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens'])) } };
 }
 
 function encodeUsage(usage) {
   if (!usage) return undefined;
-  return withPassthrough({ input_tokens: usage.inputTokens || 0, output_tokens: usage.outputTokens || 0, cache_read_input_tokens: usage.cachedInputTokens || 0, cache_creation_input_tokens: usage.cacheCreationInputTokens || 0 }, usage.passthrough?.anthropic);
+  const cached = usage.cachedInputTokens || 0;
+  const created = usage.cacheCreationInputTokens || 0;
+  return withPassthrough({ input_tokens: Math.max(0, (usage.inputTokens || 0) - cached - created), output_tokens: usage.outputTokens || 0, cache_read_input_tokens: cached, cache_creation_input_tokens: created }, usage.passthrough?.anthropic);
 }
 
 function decodeResponse(body) {
@@ -116,13 +176,14 @@ function decodeStreamEvent(event) {
   else if (event.type === 'content_block_delta') {
     if (event.delta?.type === 'text_delta') delta = { role: 'assistant', blocks: [{ type: 'text', text: event.delta.text || '' }] };
     else if (event.delta?.type === 'thinking_delta') delta = { role: 'assistant', blocks: [{ type: 'thinking', thinking: event.delta.thinking || '' }] };
+    else if (event.delta?.type === 'signature_delta') delta = { role: 'assistant', blocks: [{ type: 'thinking', thinking: '', signature: event.delta.signature || '' }] };
     else if (event.delta?.type === 'input_json_delta') delta = { role: 'assistant', blocks: [{ type: 'tool_call_delta', argumentsText: event.delta.partial_json || '', index: event.index || 0 }] };
   }
   // delta 上的未知字段（如 message_delta 中的 safeguard_results）单独保留，供同方言编码还原
   const deltaExtra = event.delta && typeof event.delta === 'object'
-    ? omitKnown(event.delta, new Set(['type', 'text', 'thinking', 'partial_json', 'stop_reason', 'stop_sequence']))
+    ? omitKnown(event.delta, new Set(['type', 'text', 'thinking', 'partial_json', 'signature', 'stop_reason', 'stop_sequence']))
     : null;
-  return { kind: 'stream_event', sourceDialect: 'anthropic', id: event.message?.id, model: event.message?.model, eventType: event.type, index: event.index, delta, finishReason: ({ end_turn: 'stop', max_tokens: 'length', tool_use: 'tool_calls', stop_sequence: 'stop' }[event.delta?.stop_reason] || event.delta?.stop_reason), usage: decodeUsage(event.usage || event.message?.usage), deltaExtra, passthrough: { anthropic: omitKnown(event, EVENT_KEYS) } };
+  return { kind: 'stream_event', sourceDialect: 'anthropic', id: event.message?.id, model: event.message?.model, eventType: event.type, index: event.index, delta, finishReason: ({ end_turn: 'stop', max_tokens: 'length', tool_use: 'tool_calls', stop_sequence: 'stop', refusal: 'content_filter' }[event.delta?.stop_reason] || event.delta?.stop_reason), usage: decodeUsage(event.usage || event.message?.usage), deltaExtra, passthrough: { anthropic: omitKnown(event, EVENT_KEYS) } };
 }
 
 function encodeStreamEvent(ir) {

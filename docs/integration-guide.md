@@ -41,6 +41,41 @@ const client = new OpenAI({
 });
 ```
 
+### Google Gen AI SDK (Gemini / Interactions)
+
+Point the SDK at the gateway. `apiVersion` selects the `/v1beta` surface the
+google-genai SDK expects; the API key is the CrewRouter key.
+
+```python
+from google import genai
+
+client = genai.Client(
+    api_key="sk-your-key",
+    http_options={"base_url": "https://your-host"},
+)
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="Hello",
+)
+print(response.text)
+```
+
+```python
+interaction = client.interactions.create(
+    model="gemini-2.5-flash",
+    input="Hello",
+)
+print(interaction.output_text)
+```
+
+The gateway also accepts raw REST calls to
+`/v1beta/models/{model}:generateContent`,
+`:streamGenerateContent?alt=sse`, `:countTokens`, `/v1beta/models`, and
+`/v1beta/interactions`. Gemini clients authenticate with `x-goog-api-key` or
+`?key=`. The path `model` is advisory like the other protocols; actual routing
+comes from the API key binding.
+
 The request body `model` is normally ignored; routing comes from the API key
 binding. See [docs/sdk/gateway.md](./sdk/gateway.md).
 

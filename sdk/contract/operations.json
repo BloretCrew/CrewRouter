@@ -12731,6 +12731,146 @@
       "contractVersion": 1
     },
     {
+      "operationId": "interactions.create",
+      "method": "POST",
+      "path": "/v1/interactions",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "interactions.byId.delete",
+      "method": "DELETE",
+      "path": "/v1/interactions/:id",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "interactions.byId.get",
+      "method": "GET",
+      "path": "/v1/interactions/:id",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "interactions.byId.cancel",
+      "method": "POST",
+      "path": "/v1/interactions/:id/cancel",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
       "operationId": "gateway.messages.create",
       "method": "POST",
       "path": "/v1/messages",
@@ -12805,6 +12945,76 @@
       "contractVersion": 1
     },
     {
+      "operationId": "models.list",
+      "method": "GET",
+      "path": "/v1/models/*",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": true,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "manual",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "models.create",
+      "method": "POST",
+      "path": "/v1/models/*",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": true,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "manual",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
       "operationId": "gateway.responses.create",
       "method": "POST",
       "path": "/v1/responses",
@@ -12832,6 +13042,250 @@
       },
       "response": {
         "kind": "sse",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "manual",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "v1beta.interactions.create",
+      "method": "POST",
+      "path": "/v1beta/interactions",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1beta",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "v1beta.interactions.byId.delete",
+      "method": "DELETE",
+      "path": "/v1beta/interactions/:id",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1beta",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "v1beta.interactions.byId.get",
+      "method": "GET",
+      "path": "/v1beta/interactions/:id",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1beta",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "v1beta.interactions.byId.cancel",
+      "method": "POST",
+      "path": "/v1beta/interactions/:id/cancel",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1beta",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "v1beta.models.list",
+      "method": "GET",
+      "path": "/v1beta/models",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1beta",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "v1beta.models.list2",
+      "method": "GET",
+      "path": "/v1beta/models/*",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1beta",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": true,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "50mb"
+      },
+      "sdkStatus": "manual",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "v1beta.models.create",
+      "method": "POST",
+      "path": "/v1beta/models/*",
+      "aliases": [],
+      "module": "server/routes/gemini.js",
+      "mount": "/v1beta",
+      "feature": "gateway",
+      "permission": "gateway.gemini",
+      "permissionGroup": "gateway",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "oauth"
+      ],
+      "streaming": false,
+      "dynamic": true,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
         "schemaRef": null,
         "schemaStatus": "untyped"
       },

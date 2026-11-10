@@ -984,11 +984,8 @@
   "# 只需更换 base_url，即可接入所有模型": "# Just swap the base_url to access every model",
   "你的应用": "Your app",
   "更多…": "More…",
-  "兼容所有支持 OpenAI / Anthropic 格式的编程工具": "Works with every coding tool that speaks OpenAI / Anthropic",
   "技术亮点": "Technical highlights",
   "为生产环境设计的每一个细节": "Every detail engineered for production",
-  "双格式兼容 API": "Dual-format compatible API",
-  "完美兼容 OpenAI Chat Completions 和 Messages 格式。只需更换": "Fully compatible with OpenAI Chat Completions and Messages formats. Just switch the",
   "，无需修改任何代码。同时支持 Anthropic 原生格式，满足不同场景。": " — no code changes needed. Native Anthropic format supported too.",
   "团队": "Teams",
   "状态": "Status",
@@ -3452,5 +3449,8 @@
   "调用 POST /v1/chat/completions": "Call POST /v1/chat/completions",
   "调用 POST /v1/messages": "Call POST /v1/messages",
   "调用 POST /v1/responses": "Call POST /v1/responses",
-  "全部权限": "All permissions"
+  "全部权限": "All permissions",
+  "兼容所有支持 OpenAI / Anthropic / Gemini 格式的编程工具": "Works with every coding tool that speaks OpenAI / Anthropic / Gemini",
+  "多协议兼容 API": "Multi-protocol compatible API",
+  "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换": "Fully compatible with OpenAI Chat Completions, Messages and Gemini generateContent formats. Just switch the"
 }

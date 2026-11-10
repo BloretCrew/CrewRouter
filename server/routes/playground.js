@@ -175,6 +175,13 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
     }
 
+    if (['gemini', 'google'].includes(String(provider.format || '').toLowerCase())) {
+      return res.status(400).json({
+        error: 'Playground 暂不支持 Gemini 供应商，请改用 OpenAI / Anthropic / Responses 供应商',
+        code: 'unsupported_provider_format'
+      });
+    }
+
     const keyAttempts = resolvePlaygroundKeyAttempts(provider);
     if (!keyAttempts.length) {
       return res.status(500).json({ error: '供应商 API Key 未配置' });

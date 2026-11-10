@@ -148,6 +148,11 @@ async function callManageModel(model, messages) {
   if (!provider) throw new Error('供应商未配置');
   const attempts = keyAttempts(provider);
   if (!attempts.length) throw new Error('供应商 API Key 未配置');
+  if (['gemini', 'google'].includes(String(provider.format || '').toLowerCase())) {
+    const error = new Error('Agent 暂不支持 Gemini 供应商');
+    error.code = 'unsupported_provider_format';
+    throw error;
+  }
   const format = provider.format === 'anthropic' ? 'anthropic' : 'openai';
   const url = upstreamUrl(provider.base_url, format === 'anthropic' ? '/messages' : '/chat/completions');
   const urlCheck = await validateUrl(url, { allowPrivate: false });

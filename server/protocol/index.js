@@ -4,15 +4,16 @@ const openai = require('./openai-chat');
 const anthropic = require('./anthropic');
 const responses = require('./responses');
 const gemini = require('./gemini');
+const interactions = require('./interactions');
 const capabilities = require('./capabilities');
 
-const codecs = { openai, anthropic, responses, gemini };
+const codecs = { openai, anthropic, responses, gemini, interactions };
 
 const featureCompat = Object.freeze({
-  phase: 2,
-  scope: 'server/providers/transforms',
+  phase: 3,
+  scope: 'server/protocol',
   apiHotPath: false,
-  dialects: Object.freeze({ openai: 'full', anthropic: 'full', responses: 'reject', gemini: 'reject' }),
+  dialects: Object.freeze({ openai: 'full', anthropic: 'full', responses: 'full', gemini: 'full', interactions: 'full' }),
   compatibility: Object.freeze({ getTransform: true, registerTransform: true })
 });
 

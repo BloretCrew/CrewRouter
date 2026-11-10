@@ -6549,6 +6549,78 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": null,
     "bodyLimit": "50mb"
   },
+  "interactions.create": {
+    "operationId": "interactions.create",
+    "method": "POST",
+    "path": "/v1/interactions",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "interactions.byId.delete": {
+    "operationId": "interactions.byId.delete",
+    "method": "DELETE",
+    "path": "/v1/interactions/:id",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "interactions.byId.get": {
+    "operationId": "interactions.byId.get",
+    "method": "GET",
+    "path": "/v1/interactions/:id",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "interactions.byId.cancel": {
+    "operationId": "interactions.byId.cancel",
+    "method": "POST",
+    "path": "/v1/interactions/:id/cancel",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
   "gateway.messages.create": {
     "operationId": "gateway.messages.create",
     "method": "POST",
@@ -6589,6 +6661,42 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": null,
     "bodyLimit": "50mb"
   },
+  "models.list": {
+    "operationId": "models.list",
+    "method": "GET",
+    "path": "/v1/models/*",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": true,
+    "sdkStatus": "manual",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "models.create": {
+    "operationId": "models.create",
+    "method": "POST",
+    "path": "/v1/models/*",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": true,
+    "sdkStatus": "manual",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
   "gateway.responses.create": {
     "operationId": "gateway.responses.create",
     "method": "POST",
@@ -6605,6 +6713,132 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     ],
     "streaming": true,
     "dynamic": false,
+    "sdkStatus": "manual",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "v1beta.interactions.create": {
+    "operationId": "v1beta.interactions.create",
+    "method": "POST",
+    "path": "/v1beta/interactions",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "v1beta.interactions.byId.delete": {
+    "operationId": "v1beta.interactions.byId.delete",
+    "method": "DELETE",
+    "path": "/v1beta/interactions/:id",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "v1beta.interactions.byId.get": {
+    "operationId": "v1beta.interactions.byId.get",
+    "method": "GET",
+    "path": "/v1beta/interactions/:id",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "v1beta.interactions.byId.cancel": {
+    "operationId": "v1beta.interactions.byId.cancel",
+    "method": "POST",
+    "path": "/v1beta/interactions/:id/cancel",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "v1beta.models.list": {
+    "operationId": "v1beta.models.list",
+    "method": "GET",
+    "path": "/v1beta/models",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "v1beta.models.list2": {
+    "operationId": "v1beta.models.list2",
+    "method": "GET",
+    "path": "/v1beta/models/*",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": true,
+    "sdkStatus": "manual",
+    "exclusion": null,
+    "bodyLimit": "50mb"
+  },
+  "v1beta.models.create": {
+    "operationId": "v1beta.models.create",
+    "method": "POST",
+    "path": "/v1beta/models/*",
+    "aliases": [],
+    "permission": "gateway.gemini",
+    "permissionGroup": "gateway",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "oauth"
+    ],
+    "streaming": false,
+    "dynamic": true,
     "sdkStatus": "manual",
     "exclusion": null,
     "bodyLimit": "50mb"

@@ -132,8 +132,10 @@ test('Gemini codec maps contents, tools, response and stream chunks', () => {
 });
 
 test('phase one feature compatibility excludes the api hot path', () => {
-  assert.equal(protocol.featureCompat.scope, 'server/providers/transforms');
+  assert.equal(protocol.featureCompat.scope, 'server/protocol');
   assert.equal(protocol.featureCompat.apiHotPath, false);
+  assert.equal(protocol.featureCompat.dialects.gemini, 'full');
+  assert.equal(protocol.featureCompat.dialects.interactions, 'full');
   assert.equal(protocol.featureCompat.compatibility.getTransform, true);
   assert.equal(protocol.featureCompat.compatibility.registerTransform, true);
 });

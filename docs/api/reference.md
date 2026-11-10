@@ -280,9 +280,22 @@
 | `models.list.alias` | GET | `/api/models` | `gateway.models` | api_key, oauth | no |
 | `responses.create.alias` | POST | `/api/responses` | `gateway.responses` | api_key, oauth | no |
 | `gateway.chat.completions.create` | POST | `/v1/chat/completions` | `gateway.chat` | api_key, oauth | yes |
+| `interactions.create` | POST | `/v1/interactions` | `gateway.gemini` | api_key, oauth | no |
+| `interactions.byId.delete` | DELETE | `/v1/interactions/:id` | `gateway.gemini` | api_key, oauth | no |
+| `interactions.byId.get` | GET | `/v1/interactions/:id` | `gateway.gemini` | api_key, oauth | no |
+| `interactions.byId.cancel` | POST | `/v1/interactions/:id/cancel` | `gateway.gemini` | api_key, oauth | no |
 | `gateway.messages.create` | POST | `/v1/messages` | `gateway.messages` | api_key, oauth | yes |
 | `gateway.models.list` | GET | `/v1/models` | `gateway.models` | api_key, oauth | no |
+| `models.list` | GET | `/v1/models/*` | `gateway.gemini` | api_key, oauth | no |
+| `models.create` | POST | `/v1/models/*` | `gateway.gemini` | api_key, oauth | no |
 | `gateway.responses.create` | POST | `/v1/responses` | `gateway.responses` | api_key, oauth | yes |
+| `v1beta.interactions.create` | POST | `/v1beta/interactions` | `gateway.gemini` | api_key, oauth | no |
+| `v1beta.interactions.byId.delete` | DELETE | `/v1beta/interactions/:id` | `gateway.gemini` | api_key, oauth | no |
+| `v1beta.interactions.byId.get` | GET | `/v1beta/interactions/:id` | `gateway.gemini` | api_key, oauth | no |
+| `v1beta.interactions.byId.cancel` | POST | `/v1beta/interactions/:id/cancel` | `gateway.gemini` | api_key, oauth | no |
+| `v1beta.models.list` | GET | `/v1beta/models` | `gateway.gemini` | api_key, oauth | no |
+| `v1beta.models.list2` | GET | `/v1beta/models/*` | `gateway.gemini` | api_key, oauth | no |
+| `v1beta.models.create` | POST | `/v1beta/models/*` | `gateway.gemini` | api_key, oauth | no |
 
 ## keys
 

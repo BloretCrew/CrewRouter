@@ -3,7 +3,7 @@
   "info": {
     "title": "CrewRouter API",
     "version": "0.1.0",
-    "description": "OpenAI/Anthropic-compatible model gateway plus management API."
+    "description": "OpenAI/Anthropic/Gemini-compatible model gateway plus management API."
   },
   "servers": [
     {
@@ -15431,6 +15431,193 @@
         }
       }
     },
+    "/v1/interactions": {
+      "post": {
+        "operationId": "interactions.create",
+        "summary": "POST /v1/interactions",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/interactions/{id}": {
+      "delete": {
+        "operationId": "interactions.byId.delete",
+        "summary": "DELETE /v1/interactions/:id",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb"
+      },
+      "get": {
+        "operationId": "interactions.byId.get",
+        "summary": "GET /v1/interactions/:id",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb"
+      }
+    },
+    "/v1/interactions/{id}/cancel": {
+      "post": {
+        "operationId": "interactions.byId.cancel",
+        "summary": "POST /v1/interactions/:id/cancel",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/messages": {
       "post": {
         "operationId": "gateway.messages.create",
@@ -15517,6 +15704,85 @@
         ]
       }
     },
+    "/v1/models/*": {
+      "get": {
+        "operationId": "models.list",
+        "summary": "GET /v1/models/*",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb"
+      },
+      "post": {
+        "operationId": "models.create",
+        "summary": "POST /v1/models/*",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/responses": {
       "post": {
         "operationId": "gateway.responses.create",
@@ -15552,6 +15818,307 @@
         "x-crewrouter-aliases": [
           "/api/responses"
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1beta/interactions": {
+      "post": {
+        "operationId": "v1beta.interactions.create",
+        "summary": "POST /v1beta/interactions",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1beta/interactions/{id}": {
+      "delete": {
+        "operationId": "v1beta.interactions.byId.delete",
+        "summary": "DELETE /v1beta/interactions/:id",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb"
+      },
+      "get": {
+        "operationId": "v1beta.interactions.byId.get",
+        "summary": "GET /v1beta/interactions/:id",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb"
+      }
+    },
+    "/v1beta/interactions/{id}/cancel": {
+      "post": {
+        "operationId": "v1beta.interactions.byId.cancel",
+        "summary": "POST /v1beta/interactions/:id/cancel",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1beta/models": {
+      "get": {
+        "operationId": "v1beta.models.list",
+        "summary": "GET /v1beta/models",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb"
+      }
+    },
+    "/v1beta/models/*": {
+      "get": {
+        "operationId": "v1beta.models.list2",
+        "summary": "GET /v1beta/models/*",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb"
+      },
+      "post": {
+        "operationId": "v1beta.models.create",
+        "summary": "POST /v1beta/models/*",
+        "tags": [
+          "gateway"
+        ],
+        "security": [
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "gateway.gemini",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "oauth"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "50mb",
         "requestBody": {
           "required": false,
           "content": {

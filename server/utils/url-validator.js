@@ -254,6 +254,8 @@ function cleanBaseUrl(base) {
     .replace(/\/v1\/chat\/completions\/*$/i, '')
     .replace(/\/v1\/messages\/*$/i, '')
     .replace(/\/v1\/responses\/*$/i, '')
+    .replace(/\/v1beta\/models\/[^/]+:(?:generateContent|streamGenerateContent|countTokens)\/*$/i, '')
+    .replace(/\/v1\/models\/[^/]+:(?:generateContent|streamGenerateContent|countTokens)\/*$/i, '')
     .replace(/\/chat\/completions\/*$/i, '')
     .replace(/\/messages\/*$/i, '')
     .replace(/\/responses\/*$/i, '');

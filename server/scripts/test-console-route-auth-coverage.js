@@ -30,6 +30,7 @@ const MOUNTS = {
   'popup-notices.js': ['/api/user'],
   'plugin-pref-optin.js': ['/api/user'],
   'api.js': ['/api', '/v1'],
+  'gemini.js': ['/v1beta', '/v1'],
   'client-events.js': ['/api/client-events'],
   'conversations.js': ['/api/conversations'],
   'playground.js': ['/api/playground'],

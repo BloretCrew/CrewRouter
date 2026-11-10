@@ -1,8 +1,8 @@
 # CrewRouter SDK
 
-CrewRouter is an OpenAI/Anthropic-compatible AI model gateway with a management
-API for keys, models, providers, usage and billing. The SDKs give applications a
-consistent way to call both surfaces.
+CrewRouter is an OpenAI/Anthropic/Gemini-compatible AI model gateway with a
+management API for keys, models, providers, usage and billing. The SDKs give
+applications a consistent way to call both surfaces.
 
 ## Two forms
 

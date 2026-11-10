@@ -9,6 +9,7 @@ const BODY_LIMIT = 50 * 1024 * 1024;
 function isGatewayRequest(req) {
   const path = req.path || '';
   return path.startsWith('/v1/')
+    || path.startsWith('/v1beta/')
     || /^\/api\/(chat|messages|responses|models)(\/|$)/.test(path)
     // Playground requests and saved conversation messages can carry image data.
     || path === '/api/playground/chat'
@@ -92,6 +93,10 @@ function gatewayBodyError(err, req, res, next) {
   };
   const error = errors[err.type];
   if (!error) return next(err);
+  if (String(req.path || '').startsWith('/v1beta/')) {
+    const { googleErrorBody } = require('../utils/google-error');
+    return res.status(error[0]).json(googleErrorBody(error[0], error[2], { reason: error[1].toUpperCase() }));
+  }
   return res.status(error[0]).json({ error: { message: error[2], type: 'invalid_request_error', code: error[1] } });
 }
 

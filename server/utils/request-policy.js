@@ -12,7 +12,8 @@ const ERROR_CATEGORIES = Object.freeze({
 });
 
 function normalizeFormat(format) {
-  return String(format || 'openai').trim().toLowerCase() || 'openai';
+  const value = String(format || 'openai').trim().toLowerCase() || 'openai';
+  return value === 'google' ? 'gemini' : value;
 }
 
 /** Return only headers required for provider authentication. */

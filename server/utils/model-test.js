@@ -15,9 +15,13 @@ function normalizeTestUserAgent(value) {
   return String(value).replace(/[\r\n\0]/g, ' ').trim().slice(0, 500);
 }
 
-function buildTestUrl(baseUrl, format) {
+function buildTestUrl(baseUrl, format, upstreamModel) {
   if (format === 'anthropic') return upstreamUrl(baseUrl, '/messages');
   if (format === 'responses') return upstreamUrl(baseUrl, '/responses');
+  if (format === 'gemini') {
+    const modelPath = String(upstreamModel || '').split('/').map(encodeURIComponent).join('/');
+    return upstreamUrl(baseUrl, `/models/${modelPath}:generateContent`, '/v1beta');
+  }
   return upstreamUrl(baseUrl, '/chat/completions');
 }
 
@@ -37,6 +41,12 @@ function buildTestBody(upstreamModel, format) {
       // 部分上游（如 opencode Console Go）要求 max_output_tokens 不小于 16，取 64 作安全的小测试值
       max_output_tokens: 64,
       stream: false
+    };
+  }
+  if (format === 'gemini') {
+    return {
+      contents: [{ role: 'user', parts: [{ text: 'Hi' }] }],
+      generationConfig: { maxOutputTokens: 16 }
     };
   }
   return {
@@ -67,6 +77,15 @@ function extractTestUsage(data, format) {
       hasUsage: !!data?.usage
     };
   }
+  if (format === 'gemini') {
+    const gemini = data?.usageMetadata || {};
+    return {
+      promptTokens: gemini.promptTokenCount || 0,
+      completionTokens: (gemini.candidatesTokenCount || 0) + (gemini.thoughtsTokenCount || 0),
+      cachedTokens: gemini.cachedContentTokenCount || 0,
+      hasUsage: !!data?.usageMetadata
+    };
+  }
   return {
     promptTokens: usage.prompt_tokens || 0,
     completionTokens: usage.completion_tokens || 0,
@@ -85,6 +104,10 @@ function extractTestContent(data, format) {
     const items = Array.isArray(data?.output) ? data.output : [];
     return items.flatMap(item => Array.isArray(item?.content) ? item.content : [])
       .map(part => part?.text || '').join('');
+  }
+  if (format === 'gemini') {
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    return parts.filter(part => !part.thought).map(part => part.text || '').join('');
   }
   return data?.choices?.[0]?.message?.content || '';
 }
@@ -219,9 +242,10 @@ async function testModel(modelId, userId) {
   }
 
   const testUserAgent = normalizeTestUserAgent(model.test_user_agent);
-  const format = String(model.format || 'openai').toLowerCase();
+  const rawFormat = String(model.format || 'openai').toLowerCase();
+  const format = rawFormat === 'google' ? 'gemini' : rawFormat;
   const upstreamModel = model.upstream_model_id || model.name || model.id;
-  const url = baseUrl ? buildTestUrl(baseUrl, format) : '';
+  const url = baseUrl ? buildTestUrl(baseUrl, format, upstreamModel) : '';
   Logger.info(`[模型测试] modelId=${modelId} name=${model.name} upstream=${upstreamModel} provider=${model.provider_name}(${model.provider_id}) format=${format} url=${url} ua=${testUserAgent ? 'custom' : 'default'} userId=${userId}`);
 
   if (!baseUrl) {
@@ -261,6 +285,9 @@ async function testModel(modelId, userId) {
     if (format === 'anthropic') {
       headers['x-api-key'] = keys[ki];
       headers['anthropic-version'] = '2023-06-01';
+    } else if (format === 'gemini') {
+      delete headers.Authorization;
+      headers['x-goog-api-key'] = keys[ki];
     }
     if (testUserAgent) headers['User-Agent'] = testUserAgent;
     if (isOpenCodeZenUrl(url)) applyOpenCodeTestHeaders(headers, testUserAgent);

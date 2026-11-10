@@ -81,6 +81,49 @@
               "path": "/api/models"
             }
           ]
+        },
+        {
+          "id": "gateway.gemini",
+          "name": "Gemini / Interactions",
+          "description": "调用 Gemini generateContent、streamGenerateContent、countTokens、models 与 Interactions API",
+          "routes": [
+            {
+              "methods": [
+                "GET",
+                "POST"
+              ],
+              "path": "/v1beta/models/*"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/v1beta/models"
+            },
+            {
+              "methods": [
+                "GET",
+                "POST"
+              ],
+              "path": "/v1/models/*"
+            },
+            {
+              "methods": [
+                "GET",
+                "POST",
+                "DELETE"
+              ],
+              "path": "/v1beta/interactions*"
+            },
+            {
+              "methods": [
+                "GET",
+                "POST",
+                "DELETE"
+              ],
+              "path": "/v1/interactions*"
+            }
+          ]
         }
       ]
     },

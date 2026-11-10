@@ -985,11 +985,8 @@
   "# 只需更换 base_url，即可接入所有模型": "# 只需更换 base_url，即可接入所有模型",
   "你的应用": "你的应用",
   "更多…": "更多…",
-  "兼容所有支持 OpenAI / Anthropic 格式的编程工具": "兼容所有支持 OpenAI / Anthropic 格式的编程工具",
   "技术亮点": "技术亮点",
   "为生产环境设计的每一个细节": "为生产环境设计的每一个细节",
-  "双格式兼容 API": "双格式兼容 API",
-  "完美兼容 OpenAI Chat Completions 和 Messages 格式。只需更换": "完美兼容 OpenAI Chat Completions 和 Messages 格式。只需更换",
   "，无需修改任何代码。同时支持 Anthropic 原生格式，满足不同场景。": "，无需修改任何代码。同时支持 Anthropic 原生格式，满足不同场景。",
   "团队": "团队",
   "状态": "状态",
@@ -3253,5 +3250,8 @@
   "通知列表": "通知列表",
   "第 {n} 条通知": "第 {n} 条通知",
   "{current} / {total}": "{current} / {total}",
-  "加载弹窗通知失败:": "加载弹窗通知失败:"
+  "加载弹窗通知失败:": "加载弹窗通知失败:",
+  "兼容所有支持 OpenAI / Anthropic / Gemini 格式的编程工具": "兼容所有支持 OpenAI / Anthropic / Gemini 格式的编程工具",
+  "多协议兼容 API": "多协议兼容 API",
+  "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换": "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换"
 }

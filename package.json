@@ -92,7 +92,9 @@
     "sdk:check": "node sdk/codegen/generate.mjs --check",
     "sdk:conformance": "node sdk/conformance/run.mjs --all",
     "test:embedded-sdk": "node --test server/scripts/test-embedded-sdk.js server/scripts/test-embedded-sdk-options.js server/scripts/test-embedded-sdk-features.js server/scripts/test-embedded-sdk-console.js",
-    "docs:check": "node scripts/check-doc-links.mjs"
+    "docs:check": "node scripts/check-doc-links.mjs",
+    "test:protocol": "node --test server/protocol/test/*.test.js",
+    "test:gemini": "node server/scripts/test-gemini-bridge-routes.js"
   },
   "dependencies": {
     "@bloret-crew/blora-design": "2.1.0",

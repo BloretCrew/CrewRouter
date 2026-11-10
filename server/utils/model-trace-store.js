@@ -53,7 +53,7 @@ function createStore({ pool, getKeys, quotaBuffer = () => [] }) {
         AND COALESCE(p.key_mode, 'fixed') = 'fixed'
         AND ($2::text IS NULL OR m.id = $2)
       ORDER BY m.name`, [userId, modelId]);
-    return result.rows.filter(row => ['openai', 'anthropic', 'responses'].includes(row.format || 'openai'));
+    return result.rows.filter(row => ['openai', 'anthropic', 'responses', 'gemini'].includes(row.format || 'openai'));
   }
 
   async function resolve(userId, modelId, selectedKey, db = pool) {

@@ -20,8 +20,9 @@ const SESSION_ONLY = [
 // Existing oauthBearer endpoints validate raw API keys themselves, including
 // gateway-specific quotas/model policy. Avoid resolving the same key twice.
 const GATEWAY_OR_EVENTS = [
-  /^\/v1\/(?:chat\/completions|models|messages|responses)(?:\/|$)/,
+  /^\/v1\/(?:chat\/completions|models|messages|responses|interactions)(?:\/|$)/,
   /^\/api\/(?:chat\/completions|models|messages|responses)(?:\/|$)/,
+  /^\/v1beta\/(?:models|interactions)(?:\/|$)/,
   /^\/api\/client-events(?:\/|$)/,
 ];
 

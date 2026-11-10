@@ -7,12 +7,14 @@
 // 导入适配器
 const OpenAIAdapter = require('./openai');
 const AnthropicAdapter = require('./anthropic');
+const GeminiAdapter = require('./gemini');
 const BaseProviderAdapter = require('./base');
 
 // 适配器注册表
 const adapters = {
   'openai': OpenAIAdapter,
-  'anthropic': AnthropicAdapter
+  'anthropic': AnthropicAdapter,
+  'gemini': GeminiAdapter
 };
 
 /**
@@ -21,7 +23,8 @@ const adapters = {
  * @returns {BaseProviderAdapter} 适配器实例
  */
 function createAdapter(provider) {
-  const format = provider.format || 'openai';
+  const rawFormat = provider.format || 'openai';
+  const format = rawFormat === 'google' ? 'gemini' : rawFormat;
   const AdapterClass = adapters[format] || OpenAIAdapter;
   return new AdapterClass(provider);
 }
@@ -71,6 +74,16 @@ function hasAdapter(format) {
 function getClientFormat(req) {
   const path = req.path;
 
+  // Gemini Interactions API
+  if (path.includes('/interactions')) {
+    return 'interactions';
+  }
+
+  // Gemini generateContent / streamGenerateContent / countTokens
+  if (path.includes('/models/') && path.includes(':')) {
+    return 'gemini';
+  }
+
   // Anthropic Messages API
   if (path.includes('/messages')) {
     return 'anthropic';
@@ -99,6 +112,7 @@ module.exports = {
   // 适配器类
   OpenAIAdapter,
   AnthropicAdapter,
+  GeminiAdapter,
   BaseProviderAdapter,
   // 转换模块
   transforms

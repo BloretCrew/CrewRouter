@@ -3613,7 +3613,7 @@ class AdminApp {
     const items = (Array.isArray(extras) ? extras : [])
       .map((e, i) => ({
         url: String(e?.url || '').trim(),
-        format: ['openai', 'anthropic', 'responses'].includes(e?.format) ? e.format : 'openai',
+        format: ['openai', 'anthropic', 'responses', 'gemini'].includes(e?.format) ? e.format : 'openai',
         enabled: e?.enabled !== false,
         label: String(e?.label || '').trim() || this._defaultEndpointLabel(i),
       }));
@@ -3643,7 +3643,7 @@ class AdminApp {
     const multi = items.length > 1;
     const primaryUrl = document.getElementById('providerBaseUrl')?.value.trim() || t('未填写 Base URL');
     const primaryFormat = document.getElementById('providerFormat')?.value || 'openai';
-    const formatOptions = (selected) => ['openai', 'anthropic', 'responses'].map(f =>
+    const formatOptions = (selected) => ['openai', 'anthropic', 'responses', 'gemini'].map(f =>
       `<option value="${f}"${f === selected ? ' selected' : ''}>${f}</option>`).join('');
 
     const primaryRow = `
@@ -8839,7 +8839,9 @@ async function(ctx) {
       fusion: { label: 'Fusion', color: 'var(--warning)' },
       playground: { label: 'Playground', color: 'var(--success)' },
       imagine: { label: 'Imagine', color: 'var(--chart-2)' },
-      agent_manage: { label: 'Agent Manage', color: 'var(--purple)' }
+      agent_manage: { label: 'Agent Manage', color: 'var(--purple)' },
+      gemini: { label: 'Gemini', color: 'var(--chart-2)' },
+      interactions: { label: 'Interactions', color: 'var(--purple)' }
     };
     return map[t] || (t ? { label: type, color: 'var(--muted-foreground)' } : { label: '-', color: 'var(--muted-foreground)' });
   }

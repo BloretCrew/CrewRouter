@@ -9,11 +9,20 @@ function requestSpec(target, prompt, key) {
   const headers = { 'Content-Type': 'application/json' };
   let path;
   let body;
+  let version;
   if (format === 'anthropic') {
     path = '/messages';
     headers['x-api-key'] = key;
     headers['anthropic-version'] = '2023-06-01';
     body = { model: target.upstream_model_id, messages: [{ role: 'user', content: prompt }], max_tokens: target.max_output_tokens, stream: false };
+  } else if (format === 'gemini') {
+    headers['x-goog-api-key'] = key;
+    path = `/models/${String(target.upstream_model_id || '').split('/').map(encodeURIComponent).join('/')}:generateContent`;
+    version = '/v1beta';
+    body = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: target.max_output_tokens }
+    };
   } else {
     headers.Authorization = `Bearer ${key}`;
     path = format === 'responses' ? '/responses' : '/chat/completions';
@@ -21,7 +30,7 @@ function requestSpec(target, prompt, key) {
       ? { model: target.upstream_model_id, input: prompt, max_output_tokens: target.max_output_tokens, stream: false }
       : { model: target.upstream_model_id, messages: [{ role: 'user', content: prompt }], max_tokens: target.max_output_tokens, stream: false };
   }
-  return { path, headers, body };
+  return { path, headers, body, version };
 }
 
 function responseModel(value, secrets = []) {
@@ -36,18 +45,36 @@ function responseModel(value, secrets = []) {
 function parseResponse(data, format, secrets = []) {
   const text = format === 'anthropic' ? (data.content || []).map(item => item.text || '').join('')
     : format === 'responses' ? (data.output_text || (data.output || []).flatMap(item => item.content || []).map(item => item.text || '').join(''))
-      : data.choices?.[0]?.message?.content;
+      : format === 'gemini' ? (data.candidates?.[0]?.content?.parts || []).filter(part => !part.thought).map(part => part.text || '').join('')
+        : data.choices?.[0]?.message?.content;
   let usage = null;
-  if (data.usage && typeof data.usage === 'object') {
-    const input = data.usage.prompt_tokens ?? data.usage.input_tokens;
-    const output = data.usage.completion_tokens ?? data.usage.output_tokens;
-    if ([input, output].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 10000000)) {
-      const raw = format === 'responses'
-        ? { ...data.usage, cached_tokens: data.usage.input_tokens_details?.cached_tokens ?? data.usage.cached_tokens }
-        : data.usage;
-      const normalized = normalizeUsageTokens(raw, format);
-      if ([normalized.promptTokens, normalized.completionTokens, normalized.cachedTokens].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 10000000)) {
-        usage = normalized;
+  const usageSource = format === 'gemini' ? data.usageMetadata : data.usage;
+  if (usageSource && typeof usageSource === 'object') {
+    if (format === 'gemini') {
+      const input = usageSource.promptTokenCount;
+      const output = (usageSource.candidatesTokenCount || 0) + (usageSource.thoughtsTokenCount || 0);
+      if ([input, output].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 10000000)) {
+        const normalized = normalizeUsageTokens({
+          promptTokenCount: input,
+          candidatesTokenCount: usageSource.candidatesTokenCount || 0,
+          thoughtsTokenCount: usageSource.thoughtsTokenCount || 0,
+          cachedContentTokenCount: usageSource.cachedContentTokenCount || 0
+        }, 'gemini');
+        if ([normalized.promptTokens, normalized.completionTokens, normalized.cachedTokens].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 10000000)) {
+          usage = normalized;
+        }
+      }
+    } else {
+      const input = usageSource.prompt_tokens ?? usageSource.input_tokens;
+      const output = usageSource.completion_tokens ?? usageSource.output_tokens;
+      if ([input, output].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 10000000)) {
+        const raw = format === 'responses'
+          ? { ...usageSource, cached_tokens: usageSource.input_tokens_details?.cached_tokens ?? usageSource.cached_tokens }
+          : usageSource;
+        const normalized = normalizeUsageTokens(raw, format);
+        if ([normalized.promptTokens, normalized.completionTokens, normalized.cachedTokens].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 10000000)) {
+          usage = normalized;
+        }
       }
     }
   }
@@ -59,12 +86,18 @@ function parseResponse(data, format, secrets = []) {
     if (data.status === 'incomplete' || data.incomplete_details || (data.output || []).some(item => item.status === 'incomplete')) error = '上游回答未完整生成';
     if ((data.output || []).some(item => item.type === 'refusal' || (item.content || []).some(part => part.type === 'refusal' || part.refusal))) error = '上游拒绝回答';
     if (data.status === 'failed' || data.error) error = '上游生成失败';
+  } else if (format === 'gemini') {
+    const reason = data.candidates?.[0]?.finishReason;
+    if (reason === 'MAX_TOKENS') error = '上游回答因输出 Token 上限截断';
+    if (['SAFETY', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'RECITATION', 'LANGUAGE'].includes(reason)) error = '上游回答被安全策略拦截';
+    if (['MALFORMED_FUNCTION_CALL', 'MALFORMED_RESPONSE'].includes(reason)) error = '上游生成失败';
   } else {
     const choice = data.choices?.[0];
     if (choice?.finish_reason === 'length') error = '上游回答因输出 Token 上限截断';
     if (choice?.finish_reason === 'content_filter' || choice?.message?.refusal) error = '上游拒绝回答或内容被过滤';
   }
-  return { text: typeof text === 'string' ? text : '', usage, error, response_model: responseModel(data.model, secrets) };
+  const responseModelValue = format === 'gemini' ? data.modelVersion : data.model;
+  return { text: typeof text === 'string' ? text : '', usage, error, response_model: responseModel(data.model, secrets) || responseModel(responseModelValue, secrets) };
 }
 
 async function transport({ target, model, key, prompt, signal, beforeSend }) {
@@ -72,7 +105,7 @@ async function transport({ target, model, key, prompt, signal, beforeSend }) {
   const spec = requestSpec(target, prompt, key);
   const userAgent = String(model.test_user_agent || '').replace(/[\r\n\0]/g, ' ').trim().slice(0, 500);
   if (userAgent) spec.headers['User-Agent'] = userAgent;
-  const url = upstreamUrl(model.base_url, spec.path);
+  const url = upstreamUrl(model.base_url, spec.path, spec.version || '/v1');
   const checked = await validateUrl(url, { allowPrivate: false });
   if (!checked.ok) throw new Error('供应商 URL 未通过安全校验');
   const proxy = await proxyPool.getProxyAgent(model);

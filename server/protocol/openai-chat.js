@@ -2,7 +2,7 @@
 
 const { omitKnown, withPassthrough, safeParseJson } = require('./helpers');
 
-const REQUEST_KEYS = new Set(['model', 'messages', 'max_tokens', 'max_completion_tokens', 'temperature', 'top_p', 'stop', 'stream', 'stream_options', 'tools', 'tool_choice', 'reasoning_effort']);
+const REQUEST_KEYS = new Set(['model', 'messages', 'max_tokens', 'max_completion_tokens', 'temperature', 'top_p', 'top_k', 'stop', 'stream', 'stream_options', 'tools', 'tool_choice', 'reasoning_effort', 'n', 'seed', 'frequency_penalty', 'presence_penalty', 'response_format']);
 const MESSAGE_KEYS = new Set(['role', 'content', 'name', 'tool_call_id', 'tool_calls', 'reasoning_content']);
 const RESPONSE_KEYS = new Set(['id', 'object', 'created', 'model', 'choices', 'usage', 'system_fingerprint', 'service_tier']);
 const CHUNK_KEYS = new Set(['id', 'object', 'created', 'model', 'choices', 'usage', 'system_fingerprint', 'service_tier']);
@@ -13,6 +13,25 @@ function decodeContent(content) {
   return content.map(part => {
     if (part?.type === 'text') return { type: 'text', text: part.text || '', cacheControl: part.cache_control, passthrough: { openai: omitKnown(part, new Set(['type', 'text', 'cache_control'])) } };
     if (part?.type === 'image_url') return { type: 'image', source: part.image_url, cacheControl: part.cache_control, passthrough: { openai: omitKnown(part, new Set(['type', 'image_url', 'cache_control'])) } };
+    if (part?.type === 'input_audio') {
+      const format = part.input_audio?.format || 'wav';
+      return {
+        type: 'media', mediaType: 'audio',
+        mimeType: `audio/${format === 'mp3' ? 'mpeg' : format}`,
+        data: part.input_audio?.data || '',
+        passthrough: { openai: omitKnown(part, new Set(['type', 'input_audio'])) }
+      };
+    }
+    if (part?.type === 'file') {
+      return {
+        type: 'media', mediaType: 'document',
+        mimeType: part.file?.mime_type || part.file?.mimeType || 'application/octet-stream',
+        fileId: part.file?.file_id || part.file?.fileId,
+        fileData: part.file?.file_data || part.file?.fileData,
+        filename: part.file?.filename,
+        passthrough: { openai: omitKnown(part, new Set(['type', 'file'])) }
+      };
+    }
     return { type: 'raw', value: part };
   });
 }
@@ -22,6 +41,26 @@ function encodeContent(blocks, dialect) {
   for (const block of blocks || []) {
     if (block.type === 'text') content.push(withPassthrough({ type: 'text', text: block.text || '', ...(block.cacheControl !== undefined ? { cache_control: block.cacheControl } : {}) }, block.passthrough?.[dialect]));
     else if (block.type === 'image') content.push(withPassthrough({ type: 'image_url', image_url: block.source, ...(block.cacheControl !== undefined ? { cache_control: block.cacheControl } : {}) }, block.passthrough?.[dialect]));
+    else if (block.type === 'media') {
+      if (block.mediaType === 'image') {
+        const url = block.fileUri || block.url || (block.data ? `data:${block.mimeType || 'image/png'};base64,${block.data}` : '');
+        if (url) content.push({ type: 'image_url', image_url: { url }, ...(block.passthrough?.openai || {}) });
+      } else if (block.mediaType === 'audio' && block.data) {
+        const format = /mpeg|mp3/i.test(block.mimeType || '') ? 'mp3' : String(block.mimeType || 'audio/wav').split('/').pop();
+        content.push({ type: 'input_audio', input_audio: { data: block.data, format }, ...(block.passthrough?.openai || {}) });
+      } else if (block.mediaType === 'document' && (block.fileId || block.fileData)) {
+        content.push({
+          type: 'file',
+          file: {
+            ...(block.fileId ? { file_id: block.fileId } : {}),
+            ...(block.fileData ? { file_data: block.fileData } : {}),
+            ...(block.filename ? { filename: block.filename } : {}),
+            ...(block.mimeType ? { mime_type: block.mimeType } : {})
+          },
+          ...(block.passthrough?.openai || {})
+        });
+      }
+    }
     else if (block.type === 'raw' && block.value !== undefined) content.push(block.value);
   }
   if (content.length === 0) return null;
@@ -36,16 +75,17 @@ function decodeMessage(message) {
     blocks.push({
       type: 'tool_call',
       id: call.id,
+      index: call.index,
       name: call.function?.name || '',
       input: safeParseJson(call.function?.arguments, {}),
       argumentsText: call.function?.arguments || '',
-      passthrough: { openai: omitKnown(call, new Set(['id', 'type', 'function'])) }
+      passthrough: { openai: omitKnown(call, new Set(['id', 'type', 'function', 'index'])) }
     });
   }
   if (message.role === 'tool') {
     return {
       role: 'tool',
-      blocks: [{ type: 'tool_result', toolCallId: message.tool_call_id, content: blocks }],
+      blocks: [{ type: 'tool_result', toolCallId: message.tool_call_id, name: message.name, content: blocks }],
       passthrough: { openai: omitKnown(message, MESSAGE_KEYS) }
     };
   }
@@ -56,7 +96,7 @@ function encodeMessage(message) {
   const extra = message.passthrough?.openai;
   if (message.role === 'tool' || message.blocks?.some(block => block.type === 'tool_result')) {
     const result = message.blocks.find(block => block.type === 'tool_result');
-    return withPassthrough({ role: 'tool', tool_call_id: result?.toolCallId, content: encodeContent(result?.content || [], 'openai') || '' }, extra);
+    return withPassthrough({ role: 'tool', tool_call_id: result?.toolCallId, ...(result?.name ? { name: result.name } : {}), content: encodeContent(result?.content || [], 'openai') || '' }, extra);
   }
   const toolCalls = [];
   const contentBlocks = [];
@@ -100,8 +140,10 @@ function decodeRequest(body) {
     parameters: {
       maxTokens: body.max_completion_tokens ?? body.max_tokens,
       maxTokensField: body.max_completion_tokens !== undefined ? 'max_completion_tokens' : 'max_tokens',
-      temperature: body.temperature, topP: body.top_p, stop: body.stop, stream: body.stream,
-      streamUsage: body.stream_options?.include_usage, reasoningEffort: body.reasoning_effort
+      temperature: body.temperature, topP: body.top_p, topK: body.top_k, stop: body.stop, stream: body.stream,
+      streamUsage: body.stream_options?.include_usage, reasoningEffort: body.reasoning_effort,
+      n: body.n, seed: body.seed, frequencyPenalty: body.frequency_penalty, presencePenalty: body.presence_penalty,
+      responseFormat: body.response_format, responseMimeType: body.response_format ? 'application/json' : undefined
     },
     passthrough: { openai: omitKnown(body, REQUEST_KEYS) }
   };
@@ -130,13 +172,27 @@ function encodeMessages(message) {
 function encodeRequest(ir) {
   const body = { model: ir.model, messages: (ir.messages || []).flatMap(encodeMessages) };
   const p = ir.parameters || {};
-  if (p.maxTokens !== undefined) body[p.maxTokensField === 'max_tokens' ? 'max_tokens' : 'max_completion_tokens'] = p.maxTokens;
+  if (p.maxTokens !== undefined) body[p.maxTokensField === 'max_completion_tokens' ? 'max_completion_tokens' : 'max_tokens'] = p.maxTokens;
   if (p.temperature !== undefined) body.temperature = p.temperature;
   if (p.topP !== undefined) body.top_p = p.topP;
   if (p.stop !== undefined) body.stop = p.stop;
   if (p.stream !== undefined) body.stream = p.stream;
   if (p.streamUsage !== undefined) body.stream_options = { include_usage: p.streamUsage };
   if (p.reasoningEffort !== undefined) body.reasoning_effort = p.reasoningEffort;
+  if (p.n !== undefined) body.n = p.n;
+  if (p.seed !== undefined) body.seed = p.seed;
+  if (p.frequencyPenalty !== undefined) body.frequency_penalty = p.frequencyPenalty;
+  if (p.presencePenalty !== undefined) body.presence_penalty = p.presencePenalty;
+  if (p.responseFormat !== undefined) {
+    body.response_format = p.responseFormat;
+  } else if (p.responseSchema) {
+    body.response_format = {
+      type: 'json_schema',
+      json_schema: { name: 'response', schema: p.responseSchema }
+    };
+  } else if (p.responseMimeType === 'application/json') {
+    body.response_format = { type: 'json_object' };
+  }
   if (ir.tools?.length) body.tools = ir.tools.map(encodeTool);
   if (ir.toolChoice !== undefined) body.tool_choice = ir.toolChoice;
   return withPassthrough(body, ir.passthrough?.openai);
@@ -144,13 +200,14 @@ function encodeRequest(ir) {
 
 function decodeUsage(usage) {
   if (!usage) return undefined;
-  return { inputTokens: usage.prompt_tokens || 0, outputTokens: usage.completion_tokens || 0, totalTokens: usage.total_tokens, cachedInputTokens: usage.prompt_tokens_details?.cached_tokens || usage.cached_tokens || 0, passthrough: { openai: omitKnown(usage, new Set(['prompt_tokens', 'completion_tokens', 'total_tokens', 'prompt_tokens_details', 'cached_tokens'])) } };
+  return { inputTokens: usage.prompt_tokens || 0, outputTokens: usage.completion_tokens || 0, totalTokens: usage.total_tokens, cachedInputTokens: usage.prompt_tokens_details?.cached_tokens || usage.cached_tokens || 0, reasoningTokens: usage.completion_tokens_details?.reasoning_tokens || 0, passthrough: { openai: omitKnown(usage, new Set(['prompt_tokens', 'completion_tokens', 'total_tokens', 'prompt_tokens_details', 'completion_tokens_details', 'cached_tokens'])) } };
 }
 
 function encodeUsage(usage) {
   if (!usage) return undefined;
   const result = { prompt_tokens: usage.inputTokens || 0, completion_tokens: usage.outputTokens || 0, total_tokens: usage.totalTokens ?? ((usage.inputTokens || 0) + (usage.outputTokens || 0)) };
   if (usage.cachedInputTokens) result.prompt_tokens_details = { cached_tokens: usage.cachedInputTokens };
+  if (usage.reasoningTokens) result.completion_tokens_details = { reasoning_tokens: usage.reasoningTokens };
   return withPassthrough(result, usage.passthrough?.openai);
 }
 
@@ -167,12 +224,64 @@ function encodeResponse(ir) {
 
 function decodeStreamEvent(chunk) {
   const choice = chunk.choices?.[0] || {};
-  return { kind: 'stream_event', sourceDialect: 'openai', id: chunk.id, model: chunk.model, eventType: chunk.usage && !chunk.choices?.length ? 'usage' : (choice.finish_reason ? 'message_delta' : 'content_delta'), delta: choice.delta ? decodeMessage({ role: choice.delta.role || 'assistant', ...choice.delta }) : null, finishReason: choice.finish_reason, usage: decodeUsage(chunk.usage), passthrough: { openai: omitKnown(chunk, CHUNK_KEYS) } };
+  const delta = choice.delta || choice.message;
+  let decodedBlocks = null;
+  if (delta) {
+    const decodedDelta = decodeMessage({ role: delta.role || 'assistant', ...delta });
+    for (const block of decodedDelta.blocks || []) {
+      if (block.type === 'tool_call') block.streamDelta = true;
+    }
+    decodedBlocks = decodedDelta;
+  }
+  const finishReason = choice.finish_reason
+    ? ({ stop: 'stop', length: 'length', tool_calls: 'tool_calls', content_filter: 'content_filter', function_call: 'tool_calls' }[choice.finish_reason] || choice.finish_reason)
+    : undefined;
+  return {
+    kind: 'stream_event',
+    sourceDialect: 'openai',
+    id: chunk.id,
+    model: chunk.model,
+    eventType: chunk.usage && !chunk.choices?.length ? 'usage' : (finishReason ? 'finish' : 'delta'),
+    index: 0,
+    delta: decodedBlocks || null,
+    finishReason,
+    usage: decodeUsage(chunk.usage),
+    passthrough: { openai: omitKnown(chunk, CHUNK_KEYS) }
+  };
 }
 
 function encodeStreamEvent(ir) {
   const body = { id: ir.id || `chatcmpl-${Date.now().toString(36)}`, object: 'chat.completion.chunk', created: Math.floor(Date.now() / 1000), model: ir.model || 'unknown', choices: [] };
-  if (ir.eventType !== 'usage') body.choices = [{ index: 0, delta: ir.delta ? encodeMessage(ir.delta) : {}, finish_reason: ir.finishReason || null }];
+  if (ir.eventType !== 'usage') {
+    const delta = ir.delta || {};
+    const blocks = delta.blocks || [];
+    const toolBlocks = blocks.filter(block => block.type === 'tool_call' || block.type === 'tool_call_delta');
+    const contentBlocks = blocks.filter(block => block.type !== 'tool_call' && block.type !== 'tool_call_delta');
+    const encoded = encodeMessage({ ...delta, blocks: contentBlocks });
+    delete encoded.tool_calls;
+    if (toolBlocks.length) {
+      encoded.tool_calls = toolBlocks.map((block, offset) => {
+        if (block.type === 'tool_call_delta') {
+          return {
+            index: block.index ?? offset,
+            ...(block.id ? { id: block.id } : {}),
+            type: 'function',
+            function: { arguments: block.argumentsText || '' }
+          };
+        }
+        return {
+          index: block.index ?? offset,
+          id: block.id,
+          type: 'function',
+          function: {
+            name: block.name || '',
+            arguments: block.argumentsText || JSON.stringify(block.input || {})
+          }
+        };
+      });
+    }
+    body.choices = [{ index: ir.index || 0, delta: encoded, finish_reason: ir.finishReason || null }];
+  }
   if (ir.usage) body.usage = encodeUsage(ir.usage);
   return withPassthrough(body, ir.passthrough?.openai);
 }

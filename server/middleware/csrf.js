@@ -50,7 +50,10 @@ function csrfProtection(req, res, next) {
   // Auth endpoints and the store's independent bl_store_session cookie never
   // become API-key requests merely because Core has no logged-in session user.
   if (!/^\/(?:auth|oauth|store)(?:\/|$)/.test(path) && !req.session.user
-      && (req.headers.authorization?.startsWith('Bearer ') || req.headers['x-api-key'])) return next();
+      && (req.headers.authorization?.startsWith('Bearer ') || req.headers['x-api-key'] || req.headers['x-goog-api-key'])) return next();
+  // Gemini clients may use ?key=; only the Gemini/Interactions routes accept it.
+  if (!req.session?.user && typeof req.query?.key === 'string'
+      && /^\/(?:v1beta\/|v1\/(?:models\/|interactions))/.test(path)) return next();
 
   const suppliedToken = req.get('x-csrf-token') || req.body?._csrf;
   const suppliedBuffer = Buffer.from(String(suppliedToken || ''));

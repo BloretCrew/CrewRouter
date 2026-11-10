@@ -14,7 +14,11 @@ function sha256Hex(value) {
  * 由 oauthBearer 按 scope 校验，避免把两种凭证混为一谈。
  */
 function extractApiKey(req) {
-  const header = req?.headers?.['x-api-key'];
+  const path = String(req?.path || '');
+  const geminiHeader = /^\/(?:v1beta\/|v1\/(?:models\/|interactions))/.test(path)
+    ? req?.headers?.['x-goog-api-key']
+    : '';
+  const header = req?.headers?.['x-api-key'] || geminiHeader;
   let value = typeof header === 'string' ? header.trim() : '';
   if (!value && typeof req?.headers?.authorization === 'string' && req.headers.authorization.startsWith('Bearer ')) {
     value = req.headers.authorization.slice('Bearer '.length).trim();

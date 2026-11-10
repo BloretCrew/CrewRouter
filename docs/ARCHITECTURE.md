@@ -45,8 +45,9 @@ CrewRouter/
 │   │   ├── base.js             # Abstract adapter
 │   │   ├── openai.js           # OpenAI adapter
 │   │   ├── anthropic.js        # Anthropic adapter
+│   │   ├── gemini.js           # Gemini generateContent adapter
 │   │   ├── index.js            # Adapter factory/registry
-│   │   └── transforms/         # Format conversion (OpenAI ↔ Anthropic)
+│   │   └── transforms/         # Format conversion (OpenAI ↔ Anthropic, Gemini via IR)
 │   ├── fusion/                 # Multi-model consensus engine
 │   │   ├── index.js            # Pipeline orchestrator
 │   │   ├── panel-runner.js     # Parallel model execution
@@ -181,7 +182,7 @@ Located in `server/providers/`:
 
 ```
 BaseAdapter (abstract)
-    ├── getApiFormat()     → 'openai' | 'anthropic'
+    ├── getApiFormat()     → 'openai' | 'anthropic' | 'responses' | 'gemini'
     ├── transformRequest() → format-specific request
     ├── transformResponse()→ format-specific response
     ├── buildUrl()         → provider endpoint URL
@@ -190,10 +191,12 @@ BaseAdapter (abstract)
 
 OpenAIAdapter    → OpenAI Chat Completions format
 AnthropicAdapter → Anthropic Messages format (with thinking support)
+GeminiAdapter    → Gemini generateContent / streamGenerateContent format
 
 Transforms:
     openai-to-anthropic.js
     anthropic-to-openai.js
+    protocol bridge (server/protocol/*) covers Gemini generateContent and Interactions
 ```
 
 ---
@@ -205,9 +208,11 @@ optional `endpoints` JSONB column holds additional endpoints
 (`[{ url, format, enabled, label }]`); an empty array means single-endpoint
 behaviour, unchanged from before.
 
-- `server/utils/provider-endpoints.js` normalises entries, rejects `gemini`,
-  dedupes by `url+format`, and orders candidates native-format-first
-  (chat → openai, messages → anthropic, responses → responses).
+- `server/utils/provider-endpoints.js` normalises entries (openai / anthropic /
+  responses / gemini), dedupes by `url+format`, and orders candidates
+  native-format-first (chat → openai, messages → anthropic, responses →
+  responses, Gemini/Interactions → gemini). Gemini entries are valid upstreams
+  (generateContent / streamGenerateContent).
 - `runWithEndpointFallback` in `server/routes/api.js` wraps
   `runWithProviderKeyFallback`: endpoints are the outer loop, API keys the
   inner loop, so all endpoints share the provider's key list.
@@ -342,6 +347,11 @@ Pure vanilla HTML/CSS/JavaScript (no framework):
 - `POST /v1/messages` — Anthropic-compatible Messages API
 - `POST /v1/responses` — OpenAI Responses API (with conversion when upstream is chat/messages)
 - `GET /v1/models` — Virtual model list for the current API key (see “Intentional Deviations”)
+- `POST /v1beta/models/{model}:generateContent` — Gemini generateContent (also `/v1`)
+- `POST /v1beta/models/{model}:streamGenerateContent` — Gemini streaming (`?alt=sse`, default JSON array)
+- `POST /v1beta/models/{model}:countTokens` — Gemini token count (native forward or local estimate)
+- `GET /v1beta/models` — Gemini model list (also `/v1/models/*` for per-model reads)
+- `POST /v1beta/interactions` and `GET/DELETE /v1beta/interactions/{id}` — Gemini Interactions API
 - `POST /api/chat/completions` (and `/api/messages`, `/api/responses`) — Same handlers under `/api`
 
 ### Auth
