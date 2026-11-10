@@ -5,7 +5,6 @@ const {
   DEFAULT_IMAGE_MIME, toDataUri, imageSourceToResponses,
   parseDataUri, mediaPlaceholder
 } = require('./helpers');
-
 const REQUEST_KEYS = new Set(['model', 'input', 'instructions', 'max_output_tokens', 'temperature', 'top_p', 'stream', 'tools', 'tool_choice', 'parallel_tool_calls', 'reasoning', 'metadata', 'store', 'text']);
 const RESPONSE_KEYS = new Set(['id', 'object', 'created_at', 'status', 'model', 'output', 'usage', 'error', 'incomplete_details', 'metadata']);
 const EVENT_KEYS = new Set(['type', 'sequence_number', 'response', 'item_id', 'output_index', 'content_index', 'summary_index', 'delta', 'item', 'part', 'arguments', 'arguments_delta', 'refusal', 'text']);
@@ -199,7 +198,9 @@ function encodeResponse(ir) {
       }, block.passthrough?.responses));
     } else if (block.type === 'tool_result') {
       output.push({ type: 'function_call_output', call_id: block.toolCallId, output: block.result !== undefined ? block.result : (encodeContent(block.content || [], 'input') || '') });
-    } else if (block.type === 'text' || block.type === 'image' || block.type === 'media' || block.type === 'raw') {
+    } else if (block.type === 'image' || block.type === 'media') {
+      textBlocks.push({ type: 'text', text: mediaPlaceholder(block) });
+    } else if (block.type === 'text' || block.type === 'raw') {
       textBlocks.push(block);
     }
   }
@@ -270,6 +271,7 @@ function encodeStreamEvent(ir) {
   let event;
   const block = ir.delta?.blocks?.[0];
   if (block?.type === 'text') event = { type: 'response.output_text.delta', delta: block.text || '', item_id: ir.id, output_index: ir.index || 0, content_index: 0 };
+  else if (block?.type === 'image' || block?.type === 'media') event = { type: 'response.output_text.delta', delta: mediaPlaceholder(block), item_id: ir.id, output_index: ir.index || 0, content_index: 0 };
   else if (block?.type === 'thinking') event = { type: 'response.reasoning_summary_text.delta', delta: block.thinking || '', item_id: ir.id, output_index: ir.index || 0, summary_index: 0 };
   else if (block?.type === 'tool_call_delta') event = { type: 'response.function_call_arguments.delta', delta: block.argumentsText || '', item_id: block.id || ir.id, output_index: block.index ?? ir.index ?? 0 };
   else if (block?.type === 'tool_call') {

@@ -4,6 +4,7 @@ const wireShapes = require('./wire-shapes');
 const geminiCodec = require('./gemini');
 const responsesCodec = require('./responses');
 const interactionsCodec = require('./interactions');
+const { mediaPlaceholder } = require('./helpers');
 const { formatSSE, formatDone } = require('./sse');
 
 /**
@@ -136,9 +137,9 @@ function createOpenAIWriter(options = {}) {
           const state = toolState(block);
           await emitTool(state);
         } else if (block.type === 'media' || block.type === 'image') {
-          // Chat Completions has no standard model-output media part. Text
-          // clients already receive a placeholder from the upstream; don't
-          // fabricate an unsupported shape.
+          // Chat Completions has no standard model-output media part; emit a
+          // text placeholder instead of silently dropping the content.
+          await emit(chunk({ content: mediaPlaceholder(block) }));
         }
       }
     },

@@ -247,6 +247,11 @@ function placeholderBlock(block) {
   return { type: 'text', text: mediaPlaceholder(block) };
 }
 
+/** assistant/system 等不允许媒体内容的目标通道使用文本占位符。 */
+function withMediaPlaceholders(blocks) {
+  return (blocks || []).map(block => (isMediaBlock(block) ? placeholderBlock(block) : block));
+}
+
 module.exports = {
   omitKnown,
   withPassthrough,
@@ -263,5 +268,6 @@ module.exports = {
   isMediaBlock,
   splitMediaBlocks,
   mediaPlaceholder,
-  placeholderBlock
+  placeholderBlock,
+  withMediaPlaceholders
 };

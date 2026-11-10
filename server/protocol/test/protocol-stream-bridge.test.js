@@ -119,3 +119,19 @@ test('stream writers flush partial tool argument deltas', async () => {
     .join('');
   assert.equal(args, '{"a":1}');
 });
+
+test('OpenAI writer renders model media as a text placeholder', async () => {
+  const { output } = await collect('openai', [
+    { delta: { blocks: [{ type: 'media', mediaType: 'image', mimeType: 'image/png', data: 'AAAA' }] } }
+  ]);
+  assert.match(output, /media omitted: image\/png, 3 bytes/);
+  assert.doesNotMatch(output, /image_url/);
+});
+
+test('Responses writer renders model media as output_text', async () => {
+  const { output } = await collect('responses', [
+    { delta: { blocks: [{ type: 'media', mediaType: 'image', mimeType: 'image/png', data: 'AAAA' }] } }
+  ]);
+  assert.match(output, /media omitted: image\/png, 3 bytes/);
+  assert.doesNotMatch(output, /input_image/);
+});

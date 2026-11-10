@@ -1101,6 +1101,7 @@ function safeParseJson(str, fallback = {}) {
 const swallowImages = require('../utils/swallow-images');
 const { applySwallowImagesIfEnabled } = swallowImages;
 const { redactMediaForStorage } = require('../utils/media-redact');
+const { mediaPlaceholder } = require('../protocol/helpers');
 
 /**
  * 将 OpenAI 多模态 content（string | array）转为 Anthropic content
@@ -4132,7 +4133,16 @@ function convertOpenAIToAnthropicResponse(openaiResp, model) {
     content.push(wireShapes.thinkingBlock(message.reasoning_content));
   }
   if (message?.content) {
-    content.push({ type: 'text', text: message.content });
+    const parts = Array.isArray(message.content)
+      ? message.content
+      : [{ type: 'text', text: message.content }];
+    for (const part of parts) {
+      if (typeof part === 'string') content.push({ type: 'text', text: part });
+      else if (part?.type === 'text') content.push({ type: 'text', text: part.text || '' });
+      else if (part?.type === 'image_url' || part?.type === 'image' || part?.type === 'media') {
+        content.push({ type: 'text', text: mediaPlaceholder(part.type === 'image_url' ? { type: 'image', source: part.image_url } : part) });
+      }
+    }
   }
   if (message?.tool_calls) {
     for (const tc of message.tool_calls) {
@@ -5214,7 +5224,16 @@ function convertChatCompletionToResponse(data, respId, body) {
     const reasoning = wireShapes.reasoningInputItem(`rs_${respId}`, message.reasoning_content);
     if (reasoning) output.push(reasoning);
   }
-  const text = message?.content || '';
+  const text = (Array.isArray(message?.content) ? message.content : [message?.content || ''])
+    .map(part => {
+      if (typeof part === 'string') return part;
+      if (part?.type === 'text') return part.text || '';
+      if (part?.type === 'image_url' || part?.type === 'image' || part?.type === 'media') {
+        return mediaPlaceholder(part.type === 'image_url' ? { type: 'image', source: part.image_url } : part);
+      }
+      return '';
+    })
+    .join('');
   if (text) {
     output.push({
       id: `msg_${respId}`,
@@ -5352,8 +5371,20 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
     if (parsed.usage) lastUsage = parsed.usage;
     const delta = choice?.delta;
     if (!delta) return;
-    if (delta.content || delta.reasoning_content || (Array.isArray(delta.tool_calls) && delta.tool_calls.length)) {
-      markActiveToken(req, delta.content ? 'content' : (delta.reasoning_content ? 'reasoning' : 'tool'));
+    // OpenAI 兼容上游有时把 content 返回为多模态数组；目标 Responses 只能表达文本，
+    // 图片降级为占位符，避免把数组直接拼进 output_text。
+    const deltaContent = Array.isArray(delta.content)
+      ? delta.content.map(part => {
+        if (typeof part === 'string') return part;
+        if (part?.type === 'text') return part.text || '';
+        if (part?.type === 'image_url' || part?.type === 'image' || part?.type === 'media') {
+          return mediaPlaceholder(part.type === 'image_url' ? { type: 'image', source: part.image_url } : part);
+        }
+        return '';
+      }).join('')
+      : delta.content;
+    if (deltaContent || delta.reasoning_content || (Array.isArray(delta.tool_calls) && delta.tool_calls.length)) {
+      markActiveToken(req, deltaContent ? 'content' : (delta.reasoning_content ? 'reasoning' : 'tool'));
     }
 
     if (delta.reasoning_content) {
@@ -5368,7 +5399,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
       }
     }
 
-    if (delta.content && !textDone) {
+    if (deltaContent && !textDone) {
       if (!textStarted) {
         await closeReasoning();
         textStarted = true;
@@ -5377,8 +5408,8 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
         await emit({ type: 'response.output_item.added', output_index: textOutputIndex, item: { id: `msg_${respId}`, type: 'message', status: 'in_progress', role: 'assistant', content: [] } });
         await emit({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } });
       }
-      totalContent += delta.content;
-      let deltaText = delta.content;
+      totalContent += deltaContent;
+      let deltaText = deltaContent;
       if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
         const out = await pluginHooks.maybeRewriteChunk(deltaText, { model, requestType: 'Responses/OpenAI', affinityKey: affinityKeyForRequest(req, req.body) });
         if (out === null) return;
@@ -5576,6 +5607,17 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         currentToolIndex = toolUseBlocks.length;
         toolUseBlocks.push({ id: parsed.content_block.id, name: parsed.content_block.name, arguments: '' });
         markActiveToken(req, 'tool');
+      } else if (currentBlockType === 'image') {
+        // Responses 的 assistant 输出没有标准图片内容，降级为文本占位符。
+        if (!textStarted) {
+          textStarted = true;
+          textOutputIndex = nextOutputIndex++;
+          await emit({ type: 'response.output_item.added', output_index: textOutputIndex, item: { id: `msg_${respId}`, type: 'message', status: 'in_progress', role: 'assistant', content: [] } });
+          await emit({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } });
+        }
+        const placeholder = mediaPlaceholder({ type: 'image', source: parsed.content_block?.source });
+        totalContent += placeholder;
+        await emit({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, delta: placeholder });
       }
     } else if (parsed.type === 'content_block_delta') {
       if (currentBlockType === 'text' && parsed.delta?.text) {
@@ -5619,6 +5661,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         outputItems.push({ index: reasoningIndex, item: wireShapes.reasoningItem(`rs_${respId}`, reasoningText) });
       }
       if (currentBlockType === 'tool_use' && currentToolIndex >= 0) await closeText();
+      if (currentBlockType === 'image') await closeText();
       currentBlockType = null;
     } else if (parsed.type === 'message_start' && parsed.message?.usage) {
       anthropicUsage = parsed.message.usage;

@@ -725,3 +725,35 @@ test('media without a target representation becomes a text placeholder', () => {
   const openai = protocol.convertRequest('gemini', 'openai', video);
   assert.equal(openai.messages[0].content, '[media omitted: video/mp4, 3 bytes]');
 });
+
+// ---- 响应方向：目标协议无法表达媒体时降级为文本 ----
+
+test('assistant media becomes a text placeholder in OpenAI responses', () => {
+  const result = protocol.codecs.openai.encodeResponse({
+    model: 'm',
+    message: { role: 'assistant', blocks: [{ type: 'media', mediaType: 'image', mimeType: 'image/png', data: 'AAAA' }] },
+    finishReason: 'stop'
+  });
+  assert.equal(result.choices[0].message.content, '[media omitted: image/png, 3 bytes]');
+  assert.equal(JSON.stringify(result).includes('image_url'), false);
+});
+
+test('assistant media becomes a text placeholder in Anthropic responses', () => {
+  const result = protocol.codecs.anthropic.encodeResponse({
+    model: 'm',
+    message: { role: 'assistant', blocks: [{ type: 'media', mediaType: 'image', mimeType: 'image/png', data: 'AAAA' }] },
+    finishReason: 'stop'
+  });
+  assert.deepEqual(result.content[0], { type: 'text', text: '[media omitted: image/png, 3 bytes]' });
+});
+
+test('assistant media becomes output_text in Responses output', () => {
+  const result = protocol.codecs.responses.encodeResponse({
+    model: 'm',
+    message: { role: 'assistant', blocks: [{ type: 'media', mediaType: 'image', mimeType: 'image/png', data: 'AAAA' }] },
+    finishReason: 'stop'
+  });
+  assert.equal(result.output[0].content[0].type, 'output_text');
+  assert.equal(result.output[0].content[0].text, '[media omitted: image/png, 3 bytes]');
+  assert.equal(JSON.stringify(result).includes('input_image'), false);
+});

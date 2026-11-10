@@ -3,7 +3,7 @@
 const {
   omitKnown, withPassthrough, contentToText,
   DEFAULT_IMAGE_MIME, imageSourceToAnthropic,
-  parseDataUri, mediaPlaceholder
+  parseDataUri, mediaPlaceholder, isMediaBlock, withMediaPlaceholders
 } = require('./helpers');
 
 const REQUEST_KEYS = new Set(['model', 'messages', 'system', 'max_tokens', 'temperature', 'top_p', 'top_k', 'stop_sequences', 'stream', 'tools', 'tool_choice', 'thinking']);
@@ -93,7 +93,10 @@ function decodeMessage(message) {
 }
 
 function encodeMessage(message) {
-  return withPassthrough({ role: message.role === 'tool' ? 'user' : message.role, content: encodeContent(message.blocks) }, message.passthrough?.anthropic);
+  const blocks = message.role === 'user' || message.role === 'tool'
+    ? message.blocks
+    : withMediaPlaceholders(message.blocks);
+  return withPassthrough({ role: message.role === 'tool' ? 'user' : message.role, content: encodeContent(blocks) }, message.passthrough?.anthropic);
 }
 
 function decodeSystem(system) {
@@ -182,7 +185,7 @@ function decodeResponse(body) {
 }
 
 function encodeResponse(ir) {
-  const body = { id: ir.id || `msg_${Date.now()}`, type: 'message', role: 'assistant', content: encodeContent(ir.message?.blocks || []), model: ir.model, stop_reason: ({ stop: 'end_turn', length: 'max_tokens', tool_calls: 'tool_use' }[ir.finishReason] || ir.finishReason || 'end_turn'), stop_sequence: ir.stopSequence || null, usage: encodeUsage(ir.usage) || { input_tokens: 0, output_tokens: 0 } };
+  const body = { id: ir.id || `msg_${Date.now()}`, type: 'message', role: 'assistant', content: encodeContent(withMediaPlaceholders(ir.message?.blocks || [])), model: ir.model, stop_reason: ({ stop: 'end_turn', length: 'max_tokens', tool_calls: 'tool_use' }[ir.finishReason] || ir.finishReason || 'end_turn'), stop_sequence: ir.stopSequence || null, usage: encodeUsage(ir.usage) || { input_tokens: 0, output_tokens: 0 } };
   return withPassthrough(body, ir.passthrough?.anthropic);
 }
 
@@ -206,6 +209,7 @@ function encodeStreamEvent(ir) {
   let event;
   const block = ir.delta?.blocks?.[0];
   if (ir.eventType === 'message_start') event = { type: 'message_start', message: encodeResponse({ ...ir, message: ir.delta || { blocks: [] } }) };
+  else if (isMediaBlock(block)) event = { type: 'content_block_delta', index: ir.index || 0, delta: { type: 'text_delta', text: mediaPlaceholder(block) } };
   else if (ir.eventType === 'content_block_start' || block?.type === 'tool_call') event = { type: 'content_block_start', index: ir.index || 0, content_block: encodeBlock(block) };
   else if (block?.type === 'text') event = { type: 'content_block_delta', index: ir.index || 0, delta: { type: 'text_delta', text: block.text || '' } };
   else if (block?.type === 'thinking') event = { type: 'content_block_delta', index: ir.index || 0, delta: { type: 'thinking_delta', thinking: block.thinking || '' } };

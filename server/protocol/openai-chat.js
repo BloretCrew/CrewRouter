@@ -3,7 +3,8 @@
 const {
   omitKnown, withPassthrough, safeParseJson,
   DEFAULT_IMAGE_MIME, toDataUri, imageSourceToOpenAI,
-  splitMediaBlocks, mediaPlaceholder, parseDataUri
+  splitMediaBlocks, mediaPlaceholder, parseDataUri,
+  isMediaBlock, placeholderBlock
 } = require('./helpers');
 
 const TOOL_RESULT_MEDIA_NOTICE = '[tool result media]';
@@ -140,6 +141,8 @@ function encodeMessage(message) {
       // 签名只对 Anthropic 上游有意义，不能作为是否回传推理文本的判据；redacted_thinking
       // 无明文可回传，且 Anthropic 形状的块不能出现在 OpenAI 的 content 数组里，只能丢弃。
       if (!block.redacted) reasoning = (reasoning || '') + (block.thinking || '');
+    } else if (isMediaBlock(block) && message.role !== 'user') {
+      contentBlocks.push(placeholderBlock(block));
     } else contentBlocks.push(block);
   }
   const result = { role: message.role, content: encodeContent(contentBlocks, 'openai') };
