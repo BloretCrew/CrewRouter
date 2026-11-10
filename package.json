@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "CrewRouter - AI API 网关平台",
   "main": "server/index.js",
+  "bin": {
+    "cr": "cli/bin/cr.js",
+    "crewrouter": "cli/bin/cr.js"
+  },
   "exports": {
     ".": "./server/index.js",
     "./embedded": "./server/sdk/embedded.js",
@@ -13,9 +17,14 @@
     "public/**",
     "lang/**",
     "plugins/**",
+    "cli/bin/**",
+    "cli/lib/**",
+    "cli/tui/**",
+    "cli/index.js",
     "config.example.json",
     "LICENSE",
     "README.md",
+    "docs/cli.md",
     "docs/sdk/**"
   ],
   "scripts": {
@@ -36,6 +45,8 @@
     "test:public-schema-create": "node --test server/scripts/test-public-schema-create-postgres.js",
     "test:responses-compat": "node server/scripts/test-responses-compat.js",
     "start": "node server/index.js",
+    "cli": "node cli/bin/cr.js",
+    "test:cli": "node --test cli/test/*.test.js",
     "dev": "nodemon server/index.js",
     "init-db": "node server/scripts/init-db.js",
     "test:sessions-pagination": "node server/scripts/test-sessions-pagination.js",

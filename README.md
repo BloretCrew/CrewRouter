@@ -134,6 +134,20 @@ const response = await client.gateway.chat.completions.create({
 
 所有 SDK 均与主项目一样使用 **GPL-3.0**。完整文档见 [docs/sdk/README.md](docs/sdk/README.md)。
 
+## 命令行与 TUI（`cr`）
+
+仓库内置零依赖的 CrewRouter CLI，既支持非交互式子命令，也支持可直接鼠标点击的全屏 TUI；可以连接远程实例，也可以从本机启动 CrewRouter 服务。
+
+```bash
+npm link          # 激活 cr 命令
+cr                # 打开 TUI
+cr connect https://router.example.com
+cr login
+cr status
+```
+
+常用命令：`cr overview`、`cr providers`、`cr models`、`cr keys`、`cr usage`、`cr sessions`、`cr start/stop/logs`、`cr doctor`。完整说明见 [docs/cli.md](docs/cli.md)。
+
 ## 快速开始
 
 ### 方式一：一键包（推荐）
@@ -223,6 +237,7 @@ npm start          # 开发可用 npm run dev
 | [docs/api/reference.md](docs/api/reference.md) | 由路由生成的全量接口表 |
 | [docs/integration-guide.md](docs/integration-guide.md) | 接入现有应用 |
 | [docs/sdk/README.md](docs/sdk/README.md) | SDK 总览（English） |
+| [docs/cli.md](docs/cli.md) | 命令行与鼠标交互 TUI（`cr`） |
 | [docs/sdk/quickstart-node.md](docs/sdk/quickstart-node.md) | Node SDK 快速开始 |
 | [LOG_SPEC.md](docs/LOG_SPEC.md) | 运行日志约定 |
 
