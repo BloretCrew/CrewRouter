@@ -69,7 +69,7 @@ async function main() {
       await cdp.evaluate(`window.__fetch = window.fetch; window.fetch = (url, options) => String(url).includes('/api-keys/') && String(url).endsWith('/config') ? Promise.resolve(new Response(JSON.stringify({env:{ANTHROPIC_BASE_URL:'https://example.com',ANTHROPIC_AUTH_TOKEN:'fixture-key'}}),{status:200,headers:{'Content-Type':'application/json'}})) : window.__fetch(url,options); app._configKey={id:1};`);
       for (const mode of ['browser','old-desktop']) {
         await cdp.evaluate(mode==='browser' ? 'delete window.crewrouterDesktop' : 'window.crewrouterDesktop={getDesktopSettings:async()=>({})}');
-        for (const tool of ['claude','codex','grok','opencode','qwen_code','hermes','openclaw','deepseek']) {
+        for (const tool of ['claude','codex','grok','opencode','qwen_code','hermes','openclaw','deepseek','gemini_cli','agy']) {
           await cdp.evaluate("app.generateClaudeConfig(1)"); await sleep(350);
           assert.ok(await cdp.click(`[onclick="app.generateToolConfig('${tool}')"]`), 'tool click ' + tool);
           await sleep(400);

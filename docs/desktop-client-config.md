@@ -13,8 +13,16 @@ Desktop 控制台的“客户端配置”支持确认后写入当前电脑。浏
 | Qwen Code | `~/.qwen/settings.json` | OpenAI 认证、模型与 `modelProviders` |
 | Hermes | `~/.hermes/config.yaml` | named custom provider 与默认模型 |
 | OpenClaw | `~/.openclaw/openclaw.json` | `models.providers.crewrouter` 与默认模型 |
+| Gemini CLI（手动/终端） | `~/.gemini/.env` + `~/.gemini/settings.json` | `GEMINI_API_KEY`、`GOOGLE_GEMINI_BASE_URL`、`GEMINI_MODEL`；终端命令合并 `security.auth.selectedType = "gemini-api-key"` |
+| Antigravity CLI / agy（手动/终端） | `~/.crewrouter/agy/antigravity-cli/settings.json` | `modelProvider: "gemini"`；Key 只通过进程环境传入，终端命令用 `agy --gemini_dir` 启动 |
 
 Desktop 尊重工具的配置目录环境变量；实际路径显示在弹窗及系统确认框。系统服务、项目配置、profile 或环境变量可能改变工具最终生效的配置。Hermes 现有凭证池也可能影响认证。DeepSeek Harness 的本地配置结构尚未核实，仅提供带提示的手动参考，不生成可执行终端命令。
+
+Gemini CLI 与 agy 目前**不参与 Desktop 自动写入**：Gemini CLI 需要同时维护 `.env` 与 `settings.json`，agy 依赖进程环境和私有 `--gemini_dir`，无法用现有单文件合并器表达。弹窗会自动回退到手动配置/终端命令；CC Switch 导入会由 cc-switch 处理原生文件与启动环境。
+
+Gemini CLI 的 `.env` 只是用户级兜底：如果当前项目目录已有 `.env`，CLI 会优先读取项目文件。设置 `security.auth.selectedType` 前若已有 OAuth 登录，可在 CLI 中执行 `/auth` 切换到 API Key。
+
+agy 的 `settings.json` 不写 `model`：agy 只认本机模型显示名，写模型 ID 会被静默忽略。需要固定模型时，在 agy 中执行 `/model` 选择。
 
 ## 终端一键命令
 
@@ -22,6 +30,8 @@ Desktop 尊重工具的配置目录环境变量；实际路径显示在弹窗及
 - 形态：`mkdir -p "$HOME/..."`、`cat > ... <<'CREWROUTER_EOF'`、`chmod 600`。
 - 语义：整文件覆盖，与 Desktop「合并写入并备份」不同；适合新机或可接受覆盖的场景。
 - 命令含密钥；UI 提示勿分享。不支持 Windows 原生 PowerShell。
+- Gemini CLI 的终端命令先整文件写 `~/.gemini/.env`，再用 `node -` 合并 `~/.gemini/settings.json`（保留其他字段；文件不是合法 JSON 时拒绝覆盖）。没有 `node` 时只提示手动设置。
+- agy 的终端命令写私有 `~/.crewrouter/agy/antigravity-cli/settings.json`，然后以 `GEMINI_API_KEY=... GOOGLE_GEMINI_BASE_URL=... agy --gemini_dir=...` 启动；Key 不写入文件。
 - OpenCode 终端命令写入用户级默认路径；项目目录选择仍仅 Desktop 写入流程提供。
 
 ## 写入保护

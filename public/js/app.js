@@ -8273,10 +8273,13 @@ class ConsoleApp {
       if (configRequest !== this._configRequestId) return;
       const baseUrl = data.env.ANTHROPIC_BASE_URL;
       const apiKey = data.env.ANTHROPIC_AUTH_TOKEN;
+      const model = window.CrewRouterClientConfig.defaultModelFor
+        ? window.CrewRouterClientConfig.defaultModelFor(tool)
+        : 'claude-fable-5';
 
       const generated = window.CrewRouterClientConfig.generateShellCommand
-        ? window.CrewRouterClientConfig.generateShellCommand(tool, { baseUrl, apiKey, claudeConfig: data })
-        : Object.assign({}, window.CrewRouterClientConfig.generate(tool, { baseUrl, apiKey, claudeConfig: data }), { shell: '' });
+        ? window.CrewRouterClientConfig.generateShellCommand(tool, { baseUrl, apiKey, model, claudeConfig: data })
+        : Object.assign({}, window.CrewRouterClientConfig.generate(tool, { baseUrl, apiKey, model, claudeConfig: data }), { shell: '' });
       const bridge = window.crewrouterDesktop;
       let target = null;
       if (generated.supported && bridge?.getClientConfigTarget && bridge?.writeClientConfig) {
@@ -8285,10 +8288,12 @@ class ConsoleApp {
       if (configRequest !== this._configRequestId) return;
       const desktop = !!target?.supported;
       const hasShell = !!(generated.supported && generated.shell);
-      this._desktopClientConfig = desktop ? { tool, baseUrl, apiKey, model: 'claude-fable-5' } : null;
+      this._desktopClientConfig = desktop ? { tool, baseUrl, apiKey, model } : null;
       this._configOutput = { content: generated.content || '', shell: generated.shell || '', hasShell };
       document.getElementById('configOutputTitle').textContent = desktop ? t('写入') + ' ' + generated.title + '？' : generated.title;
-      document.getElementById('configOutputDesc').textContent = t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
+      document.getElementById('configOutputDesc').textContent = tool === 'agy'
+        ? t('合并配置到') + ' ' + generated.path + '。' + t('agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。')
+        : t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
       document.getElementById('configOutputContent').value = generated.content || '';
       document.getElementById('configShellContent').value = generated.shell || '';
       document.getElementById('desktopConfigWrite').hidden = !desktop;
@@ -8402,23 +8407,23 @@ class ConsoleApp {
       const data = await res.json();
       const baseUrl = data.env.ANTHROPIC_BASE_URL;
       const apiKey = data.env.ANTHROPIC_AUTH_TOKEN;
-
-      let config;
       const name = 'CrewRouter';
+      const model = window.CrewRouterClientConfig.defaultModelFor
+        ? window.CrewRouterClientConfig.defaultModelFor(app === 'gemini' ? 'gemini_cli' : app)
+        : 'claude-fable-5';
 
-      if (app === 'claude') {
-        config = { env: { ANTHROPIC_AUTH_TOKEN: apiKey, ANTHROPIC_BASE_URL: baseUrl, ANTHROPIC_MODEL: 'claude-fable-5' } };
-      } else if (app === 'codex') {
-        config = {
-          auth: { OPENAI_API_KEY: apiKey },
-          config: `[model_providers.openai]\nbase_url = "${baseUrl}"\n\n[general]\nmodel = "gpt-5.1"`
-        };
-      } else if (app === 'gemini') {
-        config = { GEMINI_API_KEY: apiKey, GEMINI_BASE_URL: baseUrl + '/v1beta', GEMINI_MODEL: 'gemini-3-pro-preview' };
-      }
+      const config = window.CrewRouterClientConfig.ccSwitchConfig
+        ? window.CrewRouterClientConfig.ccSwitchConfig(app, { baseUrl, apiKey, model })
+        : null;
+      if (!config) throw new Error('客户端配置生成器版本过旧，请刷新页面');
 
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))));
-      const deepLink = `ccswitch://v1/import?resource=provider&app=${app}&name=${encodeURIComponent(name)}&configFormat=json&config=${encoded}`;
+      let deepLink = `ccswitch://v1/import?resource=provider&app=${app}&name=${encodeURIComponent(name)}&configFormat=json&config=${encoded}`;
+      if (app === 'gemini' || app === 'agy') {
+        const endpoint = String(baseUrl).replace(/\/+$/, '');
+        deepLink += `&endpoint=${encodeURIComponent(endpoint)}&apiKey=${encodeURIComponent(apiKey)}`;
+        if (app === 'gemini') deepLink += `&model=${encodeURIComponent(model)}`;
+      }
 
       // 直接跳转
       window.location.href = deepLink;

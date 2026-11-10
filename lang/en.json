@@ -3452,5 +3452,6 @@
   "全部权限": "All permissions",
   "兼容所有支持 OpenAI / Anthropic / Gemini 格式的编程工具": "Works with every coding tool that speaks OpenAI / Anthropic / Gemini",
   "多协议兼容 API": "Multi-protocol compatible API",
-  "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换": "Fully compatible with OpenAI Chat Completions, Messages and Gemini generateContent formats. Just switch the"
+  "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换": "Fully compatible with OpenAI Chat Completions, Messages and Gemini generateContent formats. Just switch the",
+  "agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。": "agy reads credentials only from the process environment; copy the terminal command or import via CC Switch."
 }

@@ -2037,6 +2037,16 @@
             <span class="config-tool-option-label">OpenClaw</span>
             <span class="config-tool-option-path">openclaw.json</span>
           </button>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('gemini_cli')">
+            <img src="https://img.bloret.net/img/1781991757737/4589a05ed1f724de155c9916b5f9dcdd" alt="Gemini CLI" class="config-tool-option-icon">
+            <span class="config-tool-option-label">Gemini CLI</span>
+            <span class="config-tool-option-path">~/.gemini/.env</span>
+          </button>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('agy')">
+            <img src="/icons/antigravity.svg" alt="Antigravity CLI" class="config-tool-option-icon">
+            <span class="config-tool-option-label">Antigravity CLI (agy)</span>
+            <span class="config-tool-option-path">~/.crewrouter/agy/antigravity-cli/settings.json</span>
+          </button>
           <button type="button" class="blora-button" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.showCcSwitchSubmenu()" data-variant="secondary">
             <img src="https://img.bloret.net/img/1782959477140/73ea67d49cd40c9b00b85de08e5ee534" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
             CC Switch
@@ -2069,7 +2079,11 @@
           </button>
           <button type="button" class="blora-button" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateCcSwitchLink('gemini')" data-variant="secondary">
             <img src="https://img.bloret.net/img/1781991757737/4589a05ed1f724de155c9916b5f9dcdd" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            Gemini
+            Gemini CLI
+          </button>
+          <button type="button" class="blora-button" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateCcSwitchLink('agy')" data-variant="secondary">
+            <img src="/icons/antigravity.svg" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
+            Antigravity CLI (agy)
           </button>
         </div>
       </div>
@@ -2253,7 +2267,7 @@
   <script src="/js/multi-dimension-chart.js?v=lg-4"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/client-config.js?v=shell-cmd-20260326"></script>
+  <script src="/js/client-config.js?v=shell-cmd-20261110"></script>
   <script type="module" src="/js/model-trace.js?v=lg-21"></script>
   <script src="/js/app.js?v=permission-picker-v2-20261109"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>

@@ -9,11 +9,20 @@ const YAML = require('../CrewRouter-Desktop/node_modules/yaml');
 
 const context = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/js/client-config.js'), 'utf8'), context);
-const { generate, generateShellCommand } = context.window.CrewRouterClientConfig;
-const tools = ['claude', 'codex', 'grok', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek'];
+const { generate, generateShellCommand, ccSwitchConfig } = context.window.CrewRouterClientConfig;
+const tools = ['claude', 'codex', 'grok', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek', 'gemini_cli', 'agy'];
 const parse = (tool, content) => ['codex', 'grok'].includes(tool)
   ? TOML.parse(content)
   : ['hermes', 'deepseek'].includes(tool) ? YAML.parse(content) : JSON.parse(content);
+const parseEnv = content => Object.fromEntries(content.split(/\r?\n/)
+  .map(line => line.trim())
+  .filter(line => line && !line.startsWith('#'))
+  .map(line => {
+    const index = line.indexOf('=');
+    assert.ok(index > 0, '.env 行必须包含 =');
+    const value = line.slice(index + 1).trim();
+    return [line.slice(0, index).trim(), value.startsWith('"') && value.endsWith('"') ? JSON.parse(value) : value];
+  }));
 
 function extractHeredocBody(shell) {
   const open = shell.match(/<<'([^']+)'\n/);
@@ -44,17 +53,18 @@ function checkShellCommand(tool, options, generated) {
 }
 
 function checkConfigs(options) {
-  const model = options.model ?? 'claude-fable-5';
   const base = options.baseUrl.replace(/\/+$/, '');
   const v1 = base.endsWith('/v1') ? base : base + '/v1';
   for (const tool of tools) {
+    const model = options.model ?? (tool === 'gemini_cli' ? 'gemini-2.5-pro' : 'claude-fable-5');
     const output = generate(tool, options);
     assert.deepEqual(Object.keys(output).sort(), ['content', 'path', 'reason', 'supported', 'title']);
     assert.ok(output.title && output.path && output.content);
     assert.equal(output.supported, tool !== 'deepseek');
-    assert.equal(output.reason.length > 0, tool === 'deepseek');
+    assert.equal(output.reason.length > 0, tool === 'deepseek' || tool === 'agy');
     checkShellCommand(tool, options, output);
-    const config = parse(tool, output.content);
+    const shellOutput = generateShellCommand(tool, options);
+    const config = ['gemini_cli'].includes(tool) ? parseEnv(output.content) : parse(tool, output.content);
     switch (tool) {
       case 'claude':
         assert.deepEqual(config, {
@@ -114,6 +124,25 @@ function checkConfigs(options) {
         assert.match(output.content, /# 配置路径、schema 与端点拼接行为未核实/);
         assert.doesNotMatch(output.content, /适配器请求|必.*拼接/);
         break;
+      case 'gemini_cli':
+        assert.equal(output.path, '~/.gemini/.env');
+        assert.deepEqual(config, {
+          GEMINI_API_KEY: options.apiKey,
+          GOOGLE_GEMINI_BASE_URL: base,
+          GEMINI_MODEL: model
+        });
+        assert.ok(!output.content.includes('/v1beta'));
+        assert.ok(shellOutput.shell.includes('selectedType'));
+        assert.ok(shellOutput.shell.includes('gemini-api-key'));
+        break;
+      case 'agy':
+        assert.equal(output.path, '~/.crewrouter/agy/antigravity-cli/settings.json');
+        assert.deepEqual(config, { modelProvider: 'gemini' });
+        assert.ok(!output.content.includes(options.apiKey));
+        assert.ok(shellOutput.shell.includes('agy --gemini_dir='));
+        assert.ok(shellOutput.shell.includes('GEMINI_API_KEY='));
+        assert.ok(shellOutput.shell.includes('GOOGLE_GEMINI_BASE_URL='));
+        break;
     }
   }
 }
@@ -126,14 +155,17 @@ async function checkClaudeRoute() {
   const routeContext = vm.createContext({
     router: { get: (_path, _auth, callback) => { handler = callback; } },
     requireAuth: () => {},
-    getApiKeyAccess: async () => ({ can_manage: true }),
+    getApiKeyAccess: async () => ({ is_owner: true, can_manage: true }),
     pool: { query: async () => ({ rows: [{ key_value: 'test-only-key', current_model_id: 'upstream-model' }] }) },
     config: { app: { host: 'example.test' } },
     Logger: { error: () => { throw new Error('配置路由不应记录错误'); } }
   });
   vm.runInContext(source.slice(start, end), routeContext);
   let output;
-  await handler({ params: { id: 1 }, session: { user: { id: 1 } } }, { json: value => { output = value; } });
+  await handler(
+    { params: { id: 1 }, session: { user: { id: 1 } }, authUser: { id: 1 } },
+    { json: value => { output = value; }, status(code) { this.statusCode = code; return this; } }
+  );
   assert.deepEqual(JSON.parse(JSON.stringify(output)), {
     env: {
       ANTHROPIC_BASE_URL: 'https://example.test', ANTHROPIC_AUTH_TOKEN: 'test-only-key',
@@ -179,6 +211,18 @@ async function main() {
   });
   assert.match(delimiterClash.shell, /<<'CREWROUTER_EOF_2'/);
   assert.equal(extractHeredocBody(delimiterClash.shell), delimiterClash.content);
+  assert.deepEqual(JSON.parse(JSON.stringify(ccSwitchConfig('gemini', { baseUrl: 'https://example.test/', apiKey: 'k' }))), {
+    env: {
+      GEMINI_API_KEY: 'k',
+      GOOGLE_GEMINI_BASE_URL: 'https://example.test',
+      GEMINI_MODEL: 'gemini-2.5-pro'
+    }
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(ccSwitchConfig('agy', { baseUrl: 'https://example.test/', apiKey: 'k' }))), {
+    env: { GEMINI_API_KEY: 'k', GOOGLE_GEMINI_BASE_URL: 'https://example.test' }
+  });
+  assert.equal(/"GEMINI_BASE_URL"/.test(JSON.stringify(ccSwitchConfig('gemini', { baseUrl: 'https://example.test', apiKey: 'k' }))), false);
+  assert.throws(() => ccSwitchConfig('unknown', { baseUrl: 'https://example.test', apiKey: 'k' }), /未知客户端应用/);
   for (const invalid of [undefined, {}, { baseUrl: 1, apiKey: 'test-only-key' },
     { baseUrl: 'https://example.test', apiKey: '' },
     { baseUrl: 'https://example.test', apiKey: 'test-only-key', model: '\ud800' }]) {
@@ -186,7 +230,7 @@ async function main() {
     assert.throws(() => generateShellCommand('claude', invalid), /客户端配置参数无效/);
   }
   await checkClaudeRoute();
-  console.log('客户端配置测试通过：8 种工具、终端命令、格式解析、安全转义、Claude 路由。');
+  console.log('客户端配置测试通过：10 种工具、终端命令、格式解析、安全转义、Claude 路由。');
 }
 
 main().catch(() => {

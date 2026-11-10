@@ -3253,5 +3253,6 @@
   "加载弹窗通知失败:": "加载弹窗通知失败:",
   "兼容所有支持 OpenAI / Anthropic / Gemini 格式的编程工具": "兼容所有支持 OpenAI / Anthropic / Gemini 格式的编程工具",
   "多协议兼容 API": "多协议兼容 API",
-  "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换": "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换"
+  "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换": "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换",
+  "agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。": "agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。"
 }

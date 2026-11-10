@@ -64,7 +64,7 @@ async function main(){
   await cdp.send('Page.navigate',{url:`${base}/console#modelLibrary`});
   for(let i=0;i<100;i++){if(await cdp.evaluate(`typeof app !== 'undefined' && !!app.user`))break;await sleep(100);}
   await cdp.evaluate(`(()=>{const original=window.fetch.bind(window);window.fetch=async(url,options)=>String(url)==='/api/user/api-keys/1/config'?new Response(JSON.stringify({env:{ANTHROPIC_BASE_URL:'https://example.test',ANTHROPIC_AUTH_TOKEN:'test-config-key'}}),{status:200,headers:{'Content-Type':'application/json'}}):original(url,options);})()`);
-  for(const tool of ['claude','codex','opencode','grok','deepseek','qwen_code','hermes','openclaw']){
+  for(const tool of ['claude','codex','opencode','grok','deepseek','qwen_code','hermes','openclaw','gemini_cli','agy']){
    await cdp.evaluate('app.generateClaudeConfig(1)');await sleep(350);
    await check(`(()=>{const r=document.getElementById('configToolSelectModal').shadowRoot.querySelector('.blora-dialog__panel').getBoundingClientRect();return r.width<=714&&r.left>=0&&r.right<=innerWidth;})()`,'选择弹窗宽度');
    await check(`(()=>{const e=document.querySelector('#configToolSelectModal button[onclick="app.showCcSwitchSubmenu()"] img'),r=e.getBoundingClientRect();return r.width<=32&&r.height<=32;})()`,'CC Switch 图标大小');

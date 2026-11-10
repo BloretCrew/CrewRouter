@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync('public/js/app.js', 'utf8');
 const start = source.indexOf('  async generateToolConfig(tool)');
-const end = source.indexOf('  async writeDesktopClientConfig()', start);
+const end = source.indexOf('  _bindConfigOutputMode()', start);
 const method = source.slice(start, end);
 let finish;
 const sandbox = { window: {}, document: { getElementById: () => { throw new Error('Expired response touched the DOM'); } }, fetch: () => new Promise(resolve => {finish=resolve;}), t: value=>value, alert:()=>{throw new Error('Unexpected alert');} };
