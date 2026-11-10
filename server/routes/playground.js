@@ -9,6 +9,7 @@ const Logger = require('../logger');
 const config = require('../config-loader');
 const { normalizeUsageTokens } = require('../utils/token-normalize');
 const { calculateCost } = require('../utils/billing');
+const { redactMediaForStorage } = require('../utils/media-redact');
 const { recordQuotaData } = require('../utils/quota-data');
 const { recordModelCall } = require('../utils/model-uptime');
 const { recordLiveCallTest } = require('../utils/model-test');
@@ -650,7 +651,7 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
     const clientMeta = clientMetaFromReq(req || {});
 
     Logger.info(`[Playground计费] 准备记录: userId=${userId}, modelId=${modelId}, tokens=${totalTokens}, theory=${pointsCost}, deduct=${pointsToDeduct}`);
-    const messagesJson = messages ? JSON.stringify(messages) : null;
+    const messagesJson = messages ? JSON.stringify(redactMediaForStorage(messages)) : null;
     const responseText = response || null;
     const promptTokens = normalized?.promptTokens || 0;
     const completionTokens = normalized?.completionTokens || 0;

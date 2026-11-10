@@ -947,6 +947,16 @@ function affinityKeyForRequest(req, body) {
   return crypto.createHash('sha256').update(text).digest('hex').slice(0, 16);
 }
 
+function cloneMessagesForCacheAnnotation(messages) {
+  return (Array.isArray(messages) ? messages : []).map(message => {
+    if (!message || typeof message !== 'object' || !Array.isArray(message.content)) return message;
+    return {
+      ...message,
+      content: message.content.map(block => (block && typeof block === 'object' ? { ...block } : block))
+    };
+  });
+}
+
 function addFourthCacheBreakpoint(upstreamBody, sourceSystem = upstreamBody.system, enabled = config.gateway?.fourth_cache_breakpoint) {
   if (!enabled || !Array.isArray(upstreamBody.messages) || upstreamBody.messages.length < 6) return false;
   const cacheCount = (Array.isArray(sourceSystem) ? sourceSystem : [sourceSystem]).reduce((count, part) => {
@@ -1090,6 +1100,7 @@ function safeParseJson(str, fallback = {}) {
 
 const swallowImages = require('../utils/swallow-images');
 const { applySwallowImagesIfEnabled } = swallowImages;
+const { redactMediaForStorage } = require('../utils/media-redact');
 
 /**
  * 将 OpenAI 多模态 content（string | array）转为 Anthropic content
@@ -3371,7 +3382,7 @@ async function handleChatCompletion(req, res) {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
-           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
+           provider?.id || null, 'chat', JSON.stringify(redactMediaForStorage(messages)), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
@@ -3566,7 +3577,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, ${usageMetricPlaceholders(20)}) RETURNING id`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
            totalWeightedTokens, null, 'fusion',
-           JSON.stringify(messages), result.content || null, realDeduct,
+           JSON.stringify(redactMediaForStorage(messages)), result.content || null, realDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta, ...modelIdentityValues(req, true), ...usageMetricValues(fusionMetrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
@@ -4082,7 +4093,7 @@ async function handleAnthropicMessage(req, res) {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
-           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
+           provider?.id || null, 'chat', JSON.stringify(redactMediaForStorage(messages)), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
@@ -4173,7 +4184,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
 
   // 前向兼容：整包透传上游 Anthropic 字段（含 safeguards、context_management 等新能力），
   // 只覆盖网关自有的 model/stream。协议桥在同方言往返中保留未知顶层字段。
-  const upstreamBody = { ...body, model, max_tokens: body.max_tokens, messages: body.messages, stream: !!stream };
+  const upstreamBody = { ...body, model, max_tokens: body.max_tokens, messages: cloneMessagesForCacheAnnotation(body.messages), stream: !!stream };
   delete upstreamBody.response_format;
   addFourthCacheBreakpoint(upstreamBody, body.system);
   Object.assign(upstreamBody, bridgeRequest('anthropic', upstreamBody, { quirks: protocolBridge.getDialectCapability('anthropic').quirks }));
@@ -6245,7 +6256,7 @@ async function handleResponses(req, res) {
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
                pwk?.id || null, 'responses',
-               typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
+               typeof input === 'string' ? input : JSON.stringify(redactMediaForStorage(input)), responseData.output_text || null, realDeduct,
                null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(passthroughMetrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
             if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
@@ -6365,7 +6376,7 @@ async function handleResponses(req, res) {
                result.promptTokens || 0, result.completionTokens || 0,
                result.cachedTokens || 0, weightedTokens,
                provider?.id || null, 'responses',
-               typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
+               typeof input === 'string' ? input : JSON.stringify(redactMediaForStorage(input)), result.content || null, realDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
@@ -6634,7 +6645,7 @@ async function handleResponses(req, res) {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, ${usageMetricPlaceholders(23)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
              provider?.id || null, 'responses',
-             typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, realDeduct,
+             typeof input === 'string' ? input : JSON.stringify(redactMediaForStorage(input)), totalContent || null, realDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
              pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(metricsSnapshot)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
@@ -6718,7 +6729,7 @@ async function handleResponses(req, res) {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, ${usageMetricPlaceholders(22)}) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
            provider?.id || null, 'responses',
-           typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
+           typeof input === 'string' ? input : JSON.stringify(redactMediaForStorage(input)), responseData.output_text || null, realDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(metricsSnapshot)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
@@ -6938,7 +6949,7 @@ async function handleResponses(req, res) {
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'responses',
-           typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
+           typeof input === 'string' ? input : JSON.stringify(redactMediaForStorage(input)), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
@@ -7098,7 +7109,7 @@ async function recordBridgeUsage(req, { modelConfig, provider, queueModelId, res
         result.promptTokens || 0, result.completionTokens || 0,
         result.cachedTokens || 0, weightedTokens,
         provider?.id || null, requestType,
-        JSON.stringify(requestBody?.contents ?? requestBody?.input ?? null),
+        JSON.stringify(redactMediaForStorage(requestBody?.contents ?? requestBody?.input ?? null)),
         result.content || null, realDeduct,
         latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
         pluginMeta, ...modelIdentityValues(req), ...usageMetricValues(result.metrics)], userId: req.apiUser.userId,
