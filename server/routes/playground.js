@@ -524,7 +524,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       let weightedTokens = 0;
       let pointsCost = 0;
       if (totalTokens > 0) {
-        const calculated = calculateCost(modelConfig, normalized);
+        const calculated = calculateCost(modelConfig, normalized, req.body);
         weightedTokens = calculated.weightedTokens;
         pointsCost = calculated.pointsCost;
       }
@@ -571,7 +571,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       let weightedTokens = 0;
       let pointsCost = 0;
       if (totalTokens > 0) {
-        const calculated = calculateCost(modelConfig, normalized);
+        const calculated = calculateCost(modelConfig, normalized, req.body);
         weightedTokens = calculated.weightedTokens;
         pointsCost = calculated.pointsCost;
       }

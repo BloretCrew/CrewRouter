@@ -385,15 +385,24 @@ async function ensureModelsAliasColumn() {
 async function ensureModelsPricingFields() {
   try {
     const cols = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'models'`);
-    const colNames = cols.rows.map(r => r.column_name);
-    if (!colNames.includes('completion_ratio')) {
-      await pool.query(`ALTER TABLE models ADD COLUMN completion_ratio REAL DEFAULT 1.0`);
-      await pool.query(`ALTER TABLE models ADD COLUMN image_ratio REAL DEFAULT 0.0`);
-      await pool.query(`ALTER TABLE models ADD COLUMN audio_ratio REAL DEFAULT 0.0`);
-      await pool.query(`ALTER TABLE models ADD COLUMN model_price REAL DEFAULT 0`);
-      await pool.query(`ALTER TABLE models ADD COLUMN billing_mode VARCHAR(20) DEFAULT 'ratio'`);
-      Logger.info('[迁移] 已为 models 表添加多维定价字段');
+    const colNames = new Set(cols.rows.map(r => r.column_name));
+    const requiredColumns = [
+      ['completion_ratio', 'REAL DEFAULT 1.0'],
+      ['image_ratio', 'REAL DEFAULT 1.0'],
+      ['audio_ratio', 'REAL DEFAULT 0.0'],
+      ['model_price', 'REAL DEFAULT 0'],
+      ['billing_mode', "VARCHAR(20) DEFAULT 'ratio'"]
+    ];
+    let added = false;
+    for (const [name, definition] of requiredColumns) {
+      if (colNames.has(name)) continue;
+      await pool.query(`ALTER TABLE models ADD COLUMN IF NOT EXISTS ${name} ${definition}`);
+      added = true;
     }
+    if (colNames.has('image_ratio')) {
+      await pool.query(`ALTER TABLE models ALTER COLUMN image_ratio SET DEFAULT 1.0`);
+    }
+    if (added) Logger.info('[迁移] 已为 models 表添加多维定价字段');
   } catch (err) {
     Logger.error(`[迁移] models 多维定价字段迁移跳过: ${err.message}`);
     throw err;

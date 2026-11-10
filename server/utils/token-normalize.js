@@ -10,6 +10,11 @@ function normalizeTokenCount(value, field) {
   return count;
 }
 
+function optionalTokenCount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
 /**
  * Normalize token usage from different provider response formats.
  * Supports: OpenAI standard, Claude, Gemini.
@@ -25,7 +30,8 @@ function normalizeUsageTokens(usage, providerFormat = 'openai') {
       completionTokens: 0,
       totalTokens: 0,
       cachedTokens: 0,
-      cacheCreationTokens: 0
+      cacheCreationTokens: 0,
+      imageTokens: 0
     };
   }
 
@@ -33,6 +39,7 @@ function normalizeUsageTokens(usage, providerFormat = 'openai') {
   let completionTokens = 0;
   let cachedTokens = 0;
   let cacheCreationTokens = 0;
+  let imageTokens = 0;
 
   if (providerFormat === 'anthropic') {
     // Anthropic: input_tokens 只是未缓存的部分
@@ -59,11 +66,27 @@ function normalizeUsageTokens(usage, providerFormat = 'openai') {
     cachedTokens = normalizeTokenCount(
       usage.cachedContentTokenCount ?? usage.cached_content_token_count ?? usage.cached_tokens, 'cached_tokens'
     );
+    const details = Array.isArray(usage.promptTokensDetails) ? usage.promptTokensDetails : [];
+    imageTokens = details
+      .filter(detail => /image/i.test(String(detail?.modality || '')))
+      .reduce((sum, detail) => sum + optionalTokenCount(detail?.tokenCount), 0);
+    imageTokens = optionalTokenCount(usage.image_tokens ?? usage.imageTokens) || imageTokens;
   } else {
     // OpenAI: usage.prompt_tokens_details.cached_tokens
     promptTokens = normalizeTokenCount(usage.prompt_tokens ?? usage.input_tokens, 'prompt_tokens');
     completionTokens = normalizeTokenCount(usage.completion_tokens ?? usage.output_tokens, 'completion_tokens');
     cachedTokens = normalizeTokenCount(usage.cached_tokens ?? usage.prompt_tokens_details?.cached_tokens, 'cached_tokens');
+    imageTokens = optionalTokenCount(
+      usage.image_tokens
+      ?? usage.imageTokens
+      ?? usage.prompt_tokens_details?.image_tokens
+      ?? usage.input_tokens_details?.image_tokens
+    );
+  }
+
+  // Anthropic 通常不单列图片 token；部分代理会用 image_tokens 暴露。
+  if (providerFormat === 'anthropic') {
+    imageTokens = optionalTokenCount(usage.image_tokens ?? usage.imageTokens);
   }
 
   const totalTokens = normalizeTokenCount(promptTokens + completionTokens, 'totalTokens');
@@ -73,7 +96,8 @@ function normalizeUsageTokens(usage, providerFormat = 'openai') {
     completionTokens,
     totalTokens,
     cachedTokens,
-    cacheCreationTokens
+    cacheCreationTokens,
+    imageTokens
   };
 }
 

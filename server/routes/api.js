@@ -3338,7 +3338,7 @@ async function handleChatCompletion(req, res) {
     let weightedTokens = 0;
     let pointsCost = 0;
     if (totalTokens > 0) {
-      const calculated = calculateCost(modelConfig, result);
+      const calculated = calculateCost(modelConfig, result, req.body);
       weightedTokens = calculated.weightedTokens;
       pointsCost = calculated.pointsCost;
     }
@@ -4051,7 +4051,7 @@ async function handleAnthropicMessage(req, res) {
     let weightedTokens = 0;
     let pointsCost = 0;
     if (totalTokens > 0) {
-      const calculated = calculateCost(modelConfig, result);
+      const calculated = calculateCost(modelConfig, result, req.body);
       weightedTokens = calculated.weightedTokens;
       pointsCost = calculated.pointsCost;
     }
@@ -6220,7 +6220,7 @@ async function handleResponses(req, res) {
         const passthroughMetrics = passthroughAttempt.finish({ promptTokens, completionTokens, completed: true });
         const totalTokens = promptTokens + completionTokens;
         const cachedTokens = usage.cached_tokens || 0;
-        const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens });
+        const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens }, req.body);
         if (totalTokens > 0) {
           try {
             const pointsToDeduct = await adjustBillingCost(calculated.weightedTokens, calculated.pointsCost, {
@@ -6334,7 +6334,7 @@ async function handleResponses(req, res) {
         let weightedTokens = 0;
         let pointsCost = 0;
         if (totalTokens > 0) {
-          const calculated = calculateCost(modelConfig, result);
+          const calculated = calculateCost(modelConfig, result, req.body);
           weightedTokens = calculated.weightedTokens;
           pointsCost = calculated.pointsCost;
         }
@@ -6608,7 +6608,7 @@ async function handleResponses(req, res) {
             promptTokens,
             completionTokens,
             cachedTokens
-          });
+          }, req.body);
           const localModelId = modelConfig.id || model;
           const pointsToDeduct = await adjustBillingCost(calculated.weightedTokens, calculated.pointsCost, {
             userId: req.apiUser.userId,
@@ -6689,7 +6689,7 @@ async function handleResponses(req, res) {
     const metricsSnapshot = attempt.finish({ promptTokens, completionTokens, completed: true });
     const totalTokens = promptTokens + completionTokens;
     const cachedTokens = usage.cached_tokens || 0;
-    const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens });
+    const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens }, req.body);
     const weightedTokens = calculated.weightedTokens;
     const pointsCost = calculated.pointsCost;
 
@@ -6906,7 +6906,7 @@ async function handleResponses(req, res) {
     let weightedTokens = 0;
     let pointsCost = 0;
     if (totalTokens > 0) {
-      const calculated = calculateCost(modelConfig, result);
+      const calculated = calculateCost(modelConfig, result, req.body);
       weightedTokens = calculated.weightedTokens || 0;
       pointsCost = calculated.pointsCost || 0;
     }
@@ -7062,7 +7062,7 @@ async function recordBridgeUsage(req, { modelConfig, provider, queueModelId, res
   let weightedTokens = 0;
   let pointsCost = 0;
   if (totalTokens > 0) {
-    const calculated = calculateCost(modelConfig, result);
+    const calculated = calculateCost(modelConfig, result, req.body);
     weightedTokens = calculated.weightedTokens;
     pointsCost = calculated.pointsCost;
   }
