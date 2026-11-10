@@ -1,6 +1,9 @@
 'use strict';
 
-const { omitKnown, withPassthrough, safeParseJson } = require('./helpers');
+const {
+  omitKnown, withPassthrough, safeParseJson,
+  DEFAULT_IMAGE_MIME, toDataUri, imageSourceToOpenAI
+} = require('./helpers');
 
 const REQUEST_KEYS = new Set(['model', 'messages', 'max_tokens', 'max_completion_tokens', 'temperature', 'top_p', 'top_k', 'stop', 'stream', 'stream_options', 'tools', 'tool_choice', 'reasoning_effort', 'n', 'seed', 'frequency_penalty', 'presence_penalty', 'response_format']);
 const MESSAGE_KEYS = new Set(['role', 'content', 'name', 'tool_call_id', 'tool_calls', 'reasoning_content']);
@@ -40,11 +43,21 @@ function encodeContent(blocks, dialect) {
   const content = [];
   for (const block of blocks || []) {
     if (block.type === 'text') content.push(withPassthrough({ type: 'text', text: block.text || '', ...(block.cacheControl !== undefined ? { cache_control: block.cacheControl } : {}) }, block.passthrough?.[dialect]));
-    else if (block.type === 'image') content.push(withPassthrough({ type: 'image_url', image_url: block.source, ...(block.cacheControl !== undefined ? { cache_control: block.cacheControl } : {}) }, block.passthrough?.[dialect]));
+    else if (block.type === 'image') {
+      const imageUrl = imageSourceToOpenAI(block.source);
+      if (imageUrl != null) {
+        content.push(withPassthrough({
+          type: 'image_url',
+          image_url: imageUrl,
+          ...(block.cacheControl !== undefined ? { cache_control: block.cacheControl } : {})
+        }, block.passthrough?.[dialect]));
+      }
+    }
     else if (block.type === 'media') {
       if (block.mediaType === 'image') {
-        const url = block.fileUri || block.url || (block.data ? `data:${block.mimeType || 'image/png'};base64,${block.data}` : '');
-        if (url) content.push({ type: 'image_url', image_url: { url }, ...(block.passthrough?.openai || {}) });
+        const url = block.fileUri || block.url || block.uri
+          || (block.data ? toDataUri(block.mimeType || DEFAULT_IMAGE_MIME, block.data) : '');
+        if (url) content.push(withPassthrough({ type: 'image_url', image_url: { url } }, block.passthrough?.openai));
       } else if (block.mediaType === 'audio' && block.data) {
         const format = /mpeg|mp3/i.test(block.mimeType || '') ? 'mp3' : String(block.mimeType || 'audio/wav').split('/').pop();
         content.push({ type: 'input_audio', input_audio: { data: block.data, format }, ...(block.passthrough?.openai || {}) });

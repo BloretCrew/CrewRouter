@@ -1,6 +1,9 @@
 'use strict';
 
-const { omitKnown, withPassthrough, contentToText } = require('./helpers');
+const {
+  omitKnown, withPassthrough, contentToText,
+  DEFAULT_IMAGE_MIME, imageSourceToAnthropic
+} = require('./helpers');
 
 const REQUEST_KEYS = new Set(['model', 'messages', 'system', 'max_tokens', 'temperature', 'top_p', 'top_k', 'stop_sequences', 'stream', 'tools', 'tool_choice', 'thinking']);
 const RESPONSE_KEYS = new Set(['id', 'type', 'role', 'content', 'model', 'stop_reason', 'stop_sequence', 'usage']);
@@ -38,15 +41,21 @@ function encodeBlock(block) {
   let value;
   if (block.type === 'text') value = { type: 'text', text: block.text || '' };
   else if (block.type === 'thinking') value = block.redacted ? { type: 'redacted_thinking', data: block.data ?? '' } : { type: 'thinking', thinking: block.thinking || '', ...(block.signature !== undefined ? { signature: block.signature } : {}) };
-  else if (block.type === 'image') value = { type: 'image', source: block.source };
+  else if (block.type === 'image') {
+    const source = imageSourceToAnthropic(block.source);
+    if (!source) return null;
+    value = { type: 'image', source };
+  }
   else if (block.type === 'media') {
     if (block.mediaType === 'image') {
-      value = {
-        type: 'image',
-        source: block.fileUri
-          ? { type: 'url', url: block.fileUri }
-          : { type: 'base64', media_type: block.mimeType || 'image/png', data: block.data || '' }
-      };
+      const uri = block.fileUri || block.url || block.uri;
+      if (uri) {
+        value = { type: 'image', source: { type: 'url', url: uri } };
+      } else if (block.data) {
+        value = { type: 'image', source: { type: 'base64', media_type: block.mimeType || DEFAULT_IMAGE_MIME, data: block.data } };
+      } else {
+        return null;
+      }
     } else if (block.mediaType === 'document') {
       value = {
         type: 'document',

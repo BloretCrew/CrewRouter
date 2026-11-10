@@ -1,6 +1,9 @@
 'use strict';
 
-const { omitKnown, withPassthrough, safeParseJson } = require('./helpers');
+const {
+  omitKnown, withPassthrough, safeParseJson,
+  imageSourceToGemini
+} = require('./helpers');
 const {
   mediaTypeFromMime,
   fromGeminiSchema,
@@ -213,7 +216,7 @@ function encodeParts(blocks, toolNames) {
         ? mediaFromImageSource(block.source)
         : block;
       if (!media) continue;
-      const mediaUri = media.fileUri || media.uri;
+      const mediaUri = media.fileUri || media.url || media.uri;
       if (mediaUri) {
         parts.push(withPassthrough({
           fileData: {
@@ -222,11 +225,11 @@ function encodeParts(blocks, toolNames) {
             ...(media.displayName ? { displayName: media.displayName } : {})
           }
         }, extra));
-      } else {
+      } else if (media.data) {
         parts.push(withPassthrough({
           inlineData: {
             mimeType: media.mimeType || 'application/octet-stream',
-            data: media.data || '',
+            data: media.data,
             ...(media.displayName ? { displayName: media.displayName } : {})
           }
         }, extra));
@@ -261,33 +264,7 @@ function encodeParts(blocks, toolNames) {
 }
 
 function mediaFromImageSource(source) {
-  if (!source || typeof source !== 'object') return null;
-  if (source.inlineData) {
-    return {
-      type: 'media',
-      mediaType: 'image',
-      mimeType: source.inlineData.mimeType || 'image/png',
-      data: source.inlineData.data || ''
-    };
-  }
-  if (source.fileData) {
-    return {
-      type: 'media',
-      mediaType: 'image',
-      mimeType: source.fileData.mimeType,
-      fileUri: source.fileData.fileUri
-    };
-  }
-  if (source.url || typeof source === 'string') {
-    return { type: 'media', mediaType: 'image', mimeType: 'image/png', uri: source.url || source };
-  }
-  if (source.type === 'base64') {
-    return { type: 'media', mediaType: 'image', mimeType: source.media_type || 'image/png', data: source.data || '' };
-  }
-  if (source.data) {
-    return { type: 'media', mediaType: 'image', mimeType: source.media_type || source.mimeType || 'image/png', data: source.data };
-  }
-  return null;
+  return imageSourceToGemini(source);
 }
 
 function blocksToText(blocks) {

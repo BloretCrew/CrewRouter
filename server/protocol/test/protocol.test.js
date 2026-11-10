@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const protocol = require('..');
 const transforms = require('../../providers/transforms');
+const { parseDataUri, toDataUri } = require('../helpers');
 
 const openaiToAnthropic = transforms.getTransform('openai', 'anthropic');
 const anthropicToOpenai = transforms.getTransform('anthropic', 'openai');
@@ -388,4 +389,187 @@ test('actual proxy request builders preserve system/tools caches and opaque assi
     }
     assert.deepEqual(plain(body), before);
   }
+});
+
+// ---- 图片 source 跨方言归一化 ----
+
+function anthropicImage(source, extra = {}) {
+  return {
+    model: 'm', max_tokens: 8,
+    messages: [{ role: 'user', content: [{ type: 'image', source, ...extra }] }]
+  };
+}
+
+test('data URI helpers parse base64 payloads and ignore charset parameters', () => {
+  assert.deepEqual(parseDataUri('data:image/png;base64,AA=='), { mimeType: 'image/png', data: 'AA==' });
+  assert.deepEqual(parseDataUri('data:image/png;charset=utf-8;base64,AA=='), { mimeType: 'image/png', data: 'AA==' });
+  assert.equal(parseDataUri('data:image/svg+xml,<svg/>'), null);
+  assert.equal(parseDataUri('https://example.test/a.png'), null);
+  assert.equal(parseDataUri(undefined), null);
+  assert.equal(toDataUri('image/png', 'AA=='), 'data:image/png;base64,AA==');
+});
+
+test('Anthropic images become legal OpenAI image URLs', () => {
+  const base64 = protocol.convertRequest('anthropic', 'openai',
+    anthropicImage({ type: 'base64', media_type: 'image/png', data: 'AA==' }, { cache_control: { type: 'ephemeral' } }));
+  assert.deepEqual(base64.messages[0].content[0], {
+    type: 'image_url',
+    image_url: { url: 'data:image/png;base64,AA==' },
+    cache_control: { type: 'ephemeral' }
+  });
+  const remote = protocol.convertRequest('anthropic', 'openai',
+    anthropicImage({ type: 'url', url: 'https://example.test/a.png' }));
+  assert.deepEqual(remote.messages[0].content[0], {
+    type: 'image_url',
+    image_url: { url: 'https://example.test/a.png' }
+  });
+});
+
+test('Anthropic images without media_type default to image/png', () => {
+  const result = protocol.convertRequest('anthropic', 'openai',
+    anthropicImage({ type: 'base64', data: 'AA==' }));
+  assert.equal(result.messages[0].content[0].image_url.url, 'data:image/png;base64,AA==');
+});
+
+test('OpenAI image URLs become legal Anthropic sources', () => {
+  const result = protocol.convertRequest('openai', 'anthropic', {
+    model: 'm',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: 'data:image/png;base64,AA==' },
+        { type: 'image_url', image_url: { url: 'https://example.test/a.png', detail: 'high' } }
+      ]
+    }]
+  });
+  assert.deepEqual(result.messages[0].content[0].source, { type: 'base64', media_type: 'image/png', data: 'AA==' });
+  assert.deepEqual(result.messages[0].content[1].source, { type: 'url', url: 'https://example.test/a.png' });
+});
+
+test('Responses input images convert to Anthropic, OpenAI and Gemini', () => {
+  const body = {
+    model: 'm',
+    input: [{
+      role: 'user',
+      content: [
+        { type: 'input_image', image_url: 'data:image/jpeg;base64,BB==' },
+        { type: 'input_image', file_id: 'file_1' }
+      ]
+    }]
+  };
+  const anthropic = protocol.convertRequest('responses', 'anthropic', { ...body, max_tokens: 8 });
+  assert.deepEqual(anthropic.messages[0].content[0].source, { type: 'base64', media_type: 'image/jpeg', data: 'BB==' });
+  assert.deepEqual(anthropic.messages[0].content[1].source, { type: 'file', file_id: 'file_1' });
+  const openai = protocol.convertRequest('responses', 'openai', body);
+  assert.equal(openai.messages[0].content[0].image_url.url, 'data:image/jpeg;base64,BB==');
+  const gemini = protocol.convertRequest('responses', 'gemini', body);
+  assert.deepEqual(gemini.contents[0].parts[0].inlineData, { mimeType: 'image/jpeg', data: 'BB==' });
+});
+
+test('Anthropic images convert to Responses and Gemini shapes', () => {
+  const body = anthropicImage({ type: 'base64', media_type: 'image/png', data: 'AA==' });
+  const responses = protocol.convertRequest('anthropic', 'responses', body);
+  assert.deepEqual(responses.input[0].content[0], {
+    type: 'input_image',
+    image_url: 'data:image/png;base64,AA=='
+  });
+  const remote = protocol.convertRequest('anthropic', 'gemini',
+    anthropicImage({ type: 'url', url: 'https://example.test/a.png' }));
+  assert.deepEqual(remote.contents[0].parts[0].fileData, {
+    mimeType: 'image/png',
+    fileUri: 'https://example.test/a.png'
+  });
+});
+
+test('OpenAI string image URLs convert to Gemini inline data or file data', () => {
+  const dataUri = protocol.convertRequest('openai', 'gemini', {
+    model: 'm',
+    messages: [{ role: 'user', content: [{ type: 'image_url', image_url: 'data:image/png;base64,AA==' }] }]
+  });
+  assert.deepEqual(dataUri.contents[0].parts[0].inlineData, { mimeType: 'image/png', data: 'AA==' });
+  const remote = protocol.convertRequest('openai', 'gemini', {
+    model: 'm',
+    messages: [{ role: 'user', content: [{ type: 'image_url', image_url: 'https://example.test/a.png' }] }]
+  });
+  assert.deepEqual(remote.contents[0].parts[0].fileData, {
+    mimeType: 'image/png',
+    fileUri: 'https://example.test/a.png'
+  });
+});
+
+test('Gemini inline images convert to OpenAI and Anthropic without loss', () => {
+  const body = {
+    model: 'm',
+    contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/png', data: 'AA==' } }] }]
+  };
+  const openai = protocol.convertRequest('gemini', 'openai', body);
+  assert.deepEqual(openai.messages[0].content[0], {
+    type: 'image_url',
+    image_url: { url: 'data:image/png;base64,AA==' }
+  });
+  const anthropic = protocol.convertRequest('gemini', 'anthropic', { ...body, max_tokens: 8 });
+  assert.deepEqual(anthropic.messages[0].content[0].source, {
+    type: 'base64', media_type: 'image/png', data: 'AA=='
+  });
+});
+
+test('unrecognized or empty image sources are skipped instead of emitted empty', () => {
+  const empty = protocol.convertRequest('anthropic', 'openai',
+    anthropicImage({ type: 'base64', data: '' }));
+  assert.equal(empty.messages[0].content, null);
+  const invalidDataUri = protocol.convertRequest('openai', 'anthropic', {
+    model: 'm',
+    messages: [{ role: 'user', content: [{ type: 'image_url', image_url: 'data:image/svg+xml,<svg/>' }] }]
+  });
+  assert.deepEqual(invalidDataUri.messages[0].content, []);
+  const emptyGemini = protocol.convertRequest('anthropic', 'gemini',
+    anthropicImage({ type: 'base64', data: '' }));
+  assert.deepEqual(emptyGemini.contents[0].parts, []);
+});
+
+test('same-dialect image round-trips keep their shape and metadata', () => {
+  const openaiBody = {
+    model: 'm',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: 'data:image/png;base64,AA==' },
+        { type: 'image_url', image_url: { url: 'https://example.test/a.png', detail: 'high' } }
+      ]
+    }]
+  };
+  const openai = protocol.codecs.openai;
+  const openaiRoundTrip = openai.encodeRequest(openai.decodeRequest(openaiBody)).messages[0].content;
+  assert.deepEqual(openaiRoundTrip[0], { type: 'image_url', image_url: { url: 'data:image/png;base64,AA==' } });
+  assert.deepEqual(openaiRoundTrip[1], openaiBody.messages[0].content[1]);
+
+  const anthropicBody = anthropicImage(
+    { type: 'base64', media_type: 'image/png', data: 'AA==' },
+    { cache_control: { type: 'ephemeral' } }
+  );
+  const anthropic = protocol.codecs.anthropic;
+  assert.deepEqual(
+    anthropic.encodeRequest(anthropic.decodeRequest(anthropicBody)).messages[0].content,
+    anthropicBody.messages[0].content
+  );
+
+  const responsesBody = {
+    model: 'm',
+    input: [{ role: 'user', content: [{ type: 'input_image', image_url: 'https://example.test/a.png', detail: 'high' }] }]
+  };
+  const responses = protocol.codecs.responses;
+  assert.deepEqual(
+    responses.encodeRequest(responses.decodeRequest(responsesBody)).input[0].content,
+    responsesBody.input[0].content
+  );
+
+  const geminiBody = {
+    model: 'm',
+    contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/png', data: 'AA==' } }] }]
+  };
+  const gemini = protocol.codecs.gemini;
+  assert.deepEqual(
+    gemini.encodeRequest(gemini.decodeRequest(geminiBody)).contents[0].parts,
+    geminiBody.contents[0].parts
+  );
 });

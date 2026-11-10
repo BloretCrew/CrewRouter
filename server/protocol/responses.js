@@ -1,6 +1,9 @@
 'use strict';
 
-const { omitKnown, withPassthrough, safeParseJson } = require('./helpers');
+const {
+  omitKnown, withPassthrough, safeParseJson,
+  DEFAULT_IMAGE_MIME, toDataUri, imageSourceToResponses
+} = require('./helpers');
 
 const REQUEST_KEYS = new Set(['model', 'input', 'instructions', 'max_output_tokens', 'temperature', 'top_p', 'stream', 'tools', 'tool_choice', 'parallel_tool_calls', 'reasoning', 'metadata', 'store', 'text']);
 const RESPONSE_KEYS = new Set(['id', 'object', 'created_at', 'status', 'model', 'output', 'usage', 'error', 'incomplete_details', 'metadata']);
@@ -30,10 +33,16 @@ function decodeContent(content) {
 function encodeContent(blocks, mode = 'input') {
   return (blocks || []).map(block => {
     if (block.type === 'text') return withPassthrough({ type: mode === 'output' ? 'output_text' : 'input_text', text: block.text || '' }, block.passthrough?.responses);
-    if (block.type === 'image') return withPassthrough({ type: 'input_image', image_url: block.source?.url || block.source }, block.passthrough?.responses);
+    if (block.type === 'image') {
+      const part = imageSourceToResponses(block.source);
+      return part ? withPassthrough(part, block.passthrough?.responses) : null;
+    }
     if (block.type === 'media') {
       if (block.mediaType === 'image') {
-        return { type: 'input_image', image_url: block.fileUri || block.url || (block.data ? `data:${block.mimeType || 'image/png'};base64,${block.data}` : '') };
+        const uri = block.fileUri || block.url || block.uri
+          || (block.data ? toDataUri(block.mimeType || DEFAULT_IMAGE_MIME, block.data) : '');
+        if (!uri) return null;
+        return withPassthrough({ type: 'input_image', image_url: uri }, block.passthrough?.responses);
       }
       if (block.mediaType === 'document') {
         return { type: 'input_file', ...(block.fileId ? { file_id: block.fileId } : {}), ...(block.fileUri ? { file_url: block.fileUri } : {}), ...(block.filename ? { filename: block.filename } : {}) };
