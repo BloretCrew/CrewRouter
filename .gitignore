@@ -35,6 +35,13 @@ updates/*.zip
 /hermes-agent/
 /openclaw/
 
+# 本地独立子仓库（各自有独立 Git 远端，不在主仓库跟踪）
+/BloraRouter/
+/CLIProxyAPI/
+/blora-design/
+/BloraDesign3-ARCHIVE/
+/.claude/worktrees/
+
 # 本地运行时产物（许可租约含密钥凭据，勿提交）
 /.hermes/
 /server/license/
