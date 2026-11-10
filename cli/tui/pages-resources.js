@@ -39,7 +39,7 @@ function providersPage(runtime) {
             { label: '检测连通性', value: 'ping' },
             ...(data.scope === 'admin' ? [{ label: item.enabled === false ? '启用供应商' : '停用供应商', value: 'toggle' }] : []),
           ];
-          const choice = await ctx.choose(item.name || item.id, actions);
+          const choice = await ctx.choose('供应商操作', actions, { description: `${item.name || item.id}\n${item.base_url || ''}`.trim() });
           if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, JSON.stringify(providerDetail(item), null, 2));
           else if (choice === 'ping') {
             ctx.notify('正在检测连通性…');
@@ -92,7 +92,7 @@ function modelsPage(runtime) {
             { label: '测试模型', value: 'test' },
             { label: '设为当前模型', value: 'current' },
           ];
-          const choice = await ctx.choose(item.name || item.id, actions);
+          const choice = await ctx.choose('模型操作', actions, { description: `${item.name || item.id}\n${item.provider_name || item.provider || ''}`.trim() });
           if (choice === 'detail') await ctx.show(`模型 · ${item.name || item.id}`, JSON.stringify(item, null, 2));
           else if (choice === 'test') {
             ctx.notify('正在测试模型…');
@@ -147,7 +147,7 @@ function keysPage(runtime) {
             { label: '重命名', value: 'rename' },
             { label: '删除 Key', value: 'delete' },
           ];
-          const choice = await ctx.choose(key.name || key.key_prefix || `Key ${key.id}`, actions);
+          const choice = await ctx.choose('API Key 操作', actions, { description: key.name || key.key_prefix || `Key ${key.id}` });
           if (choice === 'detail') await ctx.show(`API Key · ${key.name || key.id}`, JSON.stringify({
             id: key.id, name: key.name, prefix: key.key_prefix, enabled: key.enabled,
             current_model: key.current_model_name || key.current_model_id, permissions: key.permissions,

@@ -176,7 +176,7 @@ function statusIcon(ok) {
 }
 
 module.exports = {
-  width, cut, pad, wrap, clean,
+  cw: codePointWidth, width, cut, pad, wrap, clean,
   colorEnabled, color, bold, dim, green, yellow, red, cyan,
   formatBigNumber, formatCost, formatTime, formatDuration, maskSecret, relativePath,
   table, section, statusIcon,

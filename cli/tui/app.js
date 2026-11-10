@@ -170,8 +170,8 @@ async function authenticate(ctx, runtime) {
     options.push({ label: 'API Key 登录', value: 'api-key' });
     options.push({ label: '切换服务器', value: 'switch' });
     options.push({ label: '退出', value: 'quit' });
-    const method = await ctx.choose(`登录 ${runtime.client.baseUrl}`, options, {
-      description: `实例认证方式：${methods.join('、') || '未知'}${canPassword ? '' : '\n该实例未启用密码登录；请使用 API Key，或先在浏览器登录。'}`,
+    const method = await ctx.choose('登录', options, {
+      description: `目标：${runtime.client.baseUrl}\n实例认证方式：${methods.join('、') || '未知'}${canPassword ? '' : '\n该实例未启用密码登录；请使用 API Key，或先在浏览器登录。'}`,
     });
     if (method === null || method === 'quit') return false;
     if (method === 'switch') {
@@ -326,7 +326,14 @@ async function runCliTui(args = {}, { input = process.stdin, output = process.st
     authenticate: authenticateFn,
     onSessionReset: () => { runtime.user = null; },
     refreshMs,
-    title: 'CrewRouter CLI',
+    title: 'CrewRouter',
+    headerRight: () => {
+      if (runtime.client.authWarning) return '权限受限';
+      if (runtime.client.isAdmin === true) return 'admin';
+      if (runtime.user || runtime.client.username) return runtime.client.username || '已登录';
+      return '未登录';
+    },
+    sidebarFooter: () => [runtime.profileName || 'local', runtime.client.authWarning ? '权限受限' : (runtime.user || runtime.client.username ? '已连接' : '未登录')],
   });
   return run;
 }

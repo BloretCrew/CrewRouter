@@ -52,6 +52,8 @@ const HELP_TEXT = `CrewRouter CLI (cr) — 连接远程实例或从本机启动 
   CREWROUTER_URL / CR_URL        默认服务器地址
   CREWROUTER_API_KEY / CR_API_KEY 直接使用 API Key
   CR_CONFIG_PATH                 本地服务 config.json 路径
+  CR_THEME / CR_PALETTE          TUI 配色（coral/indigo/graphite/mono/circuit/dusk）
+  CR_COLOR_SCHEME                auto/dark/light/plain
 
 激活命令：npm link（或 npm install -g .）后即可直接运行 cr。`;
 

@@ -1,33 +1,24 @@
 'use strict';
 
-// Full-screen terminal engine adapted from Blora-Warden's tui-pages.js
-// (GPL-3.0-or-later), trimmed to CrewRouter management pages. It keeps the
-// original immediate-mode hit map, SGR mouse handling and modal primitives.
+// Full-screen terminal engine adapted from Blora-Agent's ratatui visual
+// language (theme, canvas, sidebar and dialog chrome), implemented with
+// dependency-free ANSI rendering and the SGR mouse hit-map approach.
 
 const { emitKeypressEvents } = require('node:readline');
 const { PassThrough } = require('node:stream');
 const { StringDecoder } = require('node:string_decoder');
-const { clean, width, cut, pad, wrap } = require('../lib/format');
-
-function cw(ch) {
-  const cp = ch.codePointAt(0);
-  if (/\p{Mark}/u.test(ch) || cp === 0x200d || cp === 0xfe0f) return 0;
-  return cp >= 0x1100 && (
-    cp <= 0x115f || cp === 0x2329 || cp === 0x232a ||
-    (cp >= 0x2e80 && cp <= 0xa4cf) || (cp >= 0xac00 && cp <= 0xd7a3) ||
-    (cp >= 0xf900 && cp <= 0xfaff) || (cp >= 0xfe10 && cp <= 0xfe6f) ||
-    (cp >= 0xff00 && cp <= 0xff60) || (cp >= 0xffe0 && cp <= 0xffe6) ||
-    (cp >= 0x1f300 && cp <= 0x1faff) || (cp >= 0x20000 && cp <= 0x3fffd)
-  ) ? 2 : 1;
-}
+const { clean, cw, width, cut, pad, wrap } = require('../lib/format');
+const { createTheme } = require('./theme');
 
 function visibleInput(value) {
   return [...String(value ?? '')].map(ch => /[\x00-\x1f\x7f-\x9f؜‎‏‪-‮⁦-⁩]/u.test(ch) ? ' ' : ch).join('');
 }
+
 function inputView(value, position, limit) {
   const chars = [...visibleInput(value)];
   const at = Math.max(0, Math.min(position, chars.length));
-  let start = at, caret = 0;
+  let start = at;
+  let caret = 0;
   while (start > 0) {
     const size = cw(chars[start - 1]);
     if (caret + size > Math.max(0, limit - 1)) break;
@@ -36,49 +27,41 @@ function inputView(value, position, limit) {
   }
   return { text: cut(chars.slice(start).join(''), limit), start, caret };
 }
+
 function atCell(view, cell) {
-  let n = 0, w = 0;
-  for (const ch of view.text) { const x = cw(ch); if (w + x / 2 > cell) break; w += x; n++; }
+  let n = 0;
+  let used = 0;
+  for (const ch of view.text) {
+    const step = cw(ch);
+    if (used + step / 2 > cell) break;
+    used += step;
+    n++;
+  }
   return view.start + n;
 }
+
 function text(value) {
   return Array.isArray(value) ? value.map(text).join('\n')
     : value == null ? '' : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
 }
 
-function palette(env) {
-  const setting = String(env.CR_COLOR_SCHEME || env.BLORA_COLOR_SCHEME || 'auto').toLowerCase();
-  const plain = Object.hasOwn(env, 'NO_COLOR') || env.TERM === 'dumb' || ['plain', 'none', 'off'].includes(setting);
-  const light = ['light', 'dawn', 'day'].includes(setting) || (!['dark', 'night'].includes(setting) && ['7', '15'].includes(String(env.COLORFGBG || '').split(';').at(-1)));
-  const rgb = /^(truecolor|24bit)$/i.test(env.COLORTERM || '') || /direct|truecolor/i.test(env.TERM || '');
-  const c256 = /256color/i.test(env.TERM || '');
-  const colors = light
-    ? { bg: 'FAF7F8', raised: 'F4ECEE', select: 'E9DEE1', fg: '303143', dim: '555565', rose: '9F5964', amber: '806C4F', danger: '9E5559', line: 'D9D2D6' }
-    : { bg: '17161C', raised: '2C2931', select: '3A363F', fg: 'F8F2F4', dim: 'A1979D', rose: 'D18A94', amber: 'BBA27B', danger: 'D27779', line: '413C41' };
-  const basic = light
-    ? { bg: 107, raised: 107, select: 47, fg: 30, dim: 30, rose: 31, amber: 31, danger: 31, line: 37 }
-    : { bg: 40, raised: 40, select: 100, fg: 97, dim: 37, rose: 91, amber: 93, danger: 91, line: 90 };
-  function code(name, foreground) {
-    if (!rgb && !c256) return basic[name];
-    const col = colors[name].match(/../g).map(x => parseInt(x, 16));
-    if (rgb) return `${foreground ? 38 : 48};2;${col.join(';')}`;
-    const levels = [0, 95, 135, 175, 215, 255];
-    let best = 16, dist = Infinity;
-    for (let i = 16; i < 256; i++) {
-      const n = i - 16;
-      const a = i < 232 ? [levels[Math.floor(n / 36)], levels[Math.floor(n / 6) % 6], levels[n % 6]] : Array(3).fill(8 + (i - 232) * 10);
-      const d = a.reduce((s, v, k) => s + (v - col[k]) ** 2, 0);
-      if (d < dist) { dist = d; best = i; }
-    }
-    return `${foreground ? 38 : 48};5;${best}`;
-  }
-  const styles = new Map();
-  return (s, fg = 'fg', bg = 'bg', bold = false, decoration = '') => {
-    if (plain) return s;
-    const key = `${fg}:${bg}:${bold}:${decoration}`;
-    if (!styles.has(key)) styles.set(key, `\x1b[${bold ? '1;' : ''}${decoration ? `${decoration};` : ''}${code(fg, true)};${code(bg, false)}m`);
-    return `${styles.get(key)}${s}\x1b[0m`;
-  };
+function kindStyle(kind) {
+  if (kind === 'heading') return { fg: 'fg', bold: true };
+  if (kind === 'muted' || kind === 'mute') return { fg: 'mute' };
+  if (kind === 'dim') return { fg: 'dim' };
+  if (kind === 'rose') return { fg: 'rose' };
+  if (kind === 'sage') return { fg: 'sage' };
+  if (kind === 'warning') return { fg: 'amber' };
+  if (kind === 'danger') return { fg: 'danger' };
+  if (kind === 'label') return { fg: 'dim' };
+  if (kind === 'value') return { fg: 'rose', bold: true };
+  return { fg: 'fg' };
+}
+
+function rowSpans(row) {
+  if (Array.isArray(row.spans) && row.spans.length) return row.spans;
+  const style = kindStyle(row.kind);
+  return [{ text: row.line || '', ...style }];
 }
 
 async function runPagedTui({
@@ -90,13 +73,16 @@ async function runPagedTui({
   authenticate,
   onSessionReset = () => {},
   timers = {},
-  title = 'CrewRouter CLI',
+  title = 'CrewRouter',
   refreshMs = 10000,
+  headerRight = null,
+  sidebarFooter = null,
 } = {}) {
   if (!input.isTTY || !output.isTTY || typeof input.setRawMode !== 'function') throw new Error('TUI 需要交互式终端。');
   if (typeof api !== 'function' || !Array.isArray(pages) || !pages.length) throw new Error('页面或 API 未配置。');
 
-  const paint = palette(env);
+  const theme = createTheme(env);
+  const paint = theme.paint;
   const oldRaw = Boolean(input.isRaw);
   const wasFlowing = input.readableFlowing === true;
   const pageStates = new Map(pages.map(page => [page.id, {
@@ -104,7 +90,6 @@ async function runPagedTui({
     scroll: 0, selected: 0, tabIndex: 0, tabViews: {}, cache: null, version: 0,
   }]));
   let active = 0;
-  let menuStart = 0;
   let focus = 'menu';
   let compactMenu = false;
   let busy = false;
@@ -137,7 +122,8 @@ async function runPagedTui({
     st.cache = null;
   }
   function switchTab(index) {
-    const page = pages[active], st = state();
+    const page = pages[active];
+    const st = state();
     if (!page.tabs?.length) return;
     rememberTab(st, page);
     st.tabIndex = (index + page.tabs.length) % page.tabs.length;
@@ -145,84 +131,137 @@ async function runPagedTui({
     st.version++;
     render();
   }
-  function tabText(page, st, available) {
-    const tabs = page.tabs || [], activeTab = currentTab(page, st);
-    if (!tabs.length) return { text: '─'.repeat(Math.max(0, available)), spans: [] };
+  function tabLine(page, st, available) {
+    const tabs = page.tabs || [];
+    const activeTab = currentTab(page, st);
+    if (!tabs.length) return null;
     const index = tabs.indexOf(activeTab);
-    const all = `子页  ${tabs.map((tab, i) => `${i + 1} ${tab.label}`).join('  ·  ')}`;
-    if (width(all) <= available) {
-      const spans = [];
-      let cursor = 1 + width('子页  ');
-      for (const [i, tab] of tabs.entries()) {
-        const label = `${i + 1} ${tab.label}`;
-        spans.push({ start: cursor, end: cursor + width(label) - 1, index: i });
-        cursor += width(label);
-        if (i < tabs.length - 1) cursor += width('  ·  ');
-      }
-      return { text: all, spans };
-    }
-    return { text: `‹ ${activeTab.label}  ${index + 1}/${tabs.length} ›`, spans: [] };
+    const labels = tabs.map((tab, i) => i === index ? `[ ${tab.label} ]` : `  ${tab.label}  `);
+    const all = labels.join(' ');
+    if (width(all) <= available) return { text: all, labels, index };
+    return { text: cut(`‹ ${activeTab.label} ${index + 1}/${tabs.length} ›`, available), labels: null, index };
   }
   function schedule() { if (!rerender && !closed) rerender = setImmediate(() => { rerender = null; render(); }); }
+
+  function wrapRow(label, inner, indent) {
+    const room = Math.max(1, inner - indent);
+    return wrap(clean(label), room);
+  }
 
   function rowsFor(page, data, w, st) {
     const tab = currentTab(page, st);
     if (st.cache && st.cache.width === w && st.cache.version === st.version && st.cache.tab === (tab ? tab.id : null)) return st.cache.rows;
     const rows = [];
-    const add = (line, kind = 'text', action = null) => rows.push({ line, kind, action });
-    add(page.label, 'title');
-    if (page.description) for (const line of wrap(page.description, w)) add(line, 'muted');
-    add('');
-    if (st.loading) add('正在加载，请稍候…', 'muted');
-    if (st.error) for (const line of wrap(`加载失败：${st.error}。按 r 重试。`, w)) add(line, 'warning');
+    const add = (line, kind = 'text', action = null, indent = 2) => rows.push({ line, kind, action, indent });
+    const addSpans = (spans, kind = 'text', action = null, indent = 0) => rows.push({ spans, kind, action, indent });
+    if (page.description) {
+      for (const line of wrap(page.description, Math.max(1, w - 2))) add(line, 'mute', null, 1);
+    }
+    if (st.loading) add('正在加载，请稍候…', 'dim');
+    if (st.error) {
+      for (const line of wrap(`加载失败：${st.error}。按 r 重试。`, Math.max(1, w - 2))) add(line, 'warning', null, 1);
+    }
     if (data) {
+      const sections = (Array.isArray(data.sections) ? data.sections : []).filter(section => !tab || !section.tab || section.tab === tab.id);
       const actions = (Array.isArray(data.actions) ? data.actions : []).filter(action => !tab || !action.tab || action.tab === tab.id);
-      const inner = Math.max(1, w - 4);
-      const frame = (value, kind = 'panel', action = null) => add(`│ ${pad(value, inner)} │`, kind, action);
-      const panelTop = panelTitle => add(`╭─ ${pad(clean(panelTitle), Math.max(0, w - 4))}╮`, 'panelTitle');
-      const panelBottom = () => add(`╰${'─'.repeat(Math.max(0, w - 2))}╯`, 'panelEdge');
-      const showSection = section => {
-        panelTop(section.title || '');
-        if (section.description) for (const line of wrap(section.description, inner)) frame(line, 'panelMuted');
+      let first = true;
+      for (const section of sections) {
+        if (!first) add('', 'text', null, 0);
+        first = false;
+        if (section.title) addSpans([{ text: '▸ ', fg: 'rose' }, { text: clean(section.title), fg: 'fg', bold: true }], 'heading', null, 0);
+        if (section.description) {
+          for (const line of wrap(section.description, Math.max(1, w - 4))) add(line, 'mute', null, 2);
+        }
         const cards = Array.isArray(section.cards) ? section.cards : [];
         if (cards.length) {
-          const count = inner >= 66 ? 3 : inner >= 42 ? 2 : 1;
+          const count = w >= 68 ? 3 : w >= 44 ? 2 : 1;
           for (let start = 0; start < cards.length; start += count) {
             const group = cards.slice(start, start + count);
-            const size = Math.max(4, Math.floor((inner - (group.length - 1)) / group.length));
-            const each = fn => frame(group.map(card => pad(fn(card), size)).join(' '));
-            each(() => `╭${'─'.repeat(Math.max(0, size - 2))}╮`);
-            each(card => `│${pad(clean(text(card.label)), size - 2)}│`);
-            each(card => `│${pad(clean(text(card.value)), size - 2)}│`);
-            if (group.some(card => card.detail)) each(card => `│${pad(clean(text(card.detail)), size - 2)}│`);
-            each(() => `╰${'─'.repeat(Math.max(0, size - 2))}╯`);
+            const gap = 2;
+            const cell = Math.max(8, Math.floor((w - gap * (group.length - 1)) / group.length));
+            const spans = [];
+            const details = [];
+            group.forEach((card, index) => {
+              if (index) spans.push({ text: ' '.repeat(gap), fg: 'fg' });
+              const label = clean(text(card.label));
+              const value = clean(text(card.value));
+              const labelWidth = Math.max(6, Math.min(cell - 3, width(label)));
+              const shortLabel = cut(label, labelWidth);
+              spans.push({ text: shortLabel, fg: 'dim' });
+              spans.push({ text: '  ', fg: 'fg' });
+              spans.push({ text: cut(value, Math.max(1, cell - width(shortLabel) - 2)), fg: 'rose', bold: true });
+              details.push({ text: cut(clean(text(card.detail)), cell), fg: 'mute' });
+            });
+            addSpans(spans, 'text', null, 0);
+            if (details.some(item => item.text)) {
+              const detailSpans = [];
+              details.forEach((item, index) => {
+                if (index) detailSpans.push({ text: ' '.repeat(gap), fg: 'fg' });
+                detailSpans.push({ text: pad(item.text, cell), fg: 'mute' });
+              });
+              addSpans(detailSpans, 'muted', null, 0);
+            }
           }
         }
-        for (const row of section.rows || []) {
-          const obj = typeof row === 'string' ? { label: row } : row;
-          if (!obj) continue;
-          const action = typeof obj.run === 'function' && !obj.disabled ? obj : null;
-          const lines = wrap(clean(obj.label || ''), inner);
-          lines.forEach((line, i) => frame(`${i ? '  ' : ''}${line}${!i && action ? '  ›' : ''}`, action ? 'panelAction' : 'panel', !i ? action : null));
-          if (obj.detail) for (const line of wrap(text(obj.detail), Math.max(1, inner - 2))) frame(`  ${line}`, 'panelMuted');
+        for (const entry of section.rows || []) {
+          const row = typeof entry === 'string' ? { label: entry } : entry;
+          if (!row) continue;
+          const action = typeof row.run === 'function' && !row.disabled ? row : null;
+          const lines = wrapRow(row.label || '', w, 2);
+          lines.forEach((line, index) => {
+            add(line, 'text', index === 0 ? action : null, action ? 0 : 2);
+          });
+          if (row.detail) {
+            for (const line of wrap(text(row.detail), Math.max(1, w - 6))) add(line, 'mute', null, 4);
+          }
         }
-        if (!(section.rows || []).length && !cards.length) frame('暂无记录', 'panelMuted');
-        panelBottom();
-        add('');
-      };
-      const sections = (Array.isArray(data.sections) ? data.sections : []).filter(section => !tab || !section.tab || section.tab === tab.id);
-      if (sections.length) showSection(sections[0]);
-      if (actions.length) {
-        panelTop('操作');
-        for (const action of actions) if (action && action.label) frame(`[${clean(action.label)}]`, action.disabled ? 'panelMuted' : 'panelAction', action.disabled ? null : action);
-        panelBottom();
-        add('');
       }
-      for (const section of sections.slice(1)) showSection(section);
+      if (actions.length) {
+        if (!first) add('', 'text', null, 0);
+        addSpans([{ text: '▸ ', fg: 'rose' }, { text: '操作', fg: 'dim', bold: true }], 'heading', null, 0);
+        for (const action of actions) {
+          if (!action || !action.label) continue;
+          add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
+        }
+      }
     }
-    if (!data && !st.loading && !st.error) add('尚无数据。', 'muted');
+    if (!data && !st.loading && !st.error) add('尚无数据。', 'mute');
     st.cache = { width: w, version: st.version, tab: tab ? tab.id : null, rows };
     return rows;
+  }
+
+  function paintSpans(spans, available, painter, baseBg, forcedBg = null, forcedBold = false) {
+    let used = 0;
+    let out = '';
+    const positions = [];
+    for (const span of spans) {
+      if (used >= available) break;
+      const value = cut(clean(span.text ?? ''), available - used);
+      if (!value) continue;
+      const bg = forcedBg || span.bg || baseBg;
+      positions.push({ start: used, end: used + width(value) - 1, span });
+      out += painter(value, span.fg || 'fg', bg, forcedBold || span.bold === true, span.deco || '');
+      used += width(value);
+    }
+    if (used < available) out += painter(' '.repeat(available - used), 'fg', forcedBg || baseBg);
+    return { text: out, positions };
+  }
+
+  function headerChunks(innerW, page) {
+    const right = typeof headerRight === 'function' ? clean(headerRight() || '') : (authenticated ? '已连接' : '连接中');
+    const rightW = Math.min(width(right), Math.max(0, Math.floor(innerW / 2)));
+    const leftW = Math.max(0, innerW - rightW - (rightW ? 1 : 0));
+    const spans = [];
+    if (hit.compact) spans.push({ text: '[菜单]', fg: 'rose', bold: true, action: 'menu' });
+    else spans.push({ text: '✦ CrewRouter', fg: 'rose', bold: true });
+    spans.push({ text: hit.compact ? '  ' : '  ·  ', fg: 'mute' });
+    spans.push({ text: page.label, fg: 'fg', bold: true });
+    if (!hit.compact) {
+      spans.push({ text: '  ·  ', fg: 'mute' });
+      const footer = typeof sidebarFooter === 'function' ? sidebarFooter() : null;
+      spans.push({ text: (footer && footer[0]) || 'local', fg: 'sage' });
+    }
+    return { spans, leftW, right, rightW };
   }
 
   function render() {
@@ -232,163 +271,320 @@ async function runPagedTui({
     const height = Math.max(1, output.rows || 24);
     const st = state();
     const page = pages[active];
-    const compact = cols < 76;
-    const side = compact ? 0 : 24;
-    const body = Math.max(0, height - 4);
-    const main = Math.max(1, cols - side - (side ? 1 : 0));
-    const list = rowsFor(page, st.data, main, st);
-    const maxScroll = Math.max(0, list.length - body);
-    st.scroll = Math.max(0, Math.min(st.scroll, maxScroll));
-    if (focus === 'content' && !list[st.selected]?.action) {
-      const first = list.findIndex(row => row.action);
-      if (first >= 0) st.selected = first;
+    const side = cols >= 100 && height >= 18 ? 28 : 0;
+    const compact = side === 0;
+    const mainX = side;
+    const mainW = Math.max(1, cols - side - (side ? 1 : 0));
+    const padding = mainW >= 60 ? 2 : Math.max(1, Math.min(2, Math.floor(mainW / 20)));
+    const innerX = mainX + padding;
+    const innerW = Math.max(1, mainW - padding * 2);
+    const dimBackground = Boolean(modal);
+    const ui = dimBackground ? theme.dimmed : paint;
+    hit = { cols, height, compact, side, innerX, innerW, rows: [], tabSpans: [], modal: null, footer: {} };
+
+    const lines = Array.from({ length: height }, () => ui(' '.repeat(cols), 'fg', 'bg'));
+    function fillAnsi(styled, target) {
+      const missing = Math.max(0, target - width(clean(styled)));
+      return styled + ui(' '.repeat(missing), 'fg', 'bg');
     }
-    const start = st.scroll;
-    const end = Math.min(list.length, start + body);
-    const activeTab = currentTab(page, st);
-    let header = compact ? `[菜单]  ${page.label}${activeTab ? ` · ${activeTab.label}` : ''}`
-      : ` ${title}  ·  ${page.label}${activeTab ? `  /  ${activeTab.label}` : ''}`;
-    hit = { cols, height, compact, side, body, rows: [], tabSpans: [], modal: null };
-    const tabLine = tabText(page, st, cols);
-    hit.tabSpans = tabLine.spans;
-    const lines = [
-      paint(pad(header, cols), 'rose', 'raised', true),
-      paint(pad(tabLine.text, cols), page.tabs?.length ? 'fg' : 'line', 'raised', focus === 'tabs'),
-    ];
-    if (active < menuStart) menuStart = active;
-    if (active >= menuStart + body) menuStart = Math.max(0, active - body + 1);
-    for (let i = 0; i < body; i++) {
-      const pageIndex = i + menuStart;
-      const pageRow = pages[pageIndex];
-      let left = '';
-      if (side) {
-        const label = pageRow ? `${pageIndex === active ? '›' : ' '} ${pageRow.label}` : '';
-        left = paint(pad(label, side), pageIndex === active ? 'fg' : 'dim', pageIndex === active ? 'select' : 'bg', pageIndex === active) + paint('│', 'line');
+    function put(lineIndex, left, right) {
+      if (lineIndex < 0 || lineIndex >= height) return;
+      const leftText = pad(left || '', side || 0);
+      const rightText = fillAnsi(right || '', Math.max(0, cols - (side || 0) - (side ? 1 : 0)));
+      lines[lineIndex] = side
+        ? ui(leftText, 'fg', 'raised') + ui('│', 'line', 'raised') + rightText
+        : rightText;
+    }
+    function sidebarText(lineIndex) {
+      if (!side) return '';
+      if (lineIndex === 0) return '  ✦ CrewRouter';
+      if (lineIndex >= 2 && lineIndex - 2 < pages.length) {
+        const index = lineIndex - 2;
+        return `${index === active ? '›' : ' '} ${pageLabelAt(index)}`;
       }
-      if (compact && compactMenu) {
-        const rowPage = pages[pageIndex];
-        const label = rowPage ? `${pageIndex === active ? '›' : ' '} ${rowPage.label}` : '';
-        lines.push(paint(pad(label, cols), pageIndex === active ? 'fg' : 'dim', pageIndex === active ? 'select' : 'bg', pageIndex === active));
-        if (rowPage) hit.rows.push({ y: i + 3, type: 'page', index: pageIndex });
-        continue;
+      const footer = typeof sidebarFooter === 'function' ? sidebarFooter() : null;
+      if (lineIndex === height - 2) return `  ${footer && footer[0] ? footer[0] : 'local'}`;
+      if (lineIndex === height - 1) return `  ${footer && footer[1] ? footer[1] : (authenticated ? '已连接' : '未登录')}`;
+      return '';
+    }
+    function pageLabelAt(index) { return pages[index] ? pages[index].label : ''; }
+
+    const header = headerChunks(innerW, page);
+    const headerSpans = paintSpans(header.spans, header.leftW, ui, 'bg');
+    let headerLine = headerSpans.text;
+    if (header.rightW) {
+      headerLine += ui(' ', 'fg', 'bg');
+      headerLine += ui(pad(header.right, header.rightW), 'sage', 'bg');
+    }
+    if (compact && headerSpans.positions.length) {
+      const menu = headerSpans.positions.find(item => item.span && item.span.action === 'menu');
+      if (menu) hit.menu = { start: innerX + menu.start + 1, end: innerX + menu.end + 1, y: 1 };
+    }
+    const leftPad = ui(' '.repeat(padding), 'fg', 'bg');
+    if (side) {
+      for (let index = 0; index < pages.length; index++) {
+        const lineIndex = 2 + index;
+        if (lineIndex < height - 2) hit.rows.push({ y: lineIndex + 1, type: 'page', index });
       }
-      if (side && pageRow) hit.rows.push({ y: i + 3, type: 'page', index: pageIndex });
-      const row = list[start + i];
-      let content = pad(row?.line || '', main);
-      if (row) {
-        const chosen = focus === 'content' && st.selected === start + i && row.action;
-        if (chosen) content = content.startsWith('│ ') ? '│›' + content.slice(2) : '›' + content.slice(1);
-        const isPanel = row.kind.startsWith('panel');
-        content = paint(content,
-          row.kind === 'toolFailed' ? 'danger' : row.kind === 'warning' ? 'amber' : row.kind === 'title' || row.kind === 'section' || row.kind === 'panelTitle' ? 'rose' : row.kind === 'muted' || row.kind === 'panelMuted' || row.kind === 'panelEdge' ? 'dim' : 'fg',
-          chosen ? 'select' : isPanel ? 'raised' : 'bg',
-          row.kind === 'title' || row.kind === 'section' || row.kind === 'panelTitle' || chosen);
-        if (row.action) {
-          const base = side ? side + 2 : 1;
-          hit.rows.push({ y: i + 3, type: 'action', index: start + i, start: base, end: cols });
+    }
+    put(0, sidebarText(0), leftPad + headerLine + leftPad);
+    put(1, sidebarText(1), leftPad + ui('─'.repeat(innerW), 'line', 'bg') + leftPad);
+
+    let contentStart = 2;
+    if (compactMenu) {
+      for (let i = contentStart; i < height - 2; i++) {
+        const index = i - contentStart;
+        const menuPage = pages[index];
+        const selected = index === active;
+        const label = menuPage ? `${selected ? '›' : ' '} ${menuPage.label}` : '';
+        const textLine = pad(label, innerW);
+        put(i, sidebarText(i), leftPad + ui(textLine, selected ? 'rose' : 'dim', selected ? 'select' : 'bg', selected) + leftPad);
+        if (menuPage) hit.rows.push({ y: i + 1, type: 'page', index });
+      }
+    } else {
+      const tabs = tabLine(page, st, innerW);
+      if (tabs) {
+        const spans = tabs.labels
+          ? tabs.labels.map((label, index) => ({ text: `${label}${index < tabs.labels.length - 1 ? ' ' : ''}`, fg: index === tabs.index ? 'rose' : 'mute', bold: index === tabs.index, tab: index }))
+          : [{ text: tabs.text, fg: 'mute' }];
+        const painted = paintSpans(spans, innerW, ui, 'bg');
+        for (const pos of painted.positions) {
+          if (pos.span.tab !== undefined) hit.tabSpans.push({ start: innerX + pos.start + 1, end: innerX + pos.end + 1, index: pos.span.tab });
         }
-      } else content = paint(content);
-      lines.push(left + content);
+        put(contentStart, sidebarText(contentStart), leftPad + painted.text + leftPad);
+        contentStart += 1;
+      }
+      const body = Math.max(0, height - 2 - contentStart);
+      const list = rowsFor(page, st.data, innerW, st);
+      const maxScroll = Math.max(0, list.length - body);
+      st.scroll = Math.max(0, Math.min(st.scroll, maxScroll));
+      if (focus === 'content' && !list[st.selected]?.action) {
+        const first = list.findIndex(row => row.action);
+        if (first >= 0) st.selected = first;
+      }
+      const start = st.scroll;
+      for (let i = 0; i < body; i++) {
+        const row = list[start + i];
+        let content = '';
+        if (row) {
+          const chosen = focus === 'content' && st.selected === start + i && row.action;
+          const indent = row.action ? 0 : (row.indent ?? 2);
+          const prefix = row.action ? (chosen ? '❯ ' : '  ') : ' '.repeat(indent);
+          const spans = [{ text: prefix, fg: row.action ? 'rose' : 'fg' }, ...rowSpans(row)];
+          const painted = paintSpans(spans, innerW, ui, chosen ? 'select' : 'bg', chosen ? 'select' : null);
+          content = painted.text;
+          if (row.action) hit.rows.push({ y: contentStart + i + 1, type: 'action', index: start + i, start: innerX + 1, end: innerX + innerW });
+        } else {
+          content = ui(' '.repeat(innerW), 'fg', 'bg');
+        }
+        put(contentStart + i, sidebarText(contentStart + i), leftPad + content + leftPad);
+      }
+      hit.contentRange = { start: contentStart, end: contentStart + body - 1, height: body };
     }
+
+    const freshness = st.lastUpdated ? `更新 ${new Date(st.lastUpdated).toLocaleTimeString('zh-CN', { hour12: false })}${Date.now() - st.lastUpdated > 30000 ? ' · 可能过期' : ''}` : '';
     const info = st.loading ? '正在加载…' : st.refreshing ? '正在刷新…' : busy ? status || '正在处理…' : status;
-    const freshness = st.lastUpdated ? `更新 ${new Date(st.lastUpdated).toLocaleTimeString('zh-CN', { hour12: false })}${Date.now() - st.lastUpdated > 30000 ? '（可能过期）' : ''}` : '';
-    const infoText = `${freshness}${freshness && info ? ' · ' : ''}${info || ''}${list.length > body ? `   ${start + 1}-${end}/${list.length}` : ''}`;
-    const refresh = '[刷新]', service = '[服务]', quit = '[退出]';
-    lines.push(paint(pad(infoText, Math.max(0, cols - width(refresh) - width(service) - width(quit) - 2)) + refresh + ' ' + service + ' ' + quit, 'dim', 'raised'));
-    const hints = compact
-      ? '点击菜单或方向键导航 · Enter 打开 · 滚轮滚动 · q 退出'
-      : focus === 'tabs' ? '←→ 切换子页 · Enter 打开 · Tab 下一区域 · Esc 返回导航'
-        : '↑↓ 选择 · Tab 切换区域 · ←→ 子页 · Enter 打开 · 滚轮滚动 · 点击可用';
-    lines.push(paint(pad(hints, cols), 'dim', 'raised'));
-    hit.refreshStart = Math.max(1, cols - width(refresh) - width(service) - width(quit) - 1);
-    hit.serviceStart = Math.max(1, cols - width(service) - width(quit));
-    hit.quitStart = Math.max(1, cols - width(quit) + 1);
+    const statusText = [info, freshness].filter(Boolean).join('  ·  ');
+    put(height - 2, sidebarText(height - 2), leftPad + ui(pad(statusText, innerW), 'mute', 'bg') + leftPad);
+    const hints = [
+      { text: '↑↓ 选择', fg: 'mute' },
+      { text: '  Tab 区域', fg: 'mute' },
+      ...(page.tabs?.length ? [{ text: '  ←→ 子页', fg: 'mute' }] : []),
+      { text: '  Enter 打开', fg: 'mute' },
+      { text: '  r 刷新', fg: 'mute', action: 'refresh' },
+      { text: '  s 服务', fg: 'mute', action: 'service' },
+      { text: '  q 退出', fg: 'mute', action: 'quit' },
+    ];
+    const hintLine = paintSpans(hints, innerW, ui, 'bg');
+    for (const pos of hintLine.positions) {
+      if (pos.span.action === 'refresh') hit.footer.refresh = { start: innerX + pos.start + 1, end: innerX + pos.end + 1 };
+      if (pos.span.action === 'service') hit.footer.service = { start: innerX + pos.start + 1, end: innerX + pos.end + 1 };
+      if (pos.span.action === 'quit') hit.footer.quit = { start: innerX + pos.start + 1, end: innerX + pos.end + 1 };
+    }
+    put(height - 1, sidebarText(height - 1), leftPad + hintLine.text + leftPad);
 
     let overlay = '';
     let cursor = '\x1b[?25l';
     if (modal) {
-      const boxWidth = Math.min(cols, 76);
-      const inner = Math.max(1, boxWidth - 4);
-      if (!modal.descriptionCache || modal.descriptionCache.width !== inner) {
-        modal.descriptionCache = { width: inner, rows: wrap(modal.description || '', inner) };
+      const rendered = renderDialog(cols, height);
+      overlay = rendered.overlay;
+      if (rendered.cursor) cursor = rendered.cursor;
+    }
+    output.write('\x1b[?25l\x1b[H' + lines.join('\r\n') + '\x1b[J' + overlay + cursor);
+  }
+
+  function dialogGeometry(cols, height) {
+    const preferred = modal.width || (modal.type === 'show' ? 72 : modal.type === 'form' ? 66 : 62);
+    const width = modal.fullscreen ? Math.max(20, cols - 2) : Math.min(Math.max(24, preferred), Math.max(24, cols - 4));
+    let desired = modal.height || 10;
+    if (modal.type === 'choose') desired = Math.max(9, 6 + Math.min(10, Array.isArray(modal.options) ? modal.options.length : 0) + Math.min(5, wrap(modal.description || '', Math.max(1, width - 6)).length));
+    else if (modal.type === 'form') desired = Math.max(10, 8 + (modal.fields?.length || 0) * 2);
+    else if (modal.type === 'input') desired = 9;
+    else if (modal.type === 'confirm') desired = 9;
+    else if (modal.type === 'show') desired = 13;
+    const dialogHeight = modal.minimized ? 3 : (modal.fullscreen ? Math.max(5, height - 2) : Math.min(Math.max(7, desired), Math.max(7, height - 2)));
+    const left = Math.max(1, Math.floor((cols - width) / 2) + 1);
+    const top = Math.max(1, Math.floor((height - dialogHeight) / 2) + 1);
+    return { left, top, width, height: dialogHeight, innerW: Math.max(1, width - 4), bodyH: Math.max(0, dialogHeight - 4) };
+  }
+
+  function dialogRow(geometry, row, spans, bg = 'bg', forceBold = false) {
+    const painted = paintSpans(spans, geometry.innerW, paint, bg, null, forceBold);
+    return paint('│', 'line', 'bg') + painted.text + paint('│', 'line', 'bg');
+  }
+
+  function renderDialog(cols, height) {
+    const geometry = dialogGeometry(cols, height);
+    const { left, top, width: boxWidth, height: dialogHeight, innerW, bodyH } = geometry;
+    hit.modal = {
+      left, top, width: boxWidth, height: dialogHeight, innerW,
+      trafficLights: [], hintButtons: [], optionRows: [], fieldRows: [], inputRow: null, inputStart: null, inputView: null,
+    };
+    const rows = Array.from({ length: dialogHeight }, () => '');
+    rows[0] = paint(`╭${'─'.repeat(Math.max(0, boxWidth - 2))}╮`, 'line', 'bg');
+    rows[dialogHeight - 1] = paint(`╰${'─'.repeat(Math.max(0, boxWidth - 2))}╯`, 'line', 'bg');
+    const titleDots = [['●', 'danger', 'close'], ['●', 'amber', 'minimize'], ['●', 'sage', 'fullscreen']];
+    const titleSpans = [{ text: ' ', fg: 'fg' }];
+    const dotXs = [];
+    titleDots.forEach(([glyph, color, action], index) => {
+      if (index) titleSpans.push({ text: ' ', fg: 'fg' });
+      dotXs.push(2 + index * 2);
+      titleSpans.push({ text: glyph, fg: color, action });
+    });
+    titleSpans.push({ text: '  ', fg: 'fg' });
+    titleSpans.push({ text: cut(clean(modal.title || ''), Math.max(0, innerW - 9)), fg: 'dim' });
+    rows[1] = dialogRow(geometry, 1, titleSpans, 'bg');
+    dotXs.forEach((x, index) => {
+      hit.modal.trafficLights.push({ start: left + x, end: left + x + 1, y: top + 1, action: titleDots[index][2] });
+    });
+    for (let i = 2; i < dialogHeight - 1; i++) rows[i] = dialogRow(geometry, i, [{ text: '', fg: 'fg' }], 'bg');
+
+    if (modal.minimized) {
+      return {
+        overlay: rows.map((line, index) => `\x1b[${top + index};${left}H${line}`).join(''),
+        cursor: null,
+      };
+    }
+
+    const bodyX = left + 1;
+    const bodyY = top + 2;
+    let rowIndex = 0;
+    const descriptionLines = wrap(clean(modal.description || ''), innerW);
+    const putBody = (spans, bg = 'bg') => {
+      if (rowIndex >= bodyH) return false;
+      rows[2 + rowIndex] = dialogRow(geometry, 2 + rowIndex, spans, bg);
+      rowIndex++;
+      return true;
+    };
+    if (descriptionLines.some(line => line)) {
+      for (const line of descriptionLines) {
+        if (!putBody([{ text: line, fg: 'dim' }])) break;
       }
-      const question = modal.descriptionCache.rows;
-      const isChoose = modal.type === 'choose';
-      const isInput = modal.type === 'input';
-      const isForm = modal.type === 'form';
-      const isConfirm = modal.type === 'confirm';
-      const detail = [];
-      for (const line of question) detail.push({ text: line });
-      if (isChoose) modal.options.forEach((option, index) => detail.push({ text: `${index === modal.selected ? '›' : ' '} ${clean(option.label)}`, option: index }));
-      if (isForm) modal.fields.forEach((field, index) => {
+      if (modal.type !== 'show') putBody([{ text: '', fg: 'fg' }]);
+    }
+
+    let cursor = null;
+    if (modal.type === 'choose') {
+      const options = Array.isArray(modal.options) ? modal.options : [];
+      const available = Math.max(1, bodyH - rowIndex);
+      modal.scroll = Math.max(0, Math.min(modal.scroll, Math.max(0, options.length - available)));
+      if (modal.selected < modal.scroll) modal.scroll = modal.selected;
+      if (modal.selected >= modal.scroll + available) modal.scroll = modal.selected - available + 1;
+      for (let i = modal.scroll; i < Math.min(options.length, modal.scroll + available); i++) {
+        const selected = i === modal.selected;
+        const label = clean(options[i].label || options[i].value || '');
+        if (!putBody([{ text: selected ? '❯ ' : '  ', fg: 'rose' }, { text: cut(label, innerW - 2), fg: selected ? 'fg' : 'dim' }], selected ? 'select' : 'bg')) break;
+        hit.modal.optionRows.push({ y: bodyY + rowIndex - 1, index: i });
+      }
+    } else if (modal.type === 'input') {
+      const shown = modal.secret ? '•'.repeat([...modal.value].length) : modal.value;
+      hit.modal.inputView = inputView(shown, modal.position, Math.max(1, innerW - 3));
+      if (putBody([{ text: '❯ ', fg: 'rose' }, { text: hit.modal.inputView.text, fg: 'fg' }], 'raised')) {
+        hit.modal.inputRow = bodyY + rowIndex - 1;
+        hit.modal.inputStart = bodyX + 2;
+        cursor = `\x1b[${hit.modal.inputRow};${bodyX + 2 + hit.modal.inputView.caret}H\x1b[?25h`;
+      }
+    } else if (modal.type === 'form') {
+      const fields = Array.isArray(modal.fields) ? modal.fields : [];
+      const fieldStart = rowIndex;
+      const availableRows = Math.max(1, bodyH - fieldStart);
+      const selectedLine = Math.max(0, modal.selected) * 2;
+      modal.scroll = Math.max(0, Math.min(modal.scroll, Math.max(0, fields.length * 2 - availableRows)));
+      if (selectedLine < modal.scroll) modal.scroll = selectedLine;
+      if (selectedLine >= modal.scroll + availableRows) modal.scroll = selectedLine - availableRows + 2;
+      let fieldRows = 0;
+      for (let index = 0; index < fields.length; index++) {
+        const field = fields[index];
+        if (fieldRows >= availableRows) break;
+        const selected = index === modal.selected;
+        const label = clean(field.label || field.name || '');
+        if (!putBody([{ text: selected ? '❯ ' : '  ', fg: 'rose' }, { text: cut(label, innerW - 2), fg: selected ? 'fg' : 'dim', bold: selected }], selected ? 'select' : 'bg')) break;
+        hit.modal.fieldRows.push({ y: bodyY + rowIndex - 1, index, kind: 'label' });
+        fieldRows++;
+        if (fieldRows >= availableRows) break;
         const raw = modal.values[index];
         const shown = field.secret ? '•'.repeat([...String(raw)].length)
-          : field.type === 'boolean' ? (raw ? '是' : '否')
+          : field.type === 'boolean' ? (raw ? '(•) 是' : '( ) 否')
             : field.options ? (field.options.find(option => option.value === raw)?.label ?? String(raw))
               : String(raw);
-        detail.push({ text: `${index === modal.selected ? '›' : ' '} ${clean(field.label)}`, field: index });
-        const view = inputView(shown, modal.positions[index], Math.max(1, inner - 4));
-        detail.push({ text: `    ${view.text}`, field: index, view });
-      });
-      const compactControls = inner < 16;
-      const label = (name, marked = false) => compactControls ? `${name}${marked ? '*' : ''}` : `[${name}${marked ? '*' : ''}]`;
-      const confirmButtons = [[label('确认', modal.button === 0), 'ok'], [label('取消', modal.button !== 0), 'cancel']];
-      const buttonDefs = isInput ? [[label('确定'), 'ok'], [label('取消'), 'cancel']]
-        : isChoose ? [[label('选择'), 'ok'], [label('取消'), 'cancel']]
-          : isForm ? [[label(clean(modal.submitLabel || '保存')), 'ok'], [label('取消'), 'cancel']]
-            : isConfirm ? confirmButtons : [[label('关闭'), 'ok']];
-      const buttonRows = [[]];
-      for (const [name, action] of buttonDefs) {
-        let row = buttonRows.at(-1);
-        const used = row.reduce((n, item) => n + width(item[0]), 0) + Math.max(0, row.length - 1);
-        if (row.length && used + 1 + width(name) > inner) { row = []; buttonRows.push(row); }
-        row.push([name, action]);
-      }
-      const available = Math.max(1, Math.min(detail.length || 1, height - 2 - buttonRows.length - (isInput ? 1 : 0)));
-      const boxHeight = available + 2 + buttonRows.length + (isInput ? 1 : 0);
-      const top = Math.max(1, Math.floor((height - boxHeight) / 2) + 1);
-      const left = Math.max(1, Math.floor((cols - boxWidth) / 2) + 1);
-      modal.scroll = Math.max(0, Math.min(modal.scroll, Math.max(0, detail.length - available)));
-      if ((isChoose || isForm) && modal.followSelection) {
-        const selectedLine = isForm ? detail.findIndex(row => row.field === modal.selected && row.view) : question.length + modal.selected;
-        if (selectedLine < modal.scroll) modal.scroll = selectedLine;
-        if (selectedLine >= modal.scroll + available) modal.scroll = selectedLine - available + 1;
-      }
-      const border = value => `│ ${pad(value, inner)} │`;
-      const titleText = cut(clean(modal.title) + (detail.length > available ? ' ↕ PgUp/PgDn' : ''), Math.max(1, boxWidth - 5));
-      const listRows = detail.length ? detail.slice(modal.scroll, modal.scroll + available) : [{ text: '' }];
-      const parts = [`┌ ${pad(titleText, Math.max(0, boxWidth - 4))}┐`, ...listRows.map(row => border(row.text))];
-      let inputRow = 0;
-      let inputViewData = null;
-      if (isInput) {
-        inputRow = top + parts.length;
-        const shown = modal.secret ? '•'.repeat([...modal.value].length) : modal.value;
-        inputViewData = inputView(shown, modal.position, Math.max(0, inner - 2));
-        parts.push(border(`› ${inputViewData.text}`));
-      }
-      const firstButtonRow = top + parts.length;
-      const buttons = [];
-      buttonRows.forEach((row, index) => {
-        let offset = 0;
-        const base = row.map(item => item[0]).join(' ');
-        for (const [name, action] of row) {
-          const n = width(name);
-          if (offset + n <= inner) buttons.push({ row: firstButtonRow + index, start: left + 2 + offset, end: left + 1 + offset + n, action });
-          offset += n + 1;
+        const prefix = field.options || field.type === 'boolean' ? '  ' : '    ';
+        if (!putBody([{ text: prefix, fg: 'fg' }, { text: cut(shown, Math.max(1, innerW - width(prefix))), fg: 'fg' }], selected ? 'raised' : 'bg')) break;
+        hit.modal.fieldRows.push({ y: bodyY + rowIndex - 1, index, kind: 'value' });
+        fieldRows++;
+        if (selected && !field.options && field.type !== 'boolean') {
+          const view = inputView(shown, modal.positions[index], Math.max(1, innerW - width(prefix)));
+          modal.fieldView = view;
+          cursor = `\x1b[${bodyY + rowIndex - 1};${bodyX + width(prefix) + view.caret}H\x1b[?25h`;
         }
-        const hint = isForm ? '  Enter下一项 空格切换' : isConfirm ? '  ←→选择 Enter确定' : '';
-        parts.push(border(width(base + hint) <= inner ? base + hint : base));
-      });
-      parts.push(`└${'─'.repeat(Math.max(0, boxWidth - 2))}┘`);
-      overlay = parts.map((line, index) => `\x1b[${top + index};${left}H${paint(pad(line, boxWidth), index === 0 ? 'rose' : 'fg', 'raised', index === 0)}`).join('');
-      hit.modal = { left, top, width: boxWidth, height: parts.length, inputRow, buttonRow: firstButtonRow, buttons, descriptionRows: question.length, scroll: modal.scroll, detail, inputView: inputViewData };
-      if (isInput) cursor = `\x1b[${inputRow};${Math.min(cols, left + 4 + inputViewData.caret)}H\x1b[?25h`;
-      if (isForm) {
-        const at = detail.findIndex(row => row.field === modal.selected && row.view);
-        if (at >= modal.scroll && at < modal.scroll + available) cursor = `\x1b[${top + 1 + at - modal.scroll};${Math.min(cols, left + 6 + detail[at].view.caret)}H\x1b[?25h`;
+      }
+    } else if (modal.type === 'confirm') {
+      putBody([{ text: '', fg: 'fg' }]);
+    } else if (modal.type === 'show') {
+      const lines = wrap(clean(modal.description || ''), innerW);
+      const available = Math.max(1, bodyH);
+      modal.scroll = Math.max(0, Math.min(modal.scroll, Math.max(0, lines.length - available)));
+      for (let i = modal.scroll; i < Math.min(lines.length, modal.scroll + available); i++) {
+        if (!putBody([{ text: lines[i], fg: 'fg' }])) break;
       }
     }
-    output.write('\x1b[?25l\x1b[H' + lines.slice(0, height).join('\r\n') + '\x1b[J' + overlay + cursor);
+
+    const hintSpans = [];
+    const hintAction = (value, action, fg = 'mute') => hintSpans.push({ text: value, fg, action });
+    if (modal.type === 'choose') {
+      hintAction('↑↓ 选择  ·  Enter ', 'none');
+      hintAction('确认', 'ok', 'sage');
+      hintAction('  ·  Esc 关闭', 'cancel');
+    } else if (modal.type === 'input') {
+      hintAction('Enter ', 'none');
+      hintAction('确定', 'ok', 'sage');
+      hintAction('  ·  Esc ', 'none');
+      hintAction('取消', 'cancel');
+    } else if (modal.type === 'form') {
+      hintAction('↑↓ 选择 · Enter 下一项 · Space 切换 · Esc ', 'none');
+      hintAction('取消', 'cancel');
+    } else if (modal.type === 'confirm') {
+      hintAction('Enter / y ', 'none');
+      hintAction('确认', 'ok', 'sage');
+      hintAction('  ·  n / Esc ', 'none');
+      hintAction('取消', 'cancel');
+    } else {
+      hintAction('PgUp/PgDn 滚动 · Esc ', 'none');
+      hintAction('关闭', 'cancel');
+    }
+    rows[dialogHeight - 2] = dialogRow(geometry, dialogHeight - 2, hintSpans, 'bg');
+    let hintUsed = 0;
+    for (const span of hintSpans) {
+      if (span.action && span.action !== 'none') {
+        hit.modal.hintButtons.push({ start: left + 1 + hintUsed, end: left + hintUsed + width(span.text), action: span.action });
+      }
+      hintUsed += width(span.text);
+    }
+    hit.modal.body = { x: bodyX, y: bodyY, width: innerW, height: bodyH };
+
+    return {
+      overlay: rows.map((line, index) => `\x1b[${top + index};${left}H${line}`).join(''),
+      cursor,
+    };
   }
 
   function closeModal(value) {
@@ -398,10 +594,21 @@ async function runPagedTui({
     current.resolve(value);
     render();
   }
+
   function dialog(spec) {
     return new Promise(resolve => {
       if (closed) { resolve(null); return; }
-      modal = { ...spec, resolve, scroll: 0, selected: 0, followSelection: spec.type === 'form', position: [...String(spec.value || '')].length, positions: (spec.values || []).map(value => [...String(value)].length) };
+      modal = {
+        ...spec,
+        resolve,
+        scroll: 0,
+        selected: 0,
+        minimized: false,
+        fullscreen: false,
+        followSelection: spec.type === 'form',
+        position: [...String(spec.value || '')].length,
+        positions: (spec.values || []).map(value => [...String(value)].length),
+      };
       render();
     });
   }
@@ -414,7 +621,7 @@ async function runPagedTui({
     return result === null ? null : Object.fromEntries(fields.map((field, index) => [field.name, result[index]]));
   }
   async function confirm(question, description) {
-    return (await dialog({ type: 'confirm', title: question, description: text(description), button: 1 })) === true;
+    return (await dialog({ type: 'confirm', title: question, description: text(description) })) === true;
   }
   async function show(question, value) {
     const result = await dialog({ type: 'show', title: question, description: text(value) });
@@ -436,8 +643,10 @@ async function runPagedTui({
     onSessionReset();
   }
   async function load(index = active, { automatic = false } = {}) {
-    const page = pages[index], st = pageStates.get(page.id), generation = ++sequence;
-    const oldWidth = Math.max(1, hit.cols - (hit.side ? hit.side + 1 : 0));
+    const page = pages[index];
+    const st = pageStates.get(page.id);
+    const generation = ++sequence;
+    const oldWidth = Math.max(1, hit.innerW || 80);
     const oldSelection = automatic && st.data ? rowsFor(page, st.data, oldWidth, st)[st.selected]?.line : null;
     const oldScroll = st.scroll;
     st.generation = generation;
@@ -447,13 +656,20 @@ async function runPagedTui({
     try {
       const result = await page.load(api, ctx);
       if (closed || generation !== sequence || mustDefer()) return;
-      st.data = result; st.lastUpdated = Date.now(); st.error = null; st.version++; st.cache = null;
+      st.data = result;
+      st.lastUpdated = Date.now();
+      st.error = null;
+      st.version++;
+      st.cache = null;
       if (automatic && oldSelection) {
         const newRows = rowsFor(page, result, oldWidth, st);
         const selected = newRows.findIndex(row => row.action && row.line === oldSelection);
         st.selected = selected >= 0 ? selected : 0;
         st.scroll = oldScroll;
-      } else if (!automatic) { st.scroll = 0; st.selected = 0; }
+      } else if (!automatic) {
+        st.scroll = 0;
+        st.selected = 0;
+      }
     } catch (error) {
       if (closed || generation !== sequence || mustDefer()) return;
       if (error && error.statusCode === 401 && authenticated) {
@@ -464,11 +680,14 @@ async function runPagedTui({
       st.version++;
     } finally {
       if (st.generation === generation) {
-        st.loading = false; st.refreshing = false; st.version++;
+        st.loading = false;
+        st.refreshing = false;
+        st.version++;
         if (active === index) render();
       }
     }
   }
+
   function startPagePolling() {
     if (pageTimer) (timers.clearInterval || clearInterval)(pageTimer);
     pageTimer = (timers.setInterval || setInterval)(() => {
@@ -479,6 +698,7 @@ async function runPagedTui({
     }, refreshInterval);
     if (pageTimer && typeof pageTimer.unref === 'function') pageTimer.unref();
   }
+
   async function navigate(id) {
     const next = pages.findIndex(page => page.id === id);
     if (next < 0) { notify('页面不可用'); return; }
@@ -489,8 +709,10 @@ async function runPagedTui({
     compactMenu = false;
     const st = state();
     restoreTab(st, pages[next]);
-    if (!st.data) await load(next); else render();
+    if (!st.data) await load(next);
+    else render();
   }
+
   async function beginAuthentication(message) {
     authenticated = false;
     resetSession();
@@ -514,8 +736,9 @@ async function runPagedTui({
     busy = true;
     status = '正在处理…';
     render();
-    try { await action.run(ctx); }
-    catch (error) {
+    try {
+      await action.run(ctx);
+    } catch (error) {
       if (error && error.cancelled) status = '已取消';
       else if (error && error.statusCode === 401) {
         await beginAuthentication('会话已失效，请重新登录。');
@@ -535,19 +758,37 @@ async function runPagedTui({
     modal.selected = Math.max(0, Math.min(modal.options.length - 1, modal.selected + delta));
     modal.followSelection = true;
   }
+
+  function modalResult() {
+    if (!modal) return null;
+    if (modal.type === 'input') return modal.value;
+    if (modal.type === 'choose') return modal.selected;
+    if (modal.type === 'form') return modal.values;
+    return true;
+  }
+
   function onKey(str, key = {}) {
     if (key.ctrl && key.name === 'c') { if (modal) closeModal(null); else closed = true; return; }
     if (modal) {
       if (key.name === 'escape') { closeModal(null); return; }
+      if (modal.minimized) {
+        if (key.name === 'return' || str === ' ') { modal.minimized = false; render(); }
+        return;
+      }
       if (modal.type === 'confirm') {
-        if (key.name === 'left' || key.name === 'right' || key.name === 'tab') modal.button = modal.button === 0 ? 1 : 0;
-        else if (key.name === 'return') { closeModal(modal.button === 0); return; }
+        if (key.name === 'return' || str === 'y') { closeModal(true); return; }
+        if (key.name === 'n') { closeModal(false); return; }
       } else if (modal.type === 'form') {
-        if (key.name === 'pageup' || key.name === 'pagedown') { modal.followSelection = false; modal.scroll = Math.max(0, modal.scroll + (key.name === 'pageup' ? -1 : 1) * Math.max(1, hit.height - 6)); }
-        else if (key.name === 'up' || key.name === 'down' || key.name === 'tab') { modal.selected = Math.max(0, Math.min(modal.fields.length - 1, modal.selected + (key.name === 'up' ? -1 : 1))); modal.followSelection = true; }
-        else if (key.name === 'return') { if (modal.selected < modal.fields.length - 1) { modal.selected++; modal.followSelection = true; } else { closeModal(modal.values); return; } }
-        else {
-          const field = modal.fields[modal.selected], current = modal.values[modal.selected];
+        if (key.name === 'pageup' || key.name === 'pagedown') { modal.followSelection = false; modal.scroll = Math.max(0, modal.scroll + (key.name === 'pageup' ? -2 : 2)); }
+        else if (key.name === 'up' || key.name === 'down' || key.name === 'tab') {
+          modal.selected = Math.max(0, Math.min(modal.fields.length - 1, modal.selected + (key.name === 'up' ? -1 : 1)));
+          modal.followSelection = true;
+        } else if (key.name === 'return') {
+          if (modal.selected < modal.fields.length - 1) { modal.selected++; modal.followSelection = true; }
+          else { closeModal(modal.values); return; }
+        } else {
+          const field = modal.fields[modal.selected];
+          const current = modal.values[modal.selected];
           if (field?.type === 'boolean' && (str === ' ' || key.name === 'left' || key.name === 'right')) modal.values[modal.selected] = !current;
           else if (field?.options?.length && (str === ' ' || key.name === 'left' || key.name === 'right')) {
             const index = field.options.findIndex(option => option.value === current);
@@ -571,29 +812,35 @@ async function runPagedTui({
             modal.positions[modal.selected] = pos;
           }
         }
-      } else {
-        if (key.name === 'return') { closeModal(modal.type === 'input' ? modal.value : modal.type === 'choose' ? modal.selected : true); return; }
-        if (modal.type === 'choose' && (key.name === 'up' || key.name === 'down')) chooseDelta(key.name === 'up' ? -1 : 1);
-        else if (['pageup', 'pagedown', 'up', 'down'].includes(key.name)) {
-          const step = key.name === 'pageup' || key.name === 'pagedown' ? Math.max(1, hit.height - 6) : 1;
+      } else if (modal.type === 'choose') {
+        if (key.name === 'up' || key.name === 'down') chooseDelta(key.name === 'up' ? -1 : 1);
+        else if (key.name === 'return') closeModal(modal.selected);
+        else if (['pageup', 'pagedown'].includes(key.name)) {
+          const step = Math.max(1, (hit.modal?.body?.height || 4) - 1);
+          modal.scroll = Math.max(0, modal.scroll + (key.name === 'pageup' ? -step : step));
+        }
+      } else if (modal.type === 'input') {
+        if (key.name === 'return') { closeModal(modal.value); return; }
+        const chars = [...modal.value];
+        let pos = modal.position;
+        if (key.name === 'left') pos = Math.max(0, pos - 1);
+        else if (key.name === 'right') pos = Math.min(chars.length, pos + 1);
+        else if (key.name === 'home' || key.ctrl && key.name === 'a') pos = 0;
+        else if (key.name === 'end' || key.ctrl && key.name === 'e') pos = chars.length;
+        else if (key.name === 'backspace' && pos > 0) chars.splice(--pos, 1);
+        else if (key.name === 'delete' && pos < chars.length) chars.splice(pos, 1);
+        else if (key.ctrl && key.name === 'u') { chars.length = 0; pos = 0; }
+        else if (str && !key.ctrl && !key.meta && !key.sequence?.startsWith('\x1b')) {
+          const added = [...clean(str).replace(/\n/g, '')].slice(0, Math.max(0, 32768 - chars.length));
+          chars.splice(pos, 0, ...added);
+          pos += added.length;
+        }
+        modal.value = chars.join('');
+        modal.position = pos;
+      } else if (modal.type === 'show') {
+        if (['pageup', 'pagedown', 'up', 'down'].includes(key.name)) {
+          const step = key.name === 'pageup' || key.name === 'pagedown' ? Math.max(1, (hit.modal?.body?.height || 4) - 1) : 1;
           modal.scroll = Math.max(0, modal.scroll + (['up', 'pageup'].includes(key.name) ? -step : step));
-        } else if (modal.type === 'input') {
-          const chars = [...modal.value];
-          let pos = modal.position;
-          if (key.name === 'left') pos = Math.max(0, pos - 1);
-          else if (key.name === 'right') pos = Math.min(chars.length, pos + 1);
-          else if (key.name === 'home' || key.ctrl && key.name === 'a') pos = 0;
-          else if (key.name === 'end' || key.ctrl && key.name === 'e') pos = chars.length;
-          else if (key.name === 'backspace' && pos > 0) chars.splice(--pos, 1);
-          else if (key.name === 'delete' && pos < chars.length) chars.splice(pos, 1);
-          else if (key.ctrl && key.name === 'u') { chars.length = 0; pos = 0; }
-          else if (str && !key.ctrl && !key.meta && !key.sequence?.startsWith('\x1b')) {
-            const added = [...clean(str).replace(/\n/g, '')].slice(0, Math.max(0, 32768 - chars.length));
-            chars.splice(pos, 0, ...added);
-            pos += added.length;
-          }
-          modal.value = chars.join('');
-          modal.position = pos;
         }
       }
       render();
@@ -601,10 +848,11 @@ async function runPagedTui({
     }
     if (busy) return;
     const st = state();
-    const w = Math.max(1, hit.cols - (hit.side ? hit.side + 1 : 0));
+    const w = Math.max(1, hit.innerW || 80);
     const rows = rowsFor(pages[active], st.data, w, st);
     if (key.name === 'q') { closed = true; return; }
     if (key.name === 'r') { void load(); return; }
+    if (key.name === 's') { void navigate('service'); return; }
     if (key.name === 'tab') {
       if (focus === 'menu') { if (!focusTabs()) focusContent(); }
       else if (focus === 'tabs') focusContent();
@@ -629,13 +877,15 @@ async function runPagedTui({
         while (index >= 0 && index < rows.length && !rows[index].action) index += delta;
         if (index >= 0 && index < rows.length) {
           st.selected = index;
+          const bodyH = hit.contentRange?.height || 1;
           if (index < st.scroll) st.scroll = index;
-          else if (index >= st.scroll + hit.body) st.scroll = index - hit.body + 1;
+          else if (index >= st.scroll + bodyH) st.scroll = index - bodyH + 1;
         } else st.scroll = Math.max(0, st.scroll + delta);
       }
     } else if (key.name === 'pageup' || key.name === 'pagedown') {
       focus = 'content';
-      st.scroll = Math.max(0, st.scroll + (key.name === 'pageup' ? -1 : 1) * Math.max(1, hit.body - 1));
+      const bodyH = hit.contentRange?.height || 1;
+      st.scroll = Math.max(0, st.scroll + (key.name === 'pageup' ? -1 : 1) * Math.max(1, bodyH - 1));
     } else if (key.name === 'return') {
       if (focus === 'menu') { if (!focusTabs()) focusContent(); }
       else if (focus === 'tabs') focusContent();
@@ -655,25 +905,31 @@ async function runPagedTui({
     compactMenu = false;
     focus = 'content';
     const st = state();
-    const w = Math.max(1, hit.cols - (hit.side ? hit.side + 1 : 0));
+    const w = Math.max(1, hit.innerW || 80);
     const rows = rowsFor(pages[active], st.data, w, st);
     if (!rows[st.selected]?.action) {
       const first = rows.findIndex(row => row.action);
       if (first >= 0) st.selected = first;
     }
+    const bodyH = hit.contentRange?.height || 1;
     if (rows[st.selected]?.action) {
       if (st.selected < st.scroll) st.scroll = st.selected;
-      else if (st.selected >= st.scroll + hit.body) st.scroll = Math.max(0, st.selected - hit.body + 1);
+      else if (st.selected >= st.scroll + bodyH) st.scroll = Math.max(0, st.selected - bodyH + 1);
     }
   }
   function activatePage(index) { if (index < 0 || index >= pages.length || busy) return; void navigate(pages[index].id); }
   function activateRow(index) {
     const st = state();
-    const w = Math.max(1, hit.cols - (hit.side ? hit.side + 1 : 0));
+    const w = Math.max(1, hit.innerW || 80);
     const row = rowsFor(pages[active], st.data, w, st)[index];
     if (!row?.action) return;
     st.selected = index;
     void execute(row.action);
+  }
+
+  function closeFromHint(action) {
+    if (action === 'ok') { closeModal(modalResult()); return; }
+    closeModal(null);
   }
 
   function onMouse(code, x, y, final) {
@@ -685,46 +941,64 @@ async function runPagedTui({
     if (modal) {
       const box = hit.modal;
       if (!box) return;
-      if (wheel && x >= box.left && x < box.left + box.width && y >= box.top && y < box.top + box.height) {
-        if (modal.type === 'choose') chooseDelta(direction * 3);
-        else { modal.followSelection = false; modal.scroll = Math.max(0, modal.scroll + direction * 3); }
-      } else if (press) {
-        const button = box.buttons.find(item => y === item.row && x >= item.start && x <= item.end);
-        if (button) {
-          if (button.action === 'cancel') closeModal(null);
-          else closeModal(modal.type === 'input' ? modal.value : modal.type === 'choose' ? modal.selected : modal.type === 'form' ? modal.values : true);
+      if (press) {
+        const dot = box.trafficLights.find(item => y === item.y && x >= item.start && x <= item.end);
+        if (dot) {
+          if (dot.action === 'close') closeModal(null);
+          else if (dot.action === 'minimize') { modal.minimized = !modal.minimized; render(); }
+          else if (dot.action === 'fullscreen') { if (modal.minimized) { modal.minimized = false; modal.fullscreen = true; } else modal.fullscreen = !modal.fullscreen; render(); }
           return;
         }
-        if (modal.type === 'input' && y === box.inputRow && x >= box.left + 4 && box.inputView) modal.position = atCell(box.inputView, x - (box.left + 4));
-        if ((modal.type === 'choose' || modal.type === 'form') && y > box.top && y < box.buttonRow) {
-          const line = box.detail[y - box.top - 1 + modal.scroll];
-          const index = modal.type === 'choose' ? line?.option : line?.field;
-          if (modal.type === 'choose' && index >= 0 && index < modal.options.length) { modal.selected = index; closeModal(index); return; }
-          if (modal.type === 'form' && index >= 0 && index < modal.fields.length) {
-            modal.selected = index;
-            modal.followSelection = true;
-            const field = modal.fields[index];
-            if (field.type === 'boolean') modal.values[index] = !modal.values[index];
-            else if (field.options?.length) {
-              const current = field.options.findIndex(option => option.value === modal.values[index]);
-              modal.values[index] = field.options[(current + 1) % field.options.length].value;
-            } else if (line.view) modal.positions[index] = atCell(line.view, Math.max(0, x - (box.left + 6)));
+      }
+      if (modal.minimized) return;
+      if (wheel && x >= box.left && x < box.left + box.width && y >= box.top && y < box.top + box.height) {
+        if (modal.type === 'choose') chooseDelta(direction * 3);
+        else { modal.scroll = Math.max(0, modal.scroll + direction * 3); }
+        render();
+        return;
+      }
+      if (press) {
+        const hint = box.hintButtons.find(item => y === box.top + box.height - 2 && x >= item.start && x <= item.end);
+        if (hint) { closeFromHint(hint.action); return; }
+        const option = box.optionRows.find(item => y === item.y);
+        if (option && modal.type === 'choose') { modal.selected = option.index; closeModal(option.index); return; }
+        const field = box.fieldRows.find(item => y === item.y);
+        if (field && modal.type === 'form') {
+          modal.selected = field.index;
+          const spec = modal.fields[field.index];
+          if (spec.type === 'boolean') modal.values[field.index] = !modal.values[field.index];
+          else if (spec.options?.length) {
+            const current = spec.options.findIndex(option => option.value === modal.values[field.index]);
+            modal.values[field.index] = spec.options[(current + 1) % spec.options.length].value;
+          } else if (field.kind === 'value' && modal.fieldView) {
+            modal.positions[field.index] = atCell(modal.fieldView, Math.max(0, x - (box.body.x + 4)));
           }
+          render();
+          return;
+        }
+        if (modal.type === 'input' && y === box.inputRow && x >= box.inputStart) {
+          modal.position = atCell(box.inputView, x - box.inputStart);
+          render();
+          return;
         }
       }
-      render();
       return;
     }
     if (busy) return;
-    if (press && y === 2 && hit.tabSpans.length) {
+    if (press && hit.compact && hit.menu && y === 1 && x >= hit.menu.start && x <= hit.menu.end) {
+      compactMenu = !compactMenu;
+      focus = 'menu';
+      render();
+      return;
+    }
+    if (press && y === 3 && hit.tabSpans.length) {
       const tab = hit.tabSpans.find(item => x >= item.start && x <= item.end);
       if (tab) { switchTab(tab.index); return; }
     }
-    if (press && hit.compact && y === 1 && x <= 6) { compactMenu = !compactMenu; focus = 'menu'; render(); return; }
-    if (press && y === hit.height - 1) {
-      if (x >= hit.quitStart) { closed = true; return; }
-      if (x >= hit.serviceStart) { void navigate('service'); return; }
-      if (x >= hit.refreshStart) { void load(); return; }
+    if (press && y === hit.height) {
+      if (hit.footer.quit && x >= hit.footer.quit.start && x <= hit.footer.quit.end) { closed = true; return; }
+      if (hit.footer.service && x >= hit.footer.service.start && x <= hit.footer.service.end) { void navigate('service'); return; }
+      if (hit.footer.refresh && x >= hit.footer.refresh.start && x <= hit.footer.refresh.end) { void load(); return; }
     }
     const row = hit.rows.find(item => item.y === y && (item.type === 'page' ? (hit.compact ? compactMenu : x <= hit.side) : x >= item.start));
     if (wheel) {
@@ -738,12 +1012,18 @@ async function runPagedTui({
       }
     } else if (row?.type === 'page') activatePage(row.index);
     else if (row?.type === 'action') { focus = 'content'; activateRow(row.index); }
-    else if (press && y >= 3 && y < 3 + hit.body && (!hit.side || x > hit.side)) { focus = 'content'; render(); }
+    else if (press && y >= 3 && y <= hit.height - 2 && (!hit.side || x > hit.side)) { focus = 'content'; render(); }
   }
 
   const keyboard = new PassThrough();
   const decoder = new StringDecoder('utf8');
-  let buffer = '', timer = null, afterEscape = false, escapeTail = '', escapeTailTimer = null, discardMouse = false, discardTimer = null;
+  let buffer = '';
+  let timer = null;
+  let afterEscape = false;
+  let escapeTail = '';
+  let escapeTailTimer = null;
+  let discardMouse = false;
+  let discardTimer = null;
   function beginMouseDiscard() {
     discardMouse = true;
     clearTimeout(discardTimer);
@@ -831,7 +1111,7 @@ async function runPagedTui({
     input.on('end', onEnd);
     output.on('resize', onResize);
     input.resume();
-    output.write('\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h');
+    output.write(`\x1b]0;${clean(title)}\x07\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h${theme.osc}`);
     render();
     authenticated = await authenticate(ctx);
     if (authenticated && !closed) {
@@ -863,8 +1143,8 @@ async function runPagedTui({
     keyboard.destroy();
     try { input.setRawMode(oldRaw); } catch (_) {}
     if (!wasFlowing) input.pause();
-    output.write('\x1b[?1000l\x1b[?1006l\x1b[0m\x1b[?25h\x1b[?1049l');
+    output.write(`${theme.resetOsc}\x1b[?1000l\x1b[?1006l\x1b[0m\x1b[?25h\x1b[?1049l\x1b]0;\x07`);
   }
 }
 
-module.exports = { runPagedTui, palette, width, cut, pad, wrap, clean, inputView, atCell };
+module.exports = { runPagedTui, width, cut, pad, wrap, clean, inputView, atCell };
