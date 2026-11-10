@@ -155,3 +155,31 @@ test('route harness bridges Gemini requests and responses', async () => {
     await new Promise(resolve => server.close(resolve));
   }
 });
+
+test('route harness sends Anthropic base64 images as OpenAI data URIs', async () => {
+  const { app, upstream } = startHarness();
+  const server = app.listen(0);
+  try {
+    const body = {
+      model: 'm',
+      max_tokens: 8,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: 'look' },
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AA==' } }
+        ]
+      }]
+    };
+    const result = await request(server, '/anthropic-to-openai', body);
+    assert.equal(result.status, 200);
+    const call = upstream.calls.at(-1);
+    assert.deepEqual(call.body.messages[0].content[1], {
+      type: 'image_url',
+      image_url: { url: 'data:image/png;base64,AA==' }
+    });
+    assert.equal(JSON.stringify(call.body).includes('"media_type"'), false);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+});
