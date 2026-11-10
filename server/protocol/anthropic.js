@@ -2,7 +2,8 @@
 
 const {
   omitKnown, withPassthrough, contentToText,
-  DEFAULT_IMAGE_MIME, imageSourceToAnthropic
+  DEFAULT_IMAGE_MIME, imageSourceToAnthropic,
+  parseDataUri, mediaPlaceholder
 } = require('./helpers');
 
 const REQUEST_KEYS = new Set(['model', 'messages', 'system', 'max_tokens', 'temperature', 'top_p', 'top_k', 'stop_sequences', 'stream', 'tools', 'tool_choice', 'thinking']);
@@ -54,19 +55,25 @@ function encodeBlock(block) {
       } else if (block.data) {
         value = { type: 'image', source: { type: 'base64', media_type: block.mimeType || DEFAULT_IMAGE_MIME, data: block.data } };
       } else {
-        return null;
+        value = { type: 'text', text: mediaPlaceholder(block) };
       }
     } else if (block.mediaType === 'document') {
-      value = {
-        type: 'document',
-        source: block.fileUri
-          ? { type: 'url', url: block.fileUri }
-          : (block.fileId
-            ? { type: 'file', file_id: block.fileId }
-            : { type: 'base64', media_type: block.mimeType || 'application/pdf', data: block.data || '' })
-      };
+      const uri = block.fileUri || block.url || block.uri;
+      const parsedFileData = parseDataUri(block.fileData);
+      const data = block.data || parsedFileData?.data
+        || (typeof block.fileData === 'string' && !/^data:/i.test(block.fileData) ? block.fileData : undefined);
+      const mimeType = block.mimeType || parsedFileData?.mimeType || 'application/pdf';
+      if (uri) {
+        value = { type: 'document', source: { type: 'url', url: uri } };
+      } else if (block.fileId) {
+        value = { type: 'document', source: { type: 'file', file_id: block.fileId } };
+      } else if (data) {
+        value = { type: 'document', source: { type: 'base64', media_type: mimeType, data } };
+      } else {
+        value = { type: 'text', text: mediaPlaceholder(block) };
+      }
     } else {
-      return null;
+      value = { type: 'text', text: mediaPlaceholder(block) };
     }
   }
   else if (block.type === 'tool_call') value = { type: 'tool_use', id: block.id, name: block.name, input: block.input || {} };

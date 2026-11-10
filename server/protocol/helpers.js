@@ -206,6 +206,47 @@ function imageSourceToGemini(source) {
   return null; // Gemini 没有 OpenAI/Anthropic file_id 的等价物
 }
 
+function isMediaBlock(block) {
+  return !!block && (block.type === 'image' || block.type === 'media');
+}
+
+/** 把内容块拆成文本块与媒体块；tool_result 等目标通道不支持媒体时使用。 */
+function splitMediaBlocks(blocks) {
+  const text = [];
+  const media = [];
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    if (isMediaBlock(block)) media.push(block);
+    else text.push(block);
+  }
+  return { text, media };
+}
+
+function base64Bytes(data) {
+  return Math.floor(String(data || '').length * 3 / 4);
+}
+
+/** 目标协议无法表达媒体时的文本占位符，避免静默丢内容。 */
+function mediaPlaceholder(block) {
+  if (!block || typeof block !== 'object') return '[media omitted]';
+  if (block.type === 'image') {
+    const canonical = normalizeImageSource(block.source);
+    if (canonical?.kind === 'data') {
+      return `[media omitted: ${canonical.mimeType}, ${base64Bytes(canonical.data)} bytes]`;
+    }
+    if (canonical?.kind === 'url') return `[media omitted: ${canonical.url}]`;
+    if (canonical?.kind === 'file') return `[media omitted: file ${canonical.fileId}]`;
+    return '[media omitted]';
+  }
+  const mime = block.mimeType || 'application/octet-stream';
+  const bytes = block.data ? `, ${base64Bytes(block.data)} bytes` : '';
+  const name = block.filename ? `, ${block.filename}` : '';
+  return `[media omitted: ${mime}${bytes}${name}]`;
+}
+
+function placeholderBlock(block) {
+  return { type: 'text', text: mediaPlaceholder(block) };
+}
+
 module.exports = {
   omitKnown,
   withPassthrough,
@@ -218,5 +259,9 @@ module.exports = {
   imageSourceToOpenAI,
   imageSourceToAnthropic,
   imageSourceToResponses,
-  imageSourceToGemini
+  imageSourceToGemini,
+  isMediaBlock,
+  splitMediaBlocks,
+  mediaPlaceholder,
+  placeholderBlock
 };

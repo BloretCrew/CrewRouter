@@ -573,3 +573,155 @@ test('same-dialect image round-trips keep their shape and metadata', () => {
     geminiBody.contents[0].parts
   );
 });
+
+// ---- 非图片媒体与 tool_result 内嵌媒体 ----
+
+test('tool_result images are split out of OpenAI tool messages', () => {
+  const body = {
+    model: 'm', max_tokens: 8,
+    messages: [{
+      role: 'user',
+      content: [{
+        type: 'tool_result',
+        tool_use_id: 't1',
+        content: [
+          { type: 'text', text: 'done' },
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AA==' } }
+        ]
+      }]
+    }]
+  };
+  const result = protocol.convertRequest('anthropic', 'openai', body);
+  assert.deepEqual(result.messages[0], { role: 'tool', tool_call_id: 't1', content: 'done' });
+  assert.deepEqual(result.messages[1], {
+    role: 'user',
+    content: [
+      { type: 'text', text: '[tool result media]' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AA==' } }
+    ]
+  });
+});
+
+test('tool_result images become a following user turn for Gemini', () => {
+  const body = {
+    model: 'm', max_tokens: 8,
+    messages: [{
+      role: 'user',
+      content: [{
+        type: 'tool_result',
+        tool_use_id: 't1',
+        content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AA==' } }]
+      }]
+    }]
+  };
+  const result = protocol.convertRequest('anthropic', 'gemini', body);
+  assert.equal(result.contents[0].role, 'user');
+  assert.ok(result.contents[0].parts[0].functionResponse);
+  assert.deepEqual(result.contents[1], {
+    role: 'user',
+    parts: [
+      { text: '[tool result media]' },
+      { inlineData: { mimeType: 'image/png', data: 'AA==' } }
+    ]
+  });
+});
+
+test('Responses function_call_output keeps images natively', () => {
+  const body = {
+    model: 'm', max_tokens: 8,
+    messages: [{
+      role: 'user',
+      content: [{
+        type: 'tool_result',
+        tool_use_id: 'c1',
+        content: [
+          { type: 'text', text: 'done' },
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AA==' } }
+        ]
+      }]
+    }]
+  };
+  const result = protocol.convertRequest('anthropic', 'responses', body);
+  assert.deepEqual(result.input[0], {
+    type: 'function_call_output',
+    call_id: 'c1',
+    output: [
+      { type: 'input_text', text: 'done' },
+      { type: 'input_image', image_url: 'data:image/png;base64,AA==' }
+    ]
+  });
+});
+
+test('Anthropic base64 documents convert to OpenAI, Responses and Gemini', () => {
+  const body = {
+    model: 'm', max_tokens: 8,
+    messages: [{
+      role: 'user',
+      content: [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0=' } }]
+    }]
+  };
+  const openai = protocol.convertRequest('anthropic', 'openai', body);
+  assert.deepEqual(openai.messages[0].content[0], {
+    type: 'file',
+    file: { file_data: 'data:application/pdf;base64,JVBERi0=', mime_type: 'application/pdf' }
+  });
+  const responses = protocol.convertRequest('anthropic', 'responses', body);
+  assert.deepEqual(responses.input[0].content[0], { type: 'input_file', file_data: 'JVBERi0=' });
+  const gemini = protocol.convertRequest('anthropic', 'gemini', body);
+  assert.deepEqual(gemini.contents[0].parts[0], {
+    inlineData: { mimeType: 'application/pdf', data: 'JVBERi0=' }
+  });
+});
+
+test('OpenAI and Responses file_data documents convert without losing bytes', () => {
+  const openaiBody = {
+    model: 'm',
+    messages: [{
+      role: 'user',
+      content: [{ type: 'file', file: { file_data: 'data:application/pdf;base64,JVBERi0=', filename: 'a.pdf' } }]
+    }]
+  };
+  const anthropic = protocol.convertRequest('openai', 'anthropic', openaiBody);
+  assert.deepEqual(anthropic.messages[0].content[0], {
+    type: 'document',
+    source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0=' }
+  });
+  const responses = protocol.convertRequest('openai', 'responses', openaiBody);
+  assert.deepEqual(responses.input[0].content[0], {
+    type: 'input_file', file_data: 'JVBERi0=', filename: 'a.pdf'
+  });
+  const responsesBody = {
+    model: 'm',
+    input: [{
+      role: 'user',
+      content: [{ type: 'input_file', file_data: 'data:application/pdf;base64,JVBERi0=', filename: 'r.pdf' }]
+    }]
+  };
+  const openai = protocol.convertRequest('responses', 'openai', responsesBody);
+  assert.deepEqual(openai.messages[0].content[0], {
+    type: 'file',
+    file: {
+      file_data: 'data:application/pdf;base64,JVBERi0=',
+      filename: 'r.pdf',
+      mime_type: 'application/pdf'
+    }
+  });
+});
+
+test('media without a target representation becomes a text placeholder', () => {
+  const audio = {
+    model: 'm', max_tokens: 8,
+    messages: [{ role: 'user', content: [{ type: 'input_audio', input_audio: { data: 'AAAA', format: 'wav' } }] }]
+  };
+  const anthropic = protocol.convertRequest('openai', 'anthropic', audio);
+  assert.deepEqual(anthropic.messages[0].content[0], {
+    type: 'text',
+    text: '[media omitted: audio/wav, 3 bytes]'
+  });
+  const video = {
+    model: 'm',
+    contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'video/mp4', data: 'AAAA' } }] }]
+  };
+  const openai = protocol.convertRequest('gemini', 'openai', video);
+  assert.equal(openai.messages[0].content, '[media omitted: video/mp4, 3 bytes]');
+});

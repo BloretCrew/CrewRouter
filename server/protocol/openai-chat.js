@@ -2,8 +2,11 @@
 
 const {
   omitKnown, withPassthrough, safeParseJson,
-  DEFAULT_IMAGE_MIME, toDataUri, imageSourceToOpenAI
+  DEFAULT_IMAGE_MIME, toDataUri, imageSourceToOpenAI,
+  splitMediaBlocks, mediaPlaceholder, parseDataUri
 } = require('./helpers');
+
+const TOOL_RESULT_MEDIA_NOTICE = '[tool result media]';
 
 const REQUEST_KEYS = new Set(['model', 'messages', 'max_tokens', 'max_completion_tokens', 'temperature', 'top_p', 'top_k', 'stop', 'stream', 'stream_options', 'tools', 'tool_choice', 'reasoning_effort', 'n', 'seed', 'frequency_penalty', 'presence_penalty', 'response_format']);
 const MESSAGE_KEYS = new Set(['role', 'content', 'name', 'tool_call_id', 'tool_calls', 'reasoning_content']);
@@ -26,11 +29,14 @@ function decodeContent(content) {
       };
     }
     if (part?.type === 'file') {
+      const fileData = part.file?.file_data || part.file?.fileData;
+      const parsedFileData = parseDataUri(fileData);
       return {
         type: 'media', mediaType: 'document',
-        mimeType: part.file?.mime_type || part.file?.mimeType || 'application/octet-stream',
+        mimeType: part.file?.mime_type || part.file?.mimeType
+          || parsedFileData?.mimeType || 'application/octet-stream',
         fileId: part.file?.file_id || part.file?.fileId,
-        fileData: part.file?.file_data || part.file?.fileData,
+        fileData,
         filename: part.file?.filename,
         passthrough: { openai: omitKnown(part, new Set(['type', 'file'])) }
       };
@@ -58,20 +64,31 @@ function encodeContent(blocks, dialect) {
         const url = block.fileUri || block.url || block.uri
           || (block.data ? toDataUri(block.mimeType || DEFAULT_IMAGE_MIME, block.data) : '');
         if (url) content.push(withPassthrough({ type: 'image_url', image_url: { url } }, block.passthrough?.openai));
-      } else if (block.mediaType === 'audio' && block.data) {
-        const format = /mpeg|mp3/i.test(block.mimeType || '') ? 'mp3' : String(block.mimeType || 'audio/wav').split('/').pop();
-        content.push({ type: 'input_audio', input_audio: { data: block.data, format }, ...(block.passthrough?.openai || {}) });
-      } else if (block.mediaType === 'document' && (block.fileId || block.fileData)) {
-        content.push({
-          type: 'file',
-          file: {
-            ...(block.fileId ? { file_id: block.fileId } : {}),
-            ...(block.fileData ? { file_data: block.fileData } : {}),
-            ...(block.filename ? { filename: block.filename } : {}),
-            ...(block.mimeType ? { mime_type: block.mimeType } : {})
-          },
-          ...(block.passthrough?.openai || {})
-        });
+      } else if (block.mediaType === 'audio') {
+        if (block.data) {
+          const format = /mpeg|mp3/i.test(block.mimeType || '') ? 'mp3' : String(block.mimeType || 'audio/wav').split('/').pop();
+          content.push(withPassthrough({ type: 'input_audio', input_audio: { data: block.data, format } }, block.passthrough?.openai));
+        } else {
+          content.push(withPassthrough({ type: 'text', text: mediaPlaceholder(block) }, block.passthrough?.openai));
+        }
+      } else if (block.mediaType === 'document') {
+        const fileData = block.fileData
+          || (block.data ? toDataUri(block.mimeType || 'application/octet-stream', block.data) : undefined);
+        if (block.fileId || fileData) {
+          content.push(withPassthrough({
+            type: 'file',
+            file: {
+              ...(block.fileId ? { file_id: block.fileId } : {}),
+              ...(fileData ? { file_data: fileData } : {}),
+              ...(block.filename ? { filename: block.filename } : {}),
+              ...(block.mimeType ? { mime_type: block.mimeType } : {})
+            }
+          }, block.passthrough?.openai));
+        } else {
+          content.push(withPassthrough({ type: 'text', text: mediaPlaceholder(block) }, block.passthrough?.openai));
+        }
+      } else {
+        content.push(withPassthrough({ type: 'text', text: mediaPlaceholder(block) }, block.passthrough?.openai));
       }
     }
     else if (block.type === 'raw' && block.value !== undefined) content.push(block.value);
@@ -172,11 +189,29 @@ function encodeMessages(message) {
   const results = (message.blocks || []).filter(block => block.type === 'tool_result');
   if (!results.length) return [encodeMessage(message)];
   const extra = message.passthrough?.openai;
-  const encoded = results.map(result => withPassthrough({
-    role: 'tool',
-    tool_call_id: result.toolCallId,
-    content: encodeContent(result.content || [], 'openai') || ''
-  }, extra));
+  const mediaBlocks = [];
+  const encoded = results.map(result => {
+    // OpenAI tool 消息不支持媒体内容，文本留在 tool 消息，媒体拆到后续 user 消息。
+    const { text, media } = splitMediaBlocks(result.content);
+    mediaBlocks.push(...media);
+    return withPassthrough({
+      role: 'tool',
+      tool_call_id: result.toolCallId,
+      content: encodeContent(text, 'openai') || ''
+    }, extra);
+  });
+  if (mediaBlocks.length) {
+    const encodedMedia = encodeContent(mediaBlocks, 'openai');
+    if (encodedMedia) {
+      encoded.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: TOOL_RESULT_MEDIA_NOTICE },
+          ...(Array.isArray(encodedMedia) ? encodedMedia : [{ type: 'text', text: encodedMedia }])
+        ]
+      });
+    }
+  }
   const rest = message.blocks.filter(block => block.type !== 'tool_result');
   if (rest.length) encoded.push(encodeMessage({ ...message, blocks: rest }));
   return encoded;

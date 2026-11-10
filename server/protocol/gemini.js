@@ -2,8 +2,10 @@
 
 const {
   omitKnown, withPassthrough, safeParseJson,
-  imageSourceToGemini
+  imageSourceToGemini, parseDataUri, mediaPlaceholder, splitMediaBlocks
 } = require('./helpers');
+
+const TOOL_RESULT_MEDIA_NOTICE = '[tool result media]';
 const {
   mediaTypeFromMime,
   fromGeminiSchema,
@@ -216,23 +218,36 @@ function encodeParts(blocks, toolNames) {
         ? mediaFromImageSource(block.source)
         : block;
       if (!media) continue;
+      let data = media.data;
+      let mimeType = media.mimeType;
+      if (!data && media.fileData) {
+        const parsed = parseDataUri(media.fileData);
+        if (parsed) {
+          data = parsed.data;
+          mimeType = mimeType || parsed.mimeType;
+        } else if (typeof media.fileData === 'string') {
+          data = media.fileData;
+        }
+      }
       const mediaUri = media.fileUri || media.url || media.uri;
       if (mediaUri) {
         parts.push(withPassthrough({
           fileData: {
-            mimeType: media.mimeType || 'application/octet-stream',
+            mimeType: mimeType || 'application/octet-stream',
             fileUri: mediaUri,
             ...(media.displayName ? { displayName: media.displayName } : {})
           }
         }, extra));
-      } else if (media.data) {
+      } else if (data) {
         parts.push(withPassthrough({
           inlineData: {
-            mimeType: media.mimeType || 'application/octet-stream',
-            data: media.data,
+            mimeType: mimeType || 'application/octet-stream',
+            data,
             ...(media.displayName ? { displayName: media.displayName } : {})
           }
         }, extra));
+      } else {
+        parts.push(withPassthrough({ text: mediaPlaceholder(media) }, extra));
       }
     } else if (block.type === 'tool_call') {
       const functionCall = {
@@ -503,6 +518,18 @@ function encodeRequest(ir) {
       continue;
     }
     request.contents.push(encodeContent(message, toolNames));
+    const toolMedia = [];
+    for (const block of message.blocks || []) {
+      if (block?.type === 'tool_result') {
+        toolMedia.push(...splitMediaBlocks(block.content).media);
+      }
+    }
+    if (toolMedia.length) {
+      const parts = encodeParts(toolMedia, toolNames);
+      if (parts.length) {
+        request.contents.push({ role: 'user', parts: [{ text: TOOL_RESULT_MEDIA_NOTICE }, ...parts] });
+      }
+    }
   }
   if (systemBlocks.length) {
     request.systemInstruction = { parts: encodeParts(systemBlocks) };

@@ -2,7 +2,8 @@
 
 const {
   omitKnown, withPassthrough, safeParseJson,
-  DEFAULT_IMAGE_MIME, toDataUri, imageSourceToResponses
+  DEFAULT_IMAGE_MIME, toDataUri, imageSourceToResponses,
+  parseDataUri, mediaPlaceholder
 } = require('./helpers');
 
 const REQUEST_KEYS = new Set(['model', 'input', 'instructions', 'max_output_tokens', 'temperature', 'top_p', 'stream', 'tools', 'tool_choice', 'parallel_tool_calls', 'reasoning', 'metadata', 'store', 'text']);
@@ -16,13 +17,16 @@ function decodeContent(content) {
     if (part.type === 'input_text' || part.type === 'output_text' || part.type === 'text') return { type: 'text', text: part.text || '', passthrough: { responses: omitKnown(part, new Set(['type', 'text'])) } };
     if (part.type === 'input_image' || part.type === 'image') return { type: 'image', source: part.image_url || part.image || part, passthrough: { responses: omitKnown(part, new Set(['type', 'image_url', 'image'])) } };
     if (part.type === 'input_file' || part.type === 'file') {
+      const fileData = part.file_data;
+      const parsedFileData = parseDataUri(fileData);
       return {
         type: 'media', mediaType: 'document',
-        mimeType: part.mime_type || 'application/octet-stream',
+        mimeType: part.mime_type || parsedFileData?.mimeType || 'application/octet-stream',
         fileId: part.file_id,
         fileUri: part.file_url,
+        fileData,
         filename: part.filename,
-        passthrough: { responses: omitKnown(part, new Set(['type', 'file_id', 'file_url', 'filename', 'mime_type'])) }
+        passthrough: { responses: omitKnown(part, new Set(['type', 'file_id', 'file_url', 'file_data', 'filename', 'mime_type'])) }
       };
     }
     if (part.type === 'refusal') return { type: 'raw', value: part };
@@ -41,12 +45,28 @@ function encodeContent(blocks, mode = 'input') {
       if (block.mediaType === 'image') {
         const uri = block.fileUri || block.url || block.uri
           || (block.data ? toDataUri(block.mimeType || DEFAULT_IMAGE_MIME, block.data) : '');
-        if (!uri) return null;
+        if (!uri) {
+          return { type: mode === 'output' ? 'output_text' : 'input_text', text: mediaPlaceholder(block) };
+        }
         return withPassthrough({ type: 'input_image', image_url: uri }, block.passthrough?.responses);
       }
       if (block.mediaType === 'document') {
-        return { type: 'input_file', ...(block.fileId ? { file_id: block.fileId } : {}), ...(block.fileUri ? { file_url: block.fileUri } : {}), ...(block.filename ? { filename: block.filename } : {}) };
+        const uri = block.fileUri || block.url || block.uri;
+        const parsedFileData = parseDataUri(block.fileData);
+        const data = block.data || parsedFileData?.data
+          || (typeof block.fileData === 'string' && !/^data:/i.test(block.fileData) ? block.fileData : undefined);
+        if (block.fileId) {
+          return { type: 'input_file', file_id: block.fileId, ...(block.filename ? { filename: block.filename } : {}) };
+        }
+        if (uri) {
+          return { type: 'input_file', file_url: uri, ...(block.filename ? { filename: block.filename } : {}) };
+        }
+        if (data) {
+          return { type: 'input_file', file_data: data, ...(block.filename ? { filename: block.filename } : {}) };
+        }
+        return { type: mode === 'output' ? 'output_text' : 'input_text', text: mediaPlaceholder(block) };
       }
+      return { type: mode === 'output' ? 'output_text' : 'input_text', text: mediaPlaceholder(block) };
     }
     if (block.type === 'raw') return block.value;
     return null;
