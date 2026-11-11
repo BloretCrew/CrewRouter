@@ -30,7 +30,7 @@ function routes(pool, { baseline = false, invalidate = noop } = {}) {
     const res = { statusCode: 200, status(n) { this.statusCode = n; return this; }, json(value) { this.body = value; return this; } };
     const handler = handlers.get(`${method} ${route}`);
     assert(handler, `${method} ${route}`);
-    await handler({ params: { id: '1', userId: '2', ...params }, session: { user: { id: user } }, body }, res);
+    await handler({ params: { id: '1', userId: '2', ...params }, authUser: { id: user }, body }, res);
     return res;
   };
 }
@@ -48,7 +48,7 @@ async function main() {
   const pool = new Pool({ ...cluster.connection, max: 8, options: '-c statement_timeout=6000 -c idle_in_transaction_session_timeout=8000' });
   try {
     await cluster.assertIsolation(pool);
-    await pool.query(`CREATE TABLE api_keys (id integer PRIMARY KEY, user_id integer, current_model_id varchar(100), name text DEFAULT 'fixture', key_prefix text, custom_model_name text,
+    await pool.query(`CREATE TABLE api_keys (id integer PRIMARY KEY, user_id integer, current_model_id varchar(100), name text DEFAULT 'fixture', key_prefix text, custom_model_name text, permissions jsonb DEFAULT '[]'::jsonb,
       fusion_panel_models jsonb, fusion_judge_model_id text, fusion_outer_model_id text, fusion_enabled boolean, fusion_synthesis_prompt_enabled boolean,
       quota_warning_enabled boolean, signature_enabled boolean, signature_template text, enabled boolean, swallow_images boolean, crewrouter_commands boolean,
       schedule_enabled boolean, schedule_on_time text, schedule_off_time text, schedule_days integer[], schedule_timezone text);

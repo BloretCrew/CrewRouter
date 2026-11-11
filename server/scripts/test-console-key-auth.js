@@ -119,7 +119,7 @@ test('OAuth token cannot borrow a console session', async () => {
 test('permission middleware allows session and denies missing or admin-only permissions', () => {
   const { requireApiKeyPermission } = loadModule(path.resolve(__dirname, '../middleware/api-key-permissions.js'), {
     '../utils/api-key-permissions': require('../utils/api-key-permissions'),
-    './request-auth': require('../middleware/request-auth'),
+    './request-auth': loadRequestAuth(),
   });
   const sessionReq = { authActor: { type: 'session', user: { id: 1 } }, method: 'GET', originalUrl: '/api/admin/users' };
   let sessionCalled = false;

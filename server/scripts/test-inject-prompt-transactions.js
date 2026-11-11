@@ -50,7 +50,7 @@ function fixture(pool, hooks = {}) {
   });
   return { invalidations, async request(method, suffix = '', body = {}, userId = 1) {
     const res = { statusCode: 200, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
-    await routes.get(`${method} ${promptPath}${suffix}`)({ session: { user: { id: userId } }, params: { id: '1' }, body }, res);
+    await routes.get(`${method} ${promptPath}${suffix}`)({ authUser: { id: userId }, params: { id: '1' }, body }, res);
     return res;
   } };
 }
@@ -80,7 +80,7 @@ test('注入提示词写入串行化、作用域和故障回滚', async t => {
       assert(ddl, `production DDL for ${table}`);
       await pool.query(ddl[0]);
     }
-    const reset = async () => pool.query("DELETE FROM inject_prompts; INSERT INTO inject_prompts(id,user_id,name,content) VALUES(1,1,'original','base')");
+    const reset = async () => pool.query("DELETE FROM inject_prompts; INSERT INTO inject_prompts(id,user_id,name,content,enabled) VALUES(1,1,'original','base',TRUE)");
     const bindings = async () => (await pool.query('SELECT api_key_id FROM inject_prompt_key_bindings WHERE prompt_id=1 ORDER BY api_key_id')).rows.map(row => row.api_key_id);
     const prompt = async () => (await pool.query('SELECT name,content,enabled,sort_order FROM inject_prompts WHERE id=1')).rows[0];
 

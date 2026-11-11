@@ -9,7 +9,7 @@ const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const config = require('../config-loader');
 const { fetchProvidersIndex, lookupProvider } = require('../provider-lookup');
 const proxyPool = require('../proxy-pool');
-const { invalidateApiKeyCacheByKeyId } = require('./api');
+const { invalidateApiKeyCacheByKeyId, invalidateUserApiKeyCache } = require('./api');
 const apiKeyPermissions = require('../utils/api-key-permissions');
 const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone');
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
@@ -425,8 +425,8 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
 
     const result = await pool.query(
       `INSERT INTO api_keys
-         (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled, permissions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8::jsonb)
+         (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled, crewrouter_commands, permissions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, FALSE, $8::jsonb)
        RETURNING id, name, key_prefix, key_value, custom_model_name, created_at, expires_at, permissions`,
       [req.authUser.id, keyHash, rawKey, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5', JSON.stringify(grant.value)]
     );
@@ -2066,6 +2066,9 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
     if (avatar !== undefined) req.authUser.avatar = avatar;
     if (api_signature_enabled !== undefined) req.authUser.api_signature_enabled = !!api_signature_enabled;
     if (api_signature_template !== undefined) req.authUser.api_signature_template = api_signature_template;
+    if (api_signature_enabled !== undefined || api_signature_template !== undefined) {
+      invalidateUserApiKeyCache(req.authUser.id);
+    }
 
     res.json({ success: true });
   } catch (error) {

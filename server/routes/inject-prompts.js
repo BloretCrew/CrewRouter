@@ -176,7 +176,7 @@ router.post('/inject-prompts', requireAuth, async (req, res) => {
     const parsed = parsePayload(req.body || {}, { requireName: true });
     if (parsed.error) return badRequest(res, parsed.error);
 
-    const { name, content, enabled = true, sort_order = 0 } = parsed.fields;
+    const { name, content, enabled = false, sort_order = 0 } = parsed.fields;
     const result = await pool.query(
       `INSERT INTO inject_prompts (user_id, name, content, enabled, sort_order)
        VALUES ($1, $2, $3, $4, $5)
@@ -184,7 +184,7 @@ router.post('/inject-prompts', requireAuth, async (req, res) => {
       [userId, name, content, enabled === true, sort_order]
     );
 
-    // 新建即生效：全局语义，失效该用户全部 Key 缓存
+    // 条目为全局语义，失效该用户全部 Key 缓存
     invalidatePromptCaches(userId);
     res.json({ item: { ...result.rows[0], bound_key_ids: [], bound_keys: [] } });
   } catch (error) {

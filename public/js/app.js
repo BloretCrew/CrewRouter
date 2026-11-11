@@ -897,8 +897,8 @@ class ConsoleApp {
     const sigLabel = sigExplicit ? (sigOn ? t('签名开') : t('签名关')) : t('签名继承');
     const sigKind = sigExplicit ? (sigOn ? 'ok' : 'off') : 'muted';
     const swallowOn = key.swallow_images === true;
-    const quotaWarningOn = key.quota_warning_enabled !== false;
-    const crewrouterOn = key.crewrouter_commands !== false;
+    const quotaWarningOn = key.quota_warning_enabled === true;
+    const crewrouterOn = key.crewrouter_commands === true;
 
     const chips = [
       this._renderApiKeyChip(status.text, status.class === 'active' ? 'ok' : status.class === 'expiring' ? 'warn' : status.class === 'expired' ? 'danger' : 'muted'),
@@ -3362,9 +3362,9 @@ class ConsoleApp {
     const warning = document.getElementById('keyOptionQuotaWarning');
     const swallow = document.getElementById('keyOptionSwallowImages');
     const commands = document.getElementById('keyOptionCrewRouterCommands');
-    if (warning) warning.checked = key.quota_warning_enabled !== false;
+    if (warning) warning.checked = key.quota_warning_enabled === true;
     if (swallow) swallow.checked = key.swallow_images === true;
-    if (commands) commands.checked = key.crewrouter_commands !== false;
+    if (commands) commands.checked = key.crewrouter_commands === true;
     this.showModal('keyOptionsModal');
   }
 
@@ -3372,9 +3372,9 @@ class ConsoleApp {
     const keyId = this._currentOptionsKeyId;
     if (!keyId) return;
     const settings = [
-      ['quota-warning', 'quota_warning_enabled', document.getElementById('keyOptionQuotaWarning')?.checked !== false],
+      ['quota-warning', 'quota_warning_enabled', document.getElementById('keyOptionQuotaWarning')?.checked === true],
       ['swallow-images', 'swallow_images', document.getElementById('keyOptionSwallowImages')?.checked === true],
-      ['crewrouter-commands', 'crewrouter_commands', document.getElementById('keyOptionCrewRouterCommands')?.checked !== false]
+      ['crewrouter-commands', 'crewrouter_commands', document.getElementById('keyOptionCrewRouterCommands')?.checked === true]
     ];
     try {
       for (const [endpoint, field, value] of settings) {
@@ -7534,6 +7534,8 @@ class ConsoleApp {
     const status = document.getElementById('signatureSaveStatus');
     if (!toggle || !template) return;
 
+    const enabled = toggle.checked === true;
+    const signatureTemplate = template.value;
     setHTML(status, inlineLoadingHtml(t('保存中...'), 'sm'));
     status.style.color = 'var(--muted-foreground)';
 
@@ -7542,14 +7544,14 @@ class ConsoleApp {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          api_signature_enabled: toggle.checked,
-          api_signature_template: template.value
+          api_signature_enabled: enabled,
+          api_signature_template: signatureTemplate
         })
       });
       const data = await res.json();
-      if (data.success) {
-        this.user.api_signature_enabled = toggle.checked;
-        this.user.api_signature_template = template.value;
+      if (res.ok && data.success) {
+        this.user.api_signature_enabled = enabled;
+        this.user.api_signature_template = signatureTemplate;
         status.textContent = t('保存成功');
         status.style.color = 'var(--success)';
       } else {

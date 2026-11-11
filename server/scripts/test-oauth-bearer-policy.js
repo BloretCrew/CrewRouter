@@ -144,3 +144,26 @@ test('events-only tokens remain valid for client-events while gateway-only token
   assert.equal(result.res.statusCode, 403);
   assert.equal(result.called, false);
 });
+
+for (const value of [undefined, null, false, true]) {
+  test(`OAuth opt-in defaults retain explicit choices: ${value}`, async () => {
+    const f = fixture();
+    Object.assign(f.state.key, { crewrouter_commands: value, quota_warning_enabled: value,
+      signature_enabled: value, api_signature_enabled: value });
+    const { req, called } = await f.request();
+    assert.equal(called, true);
+    assert.equal(req.apiUser.crewrouterCommands, value === true);
+    assert.equal(req.apiUser.quotaWarningEnabled, value === true);
+    assert.equal(req.apiUser.signatureEnabled, value === true);
+  });
+}
+
+test('OAuth null or omitted key signature inherits the explicit user choice', async () => {
+  for (const signature_enabled of [null, undefined, false, true]) {
+    const f = fixture();
+    Object.assign(f.state.key, { signature_enabled, api_signature_enabled: true });
+    const { req, called } = await f.request();
+    assert.equal(called, true);
+    assert.equal(req.apiUser.signatureEnabled, signature_enabled !== false);
+  }
+});

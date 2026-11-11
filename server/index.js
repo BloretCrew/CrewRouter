@@ -1906,18 +1906,8 @@ async function ensureApiKeySignatureColumns() {
   try {
     await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS signature_enabled BOOLEAN DEFAULT NULL`);
     await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS signature_template TEXT DEFAULT NULL`);
-    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS quota_warning_enabled BOOLEAN DEFAULT TRUE`);
-    await pool.query(`ALTER TABLE api_keys ALTER COLUMN quota_warning_enabled SET DEFAULT TRUE`);
-    const migrationKey = 'migration_enable_quota_warning_for_all_api_keys_v1';
-    const migration = await pool.query('SELECT 1 FROM settings WHERE key = $1', [migrationKey]);
-    if (migration.rows.length === 0) {
-      const updated = await pool.query('UPDATE api_keys SET quota_warning_enabled = TRUE');
-      await pool.query(
-        `INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
-        [migrationKey, JSON.stringify({ updated: updated.rowCount, at: new Date().toISOString() })]
-      );
-      Logger.info(`[迁移] 已为现有全部 API Key 启用额度预警，共 ${updated.rowCount} 个`);
-    }
+    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS quota_warning_enabled BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE api_keys ALTER COLUMN quota_warning_enabled SET DEFAULT FALSE`);
     Logger.info('[迁移] api_keys 表独立签名字段已就绪');
   } catch (err) {
     Logger.error(`[迁移] api_keys 签名字段迁移跳过: ${err.message}`);
@@ -2017,9 +2007,9 @@ async function ensureApiKeySwallowImages() {
 
 async function ensureApiKeyCrewRouterCommands() {
   try {
-    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS crewrouter_commands BOOLEAN DEFAULT TRUE`);
-    await pool.query(`ALTER TABLE api_keys ALTER COLUMN crewrouter_commands SET DEFAULT TRUE`);
-    Logger.info('[迁移] api_keys 表 crewrouter_commands 字段已就绪（默认开启，新建 Key 默认允许）');
+    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS crewrouter_commands BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE api_keys ALTER COLUMN crewrouter_commands SET DEFAULT FALSE`);
+    Logger.info('[迁移] api_keys 表 crewrouter_commands 字段已就绪（默认关闭，新建 Key 默认禁止）');
   } catch (err) {
     Logger.error(`[迁移] api_keys crewrouter_commands 字段迁移跳过: ${err.message}`);
     throw err;
@@ -2982,12 +2972,13 @@ async function ensureInjectPromptsTable() {
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         content TEXT NOT NULL,
-        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        enabled BOOLEAN NOT NULL DEFAULT FALSE,
         sort_order INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await pool.query(`ALTER TABLE inject_prompts ALTER COLUMN enabled SET DEFAULT FALSE`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_inject_prompts_user ON inject_prompts(user_id, enabled, sort_order)`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inject_prompt_key_bindings (

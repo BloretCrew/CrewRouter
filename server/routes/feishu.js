@@ -369,8 +369,8 @@ router.get('/feishu/callback', async (req, res) => {
           const rawKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
           const keyPrefix = rawKey.substring(0, 12);
           await pool.query(
-            `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name, permissions)
-             VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5', $5::jsonb)`,
+            `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name, quota_warning_enabled, crewrouter_commands, permissions)
+             VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5', FALSE, FALSE, $5::jsonb)`,
             [user.id, require('../utils/key-hash').sha256Hex(rawKey), rawKey, keyPrefix,
               JSON.stringify(require('../utils/api-key-permissions').defaultPermissions())]
           );

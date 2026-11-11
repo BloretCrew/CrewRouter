@@ -21,7 +21,7 @@ function declaration(name, prefix = 'function') {
 function fixture() {
   const state = { enabled: true, expires_at: null, exists: true, ownerExists: true,
     cache: null, writes: 0, refreshes: 0, cacheSets: 0, invalidations: 0, downstream: 0,
-    transportError: false, disableDuringColdLoad: false };
+    transportError: false, disableDuringColdLoad: false, optIn: undefined };
   const user = () => ({ keyId: 17, userId: 29, username: 'synthetic-owner', enabled: true, teamId: null, balance: 10 });
   const sandbox = {
     Date: class extends Date { static now() { return NOW; } },
@@ -36,7 +36,7 @@ function fixture() {
       }
       if (sql.includes('SELECT ak.*, u.id as user_id')) {
         return { rows: state.exists && state.ownerExists ? [{ id: 17, user_id: 29, enabled: state.enabled,
-          expires_at: state.expires_at, balance: 10, current_model_id: 'fixture-model' }] : [] };
+          expires_at: state.expires_at, crewrouter_commands: state.optIn, quota_warning_enabled: state.optIn, api_signature_enabled: state.optIn, balance: 10, current_model_id: 'fixture-model' }] : [] };
       }
       if (sql.includes('SELECT signature_enabled')) return { rows: [{ signature_enabled: null }] };
       if (sql.includes('FROM api_key_models')) return { rows: [{ model_id: 'fixture-model' }] };
@@ -131,6 +131,17 @@ async function main() {
   unavailable.state.cache = unavailable.user();
   unavailable.state.transportError = true;
   assert.equal((await unavailable.request()).res.statusCode, 500, 'database errors retain the existing server-error contract');
+  for (const value of [undefined, null, false, true]) {
+    const f = fixture();
+    f.state.optIn = value;
+    for (let i = 0; i < 2; i++) {
+      const { req, next } = await f.request();
+      assert.equal(next, true);
+      assert.equal(req.apiUser.crewrouterCommands, value === true);
+      assert.equal(req.apiUser.quotaWarningEnabled, value === true);
+      assert.equal(req.apiUser.signatureEnabled, value === true);
+    }
+  }
   console.log('API Key lifecycle: synthetic cold/cache revocation, expiry boundary, owner deletion, gateway rejection and error contracts passed');
 }
 

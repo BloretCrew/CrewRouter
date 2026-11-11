@@ -37,7 +37,7 @@ async function seedDefaultPrompt(userId, db) {
       if (existing.rows.length === 0) {
         await client.query(
           `INSERT INTO inject_prompts (user_id, name, content, enabled, sort_order)
-           VALUES ($1, $2, $3, TRUE, -10)`,
+           VALUES ($1, $2, $3, FALSE, -10)`,
           [userId, DEFAULT_PROMPT.name, DEFAULT_PROMPT.content]
         );
         inserted = true;

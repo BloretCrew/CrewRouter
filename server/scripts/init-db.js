@@ -497,10 +497,11 @@ async function initDatabase() {
         fusion_panel_models JSONB DEFAULT '[]'::jsonb,
         fusion_judge_model_id VARCHAR(100) DEFAULT '',
         fusion_outer_model_id VARCHAR(100) DEFAULT '',
+        quota_warning_enabled BOOLEAN DEFAULT FALSE,
         signature_enabled BOOLEAN DEFAULT NULL,
         signature_template TEXT DEFAULT NULL,
         swallow_images BOOLEAN DEFAULT FALSE,
-        crewrouter_commands BOOLEAN DEFAULT TRUE,
+        crewrouter_commands BOOLEAN DEFAULT FALSE,
         permissions JSONB NOT NULL DEFAULT '[]'::jsonb
       )
     `);
@@ -525,9 +526,9 @@ async function initDatabase() {
       { name: 'fusion_outer_model_id', type: "VARCHAR(100) DEFAULT ''" },
       { name: 'signature_enabled', type: 'BOOLEAN DEFAULT NULL' },
       { name: 'signature_template', type: 'TEXT DEFAULT NULL' },
-      { name: 'quota_warning_enabled', type: 'BOOLEAN DEFAULT TRUE' },
+      { name: 'quota_warning_enabled', type: 'BOOLEAN DEFAULT FALSE' },
       { name: 'swallow_images', type: 'BOOLEAN DEFAULT FALSE' },
-      { name: 'crewrouter_commands', type: 'BOOLEAN DEFAULT TRUE' },
+      { name: 'crewrouter_commands', type: 'BOOLEAN DEFAULT FALSE' },
       // 不在这里给历史表加 NOT NULL DEFAULT，避免旧 Key 被静默清空；
       // 服务启动迁移会先回填 NULL，再设置默认值。
       { name: 'permissions', type: 'JSONB' }
@@ -542,6 +543,8 @@ async function initDatabase() {
         Logger.info(`[数据库初始化] 已为 api_keys 表添加 ${col.name} 列`);
       }
     }
+    await client.query('ALTER TABLE api_keys ALTER COLUMN quota_warning_enabled SET DEFAULT FALSE');
+    await client.query('ALTER TABLE api_keys ALTER COLUMN crewrouter_commands SET DEFAULT FALSE');
     Logger.info('[数据库初始化] 表 api_keys 已就绪');
 
     // Co-Key 成员：api_keys.user_id 始终是发起者及计费归属

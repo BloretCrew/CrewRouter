@@ -1318,8 +1318,8 @@ async function validateApiKey(req, res, next, boundKey = null) {
       fusionEnabled: keyData.fusion_enabled !== false,
       fusionSynthesisPromptEnabled: keyData.fusion_synthesis_prompt_enabled !== false,
       // 优先使用 key 级别签名设置，回退到用户级别设置
-      signatureEnabled: keySignatureResult.rows[0]?.signature_enabled !== null
-        ? keySignatureResult.rows[0].signature_enabled
+      signatureEnabled: keySignatureResult.rows[0]?.signature_enabled != null
+        ? keySignatureResult.rows[0].signature_enabled === true
         : keyData.api_signature_enabled === true,
       signatureTemplate: keySignatureResult.rows[0]?.signature_template || keyData.api_signature_template || null,
       keySignatureEnabled: keySignatureResult.rows[0]?.signature_enabled,  // 保留原始值用于前端显示
@@ -1330,7 +1330,7 @@ async function validateApiKey(req, res, next, boundKey = null) {
       permissions: Array.isArray(keyData.permissions) ? keyData.permissions : [],
       // 吞图：默认禁用；启用后客户端图片不转发给上游
       swallowImages: keyData.swallow_images === true,
-      crewrouterCommands: keyData.crewrouter_commands !== false
+      crewrouterCommands: keyData.crewrouter_commands === true
     };
 
     let injectPrompt = null;
