@@ -13,8 +13,8 @@ type Options struct {
 	BaseURL            string
 	APIKey             string
 	OAuthToken         string
-	AuthStyle          string // "bearer" (default) or "x-api-key"
-	HTTPClient         *http.Client
+	AuthStyle          string       // "bearer" (default) or "x-api-key"
+	HTTPClient         *http.Client // Custom clients retain their own redirect policy.
 	Timeout            time.Duration
 	StreamIdleTimeout  time.Duration
 	MaxRetries         int
@@ -79,7 +79,7 @@ func New(options Options) (*Client, error) {
 	}
 	httpClient := options.HTTPClient
 	if httpClient == nil {
-		httpClient = &http.Client{}
+		httpClient = &http.Client{CheckRedirect: defaultCheckRedirect}
 	}
 
 	client := &Client{

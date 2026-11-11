@@ -46,7 +46,7 @@ class PlaygroundApp {
       this.models = (Array.isArray(data) ? data : []).filter(model => model.output_kind !== 'image');
       const select = document.getElementById('pgModel');
       if (this.models.length === 0) {
-        setBloraState('pgModel', 'empty');
+        select?.setAttribute('data-blora-state', 'empty');
         setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('暂无可用模型')) + '</blora-option>');
         return;
       }
@@ -69,7 +69,7 @@ class PlaygroundApp {
       if (select) {
         select.value = String(this.models[0]?.id || '');
       }
-      setBloraState('pgModel', 'success');
+      select?.setAttribute('data-blora-state', 'success');
 
       // Store model pricing and info for cost calculation
       this.modelPricing = {};
@@ -94,7 +94,7 @@ class PlaygroundApp {
     } catch (error) {
       console.error(t('加载模型失败:'), error);
       const select = document.getElementById('pgModel');
-      if (select) { setBloraState('pgModel', 'error'); setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('加载失败')) + '</blora-option>'); }
+      if (select) { select.setAttribute('data-blora-state', 'error'); setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('加载失败')) + '</blora-option>'); }
     }
   }
 
@@ -842,18 +842,20 @@ class PlaygroundApp {
 
   renderMarkdown(text) {
     if (!text) return '';
-    let html = text;
+    let html = String(text).replace(/\0/g, '');
+    const codeFragments = [];
+    const stashCode = fragment => `\0CODE${codeFragments.push(fragment) - 1}\0`;
 
     // Escape HTML (but preserve newlines for processing)
     html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     // Code blocks: ```lang\n...\n```
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-      return `<pre><code class="lang-${lang}">${code.trimEnd()}</code></pre>`;
+      return stashCode(`<pre><code class="lang-${lang}">${code.trimEnd()}</code></pre>`);
     });
 
     // Inline code: `...`
-    html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    html = html.replace(/`([^`\n]+)`/g, (_, code) => stashCode(`<code>${code}</code>`));
 
     // Headers: ### / ## / #
     html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
@@ -892,20 +894,26 @@ class PlaygroundApp {
     html = html.replace(/^[\-\*]{3,}$/gm, '<hr>');
 
     // Links: [text](url)
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+      // Only explicit web/mail URLs and local paths can become clickable links.
+      if (!/^(?:https?:\/\/|mailto:|\/(?!\/)|#)/i.test(url) || /[\s\u0000-\u001f\u007f<>\\]|&(?:lt|gt);/.test(url)) return label;
+      const href = url.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
 
     // Paragraphs: split by double newlines
     html = html.split(/\n{2,}/).map(block => {
       block = block.trim();
       if (!block) return '';
       if (/^<(h[1-6]|ul|ol|li|pre|blockquote|hr|div)/.test(block)) return block;
+      const codeIndex = /^\0CODE(\d+)\0$/.exec(block);
+      if (codeIndex && codeFragments[Number(codeIndex[1])]?.startsWith('<pre>')) return block;
       // Wrap in paragraph, converting single newlines to <br>
       return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
     }).join('\n');
 
-    // Single newlines inside paragraphs -> <br> (already handled above)
-
-    return html;
+    // Restore code after Markdown processing so examples remain literal.
+    return html.replace(/\0CODE(\d+)\0/g, (_, index) => codeFragments[Number(index)]);
   }
 
   renderThinking(reasoning) {

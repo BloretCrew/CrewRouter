@@ -21,7 +21,7 @@ function loadRoutes(pool) {
   });
   return async (method, route, { id, userId = 7, messages, body = {}, msgIndex } = {}) => {
     const res = { statusCode: 200, status(value) { this.statusCode = value; return this; }, json(value) { this.body = value; } };
-    await handlers.get(`${method} ${route}`)({ params: { id: String(id), msgIndex: String(msgIndex) }, session: { user: { id: userId } }, body: messages === undefined ? body : { ...body, messages } }, res);
+    await handlers.get(`${method} ${route}`)({ params: { id: String(id), msgIndex: String(msgIndex) }, session: { user: { id: userId } }, authUser: { id: userId }, body: messages === undefined ? body : { ...body, messages } }, res);
     return res;
   };
 }

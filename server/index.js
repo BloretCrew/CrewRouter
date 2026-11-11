@@ -2871,22 +2871,8 @@ if (isDemo) {
   app.use('/api/stats-report', require('./routes/stats-report'));
 } else {
   const { REAL_MOUNTS } = require('./routes/mounts');
-  const moduleCache = new Map();
-  let pluginRoutes = null;
-
-  const loadMountRouter = (entry) => {
-    if (entry.factory === 'getRouter') {
-      return require('./routes/model-trace').getRouter();
-    }
-    if (entry.factory && entry.factory.startsWith('createPluginsRoutes')) {
-      if (!pluginRoutes) pluginRoutes = require('./routes/plugins').createPluginsRoutes();
-      return entry.factory.endsWith('adminRouter') ? pluginRoutes.adminRouter : pluginRoutes.publicRouter;
-    }
-    if (moduleCache.has(entry.module)) return moduleCache.get(entry.module);
-    const router = require(path.join(__dirname, 'routes', entry.module));
-    moduleCache.set(entry.module, router);
-    return router;
-  };
+  const { createMountRouterLoader } = require('./routes/mount-loader');
+  const loadMountRouter = createMountRouterLoader();
 
   for (const entry of REAL_MOUNTS) {
     if (entry.runtime !== 'index') continue;

@@ -88,6 +88,18 @@ type StreamOptions struct {
 	IdleTimeout time.Duration
 }
 
+// Restrict default-client redirects to the original origin to protect credentials.
+func defaultCheckRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= 10 {
+		return errString("stopped after 10 redirects")
+	}
+	origin := via[0].URL
+	if !strings.EqualFold(req.URL.Scheme, origin.Scheme) || !strings.EqualFold(req.URL.Host, origin.Host) {
+		return errString("crewrouter: cross-origin redirect blocked")
+	}
+	return nil
+}
+
 func defaultTimeoutFor(path string) time.Duration {
 	if strings.HasPrefix(path, "/v1/") {
 		return defaultGatewayTimeout

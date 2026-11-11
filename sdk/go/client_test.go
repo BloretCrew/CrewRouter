@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type recordedRequest struct {
@@ -236,5 +237,176 @@ func TestSessionOnlyOperationRejectedBeforeRequest(t *testing.T) {
 	}
 	if len(*requests) != 0 {
 		t.Fatalf("requests = %d, want 0", len(*requests))
+	}
+}
+
+func TestRedirectPolicy(t *testing.T) {
+	for _, operation := range []string{"Request", "Stream"} {
+		for _, scenario := range []struct {
+			name        string
+			tls         bool
+			crossOrigin bool
+		}{
+			{name: "same-origin"},
+			{name: "same-origin-tls", tls: true},
+			{name: "cross-origin-port", crossOrigin: true},
+			{name: "https-downgrade", tls: true, crossOrigin: true},
+		} {
+			for _, policy := range []string{"default", "custom-nil", "custom-allow", "custom-deny"} {
+				t.Run(operation+"/"+scenario.name+"/"+policy, func(t *testing.T) {
+					var sourceCalls, targetCalls, redirectCalls atomic.Int32
+					var sourceKey, targetKey atomic.Value
+					targetHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						targetCalls.Add(1)
+						targetKey.Store(r.Header.Get("X-API-Key"))
+						if r.Method != http.MethodPost {
+							t.Errorf("redirect method = %q, want POST", r.Method)
+						}
+						body, err := io.ReadAll(r.Body)
+						if err != nil || string(body) != `{"message":"test"}` {
+							t.Errorf("redirect body = %q, error = %v", body, err)
+						}
+						w.Header().Set("Content-Type", "text/event-stream")
+						_, _ = io.WriteString(w, "data: [DONE]\n\n")
+					})
+					var targetURL string
+					if scenario.crossOrigin {
+						target := httptest.NewServer(targetHandler)
+						defer target.Close()
+						targetURL = target.URL + "/final"
+					}
+					sourceHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						if r.URL.Path == "/final" {
+							targetHandler.ServeHTTP(w, r)
+							return
+						}
+						sourceCalls.Add(1)
+						sourceKey.Store(r.Header.Get("X-API-Key"))
+						location := targetURL
+						if location == "" {
+							location = "/final"
+						}
+						http.Redirect(w, r, location, http.StatusTemporaryRedirect)
+					})
+					var source *httptest.Server
+					if scenario.tls {
+						source = httptest.NewTLSServer(sourceHandler)
+					} else {
+						source = httptest.NewServer(sourceHandler)
+					}
+					defer source.Close()
+
+					options := Options{BaseURL: source.URL, APIKey: "sk-redirect-test", AuthStyle: "x-api-key"}
+					customErr := errors.New("custom redirect denied")
+					if policy != "default" {
+						options.HTTPClient = source.Client()
+						if policy != "custom-nil" {
+							options.HTTPClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+								redirectCalls.Add(1)
+								if policy == "custom-deny" {
+									return customErr
+								}
+								return nil
+							}
+						}
+					}
+					client, err := New(options)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if options.HTTPClient != nil && client.HTTPClient != options.HTTPClient {
+						t.Fatal("custom HTTPClient was replaced")
+					}
+					if policy == "default" && scenario.tls {
+						// Trust only the local test server without replacing the SDK policy.
+						client.HTTPClient.Transport = source.Client().Transport
+					}
+					err = exerciseRedirect(t, client, operation)
+					blocked := policy == "custom-deny" || (policy == "default" && scenario.crossOrigin)
+					if blocked {
+						var connectionErr *ConnectionError
+						if !errors.As(err, &connectionErr) {
+							t.Fatalf("error = %v, want *ConnectionError", err)
+						}
+						if policy == "custom-deny" && !errors.Is(err, customErr) {
+							t.Fatalf("error = %v, want custom redirect error", err)
+						}
+						if policy == "default" && !strings.Contains(err.Error(), "cross-origin redirect blocked") {
+							t.Fatalf("unexpected redirect error = %v", err)
+						}
+					} else if err != nil {
+						t.Fatalf("redirect error = %v", err)
+					}
+					if sourceCalls.Load() != 1 || sourceKey.Load() != "sk-redirect-test" {
+						t.Fatalf("source calls = %d, key = %v", sourceCalls.Load(), sourceKey.Load())
+					}
+					wantTargets := int32(1)
+					if blocked {
+						wantTargets = 0
+					}
+					if targetCalls.Load() != wantTargets {
+						t.Fatalf("target calls = %d, want %d", targetCalls.Load(), wantTargets)
+					}
+					if !blocked && targetKey.Load() != "sk-redirect-test" {
+						t.Fatalf("target key = %v", targetKey.Load())
+					}
+					wantCallbacks := int32(0)
+					if policy == "custom-allow" || policy == "custom-deny" {
+						wantCallbacks = 1
+					}
+					if redirectCalls.Load() != wantCallbacks {
+						t.Fatalf("custom callback calls = %d, want %d", redirectCalls.Load(), wantCallbacks)
+					}
+				})
+			}
+		}
+	}
+}
+
+func exerciseRedirect(t *testing.T, client *Client, operation string) error {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	body := map[string]any{"message": "test"}
+	if operation == "Stream" {
+		stream, err := client.Stream(ctx, http.MethodPost, "/start", body, StreamOptions{})
+		if err != nil {
+			return err
+		}
+		defer stream.Close()
+		event, err := stream.Next()
+		if err != nil || !event.Done {
+			t.Fatalf("stream event = %#v, error = %v", event, err)
+		}
+		return nil
+	}
+	response, err := client.Request(ctx, http.MethodPost, "/start", RequestOptions{Body: body})
+	if err == nil && (response.Status != http.StatusOK || response.Text() != "data: [DONE]\n\n") {
+		t.Fatalf("response = %#v", response)
+	}
+	return err
+}
+
+func TestDefaultRedirectLimit(t *testing.T) {
+	for _, operation := range []string{"Request", "Stream"} {
+		t.Run(operation, func(t *testing.T) {
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				http.Redirect(w, r, "/start", http.StatusTemporaryRedirect)
+			}))
+			defer server.Close()
+			client, err := New(Options{BaseURL: server.URL, APIKey: "sk-redirect-test", AuthStyle: "x-api-key"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = exerciseRedirect(t, client, operation)
+			if err == nil || !strings.Contains(err.Error(), "stopped after 10 redirects") {
+				t.Fatalf("error = %v, want redirect limit error", err)
+			}
+			if calls.Load() != 10 {
+				t.Fatalf("requests = %d, want 10", calls.Load())
+			}
+		})
 	}
 }

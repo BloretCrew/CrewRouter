@@ -426,14 +426,9 @@ function createPluginsRoutes() {
 
       // 路由鉴权：默认 user；admin 要求管理员；none 公开
       const routeAuth = findRouteAuth(reg, req.params.pluginId, req.method, rest);
-      if (routeAuth === 'admin' && !req.authUser?.isAdmin) {
-        return res.status(403).json({ error: '无管理员权限' });
-      }
-      if (routeAuth !== 'none' && !req.authUser) {
-        return res.status(401).json({ error: '请先登录' });
-      }
-
-      await handler(req, res);
+      if (routeAuth === 'none') return await handler(req, res);
+      const authorize = routeAuth === 'admin' ? requireAdmin : requireAuth;
+      return await authorize(req, res, () => handler(req, res));
     } catch (err) {
       Logger.error(`[plugins-api] 插件路由执行失败: ${err.message}`);
       if (!res.headersSent) res.status(500).json({ error: err.message });

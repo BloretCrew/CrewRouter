@@ -147,7 +147,7 @@ if errors.As(err, &apiErr) {
 | `MaxRetries` | `0` | Retries after the first attempt |
 | `RetryNonIdempotent` | `false` | Allow POST/PATCH retries |
 | `SignatureMode` | — | `header`, `content` or `both` |
-| `HTTPClient` | `&http.Client{}` | Custom HTTP client |
+| `HTTPClient` | Same-origin redirects only | Custom HTTP clients retain their own redirect policy; configure `CheckRedirect` to protect credentials |
 | `Sleep` | timer | Injectable sleep for tests |
 
 ## Important gateway semantics

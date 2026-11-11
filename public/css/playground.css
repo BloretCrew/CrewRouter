@@ -715,7 +715,15 @@
   }
 }
 
+.pg-language-toggle {
+  right: 12px;
+}
+
 @media (max-width: 834px) {
+  .pg-language-toggle {
+    right: 56px;
+  }
+
   .pg-mobile-bar {
     display: flex;
     align-items: center;
