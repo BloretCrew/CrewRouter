@@ -50,7 +50,7 @@
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/settings-blora.css?v=lg-2">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=lg-10">
-  <link rel="stylesheet" href="/css/blora-agent.css?v=lg-3">
+  <link rel="stylesheet" href="/css/blora-agent.css?v=agent-materials-20261111">
   <link rel="stylesheet" href="/css/prompts-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <script>
@@ -1261,12 +1261,16 @@
               </label>
             </div>
             <form id="baComposer" class="ba-composer">
+              <div id="baAttachments" class="ba-attachments" hidden></div>
               <textarea id="baInput" class="blora-textarea" rows="2" data-i18n-placeholder="输入消息，Enter 发送，Shift+Enter 换行" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
               <blora-select id="baImageSize" name="size" aria-label="尺寸">
                 <blora-option value="1024x1024" selected>1024×1024</blora-option>
                 <blora-option value="1024x1792">1024×1792</blora-option>
                 <blora-option value="1792x1024">1792×1024</blora-option>
               </blora-select>
+              <input type="file" id="baAttachInput" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,.pdf,.docx,.xlsx,.csv,.txt,.md,.json,.yaml,.yml,.log">
+              <button type="button" id="baAttachBtn" class="blora-button" data-variant="outline" hidden><span data-i18n="附件">附件</span></button>
+              <button type="button" id="baLinkBtn" class="blora-button" data-variant="outline" hidden><span data-i18n="链接">链接</span></button>
               <button type="submit" id="baSend" class="blora-button" data-variant="primary"><span data-i18n="发送">发送</span></button>
               <button type="button" id="baStop" class="blora-button" data-variant="danger" hidden><span data-i18n="停止">停止</span></button>
             </form>
@@ -2312,7 +2316,7 @@
   <script src="/js/client-config.js?v=harness-20261111"></script>
   <script type="module" src="/js/model-trace.js?v=lg-21"></script>
   <script src="/js/app.js?v=harness-20261111"></script>
-  <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
+  <script src="/js/blora-agent.js?v=agent-materials-20261111"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
     const initializeSidebarNavigation = () => {

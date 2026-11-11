@@ -41,8 +41,15 @@ async function decideApproval(pool, { threadId, approvalId, userId, decision, ed
     if (!approval) { await client.query('ROLLBACK'); return null; }
     const principal = await client.query('SELECT is_admin FROM users WHERE id=$1 FOR SHARE', [userId]);
     if (principal.rows[0]?.is_admin !== true) throw new Error('管理员权限已撤销');
-    const output = await resolveToolDecision(client, { name: approval.tool_name, arguments: approval.arguments }, decision, { edition, approved: true });
-    if (output?.error) throw new Error(output.error);
+    const output = await resolveToolDecision(client, { name: approval.tool_name, arguments: approval.arguments }, decision, {
+      edition, approved: true, userId, threadId
+    });
+    if (output?.error) {
+      const error = new Error(output.error);
+      error.code = output.code;
+      error.details = output.details;
+      throw error;
+    }
     await client.query('UPDATE agent_approvals SET status=$1, resolved_at=CURRENT_TIMESTAMP WHERE id=$2', [decision === 'allow' ? 'approved' : 'denied', approval.id]);
     await client.query(`INSERT INTO agent_messages(thread_id,role,content,tool_call_id,tool_name)
       VALUES($1,'tool',$2,$3,$4)`, [threadId, JSON.stringify(output), approval.tool_call_id, approval.tool_name]);

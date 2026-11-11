@@ -24,6 +24,12 @@ const { aggregateMessageStats, analyzeMessages } = require('../utils/message-ana
 const { getMessageAnalysisStatus } = require('../utils/message-analysis-store');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
+const {
+  loadAgentWebConfig,
+  maskAgentWebConfig,
+  mergeAgentWebConfig,
+  searchWeb
+} = require('../utils/web-search');
 
 const requireTeamAdminEdition = requireTeamEdition(() => loadPersistedEdition(pool));
 router.use(['/users', '/users/:id', '/teams', '/teams/:id', '/teams/:id/rules', '/teams/:id/rules/:ruleId', '/user-groups', '/user-groups/:id', '/user-groups/:id/rules', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters', '/stats', '/message-stats', '/usage-logs', '/usage-logs/export', '/usage-logs/:id'], (req, res, next) => {
@@ -3654,6 +3660,9 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
         hasAppSecret: !!settings.feishu_login.appSecret,
       };
     }
+    if (settings.agent_web) {
+      settings.agent_web = maskAgentWebConfig(settings.agent_web);
+    }
     res.json(settings);
   } catch (error) {
     Logger.error('[获取系统设置] 错误:', error);
@@ -3688,6 +3697,9 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
         if (key === 'autoAddNewModelsToFrontier') {
           return res.status(400).json({ error: '前沿 Team 自动启用不支持关闭' });
         }
+        if (key === 'agent_web') {
+          return res.status(400).json({ error: '请使用 /api/admin/agent-web 更新 Agent 资料设置', code: 'use_agent_web_endpoint' });
+        }
         // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
         if (key === 'model_list' && Array.isArray(value)) {
           const nonFusionModels = value.filter(m => m !== 'fusion');
@@ -3712,6 +3724,9 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
     if (key === 'autoAddNewModelsToFrontier') {
       return res.status(400).json({ error: '前沿 Team 自动启用不支持关闭' });
     }
+    if (key === 'agent_web') {
+      return res.status(400).json({ error: '请使用 /api/admin/agent-web 更新 Agent 资料设置', code: 'use_agent_web_endpoint' });
+    }
     // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
     if (key === 'model_list' && Array.isArray(value)) {
       const nonFusionModels = value.filter(m => m !== 'fusion');
@@ -3727,6 +3742,57 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
     res.json({ success: true });
   } catch (error) {
     Logger.error('[更新系统设置] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// Blora Agent 资料获取设置（联网搜索 / 链接抓取）
+router.get('/agent-web', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const config = await loadAgentWebConfig(pool);
+    res.json(maskAgentWebConfig(config));
+  } catch (error) {
+    Logger.error('[Agent 资料设置] 读取失败:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+router.put('/agent-web', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_SETTINGS, {
+  resourceType: 'system',
+  descriptionFrom: () => '更新 Blora Agent 资料获取设置'
+}), async (req, res) => {
+  try {
+    const current = await loadAgentWebConfig(pool);
+    const next = mergeAgentWebConfig(current, req.body || {});
+    if (next.search.enabled && !next.search.apiKey) {
+      return res.status(400).json({ error: '启用联网搜索前请填写搜索服务 API Key', code: 'search_key_required' });
+    }
+    await pool.query(
+      "INSERT INTO settings (key, value) VALUES ('agent_web', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+      [JSON.stringify(next)]
+    );
+    Logger.info(`[Agent 资料设置] 搜索 ${next.search.enabled ? '开启' : '关闭'}，provider=${next.search.provider}，密钥${next.search.apiKey ? '已设置' : '未设置'}`);
+    res.json(maskAgentWebConfig(next));
+  } catch (error) {
+    if (error.code === 'invalid_provider') return res.status(400).json({ error: error.message, code: error.code });
+    Logger.error('[Agent 资料设置] 保存失败:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+router.post('/agent-web/test', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const query = String(req.body?.query || '').trim();
+    if (!query) return res.status(400).json({ error: '请输入测试查询词', code: 'query_required' });
+    const result = await searchWeb(pool, {
+      query,
+      maxResults: 3,
+      userId: req.authUser.id
+    });
+    if (result.error) return res.status(400).json(result);
+    res.json({ provider: result.provider, query: result.query, results: result.results.slice(0, 3) });
+  } catch (error) {
+    Logger.error('[Agent 资料设置] 搜索测试失败:', error);
     res.status(500).json({ error: '服务器错误' });
   }
 });

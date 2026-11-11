@@ -46,8 +46,8 @@ async function main() {
       INSERT INTO models VALUES('fixture-model',true,'chat');
       CREATE TABLE agent_threads(id INTEGER PRIMARY KEY,user_id INTEGER REFERENCES users(id),mode TEXT,model_id TEXT,title TEXT DEFAULT 'synthetic',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP);
       INSERT INTO agent_threads(id,user_id,mode,model_id,updated_at) VALUES(1,1,'manage','fixture-model',CURRENT_TIMESTAMP),(2,2,'manage','fixture-model',CURRENT_TIMESTAMP);
-      CREATE TABLE agent_messages(id SERIAL PRIMARY KEY,thread_id INTEGER REFERENCES agent_threads(id),role TEXT,content TEXT,tool_calls JSONB,tool_call_id TEXT,tool_name TEXT);
-      CREATE TABLE agent_approvals(id INTEGER PRIMARY KEY,thread_id INTEGER REFERENCES agent_threads(id),user_id INTEGER,tool_call_id TEXT,tool_name TEXT,arguments JSONB,status TEXT,resolved_at TIMESTAMP);
+      CREATE TABLE agent_messages(id SERIAL PRIMARY KEY,thread_id INTEGER REFERENCES agent_threads(id),role TEXT,content TEXT,tool_calls JSONB,tool_call_id TEXT,tool_name TEXT,attachments JSONB);
+      CREATE TABLE agent_approvals(id INTEGER PRIMARY KEY,thread_id INTEGER REFERENCES agent_threads(id),user_id INTEGER,tool_call_id TEXT,tool_name TEXT,arguments JSONB,status TEXT,resolved_at TIMESTAMP,preview JSONB);
       INSERT INTO agent_approvals VALUES(1,1,1,'call-fixture','set_model_enabled','{"id":"fixture-model","enabled":false}','pending',NULL);
       CREATE TABLE usage_records(id SERIAL PRIMARY KEY,user_id INTEGER,model_id TEXT,tokens_used BIGINT,weighted_tokens NUMERIC,prompt_tokens BIGINT,completion_tokens BIGINT,cost NUMERIC(18,6),request_type TEXT,provider_id TEXT,request_source TEXT,user_agent TEXT,requested_model TEXT,resolved_model TEXT,response_model TEXT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
       CREATE TABLE agent_images(id SERIAL PRIMARY KEY,user_id INTEGER,model_id TEXT,prompt TEXT,size TEXT,mime TEXT,bytes BYTEA,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
@@ -82,13 +82,19 @@ async function main() {
     const runRoute = vm.runInNewContext(`(${routeBody("router.post('/manage/runs'")})`, {
       pool, claimThread, assertHasBalance: async () => ({ ok: true }),
       loadUsableModel: async () => ({ id: 'fixture-model' }), normalizeMessage: row => row, logAgentError() {},
+      parseAttachmentIds: () => [], cleanupDraftAttachments: async () => {},
+      bindAttachments: async () => [], attachmentManifest: () => '', toMessageAttachments: () => [],
       continueManage: async (_req, response, { thread, messages }) => {
         started(); await finishRun; await save(thread.id, messages); response.end();
       },
     });
     const response = () => ({ statusCode: 200, headersSent: false, writableEnded: false,
       status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; }, end() { this.writableEnded = true; } });
-    const runReq = text => ({ session: { user: { id: 1 } }, body: { text, thread_id: 1, model: 'fixture-model' } });
+    const runReq = text => ({
+      session: { user: { id: 1 } },
+      authUser: { id: 1 },
+      body: { text, thread_id: 1, model: 'fixture-model' }
+    });
     // The pending approval is temporarily absent to exercise the normal run.
     await pool.query("UPDATE agent_approvals SET status='denied'");
     const firstRunResponse = response();
@@ -96,7 +102,9 @@ async function main() {
     let startTimer;
     try {
       await Promise.race([runStarted, new Promise((_, reject) => {
-        startTimer = setTimeout(() => reject(new Error('Synthetic run did not start')), 2000);
+        startTimer = setTimeout(() => reject(new Error(
+          `Synthetic run did not start: ${firstRunResponse.statusCode} ${JSON.stringify(firstRunResponse.body || {})}`
+        )), 2000);
       })]);
       const secondResponse = response();
       await runRoute(runReq('conflicting-run'), secondResponse);
@@ -119,9 +127,12 @@ async function main() {
           return result;
         }, release() { client.release(); } };
       } };
-      const read = vm.runInNewContext(`(${routeBody("router.get('/manage/threads/:id'")})`, { pool: snapshotPool, normalizeMessage: row => row, logAgentError() {} });
+      const read = vm.runInNewContext(`(${routeBody("router.get('/manage/threads/:id'")})`, {
+        pool: snapshotPool, normalizeMessage: row => row, logAgentError() {},
+        listThreadAttachments: async () => []
+      });
       const readResponse = response();
-      await read({ params: { id: 1 }, session: { user: { id: 1 } } }, readResponse);
+      await read({ params: { id: 1 }, session: { user: { id: 1 } }, authUser: { id: 1 } }, readResponse);
       assert.equal(readResponse.statusCode, 200);
       assert.equal(readResponse.body.messages[0].content, 'first-run', 'thread reads must retain a single snapshot across replacement');
       assert.equal((await pool.query('SELECT content FROM agent_messages')).rows[0].content, 'new-snapshot');
@@ -130,7 +141,7 @@ async function main() {
       pool: { async connect() { throw new Error('isolated pool failure'); } }, logAgentError() {},
     });
     const unavailableReadResponse = response();
-    await unavailableRead({ params: { id: 1 }, session: { user: { id: 1 } } }, unavailableReadResponse);
+    await unavailableRead({ params: { id: 1 }, session: { user: { id: 1 } }, authUser: { id: 1 } }, unavailableReadResponse);
     assert.equal(unavailableReadResponse.statusCode, 500, 'a failed read connection must be handled inside the route');
     await pool.query("DELETE FROM agent_messages; UPDATE agent_approvals SET status='pending'");
     const params = { threadId: 1, approvalId: 1, userId: 1, decision: 'allow', edition: 'team' };
@@ -204,12 +215,15 @@ async function main() {
       beginSse: () => event => events.push(event.type), loadPersistedEdition: async () => 'team',
       runManageLoop: async ({ modelCaller }) => { await modelCaller([]); return { status: 'completed', messages: [{ role: 'assistant', content: 'synthetic' }], content: 'synthetic' }; },
       callManageModel: async () => ({ usage: { prompt_tokens: 1 } }), executeTool() { throw new Error('No tool execution expected'); },
+      attachImagesToLatestUser: async () => {},
+      validateToolCall: async () => ({ ok: true }),
+      buildApprovalPreview: async () => null,
       recordAgentUsage: billing.recordAgentUsage };
     vm.createContext(context);
     vm.runInContext(`${routeFunction('saveThreadMessages')}\n${routeFunction('continueManage')}\nthis.run = continueManage`, context);
     await pool.query('UPDATE users SET balance=0,team_id=NULL WHERE id=1');
     const res = { writableEnded: false, end() { this.writableEnded = true; } };
-    await context.run({ session: { user: { id: 1 } }, body: { model: 'fixture-model' } }, res,
+    await context.run({ session: { user: { id: 1 } }, authUser: { id: 1 }, body: { model: 'fixture-model' } }, res,
       { thread: { id: 1 }, messages: [], model: { id: 'fixture-model' } });
     assert(events.includes('run.failed'));
     assert(!events.includes('run.completed'), 'never announce completion before a successful debit');
@@ -221,7 +235,7 @@ async function main() {
     };
     const successClaim = await claimThread(pool, 1, 1);
     try {
-      await context.run({ session: { user: { id: 1 } }, body: { model: 'fixture-model' } },
+      await context.run({ session: { user: { id: 1 } }, authUser: { id: 1 }, body: { model: 'fixture-model' } },
         { writableEnded: false, end() { this.writableEnded = true; } },
         { thread: { id: 1 }, messages: [], model: { id: 'fixture-model' }, claim: successClaim });
     } finally { await successClaim.release(); }
@@ -247,7 +261,7 @@ async function main() {
     const approvalResponse = { statusCode: 200, headersSent: false, writableEnded: false,
       status(value) { this.statusCode = value; return this; }, json(body) { this.body = body; return this; },
       end() { this.writableEnded = true; } };
-    await approvalRoute({ params: { id: 2 }, body: { decision: 'allow' }, session: { user: { id: 1 } }, get: () => '' }, approvalResponse);
+    await approvalRoute({ params: { id: 2 }, body: { decision: 'allow' }, session: { user: { id: 1 } }, authUser: { id: 1 }, get: () => '' }, approvalResponse);
     assert.equal(approvalResponse.statusCode, 200, 'post-commit audit failures cannot make an applied decision appear rejected');
     assert(resumed);
     assert.equal((await pool.query('SELECT status FROM agent_approvals WHERE id=2')).rows[0].status, 'approved');
@@ -259,7 +273,7 @@ async function main() {
     } };
     const resumeFailure = vm.runInNewContext(`(${routeSource.slice(routeStart, routeEnd + 2)})`, { ...approvalContext, pool: readFailurePool });
     const failedResponse = response();
-    const retryRequest = { params: { id: 3 }, body: { decision: 'allow' }, session: { user: { id: 1 } }, get: () => '' };
+    const retryRequest = { params: { id: 3 }, body: { decision: 'allow' }, session: { user: { id: 1 } }, authUser: { id: 1 }, get: () => '' };
     await resumeFailure(retryRequest, failedResponse);
     assert.equal(failedResponse.statusCode, 503);
     assert.equal(failedResponse.body.approval_applied, true);

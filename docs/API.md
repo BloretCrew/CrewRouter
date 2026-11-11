@@ -123,3 +123,37 @@ client = Anthropic(base_url="https://your-host", api_key="sk-...")
 ```
 
 See [docs/integration-guide.md](./integration-guide.md).
+
+## Blora Agent 管理与倍率草案
+
+Manage 模式仅管理员可用。只读工具立即执行；写工具先创建 `agent_approvals` 草案，管理员允许后才在事务中落库。
+
+| Method | Path | 说明 |
+| --- | --- | --- |
+| GET | `/api/agent/manage/threads` | 管理对话列表 |
+| GET | `/api/agent/manage/threads/{id}` | 消息、附件元数据与待审批预览 |
+| POST | `/api/agent/manage/runs` | 发起一轮管理对话（SSE）；可带 `attachment_ids` |
+| POST | `/api/agent/manage/approvals/{id}` | 允许/拒绝待审批工具调用（SSE） |
+| POST | `/api/agent/manage/attachments` | multipart 上传附件（最多 5 个，字段 `files`） |
+| POST | `/api/agent/manage/attachments/url` | 抓取链接并保存为附件 |
+| GET/DELETE | `/api/agent/manage/attachments/{id}` | 读取元数据 / 删除未绑定或当前对话的附件 |
+| GET | `/api/agent/manage/attachments/{id}/content` | 读取图片附件（仅图片） |
+| GET/PUT | `/api/admin/agent-web` | 联网搜索与链接抓取设置（密钥脱敏） |
+| POST | `/api/admin/agent-web/test` | 用测试查询词验证搜索服务 |
+
+附件支持图片（PNG/JPEG/WebP/GIF）、文本（txt/md/csv/json/yaml/log）、PDF、DOCX、XLSX；旧版 `.doc`/`.xls` 与扫描版 PDF 不支持。图片 ≤4 MiB，文档 ≤8 MiB，单次总计 ≤20 MiB，每对话最多 50 个。文档正文保存在 `agent_attachments.extracted_text`，通过 `read_attachment` 分页读取；图片按视觉内容发送，不写入消息文本。
+
+### 倍率草案
+
+`preview_multiplier_batch` 只读地解析模型引用并重算倍率，返回可直接交给 `batch_set_model_multipliers` 的 `write_args`。服务端按以下公式重算，模型提供的 `new_multiplier` 偏差超过 0.0001 会被拒绝：
+
+```text
+new_multiplier = 上游每百万 Token 价格 × 加价系数 × 汇率
+```
+
+- 1 积分 = 1,000,000 加权 Token；实例积分按人民币口径折算。
+- 只修改 `models.model_multiplier`，不修改 `completion_multiplier` 或计费公式。
+- 单次最多 100 项；同一草案中任一模型倍率在审批前发生变化（`stale_multiplier`），整批回滚并返回 409。
+- 审批成功后写入 `admin.model_batch` 审计日志。
+
+链接抓取只允许 http/https 的 80/443 端口，复用固定 DNS 与逐跳校验，拒绝私网、元数据和 HTTPS 降级；网页/搜索/文档内容统一标记为不可信资料。详见 [Blora Agent 资料驱动倍率调整](./blora-agent-pricing.md)。

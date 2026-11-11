@@ -119,6 +119,60 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": "session_only",
     "bodyLimit": "2mb"
   },
+  "admin.agentWeb.list": {
+    "operationId": "admin.agentWeb.list",
+    "method": "GET",
+    "path": "/api/admin/agent-web",
+    "aliases": [],
+    "permission": "admin.settings.read",
+    "permissionGroup": "admin",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "admin.agentWeb.update": {
+    "operationId": "admin.agentWeb.update",
+    "method": "PUT",
+    "path": "/api/admin/agent-web",
+    "aliases": [],
+    "permission": "admin.settings.write",
+    "permissionGroup": "admin",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "admin.agentWeb.test": {
+    "operationId": "admin.agentWeb.test",
+    "method": "POST",
+    "path": "/api/admin/agent-web/test",
+    "aliases": [],
+    "permission": "admin.settings.write",
+    "permissionGroup": "admin",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
   "admin.auditLogs.list": {
     "operationId": "admin.auditLogs.list",
     "method": "GET",
@@ -2855,6 +2909,96 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "operationId": "agent.manage.approvals.byId.create",
     "method": "POST",
     "path": "/api/agent/manage/approvals/:id",
+    "aliases": [],
+    "permission": "agent.manage",
+    "permissionGroup": "tools",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "agent.manage.attachments.create": {
+    "operationId": "agent.manage.attachments.create",
+    "method": "POST",
+    "path": "/api/agent/manage/attachments",
+    "aliases": [],
+    "permission": "agent.manage",
+    "permissionGroup": "tools",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "agent.manage.attachments.byId.delete": {
+    "operationId": "agent.manage.attachments.byId.delete",
+    "method": "DELETE",
+    "path": "/api/agent/manage/attachments/:id",
+    "aliases": [],
+    "permission": "agent.manage",
+    "permissionGroup": "tools",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "agent.manage.attachments.byId.get": {
+    "operationId": "agent.manage.attachments.byId.get",
+    "method": "GET",
+    "path": "/api/agent/manage/attachments/:id",
+    "aliases": [],
+    "permission": "agent.manage",
+    "permissionGroup": "tools",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "agent.manage.attachments.byId.content.list": {
+    "operationId": "agent.manage.attachments.byId.content.list",
+    "method": "GET",
+    "path": "/api/agent/manage/attachments/:id/content",
+    "aliases": [],
+    "permission": "agent.manage",
+    "permissionGroup": "tools",
+    "adminOnly": true,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "agent.manage.attachments.url.create": {
+    "operationId": "agent.manage.attachments.url.create",
+    "method": "POST",
+    "path": "/api/agent/manage/attachments/url",
     "aliases": [],
     "permission": "agent.manage",
     "permissionGroup": "tools",

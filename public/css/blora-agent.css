@@ -513,3 +513,133 @@
   }
   .lg-page.blora-agent-page .ba-overlay { z-index: 119; inset-block-start: 56px; }
 }
+
+/* ---------- Manage 附件与倍率审批 ---------- */
+.lg-page.blora-agent-page .ba-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 10px;
+}
+
+.lg-page.blora-agent-page .ba-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-inline-size: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 12px;
+  background: var(--lg-card-bg);
+}
+
+.lg-page.blora-agent-page .ba-attachment--uploading { opacity: .7; }
+
+.lg-page.blora-agent-page .ba-attachment__thumb {
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex: none;
+}
+
+.lg-page.blora-agent-page .ba-attachment__meta {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  font-size: 12px;
+}
+
+.lg-page.blora-agent-page .ba-attachment__meta strong {
+  max-inline-size: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lg-page.blora-agent-page .ba-attachment__meta small { color: var(--lg-fg-secondary); }
+
+.lg-page.blora-agent-page .ba-attachment__remove,
+.lg-page.blora-agent-page .ba-message-attachment__ref {
+  border: 0;
+  background: transparent;
+  color: var(--lg-fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  padding: 2px 4px;
+}
+
+.lg-page.blora-agent-page .ba-attachment__remove:hover,
+.lg-page.blora-agent-page .ba-message-attachment__ref:hover { color: var(--lg-accent); }
+
+.lg-page.blora-agent-page .ba-message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 8px;
+}
+
+.lg-page.blora-agent-page .ba-message-attachment {
+  padding: 3px 8px;
+  border: 1px solid var(--lg-divider);
+  border-radius: 999px;
+  background: var(--lg-card-bg);
+  font-size: 12px;
+}
+
+.lg-page.blora-agent-page .ba-approval { max-inline-size: 100%; }
+
+.lg-page.blora-agent-page .ba-approval__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 0 0 10px;
+  color: var(--lg-fg-secondary);
+  font-size: 12.5px;
+}
+
+.lg-page.blora-agent-page .ba-approval__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--lg-divider);
+  border-radius: 12px;
+}
+
+.lg-page.blora-agent-page .ba-approval__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.lg-page.blora-agent-page .ba-approval__table th,
+.lg-page.blora-agent-page .ba-approval__table td {
+  padding: 8px 10px;
+  border-block-end: 1px solid var(--lg-divider);
+  text-align: start;
+  vertical-align: top;
+}
+
+.lg-page.blora-agent-page .ba-approval__table th {
+  color: var(--lg-fg-secondary);
+  font-weight: 600;
+  background: var(--lg-accent-tint);
+}
+
+.lg-page.blora-agent-page .ba-approval__table small { color: var(--lg-fg-secondary); }
+
+.lg-page.blora-agent-page .ba-approval__warnings { padding-block-start: 10px; }
+
+.lg-page.blora-agent-page .ba-approval__unmatched,
+.lg-page.blora-agent-page .ba-approval__sources,
+.lg-page.blora-agent-page .ba-approval__hint {
+  margin: 10px 0 0;
+  color: var(--lg-fg-secondary);
+  font-size: 12.5px;
+}
+
+.lg-page.blora-agent-page .ba-approval__sources a { color: var(--lg-accent); }
+
+@media (max-width: 640px) {
+  .lg-page.blora-agent-page .ba-attachment__meta strong { max-inline-size: 11rem; }
+  .lg-page.blora-agent-page .ba-approval__table { font-size: 12px; }
+}

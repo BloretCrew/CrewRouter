@@ -1302,6 +1302,7 @@
             <button type="button" class="settings-category-card" data-admin-settings-category="retention"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/archivebox?color=black" alt="" data-sf-name="archivebox"><span><strong><span data-i18n="数据保留">数据保留</span></strong><small><span data-i18n="压缩、清理与聚合策略">压缩、清理与聚合策略</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="auth"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/person.badge.key?color=black" alt="" data-sf-name="person.badge.key"><span><strong><span data-i18n="登录与认证">登录与认证</span></strong><small><span data-i18n="飞书登录、OAuth 应用与邀请链接">飞书登录、OAuth 应用与邀请链接</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="network"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/globe?color=black" alt="" data-sf-name="globe"><span><strong><span data-i18n="网络">网络</span></strong><small><span data-i18n="代理地址与代理池">代理地址与代理池</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="agent"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/sparkles?color=black" alt="" data-sf-name="sparkles"><span><strong><span data-i18n="Blora Agent 资料">Blora Agent 资料</span></strong><small><span data-i18n="联网搜索与链接抓取">联网搜索与链接抓取</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="popups"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/bell?color=black" alt="" data-sf-name="bell"><span><strong><span data-i18n="弹窗通知">弹窗通知</span></strong><small><span data-i18n="向用户广播一次性弹窗">向用户广播一次性弹窗</span></small></span><span class="settings-category-arrow">›</span></button>
           </div>
         </div>
@@ -1416,6 +1417,45 @@
             <div class="form-group"><label for="quotaConfig_batch_size" data-i18n="每批任务数">每批任务数</label><input class="input" type="number" id="quotaConfig_batch_size" name="batch_size" min="1" max="100" step="1" value="10" required></div>
             <div class="form-group"><label for="quotaConfig_lease_seconds" data-i18n="任务租约秒数">任务租约秒数</label><input class="input" type="number" id="quotaConfig_lease_seconds" name="lease_seconds" min="30" max="3600" step="1" value="120" required></div>
             <p role="status" aria-live="polite"></p><button type="submit" class="blora-button" data-variant="primary" disabled data-i18n="保存采集配置">保存采集配置</button>
+          </form>
+        </div>
+
+        <div class="content-section admin-settings-section admin-settings-category-agent">
+          <h2><span data-i18n="Blora Agent 资料">Blora Agent 资料</span></h2>
+          <p><span data-i18n="Agent 可以抓取管理员提供的链接并联网搜索资料。网页和文档内容会按不可信数据处理。">Agent 可以抓取管理员提供的链接并联网搜索资料。网页和文档内容会按不可信数据处理。</span></p>
+          <form id="agentWebConfigForm" class="settings-form">
+            <div class="form-group"><blora-checkbox name="searchEnabled" label="启用联网搜索"></blora-checkbox></div>
+            <div class="form-group">
+              <label for="agentWebProvider"><span data-i18n="搜索服务">搜索服务</span></label>
+              <blora-select id="agentWebProvider" name="provider" value="tavily">
+                <blora-option value="tavily">Tavily</blora-option>
+                <blora-option value="brave">Brave Search</blora-option>
+                <blora-option value="serper">Serper</blora-option>
+              </blora-select>
+            </div>
+            <div class="form-group">
+              <label for="agentWebApiKey"><span data-i18n="API Key">API Key</span></label>
+              <input type="password" id="agentWebApiKey" class="input" autocomplete="new-password" placeholder="未配置">
+              <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:4px;"><span data-i18n="已配置时留空可保留原密钥">已配置时留空可保留原密钥</span></small>
+            </div>
+            <div class="form-group">
+              <label for="agentWebMaxResults"><span data-i18n="最多结果数">最多结果数</span></label>
+              <input type="number" id="agentWebMaxResults" class="input" min="1" max="8" step="1" value="5">
+            </div>
+            <div class="form-group">
+              <label for="agentWebTimeout"><span data-i18n="搜索超时（毫秒）">搜索超时（毫秒）</span></label>
+              <input type="number" id="agentWebTimeout" class="input" min="1000" max="15000" step="500" value="8000">
+            </div>
+            <div class="form-group"><blora-checkbox name="fetchEnabled" label="允许 Agent 抓取链接" checked></blora-checkbox></div>
+            <div class="form-group">
+              <label for="agentWebTestQuery"><span data-i18n="测试查询词">测试查询词</span></label>
+              <input type="text" id="agentWebTestQuery" class="input" value="CrewRouter">
+            </div>
+            <div class="form-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="submit" class="blora-button" data-variant="primary" disabled><span data-i18n="保存资料设置">保存资料设置</span></button>
+              <button type="button" id="agentWebTestBtn" class="blora-button" data-variant="secondary"><span data-i18n="测试搜索">测试搜索</span></button>
+            </div>
+            <p role="status" id="agentWebStatus" aria-live="polite" style="white-space:pre-wrap;"></p>
           </form>
         </div>
 
@@ -2653,6 +2693,7 @@
   <script src="/js/popup-notices.js?v=lg-6"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <script src="/js/request-quota-config.js?v=request-cycles-20261012"></script>
+  <script src="/js/agent-web-config.js?v=agent-web-20261111"></script>
   <script src="/js/quota-cycle-report.js?v=lg-21"></script>
   <script src="/js/provider-quota-stats.js?v=lg-21"></script>
   <script src="/js/multi-dimension-chart.js?v=quota-additive-20261012"></script>

@@ -2,7 +2,8 @@
 
 const { isKnownTool, isWriteTool, asObject } = require('./agent-tools');
 
-const MAX_ROUNDS = 6;
+const MAX_ROUNDS = 10;
+const TOOL_BUDGET = Object.freeze({ fetch_url: 6, web_search: 4, read_attachment: 20 });
 
 function callSignature(call) {
   return `${call.name}:${JSON.stringify(asObject(call.arguments))}`;
@@ -103,12 +104,13 @@ function chunkText(text, size = 24) {
 /**
  * 只读工具立即执行。遇到写入就停下，调用方负责审批和之后的续跑。
  */
-async function runManageLoop({ messages, modelCaller, onEvent, executeRead }) {
+async function runManageLoop({ messages, modelCaller, onEvent, executeRead, validateWrite }) {
   const repeats = { sig: '', count: 0 };
+  const budget = {};
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
     const pending = unansweredCalls(messages);
     if (!pending.length) {
-      const response = await modelCaller(messages);
+      const response = await modelCaller(messages, { round });
       const content = response.content || '';
       const toolCalls = (Array.isArray(response.toolCalls) ? response.toolCalls : []).map((call, index) => ({
         id: call.id || `call_${round}_${index}`,
@@ -140,18 +142,64 @@ async function runManageLoop({ messages, modelCaller, onEvent, executeRead }) {
         continue;
       }
       if (isWriteTool(call.name)) {
+        const args = asObject(call.arguments);
+        if (typeof validateWrite === 'function') {
+          const check = await validateWrite(call.name, args, { round });
+          if (!check || check.ok !== true) {
+            const output = {
+              error: check?.error || '工具参数无效',
+              code: check?.code || 'invalid_arguments',
+              ...(check?.details ? { details: check.details } : {})
+            };
+            messages.push({ role: 'tool', content: JSON.stringify(output), tool_call_id: call.id, tool_name: call.name });
+            await onEvent({ type: 'tool.completed', payload: { id: call.id, name: call.name, output } });
+            continue;
+          }
+        }
         return {
           status: 'waiting_approval',
           messages,
-          approval: { tool_call_id: call.id, tool_name: call.name, arguments: asObject(call.arguments) }
+          approval: { tool_call_id: call.id, tool_name: call.name, arguments: args }
         };
       }
-      const output = await executeRead(call.name, asObject(call.arguments));
+      const limit = TOOL_BUDGET[call.name];
+      if (limit !== undefined) {
+        budget[call.name] = (budget[call.name] || 0) + 1;
+        if (budget[call.name] > limit) {
+          const output = { error: `本次运行 ${call.name} 调用次数已达上限 ${limit}`, code: 'tool_budget_exceeded' };
+          messages.push({ role: 'tool', content: JSON.stringify(output), tool_call_id: call.id, tool_name: call.name });
+          await onEvent({ type: 'tool.completed', payload: { id: call.id, name: call.name, output } });
+          continue;
+        }
+      }
+      const output = await executeRead(call.name, asObject(call.arguments), { round });
       messages.push({ role: 'tool', content: JSON.stringify(output), tool_call_id: call.id, tool_name: call.name });
       await onEvent({ type: 'tool.completed', payload: { id: call.id, name: call.name, output } });
     }
   }
-  return { status: 'failed', messages, error: '已达到 6 轮上限' };
+  return { status: 'failed', messages, error: `已达到 ${MAX_ROUNDS} 轮上限` };
+}
+
+function openAiUserContent(message) {
+  const images = Array.isArray(message.images) ? message.images.filter(image => image?.mime && image?.base64) : [];
+  if (!images.length) return message.content || '';
+  const parts = images.map(image => ({
+    type: 'image_url',
+    image_url: { url: `data:${image.mime};base64,${image.base64}`, detail: 'auto' }
+  }));
+  if (message.content) parts.push({ type: 'text', text: message.content });
+  return parts;
+}
+
+function anthropicUserContent(message) {
+  const images = Array.isArray(message.images) ? message.images.filter(image => image?.mime && image?.base64) : [];
+  if (!images.length) return message.content || '';
+  const content = images.map(image => ({
+    type: 'image',
+    source: { type: 'base64', media_type: image.mime, data: image.base64 }
+  }));
+  if (message.content) content.push({ type: 'text', text: message.content });
+  return content;
 }
 
 function toOpenAiMessages(messages, system) {
@@ -173,7 +221,7 @@ function toOpenAiMessages(messages, system) {
       });
       continue;
     }
-    out.push({ role: message.role, content: message.content || '' });
+    out.push({ role: message.role, content: message.role === 'user' ? openAiUserContent(message) : (message.content || '') });
   }
   return out;
 }
@@ -201,13 +249,14 @@ function toAnthropicMessages(messages) {
       out.push({ role: 'assistant', content: content.length ? content : [{ type: 'text', text: '' }] });
       continue;
     }
-    out.push({ role: 'user', content: message.content || '' });
+    out.push({ role: 'user', content: anthropicUserContent(message) });
   }
   return out;
 }
 
 module.exports = {
   MAX_ROUNDS,
+  TOOL_BUDGET,
   noteRepeat,
   parseModelResponse,
   extractUsage,

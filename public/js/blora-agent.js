@@ -12,6 +12,9 @@
     messages: [],
     activeId: null,
     pendingApproval: null,
+    draftAttachments: [],
+    threadAttachments: [],
+    uploads: 0,
     streaming: false,
     abort: null,
     bound: false,
@@ -60,6 +63,42 @@
         if (!button || !this.pendingApproval) return;
         this.decide(this.pendingApproval.approval_id, button.dataset.decision);
       });
+      document.getElementById('baAttachBtn')?.addEventListener('click', () => {
+        document.getElementById('baAttachInput')?.click();
+      });
+      document.getElementById('baAttachInput')?.addEventListener('change', (event) => {
+        this.uploadFiles(event.target.files);
+        event.target.value = '';
+      });
+      document.getElementById('baLinkBtn')?.addEventListener('click', () => this.openLinkDialog());
+      document.getElementById('baComposer')?.addEventListener('dragover', (event) => {
+        if (this.mode !== 'manage') return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+      });
+      document.getElementById('baComposer')?.addEventListener('drop', (event) => {
+        if (this.mode !== 'manage') return;
+        event.preventDefault();
+        if (event.dataTransfer?.files?.length) this.uploadFiles(event.dataTransfer.files);
+      });
+      document.getElementById('baInput')?.addEventListener('paste', (event) => {
+        if (this.mode !== 'manage') return;
+        const files = event.clipboardData?.files;
+        if (files?.length) {
+          event.preventDefault();
+          this.uploadFiles(files);
+        }
+      });
+      document.getElementById('baThread')?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-reference-attachment]');
+        if (!button) return;
+        this.referenceAttachment(Number(button.dataset.referenceAttachment));
+      });
+      document.getElementById('baAttachments')?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-remove-attachment]');
+        if (!button) return;
+        this.removeAttachment(Number(button.dataset.removeAttachment));
+      });
     },
 
     renderModeSwitch() {
@@ -90,15 +129,209 @@
       const size = document.getElementById('baImageSize');
       const input = document.getElementById('baInput');
       const title = document.getElementById('baHistoryTitle');
+      const attach = document.getElementById('baAttachBtn');
+      const link = document.getElementById('baLinkBtn');
       if (chatOptions) chatOptions.hidden = this.mode !== 'chat';
       if (size) size.hidden = this.mode !== 'imagine';
+      if (attach) attach.hidden = this.mode !== 'manage';
+      if (link) link.hidden = this.mode !== 'manage';
       if (input) {
-        input.placeholder = this.mode === 'imagine' ? '描述要生成的图片' : '输入消息，Enter 发送，Shift+Enter 换行';
+        input.placeholder = this.mode === 'imagine'
+          ? '描述要生成的图片'
+          : (this.mode === 'manage'
+            ? '输入要求，可附加图片、PDF、Word、Excel、文本或链接'
+            : '输入消息，Enter 发送，Shift+Enter 换行');
       }
       if (title) title.textContent = this.mode === 'imagine' ? '图片历史' : '对话历史';
       this.activeId = null;
       this.messages = [];
       this.pendingApproval = null;
+      this.draftAttachments = [];
+      this.threadAttachments = [];
+      this.renderAttachments();
+    },
+
+    async csrfHeaders(extra = {}) {
+      if (window.app && typeof window.app._csrfHeaders === 'function') {
+        try { return await window.app._csrfHeaders(extra); } catch (_) { return extra; }
+      }
+      return extra;
+    },
+
+    formatBytes(bytes) {
+      const value = Number(bytes || 0);
+      if (value < 1024) return `${value} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
+      return `${(value / 1024 / 1024).toFixed(1)} MiB`;
+    },
+
+    renderAttachments() {
+      const host = document.getElementById('baAttachments');
+      if (!host) return;
+      const items = this.draftAttachments || [];
+      const uploading = this.uploads > 0
+        ? `<span class="ba-attachment ba-attachment--uploading"><span class="ba-attachment__meta"><strong>${Dom.escapeHtml(t('上传中...'))}</strong><small>${this.uploads}</small></span></span>`
+        : '';
+      host.hidden = !items.length && !uploading;
+      setHTML(host, uploading + items.map(item => {
+        const image = item.kind === 'image'
+          ? `<img class="ba-attachment__thumb" alt="" src="/api/agent/manage/attachments/${Number(item.id)}/content">`
+          : '';
+        return `<span class="ba-attachment" data-attachment-id="${Number(item.id)}">${image}`
+          + `<span class="ba-attachment__meta"><strong>${Dom.escapeHtml(item.filename || '')}</strong>`
+          + `<small>${Dom.escapeHtml(item.kind === 'image' ? t('图片') : (item.truncated ? t('已截断') : t('资料')))} · ${Dom.escapeHtml(this.formatBytes(item.bytes))}</small></span>`
+          + `<button type="button" class="ba-attachment__remove" data-remove-attachment="${Number(item.id)}" aria-label="${Dom.escapeHtml(t('移除'))}">&times;</button></span>`;
+      }).join(''));
+    },
+
+    collectAttachmentIds() {
+      return (this.draftAttachments || []).map(item => Number(item.id)).filter(Number.isInteger);
+    },
+
+    async uploadFiles(fileList) {
+      if (this.mode !== 'manage') return;
+      const files = Array.from(fileList || []);
+      if (!files.length) return;
+      if ((this.draftAttachments?.length || 0) + files.length > 5) {
+        this.appendError(t('一条消息最多附加 5 个附件'));
+        return;
+      }
+      const total = files.reduce((sum, file) => sum + file.size, 0)
+        + (this.draftAttachments || []).reduce((sum, item) => sum + Number(item.bytes || 0), 0);
+      if (total > 20 * 1024 * 1024) {
+        this.appendError(t('附件总大小不能超过 20 MiB'));
+        return;
+      }
+      for (const file of files) {
+        const image = /^image\//.test(file.type);
+        if (image && file.size > 4 * 1024 * 1024) {
+          this.appendError(t('单张图片不能超过 4 MiB'));
+          return;
+        }
+        if (!image && file.size > 8 * 1024 * 1024) {
+          this.appendError(t('单个文档不能超过 8 MiB'));
+          return;
+        }
+      }
+      this.uploads += files.length;
+      this.renderAttachments();
+      try {
+        const form = new FormData();
+        files.forEach(file => form.append('files', file, file.name));
+        if (this.activeId) form.append('thread_id', this.activeId);
+        const response = await fetch('/api/agent/manage/attachments', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: await this.csrfHeaders(),
+          body: form
+        });
+        if (response.status === 404) return this.showUnavailable();
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || t('附件上传失败'));
+        const added = Array.isArray(data.attachments) ? data.attachments : [];
+        this.draftAttachments = [...(this.draftAttachments || []), ...added];
+        if (Array.isArray(data.errors) && data.errors.length) {
+          this.appendError(data.errors.map(item => `${item.filename}: ${item.error}`).join('；'));
+        }
+      } catch (error) {
+        this.appendError(error.message || t('附件上传失败'));
+      } finally {
+        this.uploads = Math.max(0, this.uploads - files.length);
+        this.renderAttachments();
+      }
+    },
+
+    async openLinkDialog() {
+      if (this.mode !== 'manage') return;
+      if (typeof Dialog === 'undefined') return;
+      const modal = Dialog.showModal({
+        title: t('添加链接'),
+        width: 560,
+        content: `<div class="form-group"><label for="baLinkUrl">${Dom.escapeHtml(t('资料链接'))}</label>`
+          + `<input type="url" id="baLinkUrl" class="blora-input" placeholder="https://" autocomplete="off"></div>`
+          + `<p id="baLinkStatus" role="status" aria-live="polite"></p>`,
+        footer: `<button type="button" class="blora-button" data-variant="outline" data-link-cancel>${Dom.escapeHtml(t('取消'))}</button>`
+          + `<button type="button" class="blora-button" data-variant="primary" data-link-save>${Dom.escapeHtml(t('抓取链接'))}</button>`
+      });
+      const element = modal.element;
+      const input = element.querySelector('#baLinkUrl');
+      const status = element.querySelector('#baLinkStatus');
+      const save = element.querySelector('[data-link-save]');
+      const close = () => element.close('cancel');
+      element.querySelector('[data-link-cancel]')?.addEventListener('click', close);
+      const submit = async () => {
+        const url = (input?.value || '').trim();
+        if (!/^https?:\/\//i.test(url)) {
+          if (status) status.textContent = t('请输入 http(s) 链接');
+          return;
+        }
+        save.disabled = true;
+        if (status) status.textContent = t('正在抓取链接...');
+        try {
+          const response = await fetch('/api/agent/manage/attachments/url', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: await this.csrfHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ url, thread_id: this.activeId || undefined })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || t('抓取链接失败'));
+          if (data.attachment) {
+            this.draftAttachments = [...(this.draftAttachments || []), data.attachment];
+            this.renderAttachments();
+          }
+          element.close('saved');
+        } catch (error) {
+          if (status) status.textContent = error.message || t('抓取链接失败');
+          save.disabled = false;
+        }
+      };
+      save?.addEventListener('click', submit);
+      input?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); submit(); }
+      });
+      setTimeout(() => input?.focus(), 0);
+    },
+
+    async removeAttachment(id) {
+      const target = (this.draftAttachments || []).find(item => Number(item.id) === Number(id));
+      this.draftAttachments = (this.draftAttachments || []).filter(item => Number(item.id) !== Number(id));
+      this.renderAttachments();
+      if (!target) return;
+      const query = this.activeId ? `?thread_id=${encodeURIComponent(this.activeId)}` : '';
+      fetch(`/api/agent/manage/attachments/${Number(id)}${query}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: await this.csrfHeaders()
+      }).catch(() => {});
+    },
+
+    referenceAttachment(id) {
+      const sources = [
+        ...(this.threadAttachments || []),
+        ...(this.messages || []).flatMap(message => (Array.isArray(message.attachments) ? message.attachments : []))
+      ];
+      const found = sources.find(item => Number(item.id) === Number(id));
+      if (!found) return;
+      if ((this.draftAttachments || []).some(item => Number(item.id) === Number(id))) return;
+      if ((this.draftAttachments || []).length >= 5) {
+        this.appendError(t('一条消息最多附加 5 个附件'));
+        return;
+      }
+      this.draftAttachments = [...(this.draftAttachments || []), found];
+      this.renderAttachments();
+    },
+
+    messageAttachmentsHtml(attachments) {
+      if (!Array.isArray(attachments) || !attachments.length) return '';
+      return `<div class="ba-message-attachments">${attachments.map(item => {
+        const id = Number(item.id);
+        const label = item.filename || `#${id}`;
+        const canReference = this.mode === 'manage' && Number.isInteger(id);
+        return `<span class="ba-message-attachment">${Dom.escapeHtml(label)}`
+          + (canReference ? ` <button type="button" class="ba-message-attachment__ref" data-reference-attachment="${id}">${Dom.escapeHtml(t('重新引用'))}</button>` : '')
+          + '</span>';
+      }).join('')}</div>`;
     },
 
     async loadModels() {
@@ -284,8 +517,12 @@
         approval_id: data.approval.id,
         id: data.approval.tool_call_id,
         name: data.approval.tool_name,
-        arguments: data.approval.arguments || {}
+        arguments: data.approval.arguments || {},
+        preview: data.approval.preview || null
       } : null;
+      this.threadAttachments = Array.isArray(data.attachments) ? data.attachments : [];
+      this.draftAttachments = [];
+      this.renderAttachments();
       if (data.model_id) {
         this.setModel(data.model_id);
       }
@@ -297,6 +534,9 @@
       this.activeId = null;
       this.messages = [];
       this.pendingApproval = null;
+      this.draftAttachments = [];
+      this.threadAttachments = [];
+      this.renderAttachments();
       this.renderThread();
       this.loadHistory();
     },
@@ -314,7 +554,7 @@
       }
       let html = this.messages.map(message => this.bubbleHtml(message)).join('');
       if (this.pendingApproval && !this.messages.some(message => message.tool_call_id === this.pendingApproval.id)) {
-        html += this.toolCard(this.pendingApproval.name, JSON.stringify(this.pendingApproval.arguments || {}, null, 2), true);
+        html += this.toolCard(this.pendingApproval.name, JSON.stringify(this.pendingApproval.arguments || {}, null, 2), true, this.pendingApproval.preview);
       }
       setHTML(thread, html);
       thread.scrollTop = thread.scrollHeight;
@@ -323,14 +563,85 @@
     bubbleHtml(message) {
       if (message.role === 'tool') {
         const pending = this.pendingApproval && this.pendingApproval.id === message.tool_call_id;
-        return this.toolCard(message.tool_name || 'tool', message.content, pending);
+        return this.toolCard(message.tool_name || 'tool', message.content, pending, pending ? this.pendingApproval.preview : null);
       }
       const role = message.role === 'user' ? 'user' : 'assistant';
       const reasoning = message.reasoning ? `<div class="ba-thinking">${this.renderRich(message.reasoning)}</div>` : '';
-      return `<div class="ba-bubble ba-bubble--${role}">${reasoning}${this.renderRich(message.content || '')}</div>`;
+      const attachments = role === 'user' ? this.messageAttachmentsHtml(message.attachments) : '';
+      return `<div class="ba-bubble ba-bubble--${role}">${reasoning}${this.renderRich(message.content || '')}${attachments}</div>`;
     },
 
-    toolCard(name, body, pending) {
+    riskLabel(flag) {
+      const labels = {
+        stale: '倍率已变化',
+        disabled_model: '模型已禁用',
+        provider_disabled: '供应商已禁用',
+        output_price_mismatch: '输出价远高于输入价',
+        cache_price_mismatch: '缓存价与 10% 折扣不一致',
+        large_change: '倍率变化过大',
+        zero_price: '价格为 0',
+        tiered_pricing: '阶梯定价',
+        source_model_table: '使用了模型表价格'
+      };
+      return t(labels[flag] || flag);
+    },
+
+    basisLabel(basis) {
+      const label = { input: '输入价', output: '输出价', single: '单一价' }[basis] || basis || '-';
+      return t(label);
+    },
+
+    approvalCard(preview) {
+      const rows = Array.isArray(preview.rows) ? preview.rows : [];
+      const summary = preview.summary || {};
+      const basis = this.basisLabel(preview.basis);
+      const fx = preview.fx_rate ? ` · ${Dom.escapeHtml(String(preview.fx_rate))}` : '';
+      const rowsHtml = rows.map(row => {
+        const flags = (row.risk_flags || []).map(flag => `<span class="blora-tag" data-variant="${flag === 'stale' || flag === 'large_change' ? 'danger' : 'warning'}">${Dom.escapeHtml(this.riskLabel(flag))}</span>`).join(' ');
+        const delta = row.delta_pct == null ? '-' : `${row.delta_pct > 0 ? '+' : ''}${Number(row.delta_pct).toFixed(1)}%`;
+        return `<tr>`
+          + `<td><strong>${Dom.escapeHtml(row.name || row.upstream_model_id || row.model_id)}</strong><br><small>${Dom.escapeHtml(row.upstream_model_id || '')}</small></td>`
+          + `<td>${Dom.escapeHtml(row.provider_name || row.provider || '')}</td>`
+          + `<td>${Number(row.current_multiplier).toFixed(4)}</td>`
+          + `<td><strong>${Number(row.proposed_multiplier).toFixed(4)}</strong></td>`
+          + `<td>${Dom.escapeHtml(delta)}</td>`
+          + `<td>${Dom.escapeHtml(String(row.source_price))} ${Dom.escapeHtml(row.source_currency || '')}<br><small>${Dom.escapeHtml(String(row.price_unit || ''))}</small></td>`
+          + `<td>${flags || '-'}</td>`
+          + '</tr>';
+      }).join('');
+      const sources = (preview.sources || []).map(item => {
+        const label = item.filename || `#${item.id}`;
+        if (item.url && /^https?:\/\//i.test(item.url)) {
+          return `<a href="${Dom.escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${Dom.escapeHtml(label)}</a>`;
+        }
+        return Dom.escapeHtml(label);
+      }).join('、');
+      const unmatched = (preview.unmatched || []).map(item => item.model_ref || item.reason).filter(Boolean);
+      const errors = (preview.errors || []).map(item => item.model_ref || item.reason).filter(Boolean);
+      const warnings = [...(preview.warnings || []), ...(preview.rows || []).flatMap(row => row.risk_flags || [])];
+      const uniqueWarnings = [...new Set(warnings)].slice(0, 8);
+      return `<article class="ba-card ba-approval">`
+        + `<header><span>${Dom.escapeHtml(t('倍率调整草案'))}</span></header>`
+        + `<div class="ba-approval__summary">`
+        + `<span>${Dom.escapeHtml(t('共 {count} 项，变更 {changed} 项', { count: summary.count ?? rows.length, changed: summary.changed ?? rows.filter(row => Math.abs(row.proposed_multiplier - row.current_multiplier) > 0.0001).length }))}</span>`
+        + `<span>${Dom.escapeHtml(t('基准'))}: ${Dom.escapeHtml(basis)} · ${Dom.escapeHtml(preview.currency || '')}${fx} · ${Dom.escapeHtml(t('加价系数'))} ${Dom.escapeHtml(String(preview.markup ?? '-'))}</span>`
+        + `</div>`
+        + `<div class="ba-approval__table-wrap"><table class="ba-approval__table"><thead><tr>`
+        + `<th>${Dom.escapeHtml(t('模型'))}</th><th>${Dom.escapeHtml(t('供应商'))}</th><th>${Dom.escapeHtml(t('旧倍率'))}</th><th>${Dom.escapeHtml(t('新倍率'))}</th><th>${Dom.escapeHtml(t('变化'))}</th><th>${Dom.escapeHtml(t('来源价'))}</th><th>${Dom.escapeHtml(t('风险'))}</th>`
+        + `</tr></thead><tbody>${rowsHtml || `<tr><td colspan="7">${Dom.escapeHtml(t('没有可执行的变更'))}</td></tr>`}</tbody></table></div>`
+        + (uniqueWarnings.length ? `<div class="ba-approval__warnings">${uniqueWarnings.map(item => `<span class="blora-tag" data-variant="warning">${Dom.escapeHtml(this.riskLabel(item))}</span>`).join(' ')}</div>` : '')
+        + (unmatched.length ? `<p class="ba-approval__unmatched">${Dom.escapeHtml(t('未匹配'))}: ${Dom.escapeHtml(unmatched.join('、'))}</p>` : '')
+        + (errors.length ? `<p class="ba-approval__unmatched">${Dom.escapeHtml(t('无效项'))}: ${Dom.escapeHtml(errors.join('、'))}</p>` : '')
+        + (sources ? `<p class="ba-approval__sources">${Dom.escapeHtml(t('来源'))}: ${sources} <small>${Dom.escapeHtml(t('资料内容不可信，仅供核对'))}</small></p>` : '')
+        + `<p class="ba-approval__hint">${Dom.escapeHtml(t('如需修改，请拒绝后说明调整，Agent 会重新生成草案。'))}</p>`
+        + `<div class="ba-card__actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" data-decision="allow">${Dom.escapeHtml(t('允许整批'))}</button><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-decision="deny">${Dom.escapeHtml(t('拒绝'))}</button></div>`
+        + '</article>';
+    },
+
+    toolCard(name, body, pending, preview) {
+      if (pending && preview && preview.type === 'model_multiplier_batch') {
+        return this.approvalCard(preview);
+      }
       const actions = pending ? `<div class="ba-card__actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" data-decision="allow">允许</button><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-decision="deny">拒绝</button></div>` : '';
       return `<article class="ba-card"><header><span>${Dom.escapeHtml(name || 'tool')}</span></header><pre>${Dom.escapeHtml(typeof body === 'string' ? body : JSON.stringify(body || {}, null, 2))}</pre>${actions}</article>`;
     },
@@ -356,7 +667,12 @@
       if (this.streaming || this.pendingApproval) return;
       const input = document.getElementById('baInput');
       const text = input?.value.trim() || '';
-      if (!text) return;
+      const attachmentIds = this.mode === 'manage' ? this.collectAttachmentIds() : [];
+      if (!text && !attachmentIds.length) return;
+      if (attachmentIds.length && this.uploads > 0) {
+        this.appendError(t('附件还在上传，请稍候'));
+        return;
+      }
       const model = this.selectedModel();
       if (!model) {
         this.appendError(this.mode === 'imagine' ? '还没有图像模型。管理员可以在 Manage 里把模型标成图像。' : '请先选择模型');
@@ -364,7 +680,13 @@
       }
       input.value = '';
       if (this.mode === 'imagine') return this.sendImage(text, model);
-      if (this.mode === 'manage') return this.sendManage(text, model);
+      if (this.mode === 'manage') {
+        const sent = (this.draftAttachments || []).slice();
+        await this.sendManage(text, model, attachmentIds);
+        this.draftAttachments = [];
+        this.renderAttachments();
+        return sent;
+      }
       return this.sendChat(text, model);
     },
 
@@ -529,10 +851,29 @@
       }
     },
 
-    async sendManage(text, model) {
-      this.messages.push({ role: 'user', content: text });
+    async sendManage(text, model, attachmentIds = []) {
+      const attachments = (this.draftAttachments || []).map(item => ({
+        id: item.id,
+        kind: item.kind,
+        filename: item.filename,
+        mime: item.mime,
+        byte_size: item.bytes,
+        truncated: item.truncated === true,
+        source: item.source || 'upload',
+        url: item.url || null
+      }));
+      this.messages.push({
+        role: 'user',
+        content: text || t('（已附加资料）'),
+        attachments
+      });
       this.renderThread();
-      await this.readManageStream('/api/agent/manage/runs', { thread_id: this.activeId, model, text });
+      await this.readManageStream('/api/agent/manage/runs', {
+        thread_id: this.activeId,
+        model,
+        text,
+        attachment_ids: attachmentIds
+      });
     },
 
     async decide(approvalId, decision) {
@@ -551,14 +892,16 @@
         const response = await fetch(url, {
           method: 'POST',
           credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await this.csrfHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(body),
           signal: this.abort.signal
         });
         if (response.status === 404) return this.showUnavailable();
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          throw new Error(data.error || `请求失败 (${response.status})`);
+          const error = new Error(data.error || `请求失败 (${response.status})`);
+          error.code = data.code;
+          throw error;
         }
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.includes('text/event-stream')) {
@@ -597,7 +940,11 @@
           }
         }
       } catch (err) {
-        if (err.name !== 'AbortError') failure = err.message || '请求失败';
+        if (err.name !== 'AbortError') {
+          failure = err.code === 'stale_multiplier'
+            ? t('倍率已变化，请重新生成草案')
+            : (err.message || '请求失败');
+        }
       } finally {
         this.setStreaming(false);
         this.abort = null;

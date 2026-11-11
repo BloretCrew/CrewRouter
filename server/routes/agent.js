@@ -12,12 +12,14 @@ const { logAction, ACTIONS } = require('../utils/audit-log');
 const { ensureAgentSchema } = require('../utils/agent-schema');
 const {
   executeTool,
+  validateToolCall,
   resolveToolDecision,
   redactSecrets,
   openAiTools,
   anthropicTools,
   systemPrompt
 } = require('../utils/agent-tools');
+const { buildApprovalPreview } = require('../utils/agent-approval-preview');
 const {
   assertImageModel,
   assertImageSize,
@@ -39,6 +41,20 @@ const {
 } = require('../utils/agent-loop');
 const { createModelIdentity, normalizeModel } = require('../utils/model-identity');
 const { recordAgentUsage, assertHasBalance, logAgentError } = require('../utils/agent-billing');
+const {
+  readAgentUploads,
+  processUploads,
+  bindAttachments,
+  listThreadAttachments,
+  deleteAttachment,
+  getAttachmentContent,
+  cleanupDraftAttachments,
+  loadVisionImages,
+  attachmentManifest,
+  toMessageAttachments,
+  mapAttachment
+} = require('../utils/agent-attachments');
+const { fetchUrlAsAttachment } = require('../utils/agent-fetch');
 
 const router = express.Router();
 const { requestMiddleware: quotaRequestMiddleware, quotaFetch } = require('../utils/quota-request-context');
@@ -101,13 +117,37 @@ function normalizeMessage(row) {
   if (typeof toolCalls === 'string') {
     try { toolCalls = JSON.parse(toolCalls); } catch (_) { toolCalls = null; }
   }
+  let attachments = row.attachments;
+  if (typeof attachments === 'string') {
+    try { attachments = JSON.parse(attachments); } catch (_) { attachments = null; }
+  }
   return {
     role: row.role,
     content: row.content || '',
     tool_calls: Array.isArray(toolCalls) ? toolCalls : null,
     tool_call_id: row.tool_call_id || null,
-    tool_name: row.tool_name || null
+    tool_name: row.tool_name || null,
+    attachments: Array.isArray(attachments) ? attachments : null
   };
+}
+
+function parseAttachmentIds(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map(Number).filter(Number.isInteger))].slice(0, 10);
+}
+
+async function attachImagesToLatestUser(messages, db, { userId, threadId }) {
+  let target = null;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === 'user') { target = messages[index]; break; }
+  }
+  if (!target || !Array.isArray(target.attachments) || !target.attachments.length) return;
+  const imageIds = target.attachments
+    .filter(item => item.kind === 'image' && Number.isInteger(Number(item.id)))
+    .map(item => Number(item.id));
+  if (!imageIds.length) return;
+  const images = await loadVisionImages(db, { userId, threadId, ids: imageIds });
+  if (images.length) target.images = images;
 }
 
 async function saveThreadMessages(threadId, messages, transaction) {
@@ -118,15 +158,17 @@ async function saveThreadMessages(threadId, messages, transaction) {
     await client.query('DELETE FROM agent_messages WHERE thread_id = $1', [threadId]);
     for (const message of messages) {
       await client.query(
-        `INSERT INTO agent_messages (thread_id, role, content, tool_calls, tool_call_id, tool_name)
-         VALUES ($1, $2, $3, $4::jsonb, $5, $6)`,
+        `INSERT INTO agent_messages (thread_id, role, content, tool_calls, tool_call_id, tool_name, attachments)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7::jsonb)`,
         [
           threadId,
           message.role,
           message.content || '',
           message.tool_calls ? JSON.stringify(message.tool_calls) : null,
           message.tool_call_id || null,
-          message.tool_name || null
+          message.tool_name || null,
+          Array.isArray(message.attachments) && message.attachments.length
+            ? JSON.stringify(message.attachments) : null
         ]
       );
     }
@@ -160,7 +202,7 @@ async function callManageModel(model, messages) {
   const body = format === 'anthropic'
     ? {
       model: model.upstream_model_id,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: systemPrompt(),
       tools: anthropicTools(),
       messages: toAnthropicMessages(messages)
@@ -208,6 +250,17 @@ async function continueManage(req, res, { thread, messages, model, claim }) {
   const identities = [];
   try {
     const edition = await loadPersistedEdition(pool);
+    const toolContext = {
+      edition: edition || 'personal',
+      userId: req.authUser.id,
+      threadId: thread.id
+    };
+    await attachImagesToLatestUser(messages, pool, toolContext);
+    const imageBlocks = messages.flatMap(message => (message.images || []).map(image => ({
+      type: 'image_url',
+      image_url: { url: `data:${image.mime};base64,` }
+    })));
+    const requestBody = imageBlocks.length ? { messages: [{ role: 'user', content: imageBlocks }] } : null;
     const result = await runManageLoop({
       messages,
       modelCaller: async (current) => {
@@ -217,17 +270,38 @@ async function continueManage(req, res, { thread, messages, model, claim }) {
         return reply;
       },
       onEvent: async (event) => { send(event); },
-      executeRead: (name, args) => executeTool(pool, { name, arguments: args }, { edition: edition || 'personal' })
+      validateWrite: (name, args) => validateToolCall(pool, { name, arguments: args }, toolContext),
+      executeRead: (name, args, extra) => executeTool(pool, { name, arguments: args }, { ...toolContext, round: extra?.round })
     });
+    if (result.status === 'waiting_approval') {
+      try {
+        result.approval.preview = await buildApprovalPreview(pool, {
+          toolName: result.approval.tool_name,
+          args: result.approval.arguments,
+          userId: req.authUser.id,
+          threadId: thread.id
+        });
+      } catch (previewError) {
+        logAgentError('approval preview', previewError);
+        result.approval.preview = null;
+      }
+    }
     let approvalId;
     const persist = async client => {
       await saveThreadMessages(thread.id, result.messages, client);
       if (result.status === 'waiting_approval') {
         const approval = result.approval;
         const saved = await client.query(
-          `INSERT INTO agent_approvals (thread_id, user_id, tool_call_id, tool_name, arguments, status)
-           VALUES ($1, $2, $3, $4, $5::jsonb, 'pending') RETURNING id`,
-          [thread.id, req.authUser.id, approval.tool_call_id, approval.tool_name, JSON.stringify(approval.arguments || {})]
+          `INSERT INTO agent_approvals (thread_id, user_id, tool_call_id, tool_name, arguments, status, preview)
+           VALUES ($1, $2, $3, $4, $5::jsonb, 'pending', $6::jsonb) RETURNING id`,
+          [
+            thread.id,
+            req.authUser.id,
+            approval.tool_call_id,
+            approval.tool_name,
+            JSON.stringify(approval.arguments || {}),
+            approval.preview ? JSON.stringify(approval.preview) : null
+          ]
         );
         approvalId = saved.rows[0].id;
       }
@@ -238,6 +312,7 @@ async function continueManage(req, res, { thread, messages, model, claim }) {
         attempts: usages.map(usage => usage.quotaAttempt).filter(Boolean),
         promptTokens: usages.reduce((sum, item) => sum + Number(item.prompt_tokens || 0), 0),
         completionTokens: usages.reduce((sum, item) => sum + Number(item.completion_tokens || 0), 0),
+        requestBody,
         req, persist, transactionClient: claim?.client,
         identity: {
           requested_model: normalizeModel(req.body?.model),
@@ -256,8 +331,13 @@ async function continueManage(req, res, { thread, messages, model, claim }) {
     }
     // Completion and approval events follow the atomic history/billing commit.
     if (result.status === 'waiting_approval') {
-      send({ type: 'approval.required', payload: { id: result.approval.tool_call_id,
-        name: result.approval.tool_name, arguments: result.approval.arguments, approval_id: approvalId } });
+      send({ type: 'approval.required', payload: {
+        id: result.approval.tool_call_id,
+        name: result.approval.tool_name,
+        arguments: result.approval.arguments,
+        approval_id: approvalId,
+        preview: result.approval.preview || null
+      } });
     } else if (result.status === 'failed') {
       send({ type: 'run.failed', payload: { error: result.error || '管理对话失败' } });
     } else {
@@ -388,6 +468,115 @@ router.get('/images/:id/content', requireAuth, async (req, res) => {
   }
 });
 
+router.post('/manage/attachments', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const upload = await readAgentUploads(req);
+    let threadId = null;
+    if (upload.threadId !== undefined && upload.threadId !== null && String(upload.threadId).trim() !== '') {
+      threadId = Number(upload.threadId);
+      if (!Number.isInteger(threadId) || threadId <= 0) {
+        return res.status(400).json({ error: '无效的 thread_id', code: 'invalid_thread_id' });
+      }
+      const thread = await pool.query(
+        "SELECT id FROM agent_threads WHERE id = $1 AND user_id = $2 AND mode = 'manage'",
+        [threadId, req.authUser.id]
+      );
+      if (!thread.rows[0]) return res.status(404).json({ error: '对话不存在', code: 'thread_not_found' });
+    }
+    const result = await processUploads(pool, {
+      files: upload.files,
+      userId: req.authUser.id,
+      threadId
+    });
+    res.json(result);
+  } catch (err) {
+    logAgentError('attachments.upload', err);
+    res.status(err.status || 500).json({ error: err.message || '上传附件失败', code: err.code || undefined });
+  }
+});
+
+router.post('/manage/attachments/url', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const url = String(req.body?.url || '').trim();
+    if (!url) return res.status(400).json({ error: '请输入链接', code: 'url_required' });
+    let threadId = null;
+    if (req.body?.thread_id !== undefined && req.body?.thread_id !== null && String(req.body.thread_id).trim() !== '') {
+      threadId = Number(req.body.thread_id);
+      if (!Number.isInteger(threadId) || threadId <= 0) {
+        return res.status(400).json({ error: '无效的 thread_id', code: 'invalid_thread_id' });
+      }
+      const thread = await pool.query(
+        "SELECT id FROM agent_threads WHERE id = $1 AND user_id = $2 AND mode = 'manage'",
+        [threadId, req.authUser.id]
+      );
+      if (!thread.rows[0]) return res.status(404).json({ error: '对话不存在', code: 'thread_not_found' });
+    }
+    const fetched = await fetchUrlAsAttachment(pool, {
+      url,
+      userId: req.authUser.id,
+      threadId,
+      maxChars: 6000
+    });
+    const row = await pool.query(
+      'SELECT * FROM agent_attachments WHERE id = $1 AND user_id = $2',
+      [fetched.attachment_id, req.authUser.id]
+    );
+    res.json({ attachment: row.rows[0] ? mapAttachment(row.rows[0]) : null, preview: fetched });
+  } catch (err) {
+    logAgentError('attachments.url', err);
+    res.status(err.status || 500).json({ error: err.message || '抓取链接失败', code: err.code || undefined });
+  }
+});
+
+router.delete('/manage/attachments/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const threadId = Number(req.query?.thread_id) || null;
+    const deleted = await deleteAttachment(pool, {
+      id: Number(req.params.id),
+      userId: req.authUser.id,
+      threadId
+    });
+    if (!deleted) return res.status(404).json({ error: '附件不存在或已绑定其他对话', code: 'attachment_not_found' });
+    res.json({ success: true });
+  } catch (err) {
+    logAgentError('attachments.delete', err);
+    res.status(500).json({ error: '删除附件失败' });
+  }
+});
+
+router.get('/manage/attachments/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const result = await pool.query(
+      'SELECT * FROM agent_attachments WHERE id = $1 AND user_id = $2',
+      [id, req.authUser.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: '附件不存在', code: 'attachment_not_found' });
+    res.json(mapAttachment(result.rows[0]));
+  } catch (err) {
+    logAgentError('attachments.get', err);
+    res.status(500).json({ error: '读取附件失败' });
+  }
+});
+
+router.get('/manage/attachments/:id/content', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const row = await getAttachmentContent(pool, {
+      id: Number(req.params.id),
+      userId: req.authUser.id
+    });
+    if (!row) return res.status(404).json({ error: '图片附件不存在', code: 'attachment_not_found' });
+    res.setHeader('Content-Type', row.mime || 'application/octet-stream');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    res.send(row.bytes);
+  } catch (err) {
+    logAgentError('attachments.content', err);
+    res.status(500).json({ error: '读取附件失败' });
+  }
+});
+
 router.get('/manage/threads', requireAuth, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
@@ -415,22 +604,27 @@ router.get('/manage/threads/:id', requireAuth, requireAdmin, async (req, res) =>
     );
     if (!thread.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: '对话不存在' }); }
     const messages = await client.query(
-      `SELECT role, content, tool_calls, tool_call_id, tool_name
+      `SELECT role, content, tool_calls, tool_call_id, tool_name, attachments
        FROM agent_messages WHERE thread_id = $1 ORDER BY id`,
       [req.params.id]
     );
     const approval = await client.query(
-      `SELECT id, tool_call_id, tool_name, arguments, status
+      `SELECT id, tool_call_id, tool_name, arguments, status, preview
        FROM agent_approvals
        WHERE thread_id = $1 AND user_id = $2 AND status = 'pending'
        ORDER BY id DESC LIMIT 1`,
       [req.params.id, req.authUser.id]
     );
+    const attachments = await listThreadAttachments(client, {
+      userId: req.authUser.id,
+      threadId: Number(req.params.id)
+    });
     await client.query('COMMIT');
     res.json({
       ...thread.rows[0],
       messages: messages.rows.map(normalizeMessage),
-      approval: approval.rows[0] || null
+      approval: approval.rows[0] || null,
+      attachments
     });
   } catch (err) {
     if (client) await client.query('ROLLBACK').catch(() => {});
@@ -443,13 +637,15 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
   let claim;
   try {
     const text = String(req.body?.text || '').trim();
-    if (!text) return res.status(400).json({ error: '请输入内容' });
+    const attachmentIds = parseAttachmentIds(req.body?.attachment_ids);
+    if (!text && !attachmentIds.length) return res.status(400).json({ error: '请输入内容或添加附件' });
     const balance = await assertHasBalance(req.authUser.id);
     if (!balance.ok) return res.status(balance.status).json({ error: balance.error });
     const model = await loadUsableModel(req.authUser.id, req.body?.model);
     if (!model) return res.status(404).json({ error: '模型不存在或已禁用' });
     if (model.output_kind === 'image') return res.status(400).json({ error: '请选择对话模型' });
 
+    await cleanupDraftAttachments(pool, req.authUser.id);
     let threadId = Number(req.body?.thread_id) || null;
     let messages = [];
     if (threadId) {
@@ -466,13 +662,13 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
       );
       if (pending.rows.length) return res.status(409).json({ error: '请先处理待审批的工具调用' });
       const stored = await pool.query(
-        `SELECT role, content, tool_calls, tool_call_id, tool_name
+        `SELECT role, content, tool_calls, tool_call_id, tool_name, attachments
          FROM agent_messages WHERE thread_id = $1 ORDER BY id`,
         [threadId]
       );
       messages = stored.rows.map(normalizeMessage);
     } else {
-      const title = text.slice(0, 40);
+      const title = (text || '新对话').slice(0, 40);
       const created = await pool.query(
         `INSERT INTO agent_threads (user_id, mode, title, model_id)
          VALUES ($1, 'manage', $2, $3) RETURNING id`,
@@ -482,12 +678,26 @@ router.post('/manage/runs', requireAuth, requireAdmin, async (req, res) => {
       claim = await claimThread(pool, threadId, req.authUser.id);
       if (!claim) return res.status(409).json({ error: '对话正在处理中，请稍后重试' });
     }
-    messages.push({ role: 'user', content: text, tool_calls: null, tool_call_id: null, tool_name: null });
+    const attachments = attachmentIds.length
+      ? await bindAttachments(pool, { userId: req.authUser.id, threadId, ids: attachmentIds })
+      : [];
+    const manifest = attachmentManifest(attachments);
+    const content = [text, manifest].filter(Boolean).join('\n\n');
+    messages.push({
+      role: 'user',
+      content,
+      tool_calls: null,
+      tool_call_id: null,
+      tool_name: null,
+      attachments: toMessageAttachments(attachments)
+    });
     await continueManage(req, res, { thread: { id: threadId }, messages, model, claim });
   } catch (err) {
     logAgentError('runs', err);
-    if (!res.headersSent) res.status(500).json({ error: '管理对话失败' });
-    else if (!res.writableEnded) res.end();
+    if (!res.headersSent) {
+      const status = err.status || (err.code === 'attachment_unavailable' ? 409 : 500);
+      res.status(status).json({ error: err.message || '管理对话失败', code: err.code || undefined });
+    } else if (!res.writableEnded) res.end();
   } finally {
     if (claim) try { await claim.release(); } catch (error) { logAgentError('thread claim cleanup', error); }
   }
@@ -520,16 +730,31 @@ router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res)
     committedApproval = { id: approval.id, status: decision === 'allow' ? 'approved' : 'denied' };
     const output = applied.output;
     if (decision === 'allow' && output && !output.error) {
-      const action = approval.tool_name === 'set_provider_enabled' ? ACTIONS.ADMIN_PROVIDER_TOGGLE : ACTIONS.ADMIN_MODEL_UPDATE;
+      const isMultiplierBatch = approval.tool_name === 'batch_set_model_multipliers';
+      const action = isMultiplierBatch ? ACTIONS.ADMIN_MODEL_BATCH
+        : (approval.tool_name === 'set_provider_enabled' ? ACTIONS.ADMIN_PROVIDER_TOGGLE : ACTIONS.ADMIN_MODEL_UPDATE);
+      const details = isMultiplierBatch
+        ? {
+          updated: output.updated,
+          unchanged: output.unchanged,
+          changes: Array.isArray(output.changes) ? output.changes.slice(0, 200) : [],
+          basis: redactSecrets(approval.arguments?.basis),
+          currency: redactSecrets(approval.arguments?.currency),
+          fx_rate: approval.arguments?.fx_rate,
+          markup: approval.arguments?.markup
+        }
+        : redactSecrets(approval.arguments);
       try { await logAction({
         userId: req.authUser.id,
         username: req.authUser.username,
         isAdmin: true,
         action,
         resourceType: approval.tool_name === 'set_provider_enabled' ? 'provider' : 'model',
-        resourceId: output.id || null,
-        description: `Blora Agent ${approval.tool_name}`,
-        details: redactSecrets(approval.arguments),
+        resourceId: isMultiplierBatch ? null : (output.id || null),
+        description: isMultiplierBatch
+          ? `Blora Agent 批量调整 ${output.updated} 个模型倍率`
+          : `Blora Agent ${approval.tool_name}`,
+        details,
         ip: req.ip,
         userAgent: req.get('user-agent')
       }); } catch (error) { logAgentError('audit after committed approval', error); }
@@ -544,6 +769,13 @@ router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res)
     if (committedApproval && !res.headersSent) {
       return res.status(503).json({ error: '审批已处理，后续对话暂不可用，请刷新查看审批结果',
         approval_applied: true, approval_id: committedApproval.id, status: committedApproval.status });
+    }
+    const conflictCodes = new Set(['stale_multiplier', 'model_not_found', 'unmatched_models']);
+    if (!res.headersSent && conflictCodes.has(err.code)) {
+      return res.status(409).json({ error: err.message, code: err.code, details: err.details || null });
+    }
+    if (!res.headersSent && err.code) {
+      return res.status(400).json({ error: err.message, code: err.code, details: err.details || null });
     }
     if (!res.headersSent) res.status(500).json({ error: '处理审批失败' });
     else if (!res.writableEnded) res.end();

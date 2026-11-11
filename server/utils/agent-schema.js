@@ -72,6 +72,32 @@ async function ensureAgentSchema(db = pool) {
     )
   `);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_agent_approvals_thread_status ON agent_approvals (thread_id, status)`);
+
+  await db.query(`ALTER TABLE agent_messages ADD COLUMN IF NOT EXISTS attachments JSONB`);
+  await db.query(`ALTER TABLE agent_approvals ADD COLUMN IF NOT EXISTS preview JSONB`);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS agent_attachments (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      thread_id INTEGER REFERENCES agent_threads(id) ON DELETE CASCADE,
+      source VARCHAR(16) NOT NULL DEFAULT 'upload',
+      kind VARCHAR(16) NOT NULL,
+      filename VARCHAR(255) NOT NULL DEFAULT '',
+      mime VARCHAR(128) NOT NULL DEFAULT '',
+      byte_size INTEGER NOT NULL DEFAULT 0,
+      sha256 CHAR(64) NOT NULL DEFAULT '',
+      bytes BYTEA,
+      extracted_text TEXT,
+      text_chars INTEGER NOT NULL DEFAULT 0,
+      truncated BOOLEAN NOT NULL DEFAULT FALSE,
+      meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_agent_attachments_thread ON agent_attachments (thread_id, id)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_agent_attachments_user ON agent_attachments (user_id, created_at DESC)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_agent_attachments_hash ON agent_attachments (user_id, sha256)`);
 }
 
 module.exports = { ensureAgentSchema };

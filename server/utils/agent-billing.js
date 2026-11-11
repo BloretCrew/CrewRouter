@@ -17,13 +17,14 @@ async function recordAgentUsage({
   identity = {},
   attempts,
   persist,
+  requestBody = null,
   transactionClient
 }) {
   const billing = calculateCost(modelConfig || {}, {
     promptTokens,
     completionTokens,
     cachedTokens: 0
-  });
+  }, requestBody);
   const clientMeta = clientMetaFromReq(req || {});
   const client = transactionClient || await pool.connect();
   let inserted;

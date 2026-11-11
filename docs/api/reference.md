@@ -46,6 +46,9 @@
 
 | operationId | Method | Path | Permission | Auth | Streaming |
 | --- | --- | --- | --- | --- | --- |
+| `admin.agentWeb.list` | GET | `/api/admin/agent-web` | `admin.settings.read` | api_key, session | no |
+| `admin.agentWeb.update` | PUT | `/api/admin/agent-web` | `admin.settings.write` | api_key, session | no |
+| `admin.agentWeb.test` | POST | `/api/admin/agent-web/test` | `admin.settings.write` | api_key, session | no |
 | `admin.auditLogs.list` | GET | `/api/admin/audit-logs` | `admin.audit.read` | api_key, session | no |
 | `admin.customInstructions.list` | GET | `/api/admin/custom-instructions` | `admin.audit.read` | api_key, session | no |
 | `admin.customInstructions.byFingerprint.get` | GET | `/api/admin/custom-instructions/:fingerprint` | `admin.audit.read` | api_key, session | no |
@@ -428,6 +431,11 @@
 | `agent.images.create` | POST | `/api/agent/images` | `agent.use` | api_key, session | no |
 | `agent.images.byId.content.list` | GET | `/api/agent/images/:id/content` | `agent.use` | api_key, session | no |
 | `agent.manage.approvals.byId.create` | POST | `/api/agent/manage/approvals/:id` | `agent.manage` | api_key, session | no |
+| `agent.manage.attachments.create` | POST | `/api/agent/manage/attachments` | `agent.manage` | api_key, session | no |
+| `agent.manage.attachments.byId.delete` | DELETE | `/api/agent/manage/attachments/:id` | `agent.manage` | api_key, session | no |
+| `agent.manage.attachments.byId.get` | GET | `/api/agent/manage/attachments/:id` | `agent.manage` | api_key, session | no |
+| `agent.manage.attachments.byId.content.list` | GET | `/api/agent/manage/attachments/:id/content` | `agent.manage` | api_key, session | no |
+| `agent.manage.attachments.url.create` | POST | `/api/agent/manage/attachments/url` | `agent.manage` | api_key, session | no |
 | `agent.manage.runs.create` | POST | `/api/agent/manage/runs` | `agent.manage` | api_key, session | no |
 | `agent.manage.threads.list` | GET | `/api/agent/manage/threads` | `agent.manage` | api_key, session | no |
 | `agent.manage.threads.byId.get` | GET | `/api/agent/manage/threads/:id` | `agent.manage` | api_key, session | no |

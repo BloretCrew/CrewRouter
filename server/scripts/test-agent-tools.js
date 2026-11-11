@@ -1,15 +1,19 @@
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const {
   TOOL_NAMES,
+  WRITE_TOOLS,
   runToolCall,
+  validateToolCall,
   resolveToolDecision,
+  systemPrompt,
   PERSONAL_USER_MESSAGE
 } = require('../utils/agent-tools');
-const { noteRepeat, runManageLoop, replyAsTestModel, parseModelResponse } = require('../utils/agent-loop');
+const {
+  noteRepeat, runManageLoop, replyAsTestModel, parseModelResponse,
+  toOpenAiMessages, toAnthropicMessages
+} = require('../utils/agent-loop');
 
 let passed = 0;
 function ok(name) {
@@ -37,10 +41,24 @@ function memoryDb() {
 async function main() {
   assert.deepStrictEqual(TOOL_NAMES, [
     'list_models', 'list_providers', 'usage_summary', 'list_recent_errors', 'list_users',
-    'set_model_enabled', 'set_model_output_kind', 'set_provider_enabled'
+    'list_model_prices', 'list_attachments', 'read_attachment', 'fetch_url', 'web_search',
+    'preview_multiplier_batch',
+    'set_model_enabled', 'set_model_output_kind', 'set_provider_enabled',
+    'batch_set_model_multipliers'
   ]);
   assert.ok(!TOOL_NAMES.includes('shell'));
-  ok('tool catalog is closed');
+  assert.ok(WRITE_TOOLS.has('batch_set_model_multipliers'));
+  const prompt = systemPrompt();
+  assert.ok(prompt.includes('不可信') || prompt.includes('trust="untrusted"'));
+  assert.ok(prompt.includes('1 积分 = 1,000,000'));
+  ok('tool catalog is closed and the pricing rules are in the prompt');
+
+  const invalidDraft = await validateToolCall(memoryDb(), {
+    name: 'batch_set_model_multipliers',
+    arguments: { basis: 'input', currency: 'CNY', markup: 1.2, changes: [] }
+  }, {});
+  assert.strictEqual(invalidDraft.ok, false);
+  ok('invalid multiplier drafts are rejected before approval');
 
   const db = memoryDb();
   const pending = await runToolCall(db, { name: 'set_model_enabled', arguments: { id: 'm1', enabled: false } }, { approved: false });
@@ -89,6 +107,16 @@ async function main() {
   assert.ok(!loopDb.queries.some(sql => sql.includes('UPDATE')));
   ok('manage loop asks before marking a model as image');
 
+  const vision = [{ role: 'user', content: '价格表', images: [{ mime: 'image/png', base64: 'AAAA' }] }];
+  const openAiVision = toOpenAiMessages(vision, 'system');
+  assert.ok(Array.isArray(openAiVision[1].content));
+  assert.equal(openAiVision[1].content[0].type, 'image_url');
+  const anthropicVision = toAnthropicMessages(vision);
+  assert.ok(Array.isArray(anthropicVision[0].content));
+  assert.equal(anthropicVision[0].content[0].type, 'image');
+  assert.equal(anthropicVision[0].content[1].type, 'text');
+  ok('vision blocks are emitted for OpenAI and Anthropic');
+
   const openai = parseModelResponse('openai', {
     choices: [{ message: { content: 'hi', tool_calls: [{ id: 'c1', function: { name: 'list_models', arguments: '{}' } }] } }]
   });
@@ -111,10 +139,10 @@ async function main() {
   assert.ok(handles('/images', 'post').includes('requireAuth'));
   ok('manage routes require an admin and image routes do not');
 
-  const index = fs.readFileSync(path.join(__dirname, '../index.js'), 'utf8');
-  const playground = index.indexOf("app.use('/api/playground', require('./routes/playground'));");
-  const agent = index.indexOf("app.use('/api/agent', require('./routes/agent'));");
-  assert.ok(playground > 0 && agent > playground);
+  const { REAL_MOUNTS } = require('../routes/mounts');
+  const playground = REAL_MOUNTS.findIndex(item => item.id === 'playground');
+  const agent = REAL_MOUNTS.findIndex(item => item.id === 'agent');
+  assert.ok(playground >= 0 && agent > playground);
   ok('agent API is mounted beside playground outside demo mode');
 
   console.log(`\n${passed} assertions passed`);

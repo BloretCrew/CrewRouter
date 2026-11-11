@@ -1129,6 +1129,12 @@
                 "POST"
               ],
               "path": "/api/agent/manage/*"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/api/agent/manage/*"
             }
           ]
         }
@@ -1566,6 +1572,18 @@
                 "PUT"
               ],
               "path": "/api/admin/feishu-login"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/api/admin/agent-web"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/admin/agent-web/test"
             }
           ]
         },
@@ -1604,6 +1622,12 @@
                 "GET"
               ],
               "path": "/api/admin/feishu-login"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/admin/agent-web"
             }
           ]
         },

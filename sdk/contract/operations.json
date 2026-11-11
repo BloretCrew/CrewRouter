@@ -205,6 +205,112 @@
       "contractVersion": 1
     },
     {
+      "operationId": "admin.agentWeb.list",
+      "method": "GET",
+      "path": "/api/admin/agent-web",
+      "aliases": [],
+      "module": "server/routes/admin.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": "admin.settings.read",
+      "permissionGroup": "admin",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.agentWeb.update",
+      "method": "PUT",
+      "path": "/api/admin/agent-web",
+      "aliases": [],
+      "module": "server/routes/admin.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": "admin.settings.write",
+      "permissionGroup": "admin",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.agentWeb.test",
+      "method": "POST",
+      "path": "/api/admin/agent-web/test",
+      "aliases": [],
+      "module": "server/routes/admin.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": "admin.settings.write",
+      "permissionGroup": "admin",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
       "operationId": "admin.auditLogs.list",
       "method": "GET",
       "path": "/api/admin/audit-logs",
@@ -5532,6 +5638,180 @@
       "operationId": "agent.manage.approvals.byId.create",
       "method": "POST",
       "path": "/api/agent/manage/approvals/:id",
+      "aliases": [],
+      "module": "server/routes/agent.js",
+      "mount": "/api/agent",
+      "feature": "tools",
+      "permission": "agent.manage",
+      "permissionGroup": "tools",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "agent.manage.attachments.create",
+      "method": "POST",
+      "path": "/api/agent/manage/attachments",
+      "aliases": [],
+      "module": "server/routes/agent.js",
+      "mount": "/api/agent",
+      "feature": "tools",
+      "permission": "agent.manage",
+      "permissionGroup": "tools",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "agent.manage.attachments.byId.delete",
+      "method": "DELETE",
+      "path": "/api/agent/manage/attachments/:id",
+      "aliases": [],
+      "module": "server/routes/agent.js",
+      "mount": "/api/agent",
+      "feature": "tools",
+      "permission": "agent.manage",
+      "permissionGroup": "tools",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "agent.manage.attachments.byId.get",
+      "method": "GET",
+      "path": "/api/agent/manage/attachments/:id",
+      "aliases": [],
+      "module": "server/routes/agent.js",
+      "mount": "/api/agent",
+      "feature": "tools",
+      "permission": "agent.manage",
+      "permissionGroup": "tools",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "agent.manage.attachments.byId.content.list",
+      "method": "GET",
+      "path": "/api/agent/manage/attachments/:id/content",
+      "aliases": [],
+      "module": "server/routes/agent.js",
+      "mount": "/api/agent",
+      "feature": "tools",
+      "permission": "agent.manage",
+      "permissionGroup": "tools",
+      "adminOnly": true,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "agent.manage.attachments.url.create",
+      "method": "POST",
+      "path": "/api/agent/manage/attachments/url",
       "aliases": [],
       "module": "server/routes/agent.js",
       "mount": "/api/agent",

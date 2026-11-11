@@ -252,6 +252,131 @@
         }
       }
     },
+    "/api/admin/agent-web": {
+      "get": {
+        "operationId": "admin.agentWeb.list",
+        "summary": "GET /api/admin/agent-web",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "admin.settings.read",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb"
+      },
+      "put": {
+        "operationId": "admin.agentWeb.update",
+        "summary": "PUT /api/admin/agent-web",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "admin.settings.write",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/agent-web/test": {
+      "post": {
+        "operationId": "admin.agentWeb.test",
+        "summary": "POST /api/admin/agent-web/test",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "admin.settings.write",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/audit-logs": {
       "get": {
         "operationId": "admin.auditLogs.list",
@@ -7038,6 +7163,228 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "agent.manage",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/manage/attachments": {
+      "post": {
+        "operationId": "agent.manage.attachments.create",
+        "summary": "POST /api/agent/manage/attachments",
+        "tags": [
+          "tools"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "agent.manage",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/manage/attachments/{id}": {
+      "delete": {
+        "operationId": "agent.manage.attachments.byId.delete",
+        "summary": "DELETE /api/agent/manage/attachments/:id",
+        "tags": [
+          "tools"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "agent.manage",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb"
+      },
+      "get": {
+        "operationId": "agent.manage.attachments.byId.get",
+        "summary": "GET /api/agent/manage/attachments/:id",
+        "tags": [
+          "tools"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "agent.manage",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb"
+      }
+    },
+    "/api/agent/manage/attachments/{id}/content": {
+      "get": {
+        "operationId": "agent.manage.attachments.byId.content.list",
+        "summary": "GET /api/agent/manage/attachments/:id/content",
+        "tags": [
+          "tools"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "agent.manage",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb"
+      }
+    },
+    "/api/agent/manage/attachments/url": {
+      "post": {
+        "operationId": "agent.manage.attachments.url.create",
+        "summary": "POST /api/agent/manage/attachments/url",
+        "tags": [
+          "tools"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "Successful response",
