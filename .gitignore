@@ -34,6 +34,10 @@ updates/*.zip
 /qwen-code/
 /hermes-agent/
 /openclaw/
+/cc-switch-upstream/
+/kimi-cli/
+/pi-mono/
+/zcode-ai-connect/
 
 # 本地独立子仓库（各自有独立 Git 远端，不在主仓库跟踪）
 /BloraRouter/

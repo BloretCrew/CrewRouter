@@ -79,7 +79,7 @@ CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic / Ge
 
 只需更换 `base_url`，无需改业务代码：
 
-Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · Gemini CLI / google-genai（Native Gemini + Interactions） · Antigravity CLI (agy) · 以及一切走 OpenAI Chat Completions / OpenAI Responses / Anthropic Messages / Gemini generateContent 协议的工具，以及安装了对应插件的任意客户端
+Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · Gemini CLI / google-genai（Native Gemini + Interactions） · Antigravity CLI (agy) · Pi · Kimi Code · Qoder CLI · ZCode · 以及一切走 OpenAI Chat Completions / OpenAI Responses / Anthropic Messages / Gemini generateContent 协议的工具，以及安装了对应插件的任意客户端
 
 ```bash
 # 只需更换 base_url

@@ -15,14 +15,32 @@ Desktop 控制台的“客户端配置”支持确认后写入当前电脑。浏
 | OpenClaw | `~/.openclaw/openclaw.json` | `models.providers.crewrouter` 与默认模型 |
 | Gemini CLI（手动/终端） | `~/.gemini/.env` + `~/.gemini/settings.json` | `GEMINI_API_KEY`、`GOOGLE_GEMINI_BASE_URL`、`GEMINI_MODEL`；终端命令合并 `security.auth.selectedType = "gemini-api-key"` |
 | Antigravity CLI / agy（手动/终端） | `~/.crewrouter/agy/antigravity-cli/settings.json` | `modelProvider: "gemini"`；Key 只通过进程环境传入，终端命令用 `agy --gemini_dir` 启动 |
+| Claude Desktop（手动/CC Switch） | `Claude-3p/configLibrary/` 下的 profile | `inferenceProvider: "gateway"` 与 `inferenceGatewayBaseUrl` / `inferenceGatewayApiKey`；需同时修改 `Claude` 与 `Claude-3p` 两处配置 |
+| Pi（手动/终端） | `~/.pi/agent/models.json` | `providers.crewrouter`（OpenAI Chat）；终端命令另外合并 `~/.pi/agent/settings.json` 的默认供应商与模型 |
+| Kimi Code（手动/终端） | `~/.kimi-code/config.toml` | `providers.crewrouter` 与 `models."crewrouter/<模型>"`，OpenAI Chat 协议 |
+| Qoder CLI（手动/终端） | `~/.qoder/settings.json` | `providers.crewrouter`（`openai-compatible` / Bearer），终端命令用 node 合并现有设置 |
+| ZCode（手动/终端） | `~/.zcode/v2/provider_config.json` | `providerConfigRules` 与 `manualProviderModelRules`；终端命令用 node 合并，保留其他供应商 |
+| Cursor（仅手动） | 应用持久化存储 `state.vscdb` | Settings → Models 的 OpenAI API Key、Override OpenAI Base URL 与模型名 |
 
 Desktop 尊重工具的配置目录环境变量；实际路径显示在弹窗及系统确认框。系统服务、项目配置、profile 或环境变量可能改变工具最终生效的配置。Hermes 现有凭证池也可能影响认证。DeepSeek Harness 的本地配置结构尚未核实，仅提供带提示的手动参考，不生成可执行终端命令。
 
-Gemini CLI 与 agy 目前**不参与 Desktop 自动写入**：Gemini CLI 需要同时维护 `.env` 与 `settings.json`，agy 依赖进程环境和私有 `--gemini_dir`，无法用现有单文件合并器表达。弹窗会自动回退到手动配置/终端命令；CC Switch 导入会由 cc-switch 处理原生文件与启动环境。
+Gemini CLI 与 agy 目前**不参与 Desktop 自动写入**：Gemini CLI 需要同时维护 `.env` 与 `settings.json`，agy 依赖进程环境和私有 `--gemini_dir`，无法用现有单文件合并器表达。弹窗会自动回退到手动配置/终端命令；CC Switch 导入会由 cc-switch 处理原生文件与启动环境。CC Switch 一键导入当前覆盖 Claude Code、Codex、Gemini CLI、Antigravity CLI、Claude Desktop、Pi 与 Kimi Code；Qoder CLI 与 ZCode 不在 cc-switch 的应用列表中，只提供手动配置与终端命令。
 
 Gemini CLI 的 `.env` 只是用户级兜底：如果当前项目目录已有 `.env`，CLI 会优先读取项目文件。设置 `security.auth.selectedType` 前若已有 OAuth 登录，可在 CLI 中执行 `/auth` 切换到 API Key。
 
 agy 的 `settings.json` 不写 `model`：agy 只认本机模型显示名，写模型 ID 会被静默忽略。需要固定模型时，在 agy 中执行 `/model` 选择。
+
+Claude Desktop 通过 3P 网关接入：需要把 `Claude` 与 `Claude-3p` 两个目录下的 `claude_desktop_config.json` 设为 `deploymentMode: "3p"`，在 `Claude-3p/configLibrary/` 写入 profile，并在 `_meta.json` 登记 `appliedId`。配置目录位置随平台变化（macOS `~/Library/Application Support`、Windows `%LOCALAPPDATA%`、Linux `~/.config`），因此不参与 Desktop 自动写入，也不生成终端命令；推荐直接用 CC Switch 导入。
+
+Pi 的 `models.json` 只负责登记供应商与模型，默认模型写在同目录 `settings.json` 的 `defaultProvider` / `defaultModel`。终端命令会分别写入并合并这两个文件；`PI_CODING_AGENT_DIR` 可改变目录。
+
+Kimi Code 使用 `~/.kimi-code/config.toml`（`KIMI_CODE_HOME` 可迁移整个目录）。模型键必须是全局唯一的 `<供应商>/<模型>`，并带正整数 `max_context_size`；缺少时 Kimi 拒绝运行。终端命令会整文件覆盖该配置，适合新机或可接受覆盖的场景。
+
+Qoder CLI 的自定义供应商写在 `~/.qoder/settings.json` 的 `providers` 表（Qoder CN 使用 `~/.qoder-cn`，也可用 `QODER_CONFIG_DIR` 覆盖）。Qoder 的自定义供应商功能可能受账号能力限制；写入后可在 `/model` 中选择 `crewrouter/<模型>`。
+
+ZCode 的供应商与模型都在 `~/.zcode/v2/provider_config.json`，schema 是严格的，未知字段会让整份个人供应商配置失效。因此终端命令会先解析现有文件、只替换 `crewrouter` 条目，再原子写回；文件不可解析或 `schemaVersion` 不是 1 时拒绝写入。写入前建议托盘退出 ZCode，避免它把内存中的旧配置写回。
+
+Cursor 的自定义端点不在 `settings.json`，而是通过应用持久化存储（Linux `~/.config/Cursor/User/globalStorage/state.vscdb`，macOS `~/Library/Application Support/Cursor/...`，Windows `%APPDATA%\\Cursor\\...`）保存。直接改这个数据库需要关闭 Cursor、依赖 SQLite 且受版本影响，因此只提供手动指引：在 Cursor Settings → Models 中填入 OpenAI API Key，启用 Override OpenAI Base URL 并填写 CrewRouter 的 `/v1` 地址，再选择或添加模型。Cursor 的 Agent/Composer 功能仍可能走 Cursor 官方服务，自定义 Key 只影响使用 OpenAI 兼容端点的模型请求。
 
 ## 终端一键命令
 
@@ -32,6 +50,10 @@ agy 的 `settings.json` 不写 `model`：agy 只认本机模型显示名，写�
 - 命令含密钥；UI 提示勿分享。不支持 Windows 原生 PowerShell。
 - Gemini CLI 的终端命令先整文件写 `~/.gemini/.env`，再用 `node -` 合并 `~/.gemini/settings.json`（保留其他字段；文件不是合法 JSON 时拒绝覆盖）。没有 `node` 时只提示手动设置。
 - agy 的终端命令写私有 `~/.crewrouter/agy/antigravity-cli/settings.json`，然后以 `GEMINI_API_KEY=... GOOGLE_GEMINI_BASE_URL=... agy --gemini_dir=...` 启动；Key 不写入文件。
+- Pi 的终端命令写 `~/.pi/agent/models.json`，再用 node 合并 `~/.pi/agent/settings.json`（保留其他字段；文件不是合法 JSON 时拒绝覆盖）。
+- Kimi Code 的终端命令整文件写 `~/.kimi-code/config.toml`；已有 OAuth 登录或其他供应商会被覆盖，需要保留时请手动合并。
+- Qoder CLI 与 ZCode 的终端命令不整文件覆盖，而是用 node 解析现有 `settings.json` / `provider_config.json`，只替换 `crewrouter` 条目后写回；文件损坏或 schema 不符时拒绝写入。
+- Claude Desktop 为多文件、跨平台配置，仅提供手动参考与 CC Switch 导入，不生成终端命令；Cursor 的端点存在应用持久化数据库中，同样仅提供手动指引。
 - OpenCode 终端命令写入用户级默认路径；项目目录选择仍仅 Desktop 写入流程提供。
 
 ## 写入保护

@@ -10,8 +10,9 @@ const YAML = require('../CrewRouter-Desktop/node_modules/yaml');
 const context = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/js/client-config.js'), 'utf8'), context);
 const { generate, generateShellCommand, ccSwitchConfig } = context.window.CrewRouterClientConfig;
-const tools = ['claude', 'codex', 'grok', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek', 'gemini_cli', 'agy'];
-const parse = (tool, content) => ['codex', 'grok'].includes(tool)
+const tools = ['claude', 'claude_desktop', 'codex', 'grok', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek', 'gemini_cli', 'agy', 'pi', 'kimi_code', 'qoder_cli', 'zcode', 'cursor'];
+const mergeOnly = new Set(['qoder_cli', 'zcode']);
+const parse = (tool, content) => ['codex', 'grok', 'kimi_code'].includes(tool)
   ? TOML.parse(content)
   : ['hermes', 'deepseek'].includes(tool) ? YAML.parse(content) : JSON.parse(content);
 const parseEnv = content => Object.fromEntries(content.split(/\r?\n/)
@@ -46,8 +47,13 @@ function checkShellCommand(tool, options, generated) {
   }
   assert.ok(shellOutput.shell);
   assert.match(shellOutput.shell, /mkdir -p "\$HOME\//);
-  assert.match(shellOutput.shell, /cat > "\$HOME\//);
   assert.match(shellOutput.shell, /chmod 600 "\$HOME\//);
+  if (mergeOnly.has(tool)) {
+    assert.match(shellOutput.shell, /node - "\$HOME\//);
+    assert.ok(!shellOutput.shell.includes(generated.content), '合并文件不应整文件写入');
+    return;
+  }
+  assert.match(shellOutput.shell, /cat > "\$HOME\//);
   assert.equal(extractHeredocBody(shellOutput.shell), generated.content);
   assert.ok(!shellOutput.shell.includes('<<CREWROUTER_EOF'), 'heredoc 分隔符应加引号');
 }
@@ -60,11 +66,11 @@ function checkConfigs(options) {
     const output = generate(tool, options);
     assert.deepEqual(Object.keys(output).sort(), ['content', 'path', 'reason', 'supported', 'title']);
     assert.ok(output.title && output.path && output.content);
-    assert.equal(output.supported, tool !== 'deepseek');
-    assert.equal(output.reason.length > 0, tool === 'deepseek' || tool === 'agy');
+    assert.equal(output.supported, !['deepseek', 'claude_desktop', 'cursor'].includes(tool));
+    assert.equal(output.reason.length > 0, ['deepseek', 'agy', 'claude_desktop', 'cursor'].includes(tool));
     checkShellCommand(tool, options, output);
     const shellOutput = generateShellCommand(tool, options);
-    const config = ['gemini_cli'].includes(tool) ? parseEnv(output.content) : parse(tool, output.content);
+    const config = tool === 'cursor' ? null : ['gemini_cli'].includes(tool) ? parseEnv(output.content) : parse(tool, output.content);
     switch (tool) {
       case 'claude':
         assert.deepEqual(config, {
@@ -142,6 +148,81 @@ function checkConfigs(options) {
         assert.ok(shellOutput.shell.includes('agy --gemini_dir='));
         assert.ok(shellOutput.shell.includes('GEMINI_API_KEY='));
         assert.ok(shellOutput.shell.includes('GOOGLE_GEMINI_BASE_URL='));
+        break;
+      case 'claude_desktop':
+        assert.equal(output.path, '~/Library/Application Support/Claude-3p/configLibrary/crewrouter.json');
+        assert.deepEqual(config, {
+          coworkEgressAllowedHosts: ['*'],
+          disableDeploymentModeChooser: true,
+          inferenceGatewayApiKey: options.apiKey,
+          inferenceGatewayAuthScheme: 'bearer',
+          inferenceGatewayBaseUrl: base.replace(/\/v1$/, ''),
+          inferenceProvider: 'gateway',
+          inferenceModels: [model]
+        });
+        assert.match(output.reason, /Claude-3p/);
+        break;
+      case 'pi':
+        assert.equal(output.path, '~/.pi/agent/models.json');
+        assert.equal(config.$schema, 'https://pi.dev/schemas/models.schema.json');
+        assert.deepEqual(config.providers.crewrouter, {
+          name: 'CrewRouter', baseUrl: v1, api: 'openai-completions', apiKey: options.apiKey,
+          models: [{ id: model, name: model, contextWindow: 200000, maxTokens: 64000 }]
+        });
+        assert.ok(shellOutput.shell.includes('defaultProvider'));
+        break;
+      case 'kimi_code':
+        assert.equal(output.path, '~/.kimi-code/config.toml');
+        assert.equal(config.default_model, 'crewrouter/' + model);
+        assert.deepEqual(config.providers.crewrouter, { type: 'openai', base_url: v1, api_key: options.apiKey });
+        assert.deepEqual(config.models['crewrouter/' + model], {
+          provider: 'crewrouter', model, display_name: model, max_context_size: 200000, capabilities: ['tool_use']
+        });
+        break;
+      case 'qoder_cli':
+        assert.equal(output.path, '~/.qoder/settings.json');
+        assert.deepEqual(config.providers.crewrouter, {
+          type: 'openai-compatible', protocol: 'openai', authType: 'bearer', displayName: 'CrewRouter',
+          baseUrl: v1, apiKey: options.apiKey, model,
+          models: [{ model, displayName: model, contextWindow: 200000, maxOutputTokens: 64000,
+            capabilities: { tools: true, vision: false } }]
+        });
+        assert.match(shellOutput.shell, /doc\.providers\.crewrouter/);
+        break;
+      case 'cursor':
+        assert.equal(output.path, '~/.config/Cursor/User/globalStorage/state.vscdb');
+        assert.match(output.content, /Override OpenAI Base URL/);
+        assert.ok(output.content.includes(options.apiKey));
+        assert.ok(output.content.includes(v1));
+        assert.ok(output.content.includes(model));
+        break;
+      case 'zcode':
+        assert.equal(output.path, '~/.zcode/v2/provider_config.json');
+        assert.equal(config.schemaVersion, 1);
+        assert.deepEqual(config.config.providerConfigRules.providerRules[0], {
+          providerId: 'crewrouter', templateId: null, providerName: 'CrewRouter', enabled: true,
+          config: {
+            group: 'standard-personal', logo: null, access: { type: 'api-key', apiKey: options.apiKey },
+            api: { type: 'openai-chat-completions', baseUrl: v1, headers: {} },
+            personalModelIds: [model], modelOrder: [model], visibility: 'visible'
+          }
+        });
+        assert.deepEqual(config.config.modelConfigRules.providerModelRules, []);
+        assert.deepEqual(config.config.modelConfigRules.manualProviderModelRules[0], {
+          providerId: 'crewrouter', modelId: model,
+          config: {
+            enabled: true,
+            properties: {
+              contextWindow: 200000,
+              inputFormat: { supportsImage: false, supportsVideo: false, supportsPdf: false },
+              supportsJsonSchemaOutput: false, supportsNativeWebSearch: false, supportsMidConversationSystem: false
+            },
+            optionSpecs: { maxOutputTokens: { max: 32768 }, reasoningLevel: { values: ['disabled'], map: '{}' } }
+          }
+        });
+        assert.deepEqual(config.config.providerOrder, ['crewrouter']);
+        assert.deepEqual(config.config.defaultModelSelection, { providerId: 'crewrouter', modelId: model });
+        assert.match(shellOutput.shell, /doc\.config\.providerConfigRules/);
         break;
     }
   }
@@ -221,6 +302,17 @@ async function main() {
   assert.deepEqual(JSON.parse(JSON.stringify(ccSwitchConfig('agy', { baseUrl: 'https://example.test/', apiKey: 'k' }))), {
     env: { GEMINI_API_KEY: 'k', GOOGLE_GEMINI_BASE_URL: 'https://example.test' }
   });
+  assert.deepEqual(JSON.parse(JSON.stringify(ccSwitchConfig('claude-desktop', { baseUrl: 'https://example.test/v1/', apiKey: 'k' }))), {
+    env: { ANTHROPIC_AUTH_TOKEN: 'k', ANTHROPIC_BASE_URL: 'https://example.test', ANTHROPIC_MODEL: 'claude-fable-5' }
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(ccSwitchConfig('pi', { baseUrl: 'https://example.test/', apiKey: 'k', model: 'm' }))), {
+    name: 'CrewRouter', baseUrl: 'https://example.test/v1', apiKey: 'k', api: 'openai-completions',
+    models: [{ id: 'm', name: 'm' }]
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(ccSwitchConfig('kimi', { baseUrl: 'https://example.test/', apiKey: 'k', model: 'm' }))), {
+    provider: { type: 'openai', base_url: 'https://example.test/v1', api_key: 'k' },
+    models: { m: { model: 'm', max_context_size: 131072, capabilities: ['tool_use'] } }
+  });
   assert.equal(/"GEMINI_BASE_URL"/.test(JSON.stringify(ccSwitchConfig('gemini', { baseUrl: 'https://example.test', apiKey: 'k' }))), false);
   assert.throws(() => ccSwitchConfig('unknown', { baseUrl: 'https://example.test', apiKey: 'k' }), /未知客户端应用/);
   for (const invalid of [undefined, {}, { baseUrl: 1, apiKey: 'test-only-key' },
@@ -230,7 +322,7 @@ async function main() {
     assert.throws(() => generateShellCommand('claude', invalid), /客户端配置参数无效/);
   }
   await checkClaudeRoute();
-  console.log('客户端配置测试通过：10 种工具、终端命令、格式解析、安全转义、Claude 路由。');
+  console.log('客户端配置测试通过：16 种工具、终端命令、格式解析、安全转义、Claude 路由。');
 }
 
 main().catch(() => {

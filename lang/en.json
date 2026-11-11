@@ -3453,5 +3453,7 @@
   "兼容所有支持 OpenAI / Anthropic / Gemini 格式的编程工具": "Works with every coding tool that speaks OpenAI / Anthropic / Gemini",
   "多协议兼容 API": "Multi-protocol compatible API",
   "完美兼容 OpenAI Chat Completions、Messages 与 Gemini generateContent 格式。只需更换": "Fully compatible with OpenAI Chat Completions, Messages and Gemini generateContent formats. Just switch the",
-  "agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。": "agy reads credentials only from the process environment; copy the terminal command or import via CC Switch."
+  "agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。": "agy reads credentials only from the process environment; copy the terminal command or import via CC Switch.",
+  "Claude Desktop 需要同时修改 Claude 与 Claude-3p 的 claude_desktop_config.json 和 configLibrary，请按文档手动配置或使用 CC Switch 导入。": "Claude Desktop needs both the Claude and Claude-3p claude_desktop_config.json files plus configLibrary. Configure it manually as documented or import via CC Switch.",
+  "Cursor 将自定义端点保存在应用持久化存储（state.vscdb）中，不读取 settings.json；请在 Settings → Models 中手动填写 API Key 与 Base URL。": "Cursor stores the custom endpoint in its application persistent storage (state.vscdb) and does not read settings.json. Enter the API key and base URL manually under Settings → Models."
 }

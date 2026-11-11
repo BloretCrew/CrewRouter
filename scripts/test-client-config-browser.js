@@ -69,12 +69,12 @@ async function main() {
       await cdp.evaluate(`window.__fetch = window.fetch; window.fetch = (url, options) => String(url).includes('/api-keys/') && String(url).endsWith('/config') ? Promise.resolve(new Response(JSON.stringify({env:{ANTHROPIC_BASE_URL:'https://example.com',ANTHROPIC_AUTH_TOKEN:'fixture-key'}}),{status:200,headers:{'Content-Type':'application/json'}})) : window.__fetch(url,options); app._configKey={id:1};`);
       for (const mode of ['browser','old-desktop']) {
         await cdp.evaluate(mode==='browser' ? 'delete window.crewrouterDesktop' : 'window.crewrouterDesktop={getDesktopSettings:async()=>({})}');
-        for (const tool of ['claude','codex','grok','opencode','qwen_code','hermes','openclaw','deepseek','gemini_cli','agy']) {
+        for (const tool of ['claude','claude_desktop','codex','grok','opencode','qwen_code','hermes','openclaw','deepseek','gemini_cli','agy','pi','kimi_code','qoder_cli','zcode','cursor']) {
           await cdp.evaluate("app.generateClaudeConfig(1)"); await sleep(350);
           assert.ok(await cdp.click(`[onclick="app.generateToolConfig('${tool}')"]`), 'tool click ' + tool);
           await sleep(400);
           assert.ok(await cdp.evaluate(`(() => {const modal=document.getElementById('configOutputModal');const panel=modal.shadowRoot.querySelector('[part=panel]').getBoundingClientRect();return modal.hasAttribute('open') && document.getElementById('desktopConfigWriteButton').hidden && document.getElementById('configManualDetails').open && !!document.getElementById('configOutputContent').value && panel.left>=0 && panel.right<=innerWidth && panel.bottom<=innerHeight;})()`), `manual fallback ${mode}/${tool}/${width}`);
-          const expectShell = tool !== 'deepseek';
+          const expectShell = !['deepseek','claude_desktop','cursor'].includes(tool);
           assert.equal(await cdp.evaluate("document.getElementById('configOutputModeWrap').hidden"), !expectShell, `shell mode visibility ${tool}`);
           assert.ok(await cdp.click('#configCopyButton'), 'copy configuration');
           const content = await cdp.evaluate("document.getElementById('configOutputContent').value");
@@ -90,7 +90,12 @@ async function main() {
             const shell = await cdp.evaluate("document.getElementById('configShellContent').value");
             assert.match(shell, /mkdir -p "\$HOME\//);
             assert.match(shell, /chmod 600 "\$HOME\//);
-            assert.ok(shell.includes(content));
+            if (['qoder_cli','zcode'].includes(tool)) {
+              assert.match(shell, /node - "\$HOME\//);
+              assert.ok(shell.includes('crewrouter'));
+            } else {
+              assert.ok(shell.includes(content));
+            }
             assert.ok(await cdp.click('#configCopyButton'), 'copy shell command');
             assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), shell);
             assert.ok(await cdp.click('#configOutputMode .blora-segmented__item[data-value="content"]')

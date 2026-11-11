@@ -8291,9 +8291,11 @@ class ConsoleApp {
       this._desktopClientConfig = desktop ? { tool, baseUrl, apiKey, model } : null;
       this._configOutput = { content: generated.content || '', shell: generated.shell || '', hasShell };
       document.getElementById('configOutputTitle').textContent = desktop ? t('写入') + ' ' + generated.title + '？' : generated.title;
-      document.getElementById('configOutputDesc').textContent = tool === 'agy'
-        ? t('合并配置到') + ' ' + generated.path + '。' + t('agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。')
-        : t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
+      document.getElementById('configOutputDesc').textContent = !generated.supported && generated.reason
+        ? t(generated.reason)
+        : tool === 'agy'
+          ? t('合并配置到') + ' ' + generated.path + '。' + t('agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。')
+          : t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
       document.getElementById('configOutputContent').value = generated.content || '';
       document.getElementById('configShellContent').value = generated.shell || '';
       document.getElementById('desktopConfigWrite').hidden = !desktop;
@@ -8419,10 +8421,11 @@ class ConsoleApp {
 
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))));
       let deepLink = `ccswitch://v1/import?resource=provider&app=${app}&name=${encodeURIComponent(name)}&configFormat=json&config=${encoded}`;
-      if (app === 'gemini' || app === 'agy') {
-        const endpoint = String(baseUrl).replace(/\/+$/, '');
+      if (['gemini', 'agy', 'claude-desktop', 'pi', 'kimi'].includes(app)) {
+        const trimmed = String(baseUrl).replace(/\/+$/, '');
+        const endpoint = ['pi', 'kimi'].includes(app) && !/\/v1$/.test(trimmed) ? trimmed + '/v1' : trimmed;
         deepLink += `&endpoint=${encodeURIComponent(endpoint)}&apiKey=${encodeURIComponent(apiKey)}`;
-        if (app === 'gemini') deepLink += `&model=${encodeURIComponent(model)}`;
+        if (['gemini', 'claude-desktop', 'pi', 'kimi'].includes(app)) deepLink += `&model=${encodeURIComponent(model)}`;
       }
 
       // 直接跳转
