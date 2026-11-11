@@ -36,7 +36,28 @@ function startServer() {
   net.Socket.prototype.connect = function () { throw new Error('Fixture server outbound TCP forbidden'); };
   const express = require('express');
   const original = express.application.init;
-  let conversations = [], requests = [], release;
+  let conversations = [], requests = [], release, quotaState = null;
+  const vm = require('node:vm');
+  const policy = { exports: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'server/utils/points-deduct.js'), 'utf8'), {
+    module: policy, require(id) {
+      if (id === '../models/database') return { pool: {} };
+      if (id === './quota-data') return { getUserQuotaBuffer: () => [] };
+      if (id === './money') return require('../server/utils/money');
+      throw new Error('Unexpected policy dependency: ' + id);
+    },
+  });
+  const playground = fs.readFileSync(path.join(root, 'server/routes/playground.js'), 'utf8');
+  const preflightStart = playground.indexOf('    const userResult = await pool.query(');
+  const preflightEnd = playground.indexOf('    let modelResult', preflightStart);
+  assert.ok(preflightStart > 0 && preflightEnd > preflightStart);
+  async function preflight(res) {
+    return vm.runInNewContext(`(async () => {${playground.slice(preflightStart, preflightEnd)} return true;})()`, {
+      userId: 1, pool: { query: async () => ({ rows: [quotaState.account] }) }, res,
+      canConsumePoints: args => policy.exports.canConsumePoints(args, { checkQuotaRules: async () => quotaState.rules }),
+      notifyUser: async () => {}, NOTIFICATION_TYPES: {},
+    });
+  }
   express.application.init = function () {
     original.call(this);
     this.use(async (req, res, next) => {
@@ -52,11 +73,18 @@ function startServer() {
         if (pathname === '/__markdown/reset') { conversations = []; requests = []; return res.json({ ok: true }); }
         if (pathname === '/__markdown/state') return res.json({ conversations, requests });
         if (pathname === '/__markdown/release') { release?.(); return res.json({ ok: true }); }
+        if (pathname === '/__markdown/quota') { quotaState = body; return res.json({ ok: true }); }
         if (pathname === '/auth/me') return res.json({ id: 1, username: 'Markdown fixture', avatar: '' });
         if (pathname === '/api/user/models') return res.json([{ id: 'fixture-model', name: 'Fixture model', provider: 'Local', model_multiplier: 1 }]);
         if (pathname === '/api/playground/thinking-capabilities') return res.json({ 'fixture-model': { supportsThinking: true } });
         if (pathname === '/api/playground/chat') {
           assert.equal(body.model, 'fixture-model');
+          if (quotaState) {
+            await preflight(res);
+            if (res.headersSent) return;
+            res.setHeader('Content-Type', 'text/event-stream');
+            return res.end('data: ' + JSON.stringify({ choices: [{ delta: { content: 'Quota request accepted' } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }) + '\n\ndata: [DONE]\n\n');
+          }
           res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
           const delta = value => res.write('data: ' + JSON.stringify({ choices: [{ delta: value }] }) + '\n\n');
           delta({ reasoning_content: corpus });
@@ -277,8 +305,23 @@ async function main() {
       const copied=await cdp.evaluate("(async()=>{const items=await navigator.clipboard.read();return await (await items[0].getType('text/html')).text();})()");
       await cdp.evaluate(`(() => {const e=document.createElement('div');e.id='markdownPaste';e.innerHTML=${JSON.stringify(copied)};document.body.appendChild(e);})()`);
       await inspect('#markdownPaste', width+' rich clipboard');
+      await cdp.evaluate("document.querySelector('#markdownPaste')?.remove()");
       console.log(`Completed real playground ${width}px`);
     }
+    await request('/__markdown/quota', { account: { balance: 0, refund_balance: 50, team_id: 1 }, rules: [{ exceeded: true }, { exceeded: true }] });
+    await cdp.input('#pgInput', 'Quota preflight request');
+    await cdp.click('#pgSendBtn');
+    await cdp.wait("!pgApp.streaming&&!!document.querySelector('.pg-retry-btn')");
+    await browserCheck("document.querySelector('.pg-msg-error').textContent.includes('配额已用尽且积分不足')", 'refund currency is not silently spent as points');
+    await request('/__markdown/quota', { account: { balance: 0, team_id: 1 }, rules: [{ exceeded: true }, { exceeded: false }] });
+    await cdp.click('.pg-retry-btn');
+    await cdp.wait("!pgApp.streaming&&document.querySelector('#pgMessages').textContent.includes('Quota request accepted')");
+    await browserCheck("!document.querySelector('.pg-msg-error')", 'mixed quota windows permit zero-point retry using production preflight');
+    await request('/__markdown/quota', { account: { balance: '0.000001', team_id: 1 }, rules: [{ exceeded: true }] });
+    await cdp.input('#pgInput', 'Paid points request');
+    await cdp.click('#pgSendBtn');
+    await cdp.wait("!pgApp.streaming&&pgApp.messages.at(-1)?.content==='Quota request accepted'");
+    await browserCheck("!document.querySelector('.pg-msg-error')", 'positive points allow exhausted quota request');
     check(!cdp.events.some(e=>e.method==='Runtime.exceptionThrown'), 'no uncaught browser exceptions');
     console.log(`Browser: ${assertions} assertions, ${failures.length} failures. In-memory fixtures; no production DB/upstream. Clipboard uses real Chrome clipboard.`);
     if(failures.length) throw new Error('Regression failures: '+failures.join('; '));

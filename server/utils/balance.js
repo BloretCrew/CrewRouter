@@ -268,12 +268,21 @@ async function deductBalance(userId, cost, client) {
 async function checkBalance(userId) {
   try {
     const result = await pool.query(
-      'SELECT balance, refund_balance FROM users WHERE id = $1',
+      `SELECT u.balance, u.refund_balance,
+              COALESCE(SUM(b.amount), 0)::text AS total,
+              COUNT(b.user_id) FILTER (WHERE b.amount < 0 OR b.fee_rate < 0)::int AS invalid_count
+       FROM users u LEFT JOIN user_code_balances b ON b.user_id = u.id
+       WHERE u.id = $1 GROUP BY u.id, u.balance, u.refund_balance`,
       [userId]
     );
     if (result.rows.length === 0) return false;
     const row = result.rows[0];
-    return parseFloat(row.balance || 0) + parseFloat(row.refund_balance || 0) > 0;
+    if (compareMoney(row.balance || 0, 0) < 0 || compareMoney(row.refund_balance || 0, 0) < 0) return false;
+    if (compareMoney(row.balance || 0, 0) > 0) return true;
+    return compareMoney(row.refund_balance || 0, 0) > 0 && refundDetailsMatch(row.refund_balance, {
+      total: row.total,
+      invalidCount: Number(row.invalid_count || 0),
+    });
   } catch {
     return false;
   }

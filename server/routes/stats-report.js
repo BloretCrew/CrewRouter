@@ -15,6 +15,8 @@ const { Pool } = require('pg');
 const Logger = require('../logger');
 const config = require('../config-loader');
 
+const { isObject, normalizeStats, safeMetricSql, publicNumber } = require('../utils/stats-report-values');
+
 const router = express.Router();
 
 // ---------- 数据库（自建连接池） ----------
@@ -133,6 +135,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'payload too large' });
     }
 
+    if (Object.hasOwn(payload, 'stats') && !normalizeStats(payload.stats).valid) {
+      return res.status(400).json({ error: 'invalid payload stats' });
+    }
+
     await ensureTable();
     await getPool().query(
       `INSERT INTO stats_reports
@@ -167,11 +173,11 @@ router.get('/overview', async (req, res) => {
     // 汇总
     const summary = (await getPool().query(
       `SELECT
-         COUNT(*)::int AS total_reports,
-         COUNT(DISTINCT device_id)::int AS total_instances,
-         COALESCE(SUM((payload->'stats'->'requests'->>'total')::bigint),0)::bigint AS total_requests,
-         COALESCE(SUM((payload->'stats'->'tokens'->>'total')::bigint),0)::bigint AS total_tokens,
-         COALESCE(SUM((payload->'stats'->>'cost')::numeric),0)::numeric AS total_cost
+         COUNT(*) AS total_reports,
+         COUNT(DISTINCT device_id) AS total_instances,
+         COALESCE(SUM(${safeMetricSql('requests,total')}),0) AS total_requests,
+         COALESCE(SUM(${safeMetricSql('tokens,total')}),0) AS total_tokens,
+         COALESCE(SUM(${safeMetricSql('cost', false)}),0) AS total_cost
        FROM stats_reports`
     )).rows[0] || {};
 
@@ -180,10 +186,10 @@ router.get('/overview', async (req, res) => {
       `SELECT device_id,
          MAX(domain) AS domain,
          MAX(version) AS version,
-         COUNT(*)::int AS reports_count,
-         COALESCE(SUM((payload->'stats'->'requests'->>'total')::bigint),0)::bigint AS requests,
-         COALESCE(SUM((payload->'stats'->'tokens'->>'total')::bigint),0)::bigint AS tokens,
-         COALESCE(SUM((payload->'stats'->>'cost')::numeric),0)::numeric AS cost,
+         COUNT(*) AS reports_count,
+         COALESCE(SUM(${safeMetricSql('requests,total')}),0) AS requests,
+         COALESCE(SUM(${safeMetricSql('tokens,total')}),0) AS tokens,
+         COALESCE(SUM(${safeMetricSql('cost', false)}),0) AS cost,
          MAX(window_end) AS last_window_end,
          MAX(generated_at) AS last_report_at
        FROM stats_reports
@@ -204,21 +210,21 @@ router.get('/overview', async (req, res) => {
 
     res.json({
       summary: {
-        totalReports: Number(summary.total_reports || 0),
-        totalInstances: Number(summary.total_instances || 0),
-        totalRequests: Number(summary.total_requests || 0),
-        totalTokens: Number(summary.total_tokens || 0),
-        totalCost: Number(summary.total_cost || 0),
+        totalReports: publicNumber(summary.total_reports || 0),
+        totalInstances: publicNumber(summary.total_instances || 0),
+        totalRequests: publicNumber(summary.total_requests || 0),
+        totalTokens: publicNumber(summary.total_tokens || 0),
+        totalCost: publicNumber(summary.total_cost || 0),
         updatedAt: new Date().toISOString(),
       },
       instances: instances.map((i) => ({
         deviceId: i.device_id || 'unknown',
         domain: i.domain || '',
         version: i.version || '',
-        reportsCount: Number(i.reports_count || 0),
-        requests: Number(i.requests || 0),
-        tokens: Number(i.tokens || 0),
-        cost: Number(i.cost || 0),
+        reportsCount: publicNumber(i.reports_count || 0),
+        requests: publicNumber(i.requests || 0),
+        tokens: publicNumber(i.tokens || 0),
+        cost: publicNumber(i.cost || 0),
         lastWindowEnd: i.last_window_end,
         lastReportAt: i.last_report_at,
       })),
@@ -229,7 +235,7 @@ router.get('/overview', async (req, res) => {
         windowStart: r.window_start,
         windowEnd: r.window_end,
         generatedAt: r.generated_at,
-        stats: (r.payload && r.payload.stats) || {},
+        stats: normalizeStats(isObject(r.payload) ? r.payload.stats : null).stats,
       })),
     });
   } catch (err) {

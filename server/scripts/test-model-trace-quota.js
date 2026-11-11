@@ -15,12 +15,13 @@ const mocks = new Map([
 const originalLoad = Module._load;
 let checkQuotaRules;
 let calculatePointsToDeduct;
+let canConsumePoints;
 try {
   Module._load = function load(request, parent, isMain) {
     const resolved = Module._resolveFilename(request, parent, isMain);
     return mocks.has(resolved) ? mocks.get(resolved) : originalLoad.call(this, request, parent, isMain);
   };
-  ({ checkQuotaRules, calculatePointsToDeduct } = require('../utils/points-deduct'));
+  ({ checkQuotaRules, calculatePointsToDeduct, canConsumePoints } = require('../utils/points-deduct'));
 } finally {
   Module._load = originalLoad;
 }
@@ -97,6 +98,16 @@ async function main() {
   state.rules.push({ rule_type: 'requests', rule_value: 4, duration_hours: 24 });
   assert.equal(await points(), 0, 'any rule with remaining quota makes the request free');
 
+  reset({ rules: [
+    { rule_type: 'requests', rule_value: 1, duration_hours: 1 },
+    { rule_type: 'tokens', rule_value: 100, duration_hours: 24 },
+  ], records: [record(10), { ...record(20), created_at: new Date(Date.now() - 2 * 3600000) }] });
+  rules = await checkQuotaRules(1, 2);
+  assert.deepEqual(rules.map(rule => rule.used), [1, 30]);
+  assert.deepEqual(rules.map(rule => rule.exceeded), [true, false]);
+  assert.equal(await points(), 0, 'available longer token window overrides exhausted short request window');
+  assert.equal(await canConsumePoints({ userId: 1, teamId: 2, balance: 0 }), true);
+
   for (const client of [null, { query }]) {
     reset({ records: [record()], error: Object.assign(new Error('missing table'), { code: '42P01' }) });
     rules = await checkQuotaRules(1, 2, client);
@@ -120,6 +131,16 @@ async function main() {
   assert.equal(await checkQuotaRules(1, 2), null, 'retain existing team lookup fallback');
   reset({ rules: [] });
   assert.equal(await points(), 99);
+
+  for (const rules of [null, [], [{ exceeded: true }], [{ exceeded: true }, { exceeded: false }]]) {
+    for (const balance of [-1, 0, '0.000001']) {
+      const deps = { checkQuotaRules: async () => rules };
+      const args = { userId: 1, teamId: 2, balance, weightedTokens: 2000000, pointsCost: 99 };
+      const points = await calculatePointsToDeduct(args, deps);
+      assert.equal(points, rules?.length ? (rules.some(rule => !rule.exceeded) ? 0 : 2) : 99);
+      assert.equal(await canConsumePoints(args, deps), points === 0 || Number(balance) > 0);
+    }
+  }
 
   for (const ruleType of ['requests', 'tokens']) {
     for (const settled of [false, true]) {

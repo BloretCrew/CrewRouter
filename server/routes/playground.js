@@ -13,7 +13,7 @@ const { redactMediaForStorage } = require('../utils/media-redact');
 const { recordQuotaData } = require('../utils/quota-data');
 const { recordModelCall } = require('../utils/model-uptime');
 const { recordLiveCallTest } = require('../utils/model-test');
-const { calculatePointsToDeduct } = require('../utils/points-deduct');
+const { canConsumePoints, calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
@@ -76,11 +76,11 @@ router.post('/chat', requireAuth, async (req, res) => {
   let streamTimeout = null;
   let timeoutAborted = false;
   try {
-    const userResult = await pool.query('SELECT balance + refund_balance as total FROM users WHERE id = $1', [userId]);
-    const totalBalance = parseFloat(userResult.rows[0]?.total || 0);
-    if (totalBalance <= 0) {
-      notifyUser(userId, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '余额不足，请先充值后再发起请求。', { source: 'playground' }).catch(() => {});
-      return res.status(402).json({ error: '余额不足，请先充值' });
+    const userResult = await pool.query('SELECT balance, team_id FROM users WHERE id = $1', [userId]);
+    const account = userResult.rows[0];
+    if (!account || !await canConsumePoints({ userId, teamId: account.team_id, balance: account.balance })) {
+      notifyUser(userId, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '配额已用尽且积分不足，请及时充值或调整额度。', { source: 'playground' }).catch(() => {});
+      return res.status(402).json({ error: '配额已用尽且积分不足' });
     }
 
     let modelResult = await pool.query('SELECT * FROM models WHERE id = $1 AND enabled = TRUE', [model]);

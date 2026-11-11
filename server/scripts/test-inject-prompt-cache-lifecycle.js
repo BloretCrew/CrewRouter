@@ -19,6 +19,7 @@ function worker(state) {
     Map, Date, setInterval() { return { unref() {} }; }, sha256Hex: value => value,
     Logger: { debug() {}, warn() {}, error() {} },
     pluginHooks: { hasSubscribers: () => false },
+    canConsumePoints: async () => true,
     isAnthropicApiPath: () => false,
     buildApiErrorBody: (_req, type, message, extra) => ({ type, message, ...extra }),
     ApiKeyLifecycleError: class extends Error {},

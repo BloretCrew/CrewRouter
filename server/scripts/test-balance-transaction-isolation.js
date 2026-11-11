@@ -45,7 +45,7 @@ async function main() {
     pool = new Pool({ ...cluster.connection, max: 8 });
     await cluster.assertIsolation(pool);
     await pool.query(`CREATE TABLE users (
-      id INTEGER PRIMARY KEY, balance NUMERIC(18,6) NOT NULL DEFAULT 0,
+      id INTEGER PRIMARY KEY, team_id INTEGER, balance NUMERIC(18,6) NOT NULL DEFAULT 0,
       refund_balance NUMERIC(18,6) NOT NULL DEFAULT 0,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ); CREATE TABLE user_code_balances (
@@ -129,6 +129,24 @@ async function main() {
       client.release();
     }
     assert.equal((await pool.query('SELECT refund_balance::text FROM users WHERE id=1')).rows[0].refund_balance, '3.000000');
+    // 金额可用余额与倍率积分是不同的消费入口。
+    for (const [regular, refund, amount, fee, expected] of [
+      [0, 0, 0, 0, false], [0, 3, 3, 0, true], [0, 3, 2, 0, false],
+      [0, 3, 3, -0.1, false], [0, 3, -3, 0, false],
+      [-1, 3, 3, 0, false], [1, -1, 0, 0, false],
+      [1, 3, 2, 0, true], ['0.000001', 0, 0, 0, true],
+    ]) {
+      await pool.query('DELETE FROM user_code_balances');
+      await pool.query('UPDATE users SET balance=$1, refund_balance=$2 WHERE id=1', [regular, refund]);
+      await pool.query('INSERT INTO user_code_balances(id,user_id,amount,fee_rate) VALUES (1,1,$1,$2)', [amount, fee]);
+      assert.equal(await fixture.balance.checkBalance(1), expected, JSON.stringify([regular, refund, amount, fee]));
+      assert.equal((await deductBalance(1, '0.000001')).ok, expected, 'amount debit agrees with availability');
+    }
+    await pool.query('UPDATE users SET balance=0, refund_balance=3 WHERE id=1');
+    assert.equal((await fixture.balance.deductPoints(1, 1)).ok, false, 'refundable money is not multiplier points');
+    await pool.query('UPDATE users SET balance=1, refund_balance=-1 WHERE id=1');
+    assert.equal((await fixture.balance.deductPoints(1, 1)).ok, true, 'points debit retains regular-only semantics');
+    assert.equal(await fixture.balance.checkBalance(999), false);
     console.log('Balance transaction isolation: concurrent debit, full rollback, refund details and external ownership passed');
   } finally {
     try { if (pool) await pool.end(); }

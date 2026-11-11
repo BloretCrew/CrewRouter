@@ -18,10 +18,23 @@ function declaration(name, prefix = 'function') {
   return source.slice(start, end + 2);
 }
 
+function isolatedPoints(state) {
+  const module = { exports: {} };
+  vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../utils/points-deduct.js'), 'utf8'), {
+    module, require(name) {
+      if (name === '../models/database') return { pool: { query() { throw new Error('Unexpected quota database access'); } } };
+      if (name === './quota-data') return { getUserQuotaBuffer: () => [] };
+      if (name === './money') return require('../utils/money');
+      throw new Error(`Unexpected isolated dependency: ${name}`);
+    },
+  });
+  return args => module.exports.canConsumePoints(args, { checkQuotaRules: async () => state.rules });
+}
+
 function fixture() {
   const state = { enabled: true, expires_at: null, exists: true, ownerExists: true,
     cache: null, writes: 0, refreshes: 0, cacheSets: 0, invalidations: 0, downstream: 0,
-    transportError: false, disableDuringColdLoad: false, optIn: undefined };
+    transportError: false, disableDuringColdLoad: false, optIn: undefined, balance: 10, refund: 0, teamId: null, rules: null };
   const user = () => ({ keyId: 17, userId: 29, username: 'synthetic-owner', enabled: true, teamId: null, balance: 10 });
   const sandbox = {
     Date: class extends Date { static now() { return NOW; } },
@@ -32,16 +45,17 @@ function fixture() {
         if (state.transportError) throw new Error('synthetic database failure');
         assert(sql.includes('ak.enabled') && sql.includes('ak.expires_at'));
         return { rows: state.exists && state.ownerExists ? [{ current_model_id: 'fixture-model',
-          fusion_panel_models: [], enabled: state.enabled, expires_at: state.expires_at }] : [] };
+          fusion_panel_models: [], enabled: state.enabled, expires_at: state.expires_at,
+          api_signature_enabled: state.optIn }] : [] };
       }
       if (sql.includes('SELECT ak.*, u.id as user_id')) {
         return { rows: state.exists && state.ownerExists ? [{ id: 17, user_id: 29, enabled: state.enabled,
-          expires_at: state.expires_at, crewrouter_commands: state.optIn, quota_warning_enabled: state.optIn, api_signature_enabled: state.optIn, balance: 10, current_model_id: 'fixture-model' }] : [] };
+          expires_at: state.expires_at, crewrouter_commands: state.optIn, quota_warning_enabled: state.optIn, api_signature_enabled: state.optIn, balance: state.balance, refund_balance: state.refund, team_id: state.teamId, current_model_id: 'fixture-model' }] : [] };
       }
       if (sql.includes('SELECT signature_enabled')) return { rows: [{ signature_enabled: null }] };
       if (sql.includes('FROM api_key_models')) return { rows: [{ model_id: 'fixture-model' }] };
       if (sql.includes('FROM api_key_harness_models')) return { rows: [] };
-      if (sql.startsWith('SELECT team_id FROM users')) return { rows: [{ team_id: null }] };
+      if (sql.startsWith('SELECT team_id, balance FROM users')) return { rows: [{ team_id: state.teamId, balance: state.balance }] };
       if (sql.startsWith('UPDATE api_keys SET last_used_at')) { state.writes++; return { rows: [] }; }
       throw new Error(`Unexpected isolated query: ${sql}`);
     } },
@@ -55,7 +69,8 @@ function fixture() {
     loadModelQueueForKey: async () => ['fixture-model'],
     loadHarnessModelsForKey: async () => ({}),
     buildInjectedPrompt: async () => { if (state.disableDuringColdLoad) state.enabled = false; return null; },
-    checkQuotaRules: () => { throw new Error('Unexpected quota access'); },
+    canConsumePoints: isolatedPoints(state),
+    notifyUser: async () => {}, NOTIFICATION_TYPES: { QUOTA_INSUFFICIENT: 'quota' },
     googleError: { googleErrorBody: (code, message, options = {}) => ({ error: { code, message, status: options.status || 'UNKNOWN' } }) },
     require: () => { state.downstream++; throw new Error('Unexpected downstream dependency'); },
   };
@@ -67,11 +82,11 @@ function fixture() {
   ].join('\n');
   vm.createContext(sandbox);
   vm.runInContext(`${functions}\nthis.fixtureFunctions = { validateApiKey, refreshApiUserForRequest, handleChatCompletion, handleAnthropicMessage, handleResponses };`, sandbox);
-  async function request(route = '/chat/completions', handler = 'validateApiKey') {
+  async function request(route = '/chat/completions', handler = 'validateApiKey', binding = null) {
     const req = { path: route, headers: { 'x-api-key': RAW_KEY }, apiUser: user(), body: { model: 'fusion' } };
     const res = { statusCode: 200, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
     let next = false;
-    await sandbox.fixtureFunctions[handler](req, res, () => { next = true; });
+    await sandbox.fixtureFunctions[handler](req, res, () => { next = true; }, binding);
     return { req, res, next };
   }
   return { state, user, request };
@@ -141,6 +156,32 @@ async function main() {
       assert.equal(req.apiUser.quotaWarningEnabled, value === true);
       assert.equal(req.apiUser.signatureEnabled, value === true);
     }
+  }
+  const exhausted = { exceeded: true, duration_hours: 1 };
+  const available = { exceeded: false, duration_hours: 24 };
+  for (const mode of ['cold', 'cached', 'oauth']) {
+    for (const [teamId, rules, balance, refund, allowed] of [
+      [2, [exhausted, available], 0, 0, true], [2, [available, exhausted], -1, 0, true],
+      [2, [exhausted], 0, 9, false], [2, [exhausted], -1, 9, false],
+      [2, [exhausted], '0.000001', 0, true], [2, [], 0, 0, false],
+      [2, null, 0, 0, false], [null, null, 0, 9, false],
+      [null, null, 1, -1, true], [2, [], 1, 0, true],
+    ]) {
+      const f = fixture();
+      Object.assign(f.state, { teamId, rules, balance, refund });
+      if (mode === 'cached') f.state.cache = { ...f.user(), balance: allowed ? -100 : 100 };
+      const result = await f.request('/chat/completions', 'validateApiKey', mode === 'oauth' ? { keyId: 17, userId: 29 } : null);
+      assert.equal(result.next, allowed, JSON.stringify({ mode, teamId, rules, balance, refund }));
+      if (allowed) assert.equal(String(result.req.apiUser.balance), String(balance));
+      else assert.equal(result.res.statusCode, 429);
+      if (mode === 'oauth') assert.equal(f.state.cacheSets, 0);
+    }
+  }
+  for (const [before, after, allowed] of [[10, 0, false], [0, 10, true]]) {
+    const f = fixture();
+    f.state.cache = { ...f.user(), balance: before };
+    f.state.balance = after;
+    assert.equal((await f.request()).next, allowed, 'cached balance never overrides current balance');
   }
   console.log('API Key lifecycle: synthetic cold/cache revocation, expiry boundary, owner deletion, gateway rejection and error contracts passed');
 }

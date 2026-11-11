@@ -62,7 +62,7 @@ const {
   scrubAnthropicResponse,
   scrubResponsesApiResult,
 } = require('../utils/inject-prompt-scrub');
-const { checkQuotaRules, calculatePointsToDeduct } = require('../utils/points-deduct');
+const { canConsumePoints, calculatePointsToDeduct } = require('../utils/points-deduct');
 const { recordUsageAndDeduct } = require('../utils/balance');
 const { sha256Hex } = require('../utils/key-hash');
 const {
@@ -441,7 +441,8 @@ async function refreshApiUserModelAuthorization(apiUser) {
   const [keyResult, queueResult, harnessResult] = await Promise.all([
     pool.query(
       `SELECT ak.current_model_id, ak.fusion_panel_models, ak.fusion_judge_model_id, ak.fusion_outer_model_id,
-              ak.enabled, ak.expires_at
+              ak.enabled, ak.expires_at, ak.signature_enabled, ak.signature_template,
+              u.api_signature_enabled, u.api_signature_template
          FROM api_keys ak JOIN users u ON u.id = ak.user_id
         WHERE ak.id = $1 AND ak.user_id = $2`,
       [apiUser.keyId, apiUser.userId]
@@ -486,6 +487,11 @@ async function refreshApiUserModelAuthorization(apiUser) {
   apiUser.fusionPanelModels = fusionPanelModels;
   apiUser.fusionJudgeModelId = key.fusion_judge_model_id || '';
   apiUser.fusionOuterModelId = key.fusion_outer_model_id || '';
+  // Read signature policy on every request so all workers observe saved choices.
+  apiUser.signatureEnabled = key.signature_enabled != null
+    ? key.signature_enabled === true : key.api_signature_enabled === true;
+  apiUser.signatureTemplate = key.signature_template || key.api_signature_template || null;
+  apiUser.keySignatureEnabled = key.signature_enabled;
   return apiUser;
 }
 
@@ -1226,17 +1232,13 @@ async function validateApiKey(req, res, next, boundKey = null) {
         return sendAuthError(403, 'authentication_error', 'API key is disabled. Enable it in your console to resume access.', { code: 'key_disabled' });
       }
 
-      // 检查用户组额度规则 - 超额但仍有积分时可继续
-      // 标准状态码使用 429 + insufficient_quota / rate_limit_error（避免非标准 402）
-      const membership = await pool.query('SELECT team_id FROM users WHERE id = $1', [cached.userId]);
+      // 余额与成员关系每次重新读取，不使用凭据缓存中的余额。
+      const membership = await pool.query('SELECT team_id, balance FROM users WHERE id = $1', [cached.userId]);
       cached.teamId = membership.rows[0]?.team_id || null;
-      if (cached.teamId) {
-        const quotaRules = await checkQuotaRules(cached.userId, cached.teamId);
-        const exceeded = quotaRules && quotaRules.some(r => r.exceeded);
-        if (exceeded && (!cached.balance || cached.balance <= 0)) {
-          notifyUser(cached.userId, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '配额已用尽且积分不足，请及时充值或调整额度。', { source: 'api_key_validation' }).catch(() => {});
-          return sendAuthError(429, 'insufficient_quota', '配额已用尽且积分不足', { code: 'insufficient_quota' });
-        }
+      cached.balance = membership.rows[0]?.balance || 0;
+      if (!await canConsumePoints({ userId: cached.userId, teamId: cached.teamId, balance: cached.balance })) {
+        notifyUser(cached.userId, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '配额已用尽且积分不足，请及时充值或调整额度。', { source: 'api_key_validation' }).catch(() => {});
+        return sendAuthError(429, 'insufficient_quota', '配额已用尽且积分不足', { code: 'insufficient_quota' });
       }
 
       // 异步更新 last_used_at（不阻塞请求）
@@ -1285,14 +1287,9 @@ async function validateApiKey(req, res, next, boundKey = null) {
       return sendAuthError(403, 'authentication_error', 'API key is disabled. Enable it in your console to resume access.', { code: 'key_disabled' });
     }
 
-    // 检查 Team 额度规则 - 超额但仍有积分时可继续
-    if (keyData.team_id) {
-      const quotaRules = await checkQuotaRules(keyData.user_id, keyData.team_id);
-      const exceeded = quotaRules && quotaRules.some(r => r.exceeded);
-      if (exceeded && (!keyData.balance || keyData.balance <= 0)) {
-        notifyUser(keyData.user_id, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '配额已用尽且积分不足，请及时充值或调整额度。', { source: 'api_key_validation' }).catch(() => {});
-        return sendAuthError(429, 'insufficient_quota', '配额已用尽且积分不足', { code: 'insufficient_quota' });
-      }
+    if (!await canConsumePoints({ userId: keyData.user_id, teamId: keyData.team_id, balance: keyData.balance })) {
+      notifyUser(keyData.user_id, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '配额已用尽且积分不足，请及时充值或调整额度。', { source: 'api_key_validation' }).catch(() => {});
+      return sendAuthError(429, 'insufficient_quota', '配额已用尽且积分不足', { code: 'insufficient_quota' });
     }
 
     const currentModelId = keyData.current_model_id || null;

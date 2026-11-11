@@ -9,12 +9,13 @@ const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { test } = require('node:test');
 const source = fs.readFileSync(path.resolve(__dirname, '../routes/api.js'), 'utf8');
-function declaration(name, prefix = 'function') {
-  const start = source.indexOf(`${prefix} ${name}`);
+const pointsSource = fs.readFileSync(path.resolve(__dirname, '../utils/points-deduct.js'), 'utf8');
+function declaration(name, prefix = 'function', code = source) {
+  const start = code.indexOf(`${prefix} ${name}`);
   assert(start >= 0, name);
-  const end = source.indexOf('\n}', start);
+  const end = code.indexOf('\n}', start);
   assert(end > start, name);
-  return source.slice(start, end + 2);
+  return code.slice(start, end + 2);
 }
 function fixture() {
   const state = { quotaExceeded: false, denyModel: false, cacheCalls: 0, updates: 0, keyLoads: 0, refreshes: 0,
@@ -43,7 +44,7 @@ function fixture() {
   } };
   const Logger = { debug() {}, warn() {}, error() {} };
   const apiContext = {
-    pool, Logger, Date, Number, Set,
+    pool, Logger, Date, Number, Set, compareMoney: require('../utils/money').compareMoney,
     pluginHooks: { hasSubscribers: () => false },
     sha256Hex: value => crypto.createHash('sha256').update(value).digest('hex'),
     getCachedApiKey() { state.cacheCalls++; throw new Error('OAuth must not use raw-key cache'); },
@@ -58,6 +59,8 @@ function fixture() {
   };
   vm.createContext(apiContext);
   vm.runInContext([
+    declaration('hasAvailableQuota', 'function', pointsSource),
+    declaration('canConsumePoints', 'async function', pointsSource),
     declaration('ApiKeyLifecycleError', 'class'),
     declaration('validateApiKey', 'async function'), declaration('refreshApiUserModelAuthorization', 'async function'),
     ...['isAnthropicApiPath', 'isGeminiApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),

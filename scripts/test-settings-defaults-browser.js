@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Run: node scripts/test-settings-defaults-browser.js (Node >= 22, google-chrome).
+// Run: node scripts/test-settings-defaults-browser.js [--signature-only] (Node >= 22, google-chrome).
 // Fixtures persist only in this process; they do not exercise SQL, auth, or proxy forwarding.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -142,8 +142,9 @@ class CDP {
   }
   async click(selector) {
     await this.evaluate(`document.querySelector(${JSON.stringify(selector)})?.scrollIntoView({block:'center',behavior:'instant'})`);
-    await sleep(180);
-    const point = await this.evaluate(`(() => {const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;const r=e.getBoundingClientRect(),x=(Math.max(0,r.left)+Math.min(innerWidth,r.right))/2,y=(Math.max(0,r.top)+Math.min(innerHeight,r.bottom))/2;const hit=document.elementFromPoint(x,y);return r.width&&r.height&&(hit===e||e.contains(hit))?{x,y}:null;})()`);
+    const pointExpression = `(() => {const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;const r=e.getBoundingClientRect(),x=(Math.max(0,r.left)+Math.min(innerWidth,r.right))/2,y=(Math.max(0,r.top)+Math.min(innerHeight,r.bottom))/2;const hit=document.elementFromPoint(x,y);return r.width&&r.height&&(hit===e||e.contains(hit))?{x,y}:null;})()`;
+    await this.wait(pointExpression);
+    const point = await this.evaluate(pointExpression);
     assert.ok(point, `visible, unobstructed click target: ${selector}`);
     await this.send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point });
     await this.send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point });
@@ -236,7 +237,7 @@ async function main() {
     const reload = async page => {
       await cdp.evaluate('window.__settingsBeforeReload=true');
       await cdp.send('Page.reload');
-      await cdp.wait(`!window.__settingsBeforeReload&&document.readyState==='complete'&&typeof app!=='undefined'&&!!app.user&&document.querySelector('#${page}Page').classList.contains('active')`);
+      await cdp.wait(`!window.__settingsBeforeReload&&document.readyState!=='loading'&&typeof app!=='undefined'&&!!app.user&&document.querySelector('#${page}Page').classList.contains('active')`);
       if (page === 'prompts') await cdp.wait("!!document.querySelector('[data-inject-id=\"1\"] blora-switch')");
       if (page === 'apiKeys') await cdp.wait("document.querySelectorAll('.api-key-card').length===2");
       if (page === 'settings') await cdp.click('[data-settings-category="signature"]');
@@ -248,7 +249,7 @@ async function main() {
       await cdp.send('Page.navigate', { url: 'about:blank' });
       await cdp.wait("location.href==='about:blank'");
       await cdp.send('Page.navigate', { url: `${base}/console#settings` });
-      await cdp.wait("document.readyState==='complete'&&typeof app!=='undefined'&&!!app.user&&!!customElements.get('blora-switch')&&document.querySelector('#settingsPage').classList.contains('active')");
+      await cdp.wait("document.readyState!=='loading'&&typeof app!=='undefined'&&!!app.user&&!!customElements.get('blora-switch')&&document.querySelector('#settingsPage').classList.contains('active')");
       await sleep(500);
       await cdp.click('[data-settings-category="signature"]');
       await browserCheck("document.querySelector('#apiSignatureToggle') instanceof customElements.get('blora-switch')&&!document.querySelector('#apiSignatureToggle').checked&&getComputedStyle(document.querySelector('#signatureTemplateGroup')).display==='none'", 'missing signature field defaults off, real Blora switch');
@@ -281,6 +282,10 @@ async function main() {
         await browserCheck(`app.user.api_signature_enabled===true&&app.user.api_signature_template==='Retry ${kind} ${width}'`, `${kind} failure can retry`);
         await cdp.click('#apiSignatureToggle'); await cdp.click(save);
         await cdp.wait("app.user.api_signature_enabled===false");
+      }
+      if (process.argv.includes('--signature-only')) {
+        console.log(`PASS ${width}px signature flow: ${assertions - before} assertions`);
+        continue;
       }
       await navigate('apiKeys'); await cdp.wait("document.querySelectorAll('.api-key-card').length===2");
       await badgeCheck(1, false); await badgeCheck(2, true);

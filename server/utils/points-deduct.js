@@ -6,7 +6,7 @@
 
 const { pool } = require('../models/database');
 const { getUserQuotaBuffer } = require('./quota-data');
-const { moneyToApiNumber, moneyToString } = require('./money');
+const { compareMoney, moneyToApiNumber, moneyToString } = require('./money');
 
 /**
  * 检查用户所属 Team 的额度规则。
@@ -73,6 +73,17 @@ async function checkQuotaRules(userId, teamId, client = null) {
   return results.length ? results : null;
 }
 
+function hasAvailableQuota(rules) {
+  return Array.isArray(rules) && rules.some(rule => !rule.exceeded);
+}
+
+/** 网关倍率模式只消费普通余额，退款余额不作为积分使用。 */
+async function canConsumePoints({ userId, teamId, balance }, deps = {}) {
+  const check = deps.checkQuotaRules || checkQuotaRules;
+  const rules = teamId ? await check(userId, teamId, deps.client) : null;
+  return hasAvailableQuota(rules) || compareMoney(balance || 0, 0) > 0;
+}
+
 /**
  * 任一规则仍有余量时按额度消费；全部耗尽后按加权 Token 扣积分。
  */
@@ -83,9 +94,9 @@ async function calculatePointsToDeduct(
   if (!teamId) return moneyToApiNumber(moneyToString(pointsCost));
   const check = deps.checkQuotaRules || checkQuotaRules;
   const rules = await check(userId, teamId, deps.client);
-  if (!rules) return moneyToApiNumber(moneyToString(pointsCost));
-  if (rules.some(rule => !rule.exceeded)) return 0;
+  if (!rules?.length) return moneyToApiNumber(moneyToString(pointsCost));
+  if (hasAvailableQuota(rules)) return 0;
   return moneyToApiNumber(moneyToString(Math.max(0, (weightedTokens || 0) / 1000000)));
 }
 
-module.exports = { checkQuotaRules, calculatePointsToDeduct };
+module.exports = { checkQuotaRules, hasAvailableQuota, canConsumePoints, calculatePointsToDeduct };
