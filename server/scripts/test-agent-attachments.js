@@ -137,6 +137,8 @@ async function main() {
       'https://example.com/base'
     );
     assert.deepEqual(links.map(item => item.url), ['https://example.com/a', 'https://b.example/b']);
+    const baseLinks = extractLinks('<base href="https://cdn.example/assets/"><a href="a">A</a>', 'https://example.com/page');
+    assert.equal(baseLinks[0].url, 'https://cdn.example/assets/a');
     ok('HTML links are resolved, deduplicated and filtered');
 
     const server = http.createServer(async (request, response) => {

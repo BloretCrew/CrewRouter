@@ -154,8 +154,8 @@ async function fetchUrlOnce(db, { url, userId, threadId, maxChars = 6000 }) {
       kind = 'document';
       mime = parsed.mime || contentType;
       title = filename;
-    } else if (contentType.startsWith('text/') || contentType === 'application/json'
-        || contentType === 'application/xml' || contentType === 'application/x-yaml') {
+    } else if (contentType.startsWith('text/')
+        || /(?:json|xml|yaml|csv|markdown)/.test(contentType)) {
       const decoded = decodeText(buffer);
       if (decoded === null) throw new FetchError('fetch_unsupported_type', '文本编码无法识别');
       text = decoded.slice(0, MAX_EXTRACTED_CHARS);

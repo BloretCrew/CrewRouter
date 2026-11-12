@@ -65,13 +65,20 @@ function extractLinks(html, baseUrl, { max = 20 } = {}) {
   const source = String(html || '');
   const links = [];
   const seen = new Set();
+  let resolvedBase = baseUrl;
+  const baseMatch = source.match(/<base\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  if (baseMatch) {
+    try {
+      resolvedBase = new URL(decodeEntities(String(baseMatch[1] || baseMatch[2] || baseMatch[3] || '').trim()), baseUrl).toString();
+    } catch (_) { /* 保留页面 URL */ }
+  }
   const pattern = /<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = pattern.exec(source)) && links.length < max) {
     const raw = decodeEntities(String(match[1] || match[2] || match[3] || '').trim());
     if (!raw || raw.startsWith('#') || /^(?:javascript|mailto|tel|data):/i.test(raw)) continue;
     let url;
-    try { url = new URL(raw, baseUrl); } catch (_) { continue; }
+    try { url = new URL(raw, resolvedBase); } catch (_) { continue; }
     if (!/^https?:$/.test(url.protocol)) continue;
     url.hash = '';
     const href = url.toString();
