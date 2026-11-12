@@ -760,7 +760,7 @@ router.post('/manage/approvals/:id', requireAuth, requireAdmin, async (req, res)
       }); } catch (error) { logAgentError('audit after committed approval', error); }
     }
     const stored = await pool.query(
-      `SELECT role, content, tool_calls, tool_call_id, tool_name
+      `SELECT role, content, tool_calls, tool_call_id, tool_name, attachments
        FROM agent_messages WHERE thread_id=$1 ORDER BY id`, [approval.thread_id]);
     const messages = stored.rows.map(normalizeMessage);
     await continueManage(req, res, { thread: { id: approval.thread_id }, messages, model, claim });

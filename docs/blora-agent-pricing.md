@@ -75,10 +75,13 @@ node server/scripts/test-agent-fetch.js
 node server/scripts/test-agent-web-search.js
 node server/scripts/test-agent-transactions.js
 node server/scripts/test-agent-images.js
+node server/scripts/test-agent-e2e.js
 node scripts/test-blora-agent-registration.js
 node scripts/test-blora-agent-pricing-ui.js
 npm run docs:check
 ```
+
+`test-agent-e2e.js` 会在临时 PostgreSQL 与临时端口 `20106` 上启动真实服务，完成密码登录、multipart 上传、Manage SSE、审批落库、附件归属与审计校验；不读取生产配置或数据库。
 
 浏览器回归需要先启动隔离演示站与无头 Chrome：
 

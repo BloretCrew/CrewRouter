@@ -55,6 +55,49 @@ function extractUsage(body) {
  * test-model 不访问上游：先列出模型，再提议把其中一个标成 image。
  */
 function replyAsTestModel(messages) {
+  const wantsPricing = messages.some(message =>
+    message.role === 'user' && /倍率|multiplier|定价|price/i.test(message.content || ''));
+  if (wantsPricing) {
+    const resultFor = name => messages.filter(message => message.tool_name === name).pop();
+    const parse = message => {
+      try { return JSON.parse(message?.content || '{}'); } catch (_) { return {}; }
+    };
+    if (!resultFor('list_model_prices')) {
+      return {
+        content: '我先查看模型价格。',
+        toolCalls: [{ id: 'call_test_prices', name: 'list_model_prices', arguments: {} }]
+      };
+    }
+    const listed = parse(resultFor('list_model_prices'));
+    const model = (listed.models || []).find(item => item.id === 'test-model') || (listed.models || [])[0];
+    if (!resultFor('preview_multiplier_batch')) {
+      return {
+        content: '我按输入价计算一个倍率草案。',
+        toolCalls: [{
+          id: 'call_test_preview',
+          name: 'preview_multiplier_batch',
+          arguments: {
+            basis: 'input',
+            currency: 'CNY',
+            markup: 1.2,
+            changes: [{ model_ref: model?.id || 'test-model', source_price: 2, price_unit: 'per_1m' }]
+          }
+        }]
+      };
+    }
+    const preview = parse(resultFor('preview_multiplier_batch'));
+    if (!resultFor('batch_set_model_multipliers') && preview.write_args) {
+      return {
+        content: '草案已生成，等待你批准。',
+        toolCalls: [{
+          id: 'call_test_write',
+          name: 'batch_set_model_multipliers',
+          arguments: preview.write_args
+        }]
+      };
+    }
+    return { content: '倍率草案已处理。', toolCalls: [] };
+  }
   const list = messages.filter(message => message.tool_name === 'list_models').pop();
   const tagged = messages.some(message => message.tool_name === 'set_model_output_kind');
   if (!list) {
