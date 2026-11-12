@@ -27,6 +27,9 @@ const DEFAULT_CONFIG = Object.freeze({
 });
 
 const rateBuckets = new Map();
+const searchCache = new Map();
+const SEARCH_CACHE_TTL_MS = 5 * 60_000;
+const SEARCH_CACHE_MAX = 100;
 
 class SearchError extends Error {
   constructor(code, message, status = 400) {
@@ -266,6 +269,11 @@ async function searchWeb(db, { query, maxResults, recencyDays, userId } = {}) {
     Math.max(Number(maxResults) || config.search.maxResults, 1),
     MAX_RESULTS
   );
+  const cacheKey = `${config.search.provider}|${results}|${text.toLowerCase()}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL_MS) {
+    return { ...cached.value, cached: true };
+  }
   const adapter = ADAPTERS[config.search.provider] || ADAPTERS.tavily;
   try {
     const items = await adapter({
@@ -275,12 +283,18 @@ async function searchWeb(db, { query, maxResults, recencyDays, userId } = {}) {
       apiKey: config.search.apiKey,
       recencyDays
     });
-    return {
+    const value = {
       provider: config.search.provider,
       query: text,
       results: items.slice(0, results),
       trust: 'untrusted'
     };
+    searchCache.set(cacheKey, { at: Date.now(), value });
+    while (searchCache.size > SEARCH_CACHE_MAX) {
+      const oldest = searchCache.keys().next().value;
+      searchCache.delete(oldest);
+    }
+    return value;
   } catch (error) {
     if (error instanceof SearchError) {
       return { error: error.message, code: error.code };
