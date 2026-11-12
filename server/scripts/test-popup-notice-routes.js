@@ -32,6 +32,8 @@ function loadRoute(relative, relativeDeps) {
     const entry = handlers.find(item => item.method === method && item.url === url);
     if (!entry) throw new Error(`route not found: ${method} ${url}`);
     const req = { params: params || {}, body: body || {}, query: {}, session: session || { user: { id: 1 } } };
+    // requireAuth 在真实应用中把会话用户投影为 req.authUser。
+    req.authUser = req.session.user;
     const res = {
       statusCode: 200,
       status(code) { this.statusCode = code; return this; },

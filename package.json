@@ -99,7 +99,8 @@
     "test:agent-attachments": "node server/scripts/test-agent-attachments.js",
     "test:agent-fetch": "node server/scripts/test-agent-fetch.js",
     "test:agent-web-search": "node server/scripts/test-agent-web-search.js",
-    "test:blora-agent-pricing-ui": "node scripts/test-blora-agent-pricing-ui.js"
+    "test:blora-agent-pricing-ui": "node scripts/test-blora-agent-pricing-ui.js",
+    "test:blora-agent-pricing-browser": "node scripts/test-blora-agent-pricing-browser.js"
   },
   "dependencies": {
     "@bloret-crew/blora-design": "2.1.0",

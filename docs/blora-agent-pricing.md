@@ -76,7 +76,18 @@ node server/scripts/test-agent-web-search.js
 node server/scripts/test-agent-transactions.js
 node server/scripts/test-agent-images.js
 node scripts/test-blora-agent-registration.js
+node scripts/test-blora-agent-pricing-ui.js
 npm run docs:check
 ```
+
+浏览器回归需要先启动隔离演示站与无头 Chrome：
+
+```sh
+node scripts/verify-blora-correction-browser.js --server &
+node scripts/verify-blora-correction-browser.js --chrome &
+node scripts/test-blora-agent-pricing-browser.js
+```
+
+它验证 Manage 附件区、历史消息“重新引用”、审批表格、风险/来源展示、HTML 转义以及 1440px/390px 下无横向溢出。
 
 集成测试使用临时 Unix-socket PostgreSQL 集群和合成文件，不读取生产配置或数据库。
