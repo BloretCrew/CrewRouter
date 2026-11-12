@@ -1,0 +1,271 @@
+/* 策略管理页面：仅布局，颜色/皮肤复用 Blora 与 Liquid Glass token。 */
+
+.blora-admin-policies-page {
+  gap: 16px;
+}
+
+.blora-admin-policies-page.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.policy-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.policy-header h2 {
+  margin: 0 0 4px;
+}
+
+.policy-subtitle,
+.policy-hint {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.policy-header-actions,
+.policy-quick-actions,
+.policy-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.policy-filter-bar .blora-input {
+  min-width: 200px;
+  flex: 1 1 200px;
+}
+
+.policy-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.policy-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.policy-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.policy-stat-label {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.policy-stat-hint {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.policy-overview-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.policy-card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.policy-card h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.policy-pane {
+  padding-top: 14px;
+}
+
+.policy-loading,
+.policy-empty,
+.policy-error {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.policy-error {
+  color: var(--destructive);
+}
+
+.policy-desc {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.policy-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.policy-summary {
+  margin: 10px 0 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.policy-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.policy-editor-grid,
+.policy-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.policy-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.policy-preview {
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+.policy-preview h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.policy-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.policy-preview-result,
+.policy-json {
+  margin: 8px 0 0;
+  padding: 10px;
+  max-height: 260px;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--muted);
+  color: var(--foreground);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.policy-template-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.policy-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.policy-template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+}
+
+.policy-template-card:hover {
+  border-color: var(--primary);
+}
+
+.policy-template-card small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.policy-dimensions {
+  margin: 4px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.policy-dimensions legend {
+  padding: 0 6px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.policy-effective h4 {
+  margin: 12px 0 6px;
+  font-size: 13px;
+}
+
+.policy-effective code {
+  font-size: 11px;
+  word-break: break-all;
+}
+
+@media (max-width: 760px) {
+  .policy-header {
+    flex-direction: column;
+  }
+  .policy-header-actions,
+  .policy-quick-actions {
+    width: 100%;
+  }
+  .policy-filter-bar .blora-input {
+    min-width: 0;
+  }
+  .policy-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .policy-editor-grid,
+  .policy-settings-grid,
+  .policy-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}

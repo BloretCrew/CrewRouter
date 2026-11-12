@@ -63,6 +63,9 @@ const {
   scrubResponsesApiResult,
 } = require('../utils/inject-prompt-scrub');
 const { canConsumePoints, calculatePointsToDeduct } = require('../utils/points-deduct');
+const { suspensionState } = require('../utils/policy/suspension');
+const { recordSuspensionHit } = require('../utils/policy/hit-recorder');
+const { policyGate } = require('../middleware/policy-gate');
 const { recordUsageAndDeduct } = require('../utils/balance');
 const { sha256Hex } = require('../utils/key-hash');
 const {
@@ -518,6 +521,9 @@ class ApiKeyLifecycleError extends Error {
 function resolveModelQueueForRequest(apiUser, req, metadata = {}) {
   const meta = clientMetaFromReq(req, metadata);
   const requestSource = normalizeRequestSource(meta.requestSource);
+  if (req?.policyDecision?.modelQueueOverride?.length) {
+    return { queue: req.policyDecision.modelQueueOverride, requestSource, harnessOverride: false, policyOverride: true };
+  }
   const harnessMap = apiUser?.harnessModels && typeof apiUser.harnessModels === 'object'
     ? apiUser.harnessModels
     : {};
@@ -1003,6 +1009,14 @@ async function adjustBillingCost(weightedTokens, pointsCost, meta) {
   }
 }
 
+// 策略下发的 RPM/TPM 与用户/模型限制取较小值。
+function effectiveRateLimit(baseLimit, policyLimit) {
+  const base = Number(baseLimit) || 0;
+  const policy = Number(policyLimit) || 0;
+  if (base > 0 && policy > 0) return Math.min(base, policy);
+  return base > 0 ? base : policy;
+}
+
 // 速率限制检查
 function checkRateLimit(key, rpmLimit, tpmLimit, tokenCount) {
   const now = Date.now();
@@ -1166,6 +1180,26 @@ function normalizeMessageRole(role) {
 }
 
 // 验证API密钥中间件（带缓存优化；按路径返回 OpenAI/Anthropic 标准错误形）
+function rejectSuspendedApiUser(req, sendAuthError, apiUser, suspended) {
+  const meta = clientMetaFromReq(req);
+  recordSuspensionHit({
+    actor: { userId: apiUser.userId, teamId: apiUser.teamId, keyId: apiUser.keyId },
+    identity: { harness: meta.requestSource, userAgent: meta.userAgent, protocol: null, method: req.method, path: req.path },
+    request: { model: req.body?.model || null },
+    network: { ip: clientIp(req) },
+    semantics: { type: null },
+  }, {
+    requestId: req._upstreamAttemptContext?.requestId || null,
+    reason: 'member_suspended',
+    until: suspended.until ? suspended.until.toISOString() : null,
+  });
+  return sendAuthError(403, 'permission_error', '账号已被团队管理员暂停', {
+    code: 'member_suspended',
+    suspended_until: suspended.until ? suspended.until.toISOString() : null,
+    suspended_reason: suspended.reason || '',
+  });
+}
+
 async function validateApiKey(req, res, next, boundKey = null) {
   let apiKey = req.headers['x-api-key'] || req.headers['x-goog-api-key'];
   // 支持 Authorization: Bearer xxx 格式
@@ -1232,10 +1266,25 @@ async function validateApiKey(req, res, next, boundKey = null) {
         return sendAuthError(403, 'authentication_error', 'API key is disabled. Enable it in your console to resume access.', { code: 'key_disabled' });
       }
 
-      // 余额与成员关系每次重新读取，不使用凭据缓存中的余额。
-      const membership = await pool.query('SELECT team_id, balance FROM users WHERE id = $1', [cached.userId]);
-      cached.teamId = membership.rows[0]?.team_id || null;
-      cached.balance = membership.rows[0]?.balance || 0;
+      // 余额、成员关系与策略字段每次重新读取，不使用凭据缓存中的旧值。
+      const membership = await pool.query(
+        `SELECT team_id, balance, is_admin, tags, timezone, policy_bypass, policy_bypass_until,
+                suspended_at, suspended_until, suspended_reason, suspended_scope
+           FROM users WHERE id = $1`,
+        [cached.userId]
+      );
+      const member = membership.rows[0] || {};
+      cached.teamId = member.team_id || null;
+      cached.balance = member.balance || 0;
+      cached.isAdmin = member.is_admin === true;
+      cached.tags = Array.isArray(member.tags) ? member.tags : [];
+      cached.timezone = member.timezone || null;
+      cached.policyBypass = member.policy_bypass === true;
+      cached.policyBypassUntil = member.policy_bypass_until || null;
+      const suspended = suspensionState(member);
+      if (suspended.suspended) {
+        return rejectSuspendedApiUser(req, sendAuthError, cached, suspended);
+      }
       if (!await canConsumePoints({ userId: cached.userId, teamId: cached.teamId, balance: cached.balance })) {
         notifyUser(cached.userId, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '配额已用尽且积分不足，请及时充值或调整额度。', { source: 'api_key_validation' }).catch(() => {});
         return sendAuthError(429, 'insufficient_quota', '配额已用尽且积分不足', { code: 'insufficient_quota' });
@@ -1258,7 +1307,9 @@ async function validateApiKey(req, res, next, boundKey = null) {
     const result = await pool.query(
       `SELECT ak.*, u.id as user_id, u.username, u.balance, u.team_id,
               u.rate_limit_rpm as user_rate_limit_rpm, u.rate_limit_tpm as user_rate_limit_tpm,
-              u.api_signature_enabled, u.api_signature_template
+              u.api_signature_enabled, u.api_signature_template,
+              u.is_admin, u.tags, u.timezone, u.policy_bypass, u.policy_bypass_until,
+              u.suspended_at, u.suspended_until, u.suspended_reason, u.suspended_scope
        FROM api_keys ak
        JOIN users u ON ak.user_id = u.id
        WHERE ${boundKey ? 'ak.id = $1 AND ak.user_id = $2' : 'ak.key_value = $1 OR ak.key_hash = $2'}`,
@@ -1287,6 +1338,15 @@ async function validateApiKey(req, res, next, boundKey = null) {
       return sendAuthError(403, 'authentication_error', 'API key is disabled. Enable it in your console to resume access.', { code: 'key_disabled' });
     }
 
+    const suspended = suspensionState(keyData);
+    if (suspended.suspended) {
+      return rejectSuspendedApiUser(req, sendAuthError, {
+        userId: keyData.user_id,
+        teamId: keyData.team_id,
+        keyId: keyData.id,
+      }, suspended);
+    }
+
     if (!await canConsumePoints({ userId: keyData.user_id, teamId: keyData.team_id, balance: keyData.balance })) {
       notifyUser(keyData.user_id, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, '配额已用尽且积分不足，请及时充值或调整额度。', { source: 'api_key_validation' }).catch(() => {});
       return sendAuthError(429, 'insufficient_quota', '配额已用尽且积分不足', { code: 'insufficient_quota' });
@@ -1305,6 +1365,13 @@ async function validateApiKey(req, res, next, boundKey = null) {
       balance: keyData.balance,
       userRateLimitRpm: keyData.user_rate_limit_rpm || 0,
       userRateLimitTpm: keyData.user_rate_limit_tpm || 0,
+      isAdmin: keyData.is_admin === true,
+      tags: Array.isArray(keyData.tags) ? keyData.tags : [],
+      timezone: keyData.timezone || null,
+      policyBypass: keyData.policy_bypass === true,
+      policyBypassUntil: keyData.policy_bypass_until || null,
+      keyCreatedAt: keyData.created_at || null,
+      keyShared: false,
       customModelName: keyData.custom_model_name || 'claude-fable-5',
       currentModelId,
       modelQueue,
@@ -3009,7 +3076,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 // OpenAI 兼容: /v1/chat/completions 和 /api/chat/completions
 // 双鉴权：Bearer crh_ 前缀走自有 OAuth access token（scope 需 gateway:invoke），
 // 其余凭证原样回落 validateApiKey，老路径零影响
-router.post('/chat/completions', oauthBearer, handleChatCompletion);
+router.post('/chat/completions', oauthBearer, policyGate, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
   if (!await refreshApiUserForRequest(req, res)) return;
@@ -3190,8 +3257,9 @@ async function handleChatCompletion(req, res) {
     // 速率限制检查（模型级别 + 用户级别，取较严格的值）
     const modelRpm = modelConfig.rate_limit_rpm || 0;
     const modelTpm = modelConfig.rate_limit_tpm || 0;
-    const userRpm = req.apiUser.userRateLimitRpm || 0;
-    const userTpm = req.apiUser.userRateLimitTpm || 0;
+    const policyRateLimits = req.policyRateLimits || {};
+    const userRpm = effectiveRateLimit(req.apiUser.userRateLimitRpm, policyRateLimits.rpm);
+    const userTpm = effectiveRateLimit(req.apiUser.userRateLimitTpm, policyRateLimits.tpm);
 
     const effectiveRpm = (modelRpm > 0 && userRpm > 0) ? Math.min(modelRpm, userRpm) : (modelRpm || userRpm);
     const effectiveTpm = (modelTpm > 0 && userTpm > 0) ? Math.min(modelTpm, userTpm) : (modelTpm || userTpm);
@@ -3622,7 +3690,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
 }
 
 // OpenAI 兼容: /v1/models (CrewRouter: 返回配置的模型列表 + fusion 固定)
-router.get('/models', oauthBearer, async (req, res) => {
+router.get('/models', oauthBearer, policyGate, async (req, res) => {
   try {
     // 读取系统设置中配置的模型列表
     const settingsResult = await pool.query("SELECT value FROM settings WHERE key = 'model_list'");
@@ -3684,7 +3752,7 @@ router.get('/models', oauthBearer, async (req, res) => {
 });
 
 // Anthropic 兼容: /v1/messages 和 /api/messages
-router.post('/messages', oauthBearer, handleAnthropicMessage);
+router.post('/messages', oauthBearer, policyGate, handleAnthropicMessage);
 
 // Claude Code auto 模式服务端安全检查：请求携带 safeguards 字段与 dangerous-tool-use beta。
 // 只有原生 Anthropic 上游能原样承载；其余上游按官方契约返回点名 safeguards 的 400，
@@ -3912,8 +3980,9 @@ async function handleAnthropicMessage(req, res) {
 
     const modelRpm = modelConfig.rate_limit_rpm || 0;
     const modelTpm = modelConfig.rate_limit_tpm || 0;
-    const userRpm = req.apiUser.userRateLimitRpm || 0;
-    const userTpm = req.apiUser.userRateLimitTpm || 0;
+    const policyRateLimits = req.policyRateLimits || {};
+    const userRpm = effectiveRateLimit(req.apiUser.userRateLimitRpm, policyRateLimits.rpm);
+    const userTpm = effectiveRateLimit(req.apiUser.userRateLimitTpm, policyRateLimits.tpm);
 
     const effectiveRpm = (modelRpm > 0 && userRpm > 0) ? Math.min(modelRpm, userRpm) : (modelRpm || userRpm);
     const effectiveTpm = (modelTpm > 0 && userTpm > 0) ? Math.min(modelTpm, userTpm) : (modelTpm || userTpm);
@@ -6063,7 +6132,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 }
 
 // OpenAI 兼容: /v1/responses 和 /api/responses
-router.post('/responses', oauthBearer, handleResponses);
+router.post('/responses', oauthBearer, policyGate, handleResponses);
 
 async function handleResponses(req, res) {
   if (!await refreshApiUserForRequest(req, res)) return;
@@ -6148,8 +6217,9 @@ async function handleResponses(req, res) {
     const upModel = cfg.upstream_model_id || cfg.id;
     const modelRpm = cfg.rate_limit_rpm || 0;
     const modelTpm = cfg.rate_limit_tpm || 0;
-    const userRpm = req.apiUser.userRateLimitRpm || 0;
-    const userTpm = req.apiUser.userRateLimitTpm || 0;
+    const policyRateLimits = req.policyRateLimits || {};
+    const userRpm = effectiveRateLimit(req.apiUser.userRateLimitRpm, policyRateLimits.rpm);
+    const userTpm = effectiveRateLimit(req.apiUser.userRateLimitTpm, policyRateLimits.tpm);
     const effectiveRpm = (modelRpm > 0 && userRpm > 0) ? Math.min(modelRpm, userRpm) : (modelRpm || userRpm);
     const effectiveTpm = (modelTpm > 0 && userTpm > 0) ? Math.min(modelTpm, userTpm) : (modelTpm || userTpm);
 
@@ -7093,8 +7163,9 @@ function sendBridgeError(res, clientDialect, status, message, options = {}) {
 function checkBridgeRateLimits(req, modelConfig, upstreamModel, estimatedTokens) {
   const modelRpm = modelConfig.rate_limit_rpm || 0;
   const modelTpm = modelConfig.rate_limit_tpm || 0;
-  const userRpm = req.apiUser.userRateLimitRpm || 0;
-  const userTpm = req.apiUser.userRateLimitTpm || 0;
+  const policyRateLimits = req.policyRateLimits || {};
+  const userRpm = effectiveRateLimit(req.apiUser.userRateLimitRpm, policyRateLimits.rpm);
+  const userTpm = effectiveRateLimit(req.apiUser.userRateLimitTpm, policyRateLimits.tpm);
   const effectiveRpm = (modelRpm > 0 && userRpm > 0) ? Math.min(modelRpm, userRpm) : (modelRpm || userRpm);
   const effectiveTpm = (modelTpm > 0 && userTpm > 0) ? Math.min(modelTpm, userTpm) : (modelTpm || userTpm);
   if (effectiveRpm > 0) {

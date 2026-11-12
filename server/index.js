@@ -2600,6 +2600,9 @@ app.get('/api/csrf-token', csrfTokenRoute);
 app.use(csrfProtection);
 app.use(['/api', '/v1', '/v1beta'], require('./middleware/api-key-permissions').requireApiKeyPermission);
 
+// Team Edition 成员暂停：网关之外的控制台 API 统一拦截（白名单见 middleware）。
+app.use('/api', require('./middleware/suspension-gate').suspensionGate);
+
 // 请求日志中间件
 const apiKeyUserCache = new Map(); // key -> { username, ts }
 const KEY_CACHE_TTL = 60_000; // 1 分钟缓存
@@ -3061,6 +3064,9 @@ async function runPendingMigrations() {
     ensureProductsTable,
     ensureQuotaDataTable,
     ensureTeamsTables,
+    async function ensurePolicyPlatformSchema() {
+      await require('./utils/policy/schema').ensurePolicySchema(pool);
+    },
     ensureUserModelLibraryOrderTables,
     ensureUserModelLibraryHiddenTables,
     ensureUserModelLibraryStarredTables,

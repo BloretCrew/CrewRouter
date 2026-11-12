@@ -17,6 +17,7 @@ const PERSONAL_CAPABILITIES = Object.freeze({
   auditLogs: true,
   teamProjects: false,
   teamAuditLogs: false,
+  teamPolicies: false,
 });
 const TEAM_ONLY_CAPABILITIES = Object.freeze({
   ai: true,
@@ -36,6 +37,7 @@ const TEAM_ONLY_CAPABILITIES = Object.freeze({
   auditLogs: true,
   teamProjects: true,
   teamAuditLogs: true,
+  teamPolicies: true,
 });
 
 function normalizeEdition(value) {
@@ -140,4 +142,29 @@ function requireTeamEdition(getEdition) {
   };
 }
 
-module.exports = { normalizeEdition, normalizeRuntime, getCapabilities, metadata, loadPersistedEdition, initializeEdition, resolveEdition, inspectLegacyData, requireTeamEdition };
+let cachedEdition = null;
+let cachedEditionAt = 0;
+const EDITION_CACHE_TTL_MS = 60_000;
+
+/** 热路径使用的 Team 版判断，60 秒缓存。 */
+async function isTeamEditionCached() {
+  if (cachedEdition != null && Date.now() - cachedEditionAt < EDITION_CACHE_TTL_MS) {
+    return cachedEdition === 'team';
+  }
+  try {
+    const { pool } = require('../models/database');
+    cachedEdition = await loadPersistedEdition(pool);
+    cachedEditionAt = Date.now();
+  } catch (_) {
+    cachedEdition = null;
+    cachedEditionAt = Date.now();
+  }
+  return cachedEdition === 'team';
+}
+
+function invalidateEditionCache() {
+  cachedEdition = null;
+  cachedEditionAt = 0;
+}
+
+module.exports = { normalizeEdition, normalizeRuntime, getCapabilities, metadata, loadPersistedEdition, initializeEdition, resolveEdition, inspectLegacyData, requireTeamEdition, isTeamEditionCached, invalidateEditionCache };

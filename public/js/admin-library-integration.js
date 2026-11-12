@@ -41,7 +41,7 @@
   };
 
   proto._adminPageIds = function () {
-    return new Set(['adminModelLibrary', 'adminStats', 'adminUsers', 'adminModels', 'adminProviders', 'adminSettings', 'adminTeams', 'adminUserGroups', 'adminErrorLogs', 'adminAuditLogs', 'adminPrompts', 'adminPlugins']);
+    return new Set(['adminModelLibrary', 'adminStats', 'adminUsers', 'adminPolicies', 'adminModels', 'adminProviders', 'adminSettings', 'adminTeams', 'adminUserGroups', 'adminErrorLogs', 'adminAuditLogs', 'adminPrompts', 'adminPlugins']);
   };
   proto._parseAdminHash = function (hash) {
     const parts = String(hash || '').replace(/^#/, '').split('/');
@@ -65,7 +65,7 @@
       if (manager !== 'teams' || !options.teamId) await this.openLibraryManager(manager);
       return;
     }
-    if (this._unifiedProviders && ['adminStats', 'adminUsers', 'adminTeams', 'adminUserGroups', 'adminAuditLogs'].includes(page)) page = 'adminModelLibrary';
+    if (this._unifiedProviders && ['adminStats', 'adminUsers', 'adminPolicies', 'adminTeams', 'adminUserGroups', 'adminAuditLogs'].includes(page)) page = 'adminModelLibrary';
     if (embedded && !['adminProviders', 'adminModels'].includes(page)) page = 'adminModelLibrary';
     this.closeLibraryManager(false);
     this._libraryMemberSeq = (this._libraryMemberSeq || 0) + 1;

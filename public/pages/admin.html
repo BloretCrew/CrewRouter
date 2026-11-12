@@ -54,6 +54,7 @@
   <link rel="stylesheet" href="/css/liquid-glass.css?v=lg-29">
   <link rel="stylesheet" href="/css/admin-model-library-console.css?v=lg-25">
   <link rel="stylesheet" href="/css/admin-model-library.css?v=lg-27">
+  <link rel="stylesheet" href="/css/admin-policies-blora.css?v=policy-20261112">
   <script src="/js/liquid-glass.js?v=lg-25" defer></script>
   <link rel="stylesheet" href="/css/popup-notices.css?v=lg-7">
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
@@ -117,6 +118,10 @@
           <div class="nav-item" data-page="adminUsers" data-capability="multiUser">
             <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="用户管理">用户管理</span></span>
+          </div>
+          <div class="nav-item" data-page="adminPolicies" data-capability="teamPolicies">
+            <img src="https://img.bloret.net/SF/shield.lefthalf.filled?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="shield.lefthalf.filled" style="display:inline-block;vertical-align:middle;">
+            <span><span data-i18n="策略">策略</span></span>
           </div>
           <div class="nav-item" data-page="adminModelLibrary">
             <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cpu">
@@ -215,6 +220,31 @@
             <!-- 用户列表将通过JS动态加载 -->
           </div>
     </div>
+      </div>
+
+      <!-- 策略页面 -->
+      <div id="adminPoliciesPage" class="page lg-page blora-admin-policies-page">
+        <div class="content-section policy-header">
+          <div>
+            <h2><span data-i18n="策略">策略</span></h2>
+            <p class="policy-subtitle"><span data-i18n="按成员、Team、客户端、时间、用量、网络与请求特征管理访问策略。">按成员、Team、客户端、时间、用量、网络与请求特征管理访问策略。</span></p>
+          </div>
+          <div class="policy-header-actions">
+            <span id="policyModeBadge" class="blora-badge" data-variant="info">强制执行</span>
+            <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.policyApp?.openTemplatePicker()"><span data-i18n="从模板创建">从模板创建</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.policyApp?.openEditor()"><span data-i18n="新建策略">新建策略</span></button>
+          </div>
+        </div>
+        <div class="content-section">
+          <blora-tabs id="policyTabs" value="overview">
+            <blora-tab label="概览" value="overview"><div id="policyOverviewPane" class="policy-pane"></div></blora-tab>
+            <blora-tab label="策略列表" value="policies"><div id="policyPoliciesPane" class="policy-pane"></div></blora-tab>
+            <blora-tab label="成员策略" value="members"><div id="policyMembersPane" class="policy-pane"></div></blora-tab>
+            <blora-tab label="客户端管控" value="clients"><div id="policyClientsPane" class="policy-pane"></div></blora-tab>
+            <blora-tab label="命中记录" value="hits"><div id="policyHitsPane" class="policy-pane"></div></blora-tab>
+            <blora-tab label="全局设置" value="settings"><div id="policySettingsPane" class="policy-pane"></div></blora-tab>
+          </blora-tabs>
+        </div>
       </div>
 
       <!-- Team 管理页面 -->
@@ -2700,6 +2730,9 @@
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script type="module" src="/js/model-trace.js?v=lg-21"></script>
+  <script src="/js/time-format.js?v=policy-20261112"></script>
+  <script src="/js/suspension-banner.js?v=policy-20261112"></script>
+  <script src="/js/admin-policies.js?v=policy-20261112"></script>
   <script src="/js/admin.js?v=oauth-clients-20261109"></script>
   <script src="/js/admin-library-i18n.js?v=admin-library-20261014"></script>
   <script src="/js/admin-library-console-view.js?v=lg-25"></script>

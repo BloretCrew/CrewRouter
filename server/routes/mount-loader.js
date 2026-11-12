@@ -16,6 +16,7 @@ const routeModules = {
   './admin-custom-instructions': () => require('./admin-custom-instructions'),
   './update': () => require('./update'),
   './teams': () => require('./teams'),
+  './admin-policies': () => require('./admin-policies'),
   './model-trace': () => require('./model-trace'),
   './user': () => require('./user'),
   './balance-alert': () => require('./balance-alert'),

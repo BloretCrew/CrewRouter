@@ -3,6 +3,7 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const { oauthBearer } = require('../middleware/oauth-bearer');
+const { policyGate } = require('../middleware/policy-gate');
 const api = require('./api');
 const googleError = require('../utils/google-error');
 const { requestMiddleware: quotaRequestMiddleware } = require('../utils/quota-request-context');
@@ -50,9 +51,9 @@ router.use((req, res, next) => {
 
 // Gemini generateContent family. Express 4 wildcard keeps `models/...` and
 // `tunedModels/...` model names (including their `:` method suffix) intact.
-router.get('/models', oauthBearer, api.handleGeminiModels);
-router.get('/models/*', oauthBearer, api.handleGeminiModelGet);
-router.post('/models/*', oauthBearer, async (req, res) => {
+router.get('/models', oauthBearer, policyGate, api.handleGeminiModels);
+router.get('/models/*', oauthBearer, policyGate, api.handleGeminiModelGet);
+router.post('/models/*', oauthBearer, policyGate, async (req, res) => {
   const rawTarget = String(req.params[0] || '');
   let target = rawTarget;
   try { target = decodeURIComponent(rawTarget); } catch { /* keep raw */ }
@@ -70,9 +71,9 @@ router.post('/models/*', oauthBearer, async (req, res) => {
 });
 
 // Interactions API (v1beta and the stable v1 alias both mount this router).
-router.post('/interactions', oauthBearer, api.handleInteractionsCreate);
-router.get('/interactions/:id', oauthBearer, api.handleInteractionsGet);
-router.delete('/interactions/:id', oauthBearer, api.handleInteractionsDelete);
-router.post('/interactions/:id/cancel', oauthBearer, api.handleInteractionsCancel);
+router.post('/interactions', oauthBearer, policyGate, api.handleInteractionsCreate);
+router.get('/interactions/:id', oauthBearer, policyGate, api.handleInteractionsGet);
+router.delete('/interactions/:id', oauthBearer, policyGate, api.handleInteractionsDelete);
+router.post('/interactions/:id/cancel', oauthBearer, policyGate, api.handleInteractionsCancel);
 
 module.exports = router;

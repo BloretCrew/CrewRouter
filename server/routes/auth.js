@@ -6,6 +6,7 @@ const Logger = require('../logger');
 const { ACTIONS, logAction } = require('../utils/audit-log');
 const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
 const { loadPersistedEdition } = require('../utils/instance-edition');
+const { suspensionState } = require('../utils/policy/suspension');
 
 const loginRateLimits = new Map();
 const LOGIN_LIMIT = 5;
@@ -362,20 +363,33 @@ router.get('/me', async (req, res) => {
   }
   try {
     const result = await pool.query(
-      'SELECT password_hash FROM users WHERE id = $1',
+      `SELECT password_hash, suspended_at, suspended_until, suspended_reason, suspended_scope,
+              policy_bypass, policy_bypass_until
+         FROM users WHERE id = $1`,
       [req.session.user.id]
     );
     if (result.rows.length === 0) {
       return res.status(401).json({ error: '未登录' });
     }
+    const row = result.rows[0];
     const needsPasswordSetup = process.env.CR_RUNTIME === 'desktop-local'
       ? false
-      : isPasswordMissing(result.rows[0].password_hash);
+      : isPasswordMissing(row.password_hash);
     // 同步 session 标记
     if (req.session.user.needsPasswordSetup !== needsPasswordSetup) {
       req.session.user.needsPasswordSetup = needsPasswordSetup;
     }
-    res.json({ ...req.session.user, needsPasswordSetup });
+    const suspended = suspensionState(row);
+    res.json({
+      ...req.session.user,
+      needsPasswordSetup,
+      suspended: suspended.suspended,
+      suspended_until: suspended.until ? suspended.until.toISOString() : null,
+      suspended_reason: suspended.reason || '',
+      suspended_scope: suspended.scope || 'all',
+      policy_bypass: row.policy_bypass === true,
+      policy_bypass_until: row.policy_bypass_until ? new Date(row.policy_bypass_until).toISOString() : null,
+    });
   } catch (error) {
     Logger.error('[me] 错误:', error);
     res.json({ ...req.session.user, needsPasswordSetup: !!req.session.user.needsPasswordSetup });

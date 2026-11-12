@@ -96,6 +96,25 @@ const ACTIONS = {
   ADMIN_PROVIDER_TAG: 'admin.provider_tag',
   ADMIN_POPUP_NOTICE: 'admin.popup_notice',
 
+  // 策略平台
+  POLICY_CREATE: 'policy.create',
+  POLICY_UPDATE: 'policy.update',
+  POLICY_DELETE: 'policy.delete',
+  POLICY_PUBLISH: 'policy.publish',
+  POLICY_ROLLBACK: 'policy.rollback',
+  POLICY_BULK: 'policy.bulk',
+  POLICY_IMPORT: 'policy.import',
+  POLICY_SETTINGS: 'policy.settings',
+  POLICY_EXEMPTION_CREATE: 'policy.exemption_create',
+  POLICY_EXEMPTION_REVOKE: 'policy.exemption_revoke',
+  POLICY_APPEAL_DECIDE: 'policy.appeal_decide',
+  POLICY_APPROVAL_DECIDE: 'policy.approval_decide',
+  POLICY_MEMBER_SUSPEND: 'policy.member_suspend',
+  POLICY_MEMBER_RESUME: 'policy.member_resume',
+  POLICY_MEMBER_BYPASS: 'policy.member_bypass',
+  POLICY_CHANNEL_UPDATE: 'policy.channel_update',
+  POLICY_KILL_SWITCH: 'policy.kill_switch',
+
   // 插件
   PLUGIN_INSTALL: 'plugin.install',
   PLUGIN_UNINSTALL: 'plugin.uninstall',

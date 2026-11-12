@@ -175,7 +175,9 @@ class AdminApp {
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseAdminHash(location.hash);
     const teamPages = new Set(['adminTeams', 'adminUserGroups', 'adminAuditLogs']);
-    const safePage = teamPages.has(restored.page) && this._instance?.capabilities?.teamAdmin === false
+    const blockedByEdition = (teamPages.has(restored.page) && this._instance?.capabilities?.teamAdmin === false)
+      || (restored.page === 'adminPolicies' && this._instance?.capabilities?.teamPolicies === false);
+    const safePage = blockedByEdition
       ? (this._unifiedProviders ? 'adminProviders' : 'adminStats') : restored.page;
     if (safePage !== restored.page) this._writeAdminHash(safePage, { replaceHash: true });
     const startPage = safePage || (this._unifiedProviders ? 'adminProviders' : 'adminStats');
@@ -208,7 +210,7 @@ class AdminApp {
   /** 支持的管理后台页面 id */
   _adminPageIds() {
     return new Set([
-      'adminStats', 'adminUsers', 'adminModels', 'adminProviders',
+      'adminStats', 'adminUsers', 'adminPolicies', 'adminModels', 'adminProviders',
       'adminSettings', 'adminTeams', 'adminUserGroups',
       'adminErrorLogs',
       'adminAuditLogs'
@@ -553,9 +555,10 @@ class AdminApp {
   }
 
   async navigateTo(page, options = {}) {
-    if (this._unifiedProviders && ['adminStats', 'adminUsers', 'adminTeams', 'adminUserGroups', 'adminAuditLogs'].includes(page)) page = 'adminProviders';
+    if (this._unifiedProviders && ['adminStats', 'adminUsers', 'adminPolicies', 'adminTeams', 'adminUserGroups', 'adminAuditLogs'].includes(page)) page = 'adminProviders';
     if (document.documentElement.classList.contains('embedded-provider-manager') && !['adminProviders', 'adminModels'].includes(page)) page = 'adminProviders';
     if (page === 'adminUserGroups') page = 'adminTeams';
+    if (page !== 'adminPolicies') this.policyApp?.onHide?.();
     // 兼容旧「仪表盘」入口，统一到统计信息
     if (page === 'adminDashboard') page = this._unifiedProviders ? 'adminProviders' : 'adminStats';
 
@@ -574,6 +577,7 @@ class AdminApp {
     // 更新页面标题
     const titles = {
       'adminUsers': t('用户管理'),
+      'adminPolicies': t('策略'),
       'adminModels': t('模型管理'),
       'adminProviders': t('供应商管理'),
       'adminStats': t('统计信息'),
@@ -691,6 +695,10 @@ class AdminApp {
       case 'adminUsers':
         this.userPage = 0;
         await this.loadUsers();
+        break;
+      case 'adminPolicies':
+        if (!this.policyApp) this.policyApp = new AdminPoliciesApp(this);
+        await this.policyApp.mount(document.getElementById('adminPoliciesPage'));
         break;
       case 'adminModels':
         await this.loadModels({ resetPage: true, clearSelection: true });
