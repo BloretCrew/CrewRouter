@@ -26,6 +26,19 @@ new_multiplier = 上游每百万 Token 价格 × 加价系数 × 汇率
 - 单倍率无法同时精确表达输入价、输出价和缓存价。Agent 必须让管理员选择 `basis`（`input`/`output`/`single`），并在预览中标记 `output_price_mismatch`、`cache_price_mismatch` 等风险。
 - 只修改 `model_multiplier`，不修改 `completion_multiplier`；后者当前不参与计费。
 
+## 资料工具
+
+| 工具 | 作用 |
+| --- | --- |
+| `web_search` | 通过已配置的搜索服务查资料，返回标题、链接和摘要 |
+| `fetch_url` | 抓取单个网页/文本/PDF，保存为附件并返回预览与页面链接 |
+| `fetch_urls` | 一次抓取最多 3 个链接，适合从搜索结果批量读取候选资料 |
+| `list_attachments` | 列出当前对话的附件元数据 |
+| `search_attachments` | 在大文档/价格表中按关键词定位片段，返回附件 id、行号和上下文 |
+| `read_attachment` | 按 offset/limit 分页读取附件正文 |
+
+抓取失败会按 URL 单独返回错误；网络超时/5xx 自动重试一次，4xx 不重试。网页正文中提取的链接会随 `fetch_url` 结果返回，可直接交给 `fetch_urls` 继续读取。
+
 ## 草案结构
 
 `preview_multiplier_batch` 返回：

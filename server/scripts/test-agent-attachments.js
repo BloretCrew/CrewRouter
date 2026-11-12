@@ -18,7 +18,8 @@ const {
   toMessageAttachments
 } = require('../utils/agent-attachments');
 const { TEST_IMAGE_PNG } = require('../utils/agent-images');
-const { htmlToText } = require('../utils/html-text');
+const { htmlToText, extractLinks } = require('../utils/html-text');
+const { executeTool } = require('../utils/agent-tools');
 
 let passed = 0;
 function ok(name) {
@@ -131,6 +132,13 @@ async function main() {
     assert.doesNotMatch(parsedHtml.text, /bad\(\)/);
     ok('HTML is reduced to text without scripts');
 
+    const links = extractLinks(
+      '<a href="/a">A</a><a href="javascript:alert(1)">X</a><a href="/a#frag">A2</a><a href="https://b.example/b">B</a>',
+      'https://example.com/base'
+    );
+    assert.deepEqual(links.map(item => item.url), ['https://example.com/a', 'https://b.example/b']);
+    ok('HTML links are resolved, deduplicated and filtered');
+
     const server = http.createServer(async (request, response) => {
       try {
         const upload = await readAgentUploads(request);
@@ -175,6 +183,15 @@ async function main() {
     assert.match(attachmentManifest(uploads.attachments), /prices\.csv/);
     assert.equal(toMessageAttachments(uploads.attachments).length, 2);
     ok('uploads are parsed and stored');
+
+    const search = await executeTool(pool, {
+      name: 'search_attachments', arguments: { query: 'GPT-4.1' }
+    }, { userId: 1, threadId: 1 });
+    assert.equal(search.matches.length, 1);
+    assert.equal(search.matches[0].attachment_id, uploads.attachments[0].id);
+    assert.match(search.matches[0].snippet, /GPT-4\.1/);
+    assert.equal(search.trust, 'untrusted');
+    ok('attachments can be searched by keyword before paging');
 
     const bound = await bindAttachments(pool, {
       userId: 1,

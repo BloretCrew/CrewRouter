@@ -4,7 +4,7 @@ const { validateUrl } = require('./url-validator');
 const { pinnedFetchValidated } = require('../proxy-pool');
 const { decodeText, extractDocumentText, sniffImageMime, MAX_EXTRACTED_CHARS } = require('./document-extract');
 const { storeAttachment } = require('./agent-attachments');
-const { htmlToText } = require('./html-text');
+const { htmlToText, extractLinks } = require('./html-text');
 
 const MAX_REDIRECTS = 5;
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -37,6 +37,7 @@ async function fetchWithRedirects(rawUrl, signal) {
       redirect: 'manual',
       headers: {
         'User-Agent': 'CrewRouter-Agent/1.0',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         Accept: 'text/html,application/xhtml+xml,application/pdf,text/plain,application/json,text/csv;q=0.9,*/*;q=0.5'
       }
     });
@@ -100,7 +101,7 @@ function isOfficeType(mime, url) {
 /**
  * 抓取链接并保存为当前对话附件。返回给 Agent 的预览。
  */
-async function fetchUrlAsAttachment(db, { url, userId, threadId, maxChars = 6000 }) {
+async function fetchUrlOnce(db, { url, userId, threadId, maxChars = 6000 }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new FetchError('fetch_timeout', '抓取超时', 504)), TIMEOUT_MS);
   try {
@@ -117,6 +118,7 @@ async function fetchUrlAsAttachment(db, { url, userId, threadId, maxChars = 6000
     let text = '';
     let truncated = false;
     let title = '';
+    let links = [];
     let meta = { url, final_url: finalUrl.toString(), content_type: contentType };
 
     const imageMime = sniffImageMime(buffer);
@@ -140,6 +142,7 @@ async function fetchUrlAsAttachment(db, { url, userId, threadId, maxChars = 6000
       text = parsed.text;
       truncated = parsed.truncated;
       title = parsed.title;
+      links = extractLinks(decoded, finalUrl.toString(), { max: 20 });
       mime = 'text/html';
     } else if (isOfficeType(contentType, finalUrl.toString())) {
       const filename = finalUrl.pathname.split('/').pop() || 'document';
@@ -176,6 +179,7 @@ async function fetchUrlAsAttachment(db, { url, userId, threadId, maxChars = 6000
         text = parsed.text;
         truncated = parsed.truncated;
         title = parsed.title;
+        links = extractLinks(decoded, finalUrl.toString(), { max: 20 });
         mime = 'text/html';
       } else {
         text = decoded.slice(0, MAX_EXTRACTED_CHARS);
@@ -211,6 +215,7 @@ async function fetchUrlAsAttachment(db, { url, userId, threadId, maxChars = 6000
       chars: text.length,
       truncated,
       preview,
+      links,
       warnings: [...new Set(warnings)],
       trust: 'untrusted'
     };
@@ -228,12 +233,36 @@ async function fetchUrlAsAttachment(db, { url, userId, threadId, maxChars = 6000
   }
 }
 
+function isRetryable(error) {
+  if (!(error instanceof FetchError)) return false;
+  if (error.code === 'fetch_timeout' || error.code === 'fetch_failed') return true;
+  return error.code === 'fetch_http_error' && Number(error.status) >= 500;
+}
+
+/**
+ * 抓取链接并保存为当前对话附件。网络错误/5xx 重试一次，4xx 不重试。
+ */
+async function fetchUrlAsAttachment(db, options) {
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await fetchUrlOnce(db, options);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryable(error) || attempt === 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, 400));
+    }
+  }
+  throw lastError;
+}
+
 module.exports = {
   MAX_BYTES,
   MAX_REDIRECTS,
   TIMEOUT_MS,
   FetchError,
   fetchUrlAsAttachment,
+  fetchUrlOnce,
   fetchWithRedirects,
   readBody
 };

@@ -41,8 +41,8 @@ function memoryDb() {
 async function main() {
   assert.deepStrictEqual(TOOL_NAMES, [
     'list_models', 'list_providers', 'usage_summary', 'list_recent_errors', 'list_users',
-    'list_model_prices', 'list_attachments', 'read_attachment', 'fetch_url', 'web_search',
-    'preview_multiplier_batch',
+    'list_model_prices', 'list_attachments', 'read_attachment', 'search_attachments',
+    'fetch_url', 'fetch_urls', 'web_search', 'preview_multiplier_batch',
     'set_model_enabled', 'set_model_output_kind', 'set_provider_enabled',
     'batch_set_model_multipliers'
   ]);

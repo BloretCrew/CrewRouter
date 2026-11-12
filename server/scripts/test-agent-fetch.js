@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const { fetchUrlAsAttachment, readBody, FetchError } = require('../utils/agent-fetch');
+const { executeTool } = require('../utils/agent-tools');
 
 let passed = 0;
 function ok(name) {
@@ -35,6 +36,14 @@ async function main() {
     error => error instanceof FetchError && error.code === 'fetch_blocked'
   );
   ok('unexpected ports are blocked');
+
+  const batch = await executeTool({}, {
+    name: 'fetch_urls',
+    arguments: { urls: ['http://127.0.0.1/a', 'http://localhost/b'] }
+  }, { userId: 1, threadId: 1 });
+  assert.equal(batch.results.length, 2);
+  assert.ok(batch.results.every(item => item.code === 'fetch_blocked'));
+  ok('fetch_urls reports per-URL failures without aborting the batch');
 
   const small = await readBody(new Response(Buffer.from('hello')));
   assert.equal(small.toString('utf8'), 'hello');

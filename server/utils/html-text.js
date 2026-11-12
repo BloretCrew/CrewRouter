@@ -61,4 +61,26 @@ function htmlToText(html, { maxChars = MAX_HTML_CHARS } = {}) {
   };
 }
 
-module.exports = { MAX_HTML_CHARS, decodeEntities, htmlToText };
+function extractLinks(html, baseUrl, { max = 20 } = {}) {
+  const source = String(html || '');
+  const links = [];
+  const seen = new Set();
+  const pattern = /<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = pattern.exec(source)) && links.length < max) {
+    const raw = decodeEntities(String(match[1] || match[2] || match[3] || '').trim());
+    if (!raw || raw.startsWith('#') || /^(?:javascript|mailto|tel|data):/i.test(raw)) continue;
+    let url;
+    try { url = new URL(raw, baseUrl); } catch (_) { continue; }
+    if (!/^https?:$/.test(url.protocol)) continue;
+    url.hash = '';
+    const href = url.toString();
+    if (seen.has(href)) continue;
+    seen.add(href);
+    const text = cleanWhitespace(decodeEntities(String(match[4] || '').replace(/<[^>]+>/g, ' '))).slice(0, 200);
+    links.push({ url: href, text: text || href });
+  }
+  return links;
+}
+
+module.exports = { MAX_HTML_CHARS, decodeEntities, htmlToText, extractLinks };

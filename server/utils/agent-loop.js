@@ -3,7 +3,13 @@
 const { isKnownTool, isWriteTool, asObject } = require('./agent-tools');
 
 const MAX_ROUNDS = 10;
-const TOOL_BUDGET = Object.freeze({ fetch_url: 6, web_search: 4, read_attachment: 20 });
+const TOOL_BUDGET = Object.freeze({
+  fetch_url: 6,
+  fetch_urls: 2,
+  web_search: 4,
+  read_attachment: 20,
+  search_attachments: 10
+});
 
 function callSignature(call) {
   return `${call.name}:${JSON.stringify(asObject(call.arguments))}`;
