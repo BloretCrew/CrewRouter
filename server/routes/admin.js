@@ -3693,6 +3693,9 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
       if (entries.length === 0) {
         return res.status(400).json({ error: '设置不能为空' });
       }
+      if (entries.some(([key]) => key === 'agent_web')) {
+        return res.status(400).json({ error: '请使用 /api/admin/agent-web 更新 Agent 资料设置', code: 'use_agent_web_endpoint' });
+      }
       for (const [key, value] of entries) {
         if (key === 'autoAddNewModelsToFrontier') {
           return res.status(400).json({ error: '前沿 Team 自动启用不支持关闭' });

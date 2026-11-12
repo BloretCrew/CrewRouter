@@ -157,9 +157,12 @@ async function countThreadAttachments(db, { userId, threadId }) {
 
 async function storeAttachment(db, {
   userId, threadId = null, source = 'upload', kind, filename, mime,
-  bytes = null, byteSize = 0, extractedText = '', textChars = 0, truncated = false, meta = {}
+  bytes = null, byteSize = 0, sourceBytes = null, extractedText = '', textChars = 0,
+  truncated = false, meta = {}
 }) {
-  const digest = crypto.createHash('sha256').update(bytes || Buffer.from(extractedText || '')).digest('hex');
+  const digest = crypto.createHash('sha256')
+    .update(bytes || sourceBytes || Buffer.from(extractedText || ''))
+    .digest('hex');
   const existing = await db.query(
     `SELECT * FROM agent_attachments
      WHERE user_id = $1 AND sha256 = $2 AND (thread_id IS NULL OR thread_id = $3)
@@ -225,6 +228,7 @@ async function processUploads(db, { files, userId, threadId = null }) {
         mime: extracted.mime,
         bytes: extracted.kind === 'image' ? file.data : null,
         byteSize: file.data.length,
+        sourceBytes: file.data,
         extractedText: extracted.text || '',
         textChars: (extracted.text || '').length,
         truncated: extracted.truncated === true,
@@ -254,6 +258,18 @@ async function bindAttachments(db, { userId, threadId, ids }) {
     [threadId, userId]
   );
   if (!thread.rows[0]) throw new AttachmentError('对话不存在', 404, 'thread_not_found');
+  const [currentCount, alreadyBound] = await Promise.all([
+    countThreadAttachments(db, { userId, threadId }),
+    db.query(
+      `SELECT COUNT(*)::int AS count FROM agent_attachments
+       WHERE id = ANY($1::int[]) AND user_id = $2 AND thread_id = $3`,
+      [unique, userId, threadId]
+    )
+  ]);
+  const incoming = unique.length - Number(alreadyBound.rows[0]?.count || 0);
+  if (currentCount + incoming > MAX_FILES_PER_THREAD) {
+    throw new AttachmentError(`每个对话最多 ${MAX_FILES_PER_THREAD} 个附件`, 400, 'thread_attachment_limit');
+  }
   const result = await db.query(
     `UPDATE agent_attachments
      SET thread_id = $3

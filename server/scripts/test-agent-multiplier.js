@@ -117,6 +117,19 @@ async function main() {
     assert.equal(mismatch.errors[0].reason, 'multiplier_mismatch');
     ok('model-supplied multipliers must match the server calculation');
 
+    const duplicate = await normalizeMultiplierBatch(pool, {
+      basis: 'input',
+      currency: 'CNY',
+      markup: 1.2,
+      changes: [
+        { model_ref: 'm1', source_price: 2, price_unit: 'per_1m' },
+        { model_ref: 'm1', source_price: 3, price_unit: 'per_1m' }
+      ]
+    });
+    assert.equal(duplicate.errors[0].reason, 'duplicate_model');
+    assert.equal(draftProblem(duplicate).code, 'draft_invalid');
+    ok('duplicate model entries are rejected');
+
     const stale = await normalizeMultiplierBatch(pool, {
       basis: 'input',
       currency: 'CNY',

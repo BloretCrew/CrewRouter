@@ -98,8 +98,7 @@ const TOOL_SPECS = Object.freeze([
       type: 'object',
       properties: {
         query: { type: 'string', maxLength: 400 },
-        max_results: { type: 'integer', minimum: 1, maximum: 8 },
-        recency_days: { type: 'integer', minimum: 1, maximum: 365 }
+        max_results: { type: 'integer', minimum: 1, maximum: 8 }
       },
       required: ['query'],
       additionalProperties: false
@@ -322,7 +321,9 @@ function numberOrNull(value) {
 async function listModelPrices(db, args) {
   const provider = typeof args.provider === 'string' && args.provider.trim() ? args.provider.trim() : null;
   const ids = Array.isArray(args.ids)
-    ? args.ids.map(String).map(item => item.trim()).filter(Boolean).slice(0, 200) : null;
+    ? args.ids.map(String).map(item => item.trim()).filter(Boolean).slice(0, 200)
+    : null;
+  const idFilter = ids && ids.length ? ids : null;
   const query = typeof args.query === 'string' && args.query.trim() ? `%${args.query.trim()}%` : null;
   const includeDisabled = args.include_disabled === true;
   const limit = Math.min(Math.max(Number(args.limit) || 200, 1), 300);
@@ -342,7 +343,7 @@ async function listModelPrices(db, args) {
        AND ($4::boolean OR m.enabled = TRUE)
      ORDER BY m.provider, m.name
      LIMIT $5`,
-    [provider, ids, query, includeDisabled, limit + 1]
+    [provider, idFilter, query, includeDisabled, limit + 1]
   );
   const truncated = result.rows.length > limit;
   return {
@@ -460,7 +461,6 @@ async function webSearchTool(db, args, ctx) {
   const result = await searchWeb(db, {
     query,
     maxResults: args.max_results,
-    recencyDays: args.recency_days,
     userId: ctx.userId
   });
   return redactSecrets(result);

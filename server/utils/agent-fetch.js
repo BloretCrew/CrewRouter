@@ -196,6 +196,7 @@ async function fetchUrlAsAttachment(db, { url, userId, threadId, maxChars = 6000
       mime,
       bytes: null,
       byteSize: buffer.length,
+      sourceBytes: buffer,
       extractedText: text,
       textChars: text.length,
       truncated,

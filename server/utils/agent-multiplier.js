@@ -205,6 +205,7 @@ async function normalizeMultiplierBatch(db, args = {}, options = {}) {
   const unmatched = [];
   const errors = [];
   const warnings = [];
+  const seenModels = new Set();
 
   for (const item of changes) {
     const refLabel = String(item.model_id || item.model_ref || '').trim();
@@ -220,6 +221,11 @@ async function normalizeMultiplierBatch(db, args = {}, options = {}) {
       continue;
     }
     const model = resolved.model;
+    if (seenModels.has(model.id)) {
+      errors.push({ model_ref: refLabel, model_id: model.id, reason: 'duplicate_model' });
+      continue;
+    }
+    seenModels.add(model.id);
     const itemBasis = String(item.basis || basis).trim();
     if (!BASIS_VALUES.has(itemBasis)) {
       errors.push({ model_ref: refLabel, reason: 'basis_required' });

@@ -118,8 +118,11 @@ async function extractXlsxText(buffer) {
   const warnings = [];
   const sheets = workbook.worksheets.slice(0, MAX_XLSX_SHEETS);
   if (workbook.worksheets.length > MAX_XLSX_SHEETS) warnings.push('sheet_limit');
+  let totalChars = 0;
+  outer:
   for (const sheet of sheets) {
     lines.push(`# ${sheet.name}`);
+    totalChars += sheet.name.length + 3;
     const rowCount = Math.min(sheet.rowCount || 0, MAX_XLSX_ROWS);
     const columnCount = Math.min(sheet.columnCount || 0, MAX_XLSX_COLS);
     if ((sheet.rowCount || 0) > MAX_XLSX_ROWS || (sheet.columnCount || 0) > MAX_XLSX_COLS) {
@@ -133,13 +136,16 @@ async function extractXlsxText(buffer) {
         cells.push(cell && cell.text != null ? String(cell.text) : '');
       }
       while (cells.length && cells[cells.length - 1] === '') cells.pop();
-      if (cells.length) lines.push(cells.join('\t'));
-      if (lines.join('\n').length > MAX_EXTRACTED_CHARS) {
+      if (cells.length) {
+        const line = cells.join('\t');
+        lines.push(line);
+        totalChars += line.length + 1;
+      }
+      if (totalChars > MAX_EXTRACTED_CHARS) {
         warnings.push('char_limit');
-        break;
+        break outer;
       }
     }
-    if (lines.join('\n').length > MAX_EXTRACTED_CHARS) break;
   }
   return { text: lines.join('\n'), warnings: [...new Set(warnings)], meta: { sheets: workbook.worksheets.length } };
 }
