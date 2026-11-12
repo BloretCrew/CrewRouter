@@ -193,6 +193,15 @@ async function main() {
     assert.equal(search.trust, 'untrusted');
     ok('attachments can be searched by keyword before paging');
 
+    const listedAttachments = await executeTool(pool, {
+      name: 'list_attachments', arguments: {}
+    }, { userId: 1, threadId: 1 });
+    const documentEntry = listedAttachments.attachments.find(item => item.id === uploads.attachments[0].id);
+    const imageEntry = listedAttachments.attachments.find(item => item.id === uploads.attachments[1].id);
+    assert.match(documentEntry.preview, /GPT-4\.1/);
+    assert.equal(imageEntry.preview, null);
+    ok('attachment listing includes a short document preview');
+
     const bound = await bindAttachments(pool, {
       userId: 1,
       threadId: 1,

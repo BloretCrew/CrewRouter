@@ -409,7 +409,8 @@ async function listModelPrices(db, args) {
 async function listAttachments(db, ctx) {
   if (!Number.isInteger(Number(ctx.threadId))) return { attachments: [] };
   const result = await db.query(
-    `SELECT id, source, kind, filename, mime, byte_size, text_chars, truncated, meta, created_at
+    `SELECT id, source, kind, filename, mime, byte_size, text_chars, truncated, meta, created_at,
+            LEFT(COALESCE(extracted_text, ''), 200) AS preview
      FROM agent_attachments
      WHERE user_id = $1 AND thread_id = $2
      ORDER BY id`,
@@ -426,6 +427,7 @@ async function listAttachments(db, ctx) {
       chars: Number(row.text_chars || 0),
       truncated: row.truncated === true,
       url: row.meta?.url || null,
+      preview: row.kind === 'image' ? null : redactSecrets(String(row.preview || '')),
       created_at: row.created_at
     }))
   };

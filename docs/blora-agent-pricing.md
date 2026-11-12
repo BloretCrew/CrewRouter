@@ -33,7 +33,7 @@ new_multiplier = 上游每百万 Token 价格 × 加价系数 × 汇率
 | `web_search` | 通过已配置的搜索服务查资料，返回标题、链接和摘要 |
 | `fetch_url` | 抓取单个网页/文本/PDF，保存为附件并返回预览与页面链接 |
 | `fetch_urls` | 一次抓取最多 3 个链接，适合从搜索结果批量读取候选资料 |
-| `list_attachments` | 列出当前对话的附件元数据 |
+| `list_attachments` | 列出当前对话的附件元数据，文档附带开头 200 字预览 |
 | `search_attachments` | 在大文档/价格表中按关键词定位片段，返回附件 id、行号和上下文 |
 | `read_attachment` | 按 offset/limit 分页读取附件正文 |
 
