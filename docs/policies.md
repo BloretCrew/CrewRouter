@@ -37,7 +37,11 @@
 | `api_keys` | `{"ids":[12],"names":["prod-*"],"older_than_days":90,"shared":true}` | Key 维度 |
 | `oauth_clients` | `["crewrouter-cli"]` | OAuth 客户端 |
 | `session` | `{"subagent":true,"compaction":false,"cwd_prefix":["/home/team/"]}` | 会话/项目 |
-| `prompt` | `{"contains":["secret"],"regex":["AKIA[0-9A-Z]{16}"]}` | 提示词关键词/正则 |
+| `prompt` | `{"contains":["secret"],"regex":["AKIA[0-9A-Z]{16}"]}` | 请求提示词关键词/正则 |
+| `output` | `{"contains":["secret"],"regex":["..." ]}` | 响应内容关键词/正则（事后扫描，action=warn） |
+| `login` | `{"methods":["password+2fa"],"require_mfa":true,"max_failed_attempts":5}` | 登录方式、MFA、失败次数 |
+| `countries` / `countries_deny` | `{"countries":["CN"]}` | 依赖反向代理注入 `cf-ipcountry` / `x-geo-country` / `x-country-code` |
+| `asn` | `{"asn":["4134"]}` | 依赖 `cf-asn` / `x-asn` 请求头 |
 | `media` | `{"max_images":0,"forbid_attachments":true}` | 图片/附件 |
 | `limits` | `{"max_tokens":32000,"max_messages":200,"max_body_bytes":1048576}` | 请求体限制，超过即匹配 |
 | `schedule` | 见下 | 周日程、日期例外、时区、日历 |
@@ -124,6 +128,12 @@
 | GET/POST/PUT/DELETE | `/policy-channels`、`POST /policy-channels/:id/test` | 通知渠道 |
 | GET/POST/PUT/DELETE | `/policy-alert-rules` | 告警规则 |
 | POST | `/policy-members/:userId/role` | 设置 Team 角色（owner/admin/member/viewer） |
+| POST | `/policy-members/:userId/offboard` | 离岗停用（永久暂停 + 禁用全部 Key + 吊销 OAuth token） |
+| GET | `/policy-login-events` | 登录事件（成功/失败、方式、MFA、IP） |
+| GET | `/policy-teams`、`/policy-users` | 策略范围选择（按管理 Team 隔离） |
+| GET | `/policies/export`、`POST /policies/import`、`/policies/schema` | 导出/导入（支持 dry-run）与 IaC schema |
+| POST | `/policies/output-scan` | 手动扫描最近响应内容 |
+| GET/POST | `/policies/metrics`、`/policies/analytics` | 指标与分析 |
 
 用户端 `/api/user`：
 
@@ -169,7 +179,41 @@
   - `node server/scripts/migrate-time-format.js --write`：把常见 `new Date(x).toLocaleString('zh-CN', ...)` 替换为 `CRTime`。
 - 业务自然日分桶（图表横轴）仍按业务时区聚合，页面需标注或通过 tooltip 说明。
 
-## 10. 运维与注意事项
+## 9. Team 角色与数据范围
+
+- `user_teams.role` 支持 `owner/admin/member/viewer`；策略管理需要 `owner/admin` 或全局管理员。
+- 全局管理员可管理所有 Team 与全局策略；Team owner/admin 只能管理本 Team 策略、成员、命中、豁免、申诉与审批。
+- 全局策略对 Team 管理员只读；通知渠道、告警规则、全局设置、kill switch、Prometheus 指标仅全局管理员可操作。
+- 非全局管理员访问 `/admin` 时会进入“策略专用”视图，只显示「策略」入口。
+
+## 10. 登录策略
+
+- 密码、2FA 与 Passkey 登录在建立会话前调用 `evaluateLoginPolicy`。
+- 支持条件：允许的登录方式、是否要求 MFA、窗口内失败次数、IP、时段、身份/标签。
+- 登录成功/失败写入 `login_events`（方式、IP、UA、MFA、原因），可在策略页「成员策略 → 登录事件」查看。
+- 登录策略的登录条件采用“合规要求”语义：方法/MFA/失败次数都满足时不构成拒绝。
+
+## 11. 输出内容策略
+
+- `conditions.output` 对已写入 `usage_records.response` 的响应做事后扫描。
+- 调度器每分钟扫描最近记录；也可调用 `POST /api/admin/policies/output-scan` 手动触发。
+- 命中记录 `action=warn`、`decision=allow`、`reason=output_match`，不会改变已发送的响应；适用于敏感信息/密钥泄露告警。
+- 流式响应无法回溯改写，输出策略定位为审计与告警。
+
+## 12. 导入导出与 IaC
+
+- `GET /api/admin/policies/export` 导出当前管理员可见策略的配置 JSON（不含 ID/审计字段）。
+- `POST /api/admin/policies/import` 支持 `dry_run`；单次最多 200 条，同作用域同名策略会跳过。
+- `GET /api/admin/policies/schema` 返回版本化的字段/枚举/条件键定义，可用于 GitOps 或 CLI。
+- 策略页「导出 / 导入 / 输出扫描」按钮提供同样能力。
+
+## 13. SIEM 与离岗
+
+- 通知渠道新增 `syslog`（UDP/TCP）与 `otlp`（OTLP/HTTP JSON），可接入企业 SIEM/可观测平台。
+- `POST /api/admin/policy-members/:userId/offboard` 一键离岗：永久暂停、禁用全部 API Key、吊销 OAuth token、写审计与通知。
+- 可通过外部 HR/SCIM 系统在成员离职时调用该端点完成自动吊销。
+
+## 14. 运维与注意事项
 
 - **客户端识别可绕过**：自定义 system prompt 或 UA 可能让 Claude Code 被识别为 `unknown`。建议先使用 `shadow` 观察，或开启客户端白名单并禁止 `unknown`。这是检测能力，不是 DRM。
 - **IP 可信度**：`ip` 来自 `x-forwarded-for` / `req.ip`，仅在可信代理部署下用于强策略。

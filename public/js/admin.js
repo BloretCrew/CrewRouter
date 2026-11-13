@@ -161,6 +161,11 @@ class AdminApp {
         if ((instance.capabilities.multiUser === false && (location.hash.startsWith('#adminUsers') || location.hash.startsWith('#adminTeams') || location.hash === '#adminUserGroups')) || (instance.capabilities.teamAuditLogs === false && location.hash === '#adminAuditLogs')) location.hash = '#adminStats';
       }
     } catch (_) { /* backend remains authoritative */ }
+    if (this._policyOnly) {
+      document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+        if (el.dataset.page !== 'adminPolicies') el.style.display = 'none';
+      });
+    }
     if (this._unifiedProviders) {
       document.documentElement.classList.add('unified-provider-manager');
       document.querySelectorAll('#providerScopeFilter, #adminProvidersStickyScope').forEach(el => { el.value = ''; el.hidden = true; });
@@ -180,7 +185,9 @@ class AdminApp {
     const safePage = blockedByEdition
       ? (this._unifiedProviders ? 'adminProviders' : 'adminStats') : restored.page;
     if (safePage !== restored.page) this._writeAdminHash(safePage, { replaceHash: true });
-    const startPage = safePage || (this._unifiedProviders ? 'adminProviders' : 'adminStats');
+    const startPage = this._policyOnly
+      ? 'adminPolicies'
+      : (safePage || (this._unifiedProviders ? 'adminProviders' : 'adminStats'));
     await this.navigateTo(startPage, {
       skipHash: true,
       teamId: restored.teamId || null
@@ -275,8 +282,17 @@ class AdminApp {
         this._instance = instance;
         this._unifiedProviders = instance?.edition === 'personal' || instance?.runtime === 'desktop-local';
         if (!this.user.isAdmin && !this._unifiedProviders) {
-          window.location.href = '/console';
-          return;
+          let policyRole = null;
+          try {
+            const roleResponse = await fetch('/api/user/policy-role', { credentials: 'same-origin' });
+            policyRole = roleResponse.ok ? await roleResponse.json() : null;
+          } catch (_) { /* ignore */ }
+          if (!policyRole?.canManagePolicies) {
+            window.location.href = '/console';
+            return;
+          }
+          this._policyOnly = true;
+          this._policyReadOnly = policyRole.readOnly === true;
         }
         this.updateUserInfo();
       } else {
@@ -555,6 +571,7 @@ class AdminApp {
   }
 
   async navigateTo(page, options = {}) {
+    if (this._policyOnly && page !== 'adminPolicies') page = 'adminPolicies';
     if (this._unifiedProviders && ['adminStats', 'adminUsers', 'adminPolicies', 'adminTeams', 'adminUserGroups', 'adminAuditLogs'].includes(page)) page = 'adminProviders';
     if (document.documentElement.classList.contains('embedded-provider-manager') && !['adminProviders', 'adminModels'].includes(page)) page = 'adminProviders';
     if (page === 'adminUserGroups') page = 'adminTeams';

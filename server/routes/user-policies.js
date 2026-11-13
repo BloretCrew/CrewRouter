@@ -18,6 +18,30 @@ function userIdOf(req) {
   return Number(req.authUser?.id || req.session?.user?.id);
 }
 
+router.get('/policy-role', async (req, res) => {
+  try {
+    const userId = userIdOf(req);
+    const user = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+    if (user.rows[0]?.is_admin === true) {
+      return res.json({ canManagePolicies: true, all: true, teamIds: [] });
+    }
+    const rows = await pool.query(
+      `SELECT team_id, role FROM user_teams WHERE user_id = $1 AND role IN ('owner','admin','viewer')`,
+      [userId]
+    );
+    const managers = rows.rows.filter(row => row.role === 'owner' || row.role === 'admin');
+    res.json({
+      canManagePolicies: rows.rows.length > 0,
+      readOnly: rows.rows.length > 0 && managers.length === 0,
+      all: false,
+      teamIds: rows.rows.map(row => Number(row.team_id)),
+      roles: rows.rows,
+    });
+  } catch (error) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 router.get('/policies/mine', async (req, res) => {
   try {
     const userId = userIdOf(req);

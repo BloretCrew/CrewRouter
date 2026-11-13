@@ -31,8 +31,9 @@ const KNOWN_CLIENTS = new Set([...Object.values(REQUEST_SOURCES), 'unknown']);
 const CONDITION_KEYS = new Set([
   'clients', 'protocols', 'endpoints', 'semantics', 'models', 'providers',
   'tools', 'mcp_servers', 'ips', 'tags', 'identities', 'api_keys',
-  'oauth_clients', 'session', 'prompt', 'media', 'limits', 'schedule',
-  'usage', 'budget', 'concurrency', 'all', 'any', 'not'
+  'oauth_clients', 'session', 'prompt', 'output', 'media', 'limits', 'schedule',
+  'usage', 'budget', 'concurrency', 'login', 'countries', 'countries_deny', 'asn',
+  'all', 'any', 'not'
 ]);
 const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -338,6 +339,22 @@ function normalizeEndpoints(value, field, details) {
   return out;
 }
 
+function normalizeLogin(value, field, details) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    fail(field, '登录条件必须是对象', details);
+    return null;
+  }
+  const methods = asStringArray(value.methods, `${field}.methods`, details, {
+    allowed: new Set(['password', 'password+2fa', 'passkey', 'feishu', 'passport']),
+  });
+  return {
+    methods,
+    require_mfa: value.require_mfa === true,
+    max_failed_attempts: asNumber(value.max_failed_attempts, `${field}.max_failed_attempts`, details, { min: 1, max: 1000, integer: true }),
+    window_minutes: asNumber(value.window_minutes, `${field}.window_minutes`, details, { min: 1, max: 1440, integer: true }) || 30,
+  };
+}
+
 function normalizeConditionObject(raw) {
   const details = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -365,12 +382,25 @@ function normalizeConditionObject(raw) {
   if (raw.oauth_clients !== undefined) out.oauth_clients = asStringArray(raw.oauth_clients, 'conditions.oauth_clients', details);
   if (raw.session !== undefined) out.session = normalizeSession(raw.session, 'conditions.session', details);
   if (raw.prompt !== undefined) out.prompt = normalizePrompt(raw.prompt, 'conditions.prompt', details);
+  if (raw.output !== undefined) out.output = normalizePrompt(raw.output, 'conditions.output', details);
   if (raw.media !== undefined) out.media = normalizeMedia(raw.media, 'conditions.media', details);
   if (raw.limits !== undefined) out.limits = normalizeLimits(raw.limits, 'conditions.limits', details);
   if (raw.schedule !== undefined) out.schedule = normalizeSchedule(raw.schedule, 'conditions.schedule', details);
   if (raw.usage !== undefined) out.usage = normalizeUsage(raw.usage, 'conditions.usage', details);
   if (raw.budget !== undefined) out.budget = normalizeBudget(raw.budget, 'conditions.budget', details);
   if (raw.concurrency !== undefined) out.concurrency = normalizeConcurrency(raw.concurrency, 'conditions.concurrency', details);
+  if (raw.login !== undefined) out.login = normalizeLogin(raw.login, 'conditions.login', details);
+  if (raw.countries !== undefined) {
+    out.countries = asStringArray(raw.countries, 'conditions.countries', details, { max: 250 })
+      .map(code => code.toUpperCase());
+    for (const code of out.countries) if (!/^[A-Z]{2}$/.test(code)) fail('conditions.countries', `国家代码无效: ${code}`, details);
+  }
+  if (raw.countries_deny !== undefined) {
+    out.countries_deny = asStringArray(raw.countries_deny, 'conditions.countries_deny', details, { max: 250 })
+      .map(code => code.toUpperCase());
+    for (const code of out.countries_deny) if (!/^[A-Z]{2}$/.test(code)) fail('conditions.countries_deny', `国家代码无效: ${code}`, details);
+  }
+  if (raw.asn !== undefined) out.asn = asStringArray(raw.asn, 'conditions.asn', details, { max: 100 });
   if (raw.all !== undefined) out.all = normalizeConditionTree(raw.all, 'conditions.all', details, 1);
   if (raw.any !== undefined) out.any = normalizeConditionTree(raw.any, 'conditions.any', details, 1);
   if (raw.not !== undefined) out.not = normalizeConditionTree([raw.not], 'conditions.not', details, 1)[0] || null;

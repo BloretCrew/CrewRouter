@@ -1,13 +1,15 @@
 'use strict';
 
 const axios = require('axios');
+const dgram = require('dgram');
+const net = require('net');
 const { validateUrl } = require('../url-validator');
 const { encryptSecret, decryptSecret } = require('../secret-crypto');
 const { SendEmail } = require('../email');
 const Logger = require('../../logger');
 
 const MASK = '********';
-const TYPES = new Set(['webhook', 'feishu', 'wecom', 'dingtalk', 'slack', 'telegram', 'email', 'bark']);
+const TYPES = new Set(['webhook', 'feishu', 'wecom', 'dingtalk', 'slack', 'telegram', 'email', 'bark', 'syslog', 'otlp']);
 
 function publicChannel(row) {
   if (!row) return row;
@@ -18,14 +20,14 @@ function publicChannel(row) {
   return { ...row, config };
 }
 
-async function safeUrl(url) {
-  const result = await validateUrl(url);
+async function safeUrl(url, options = {}) {
+  const result = await validateUrl(url, options);
   if (!result.ok) throw new Error(result.error || 'URL 校验失败');
   return result.url || url;
 }
 
-async function postJson(url, body, headers = {}) {
-  const target = await safeUrl(url);
+async function postJson(url, body, headers = {}, options = {}) {
+  const target = await safeUrl(url, options);
   const response = await axios.post(target, body, {
     timeout: 10000,
     maxRedirects: 0,
@@ -34,6 +36,36 @@ async function postJson(url, body, headers = {}) {
     validateStatus: status => status >= 200 && status < 300,
   });
   return response.data;
+}
+
+async function sendSyslog(config, message) {
+  const host = String(config.host || '').trim();
+  const port = Number(config.port) || 514;
+  if (!host) throw new Error('Syslog 需要 host');
+  const protocol = config.protocol === 'tcp' ? 'tcp' : 'udp';
+  const severity = message.severity === 'critical' ? 2 : message.severity === 'warning' ? 4 : 6;
+  const payload = `<${8 * 8 + severity}>${new Date().toISOString()} CrewRouter policy: ${message.title} - ${message.text}`;
+  if (protocol === 'tcp') {
+    await new Promise((resolve, reject) => {
+      const socket = net.createConnection({ host, port, timeout: 5000 }, () => {
+        socket.end(payload);
+      });
+      socket.once('close', resolve);
+      socket.once('timeout', () => { socket.destroy(); reject(new Error('Syslog TCP 超时')); });
+      socket.once('error', reject);
+    });
+    return { ok: true };
+  }
+  await new Promise((resolve, reject) => {
+    const socket = dgram.createSocket('udp4');
+    const buffer = Buffer.from(payload, 'utf8');
+    socket.send(buffer, port, host, (error) => {
+      socket.close();
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+  return { ok: true };
 }
 
 async function dispatchChannel(channel, message) {
@@ -83,6 +115,29 @@ async function dispatchChannel(channel, message) {
       const endpoint = config.endpoint || 'https://api.day.app';
       if (!config.key) throw new Error('Bark 渠道需要 Server Key');
       return postJson(`${endpoint.replace(/\/$/, '')}/${encodeURIComponent(config.key)}`, { title, body: text, group: 'CrewRouter' });
+    }
+    case 'syslog':
+      return sendSyslog(config, message);
+    case 'otlp': {
+      const endpoint = config.url || 'http://127.0.0.1:4318/v1/logs';
+      return postJson(endpoint, {
+        resourceLogs: [{
+          resource: { attributes: [{ key: 'service.name', value: { stringValue: 'crewrouter' } }] },
+          scopeLogs: [{
+            scope: { name: 'crewrouter.policy' },
+            logRecords: [{
+              timeUnixNano: `${Date.now()}000000`,
+              severityText: String(message.severity || 'WARNING').toUpperCase(),
+              body: { stringValue: `${title}\n${text}` },
+              attributes: [
+                { key: 'policy.id', value: { intValue: String(message.policy?.id || 0) } },
+                { key: 'policy.name', value: { stringValue: String(message.policy?.name || '') } },
+                { key: 'user.id', value: { intValue: String(message.user?.id || 0) } },
+              ],
+            }],
+          }],
+        }],
+      }, {}, { allowPrivate: true });
     }
     default:
       throw new Error(`不支持的渠道类型: ${channel.type}`);

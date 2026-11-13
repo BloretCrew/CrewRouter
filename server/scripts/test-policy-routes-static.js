@@ -74,9 +74,20 @@ check('admin policies API exposes CRUD and members', () => {
     '/policies/simulate', '/policies/analytics', '/policies/metrics',
     '/policy-exemptions', '/policy-appeals', '/policy-approvals',
     '/policy-channels', '/policy-alert-rules', '/policy-hits/stream',
+    '/policies/export', '/policies/import', '/policies/schema',
+    '/policies/output-scan', '/policy-login-events', '/policy-teams', '/policy-users',
+    '/offboard',
   ]) {
     assert.ok(route.includes(endpoint), `${endpoint} missing`);
   }
+});
+
+check('login policy and events wired', () => {
+  assert.match(read('server/routes/auth.js'), /evaluateLoginPolicy/);
+  assert.match(read('server/routes/auth.js'), /recordLoginEvent/);
+  assert.match(read('server/routes/passkey.js'), /evaluateLoginPolicy/);
+  assert.match(read('server/utils/policy/login-policy.js'), /evaluateLoginPolicy/);
+  assert.match(read('server/utils/policy/login-events.js'), /recordLoginEvent/);
 });
 
 check('lifecycle endpoints registered', () => {

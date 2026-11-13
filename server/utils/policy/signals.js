@@ -209,6 +209,11 @@ function buildPolicySignals(req) {
       forwardedFor: headerValue(req.headers, 'x-forwarded-for') || null,
       origin: req.headers?.origin || null,
       referer: req.headers?.referer || null,
+      country: (headerValue(req.headers, 'cf-ipcountry')
+        || headerValue(req.headers, 'x-geo-country')
+        || headerValue(req.headers, 'x-country-code')
+        || '').toUpperCase() || null,
+      asn: headerValue(req.headers, 'cf-asn') || headerValue(req.headers, 'x-asn') || null,
     },
     history: {},
     _promptCorpus: null,

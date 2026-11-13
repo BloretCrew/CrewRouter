@@ -7,6 +7,8 @@ const { ACTIONS, logAction } = require('../utils/audit-log');
 const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
 const { loadPersistedEdition } = require('../utils/instance-edition');
 const { suspensionState } = require('../utils/policy/suspension');
+const { evaluateLoginPolicy } = require('../utils/policy/login-policy');
+const { recordLoginEvent } = require('../utils/policy/login-events');
 
 const loginRateLimits = new Map();
 const LOGIN_LIMIT = 5;
@@ -141,11 +143,30 @@ router.post('/login', async (req, res) => {
     // 验证密码
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+      recordLoginEvent({ userId: user.id, method: 'password', success: false, ip: req.ip, userAgent: req.headers['user-agent'], reason: 'bad_password' });
       return reply(401, { error: '用户名/邮箱或密码错误' });
     }
 
     // 登录成功后清除该账号/IP 的失败计数
     loginRateLimits.delete(rateKey);
+
+    // 登录期策略：在发放会话前检查 IP/时间/登录方式/MFA/失败次数等
+    const policyDecision = await evaluateLoginPolicy({
+      userId: user.id,
+      method: user.two_factor_enabled ? 'password+2fa' : 'password',
+      mfa: user.two_factor_enabled === true,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    }).catch(() => ({ allowed: true }));
+    if (!policyDecision.allowed) {
+      recordLoginEvent({ userId: user.id, method: 'password', success: false, ip: req.ip, userAgent: req.headers['user-agent'], reason: policyDecision.code || 'policy_blocked' });
+      return reply(403, {
+        error: policyDecision.message || '登录被团队策略拦截',
+        type: 'policy_login_blocked',
+        code: policyDecision.code || 'policy_login_blocked',
+        policy: policyDecision.policy || null,
+      });
+    }
 
     // 检查是否启用了 2FA
     if (user.two_factor_enabled) {
@@ -211,6 +232,7 @@ router.post('/login', async (req, res) => {
       });
       // 登录状态上报（fire-and-forget，不阻塞响应）
       reportLoginEvent(req);
+      recordLoginEvent({ userId: user.id, method: 'password', success: true, ip: req.ip, userAgent: req.headers['user-agent'], mfa: false });
       reply(200, req.session.user);
     });
   } catch (error) {
@@ -316,6 +338,14 @@ router.post('/login/2fa', async (req, res) => {
       });
       // 登录状态上报（fire-and-forget，不阻塞响应）
       reportLoginEvent(req);
+      recordLoginEvent({
+        userId: user.id,
+        method: pending.method === 'passkey' ? 'passkey' : 'password+2fa',
+        success: true,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        mfa: true,
+      });
       res.json(req.session.user);
     });
   } catch (error) {

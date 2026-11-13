@@ -14,6 +14,7 @@ const ALLOW_PREFIXES = [
   '/api/user/popup-notices',
   '/api/user/suspension',
   '/api/user/policies',
+  '/api/user/policy-role',
   '/api/user/policy-appeals',
   '/api/user/policy-approvals',
   '/api/csrf-token',

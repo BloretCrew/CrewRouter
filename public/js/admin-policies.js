@@ -52,14 +52,35 @@ class AdminPoliciesApp {
     return data;
   }
 
+  isReadOnly() {
+    return this.host?._policyReadOnly === true;
+  }
+
+  _applyReadOnly() {
+    if (!this.isReadOnly() || !this.root) return;
+    this.root.querySelectorAll('button').forEach(button => {
+      const text = (button.textContent || '').trim();
+      if (!text) return;
+      if (/查看|导出|测试|刷新|关闭|取消|登录事件|下载审计报告/.test(text)) return;
+      if (/新建|创建|编辑|删除|发布|停用|启用|复制|撤销|通过|驳回|暂停|恢复|豁免|导入|扫描|保存|紧急|回滚|设置/.test(text)) {
+        button.style.display = 'none';
+      }
+    });
+  }
+
   async mount(root) {
     if (!root) return;
     this.root = root;
     if (!this.mounted) {
       this.mounted = true;
       this._bindTabs();
+      if (this.isReadOnly() && typeof MutationObserver !== 'undefined') {
+        this._readOnlyObserver = new MutationObserver(() => this._applyReadOnly());
+        this._readOnlyObserver.observe(root, { childList: true, subtree: true });
+      }
       await Promise.all([this.loadTeams(), this.loadUsers()]).catch(() => {});
       await this.loadOverview();
+      this._applyReadOnly();
     }
   }
 
@@ -109,12 +130,12 @@ class AdminPoliciesApp {
   // ==================== 数据加载 ====================
 
   async loadTeams() {
-    const data = await this._request('/api/admin/teams');
+    const data = await this._request('/api/admin/policy-teams');
     this._teams = Array.isArray(data) ? data.filter(team => !team.is_personal) : [];
   }
 
   async loadUsers() {
-    const data = await this._request('/api/admin/users?page=1&limit=200');
+    const data = await this._request('/api/admin/policy-users?limit=500');
     this._users = Array.isArray(data) ? data : (data.items || []);
   }
 
@@ -167,7 +188,7 @@ class AdminPoliciesApp {
         <div class="policy-quick-actions">
           <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-action="templates">从模板创建</button>
           <button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-action="simulate">策略模拟</button>
-          <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-action="kill">${settings.global?.kill_switch ? '解除紧急停止' : '紧急停止全部策略'}</button>
+          ${this.host?.user?.isAdmin === true ? `<button type="button" class="blora-button" data-variant="outline" data-size="sm" data-action="kill">${settings.global?.kill_switch ? '解除紧急停止' : '紧急停止全部策略'}</button>` : ''}
         </div>
       `;
       pane.querySelectorAll('[data-action]').forEach(button => {
@@ -230,6 +251,9 @@ class AdminPoliciesApp {
           </select>
           <button type="button" class="blora-button" data-variant="primary" data-size="sm" id="policyCreateBtn">新建策略</button>
           <button type="button" class="blora-button" data-variant="secondary" data-size="sm" id="policyTemplateBtn">从模板创建</button>
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" id="policyExportBtn">导出</button>
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" id="policyImportBtn">导入</button>
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" id="policyScanBtn">输出扫描</button>
         </div>
         <div class="blora-table-wrap">
           <table class="blora-table">
@@ -299,6 +323,9 @@ class AdminPoliciesApp {
     pane.querySelector('#policyEnabledFilter')?.addEventListener('change', event => { this._filters.enabled = event.target.value; this.loadPolicies(); });
     pane.querySelector('#policyCreateBtn')?.addEventListener('click', () => this.openEditor());
     pane.querySelector('#policyTemplateBtn')?.addEventListener('click', () => this.openTemplatePicker());
+    pane.querySelector('#policyExportBtn')?.addEventListener('click', () => this.exportPolicies());
+    pane.querySelector('#policyImportBtn')?.addEventListener('click', () => this.importPolicies());
+    pane.querySelector('#policyScanBtn')?.addEventListener('click', () => this.runOutputScan());
   }
 
   async _handlePolicyAction(action, id) {
@@ -342,6 +369,67 @@ class AdminPoliciesApp {
         this.toast('策略已删除');
         await this.loadPolicies();
       }
+    } catch (error) {
+      this.toast(error.message, 'error');
+    }
+  }
+
+  async exportPolicies() {
+    try {
+      const data = await this._request('/api/admin/policies/export');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `crewrouter-policies-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.toast(`已导出 ${(data.policies || []).length} 条策略`);
+    } catch (error) {
+      this.toast(error.message, 'error');
+    }
+  }
+
+  async importPolicies() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const payload = JSON.parse(await file.text());
+        const policies = Array.isArray(payload) ? payload : payload.policies;
+        if (!Array.isArray(policies) || !policies.length) throw new Error('文件中没有策略');
+        const preview = await this._request('/api/admin/policies/import', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ policies, dry_run: true }),
+        });
+        const ok = (preview.results || []).filter(item => item.ok).length;
+        if (!window.confirm(`校验通过 ${ok} / ${policies.length} 条，是否导入？`)) return;
+        const result = await this._request('/api/admin/policies/import', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ policies, dry_run: false }),
+        });
+        const imported = (result.results || []).filter(item => item.ok && !item.skipped).length;
+        const skipped = (result.results || []).filter(item => item.skipped).length;
+        this.toast(`已导入 ${imported} 条，跳过 ${skipped} 条`, imported ? 'success' : 'warning');
+        await this.loadPolicies();
+      } catch (error) {
+        this.toast(error.message, 'error');
+      }
+    });
+    input.click();
+  }
+
+  async runOutputScan() {
+    try {
+      const result = await this._request('/api/admin/policies/output-scan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ since_minutes: 60, limit: 200 }),
+      });
+      this.toast(`扫描 ${result.scanned || 0} 条响应，命中 ${result.matched || 0} 次`, result.matched ? 'warning' : 'success');
+      await this.loadHits();
     } catch (error) {
       this.toast(error.message, 'error');
     }
@@ -708,6 +796,7 @@ class AdminPoliciesApp {
             <option value="active" ${this._memberFilters.status === 'active' ? 'selected' : ''}>正常</option>
             <option value="suspended" ${this._memberFilters.status === 'suspended' ? 'selected' : ''}>暂停中</option>
           </select>
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" id="loginEventsBtn">登录事件</button>
         </div>
         <div class="blora-table-wrap">
           <table class="blora-table">
@@ -728,6 +817,7 @@ class AdminPoliciesApp {
         this._memberFilters.status = event.target.value;
         this.loadMembers();
       });
+      pane.querySelector('#loginEventsBtn')?.addEventListener('click', () => this.openLoginEvents());
       pane.querySelectorAll('[data-member-action]').forEach(button => {
         button.addEventListener('click', () => this._handleMemberAction(button.dataset.memberAction, Number(button.dataset.id), button.dataset.name));
       });
@@ -1060,14 +1150,18 @@ class AdminPoliciesApp {
     if (!pane) return;
     this.loading(pane);
     try {
+      const isGlobalAdmin = this.host?.user?.isAdmin === true;
       const [analytics, channels, rules] = await Promise.all([
         this._request('/api/admin/policies/analytics?range=7d&group_by=policy'),
-        this._request('/api/admin/policy-channels'),
-        this._request('/api/admin/policy-alert-rules'),
+        isGlobalAdmin ? this._request('/api/admin/policy-channels') : Promise.resolve([]),
+        isGlobalAdmin ? this._request('/api/admin/policy-alert-rules') : Promise.resolve([]),
       ]);
       const totals = analytics.totals || {};
       const maxHits = Math.max(1, ...(analytics.rows || []).map(row => Number(row.hits) || 0));
       pane.innerHTML = `
+        <div class="policy-quick-actions" style="margin-bottom:12px;">
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" id="policyReportBtn">下载审计报告</button>
+        </div>
         <div class="policy-stat-grid">
           ${this._statCard('7d 命中', totals.hits || 0, '策略命中总数')}
           ${this._statCard('7d 拦截', totals.blocked || 0, 'decision=block')}
@@ -1113,7 +1207,25 @@ class AdminPoliciesApp {
           </table></div>
         </section>
       `;
+      if (!isGlobalAdmin) {
+        pane.querySelectorAll('.policy-card').forEach(card => {
+          const title = card.querySelector('h3')?.textContent || '';
+          if (title.includes('通知渠道') || title.includes('告警规则')) card.style.display = 'none';
+        });
+      }
       pane.querySelector('#addChannelBtn')?.addEventListener('click', () => this.openChannelDialog());
+      pane.querySelector('#policyReportBtn')?.addEventListener('click', async () => {
+        try {
+          const report = await this._request('/api/admin/policies/report?range=30d');
+          const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `crewrouter-policy-report-${new Date().toISOString().slice(0, 10)}.json`;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) { this.toast(error.message, 'error'); }
+      });
       pane.querySelector('#addRuleBtn')?.addEventListener('click', () => this.openRuleDialog(channels || []));
       pane.querySelectorAll('[data-channel-test]').forEach(button => {
         button.addEventListener('click', async () => {
@@ -1154,7 +1266,7 @@ class AdminPoliciesApp {
           <label class="blora-field"><span class="blora-field__label">名称</span><input class="blora-input" id="chName"></label>
           <label class="blora-field"><span class="blora-field__label">类型</span>
             <select class="blora-select" id="chType">
-              ${['webhook','feishu','wecom','dingtalk','slack','telegram','email','bark'].map(value => `<option value="${value}">${value}</option>`).join('')}
+              ${['webhook','feishu','wecom','dingtalk','slack','telegram','email','bark','syslog','otlp'].map(value => `<option value="${value}">${value}</option>`).join('')}
             </select>
           </label>
           <label class="blora-field"><span class="blora-field__label">最低级别</span>
@@ -1166,6 +1278,8 @@ class AdminPoliciesApp {
           <label class="blora-field"><span class="blora-field__label">Secret / Token / Key</span><input class="blora-input" id="chSecret"></label>
           <label class="blora-field"><span class="blora-field__label">邮件收件人</span><input class="blora-input" id="chTo"></label>
           <label class="blora-field"><span class="blora-field__label">Telegram chat_id</span><input class="blora-input" id="chChat"></label>
+          <label class="blora-field"><span class="blora-field__label">Syslog host</span><input class="blora-input" id="chHost"></label>
+          <label class="blora-field"><span class="blora-field__label">Syslog 端口</span><input class="blora-input" type="number" id="chPort" value="514"></label>
         </div>
         <p class="policy-hint">Secret 会加密存储；URL 必须通过 SSRF 校验。</p>
       `,
@@ -1182,6 +1296,9 @@ class AdminPoliciesApp {
         if (secret) config.secret = secret;
         if (to) config.to = to;
         if (chat) config.chat_id = chat;
+        const host = dialog.element.querySelector('#chHost').value.trim();
+        const port = Number(dialog.element.querySelector('#chPort').value) || 514;
+        if (host) { config.host = host; config.port = port; }
         await this._request('/api/admin/policy-channels', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1237,6 +1354,31 @@ class AdminPoliciesApp {
         await this.loadAnalytics();
       } catch (error) { this.toast(error.message, 'error'); }
     });
+  }
+
+  async openLoginEvents() {
+    try {
+      const events = await this._request('/api/admin/policy-login-events?limit=100');
+      Dialog.showModal({
+        title: '登录事件',
+        width: 'min(820px, 96vw)',
+        content: `<div class="blora-table-wrap"><table class="blora-table">
+          <thead><tr><th>时间</th><th>成员</th><th>方式</th><th>结果</th><th>MFA</th><th>IP</th><th>原因</th></tr></thead>
+          <tbody>${(events || []).map(event => `<tr>
+            <td>${this.fmt(event.created_at)}</td>
+            <td>${this.esc(event.username || event.user_id || '-')}</td>
+            <td>${this.esc(event.method || '-')}</td>
+            <td>${event.success ? '<span class="blora-badge" data-variant="success">成功</span>' : '<span class="blora-badge" data-variant="danger">失败</span>'}</td>
+            <td>${event.mfa ? '是' : '否'}</td>
+            <td>${this.esc(event.ip || '-')}</td>
+            <td>${this.esc(event.reason || '-')}</td>
+          </tr>`).join('') || '<tr><td colspan="7" class="policy-empty">暂无登录事件</td></tr>'}</tbody>
+        </table></div>`,
+        footer: '<button type="button" class="blora-button" data-variant="secondary" data-dialog-cancel>关闭</button>',
+      });
+    } catch (error) {
+      this.toast(error.message, 'error');
+    }
   }
 
   // ==================== 客户端 ====================
@@ -1449,7 +1591,7 @@ class AdminPoliciesApp {
         </div>
         <div class="policy-quick-actions">
           <button type="button" class="blora-button" data-variant="primary" id="psSaveBtn">保存设置</button>
-          <button type="button" class="blora-button" data-variant="outline" id="psKillBtn">${settings.kill_switch ? '解除紧急停止' : '紧急停止全部策略'}</button>
+          ${this.host?.user?.isAdmin === true ? `<button type="button" class="blora-button" data-variant="outline" id="psKillBtn">${settings.kill_switch ? '解除紧急停止' : '紧急停止全部策略'}</button>` : ''}
         </div>
         <p class="policy-hint">紧急停止会立即放行所有请求；恢复后策略重新生效。多进程实例最多 10 秒内感知。</p>
       `;
@@ -1460,7 +1602,7 @@ class AdminPoliciesApp {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              team_id: null,
+              team_id: this.host?.user?.isAdmin === true ? null : (this._settings?.team?.team_id ?? null),
               enforcement_mode: pane.querySelector('#psMode').value,
               fail_mode: pane.querySelector('#psFailMode').value,
               hit_retention_days: Number(pane.querySelector('#psRetention').value),

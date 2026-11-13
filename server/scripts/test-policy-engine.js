@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { compilePolicy } = require('../utils/policy/matcher');
+const { compilePolicy, matchPolicy } = require('../utils/policy/matcher');
 const { evaluatePolicies } = require('../utils/policy/engine');
 const { DEFAULT_SETTINGS } = require('../utils/policy/cache');
 const { buildPolicyErrorBody } = require('../utils/gateway-errors');
@@ -217,6 +217,30 @@ async function run(cases) {
       assert.strictEqual(built.status, 403);
       assert.strictEqual(built.body.error.status, 'PERMISSION_DENIED');
       assert.strictEqual(built.body.error.details[0].reason, 'POLICY_BLOCKED');
+    }],
+    ['login condition checks method and MFA', async () => {
+      const p = compilePolicy({ conditions: { login: { methods: ['password+2fa'], require_mfa: true } } });
+      const base = { identity: {}, request: {}, actor: {}, network: {}, now: new Date(), getPromptCorpus: () => '' };
+      const hit = await matchPolicy(p, { ...base, login: { method: 'password+2fa', mfa: true, failedAttempts: 0 } });
+      const missMethod = await matchPolicy(p, { ...base, login: { method: 'password', mfa: true, failedAttempts: 0 } });
+      const missMfa = await matchPolicy(p, { ...base, login: { method: 'password+2fa', mfa: false, failedAttempts: 0 } });
+      assert.strictEqual(hit.match, true);
+      assert.strictEqual(missMethod.match, false);
+      assert.strictEqual(missMfa.match, false);
+    }],
+    ['country and ASN conditions', async () => {
+      const p = compilePolicy({ conditions: { countries: ['CN'], asn: ['4134'] } });
+      const base = { identity: {}, request: {}, actor: {}, login: {}, now: new Date(), getPromptCorpus: () => '' };
+      const hit = await matchPolicy(p, { ...base, network: { country: 'CN', asn: 'AS4134' } });
+      const miss = await matchPolicy(p, { ...base, network: { country: 'US', asn: 'AS4134' } });
+      assert.strictEqual(hit.match, true);
+      assert.strictEqual(miss.match, false);
+    }],
+    ['output scan matching', async () => {
+      const { matchOutput } = require('../utils/policy/output-scan');
+      assert.deepStrictEqual(matchOutput('secret token AKIA1234567890ABCDEF', { contains: ['secret'] }), { type: 'contains', value: 'secret' });
+      assert.strictEqual(matchOutput('hello', { contains: ['secret'] }), null);
+      assert.strictEqual(matchOutput('key AKIA1234567890ABCDEF', { regex: ['AKIA[0-9A-Z]{16}'] })?.type, 'regex');
     }],
   ]);
 })().catch(error => {

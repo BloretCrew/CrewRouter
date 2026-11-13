@@ -272,6 +272,33 @@ async function matchOneCondition(key, cond, ctx, deps) {
       if (cond.max_body_bytes != null && (request.bodyBytes || 0) > cond.max_body_bytes) return true;
       return false;
     }
+    case 'countries': {
+      if (!Array.isArray(cond) || !cond.length) return true;
+      const country = String(ctx.network?.country || '').toUpperCase();
+      return country ? cond.includes(country) : false;
+    }
+    case 'countries_deny': {
+      if (!Array.isArray(cond) || !cond.length) return true;
+      const country = String(ctx.network?.country || '').toUpperCase();
+      return country ? cond.includes(country) : false;
+    }
+    case 'asn': {
+      if (!Array.isArray(cond) || !cond.length) return true;
+      const asn = String(ctx.network?.asn || '').replace(/^AS/i, '');
+      if (!asn) return false;
+      return cond.some(item => String(item).replace(/^AS/i, '') === asn);
+    }
+    case 'login': {
+      const login = ctx.login || {};
+      if (Array.isArray(cond.methods) && cond.methods.length) {
+        if (!cond.methods.includes(login.method)) return false;
+      }
+      if (cond.require_mfa === true && !login.mfa) return false;
+      if (cond.max_failed_attempts != null) {
+        if (Number(login.failedAttempts || 0) < Number(cond.max_failed_attempts)) return false;
+      }
+      return true;
+    }
     case 'schedule':
       return matchSchedule(cond, ctx.now || new Date());
     case 'usage': {

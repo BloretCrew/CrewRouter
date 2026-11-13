@@ -33,7 +33,7 @@ async function aggregateRecentDays(days = 2) {
   }
 }
 
-async function analytics({ from, to, groupBy = 'policy', limit = 50 } = {}) {
+async function analytics({ from, to, groupBy = 'policy', limit = 50, teamIds = null } = {}) {
   const since = from ? new Date(from) : new Date(Date.now() - 7 * 86400000);
   const until = to ? new Date(to) : new Date();
   const groupMap = {
@@ -46,6 +46,11 @@ async function analytics({ from, to, groupBy = 'policy', limit = 50 } = {}) {
   };
   const group = groupMap[groupBy] || groupMap.policy;
   const order = groupBy === 'policy' ? 'policy_id' : groupBy === 'user' ? 'user_id' : groupBy === 'team' ? 'team_id' : groupBy === 'source' ? 'request_source' : groupBy === 'model' ? 'requested_model' : 'action';
+  const hasTeams = Array.isArray(teamIds) && teamIds.length > 0;
+  const teamFilter = hasTeams ? 'AND team_id = ANY($3::int[])' : '';
+  const rowParams = [since, until, ...(hasTeams ? [teamIds] : []), Math.min(500, Math.max(1, limit))];
+  const baseParams = [since, until, ...(hasTeams ? [teamIds] : [])];
+  const limitPlaceholder = hasTeams ? '$4' : '$3';
   const [rows, series, totals] = await Promise.all([
     pool.query(
       `SELECT ${group},
@@ -53,28 +58,28 @@ async function analytics({ from, to, groupBy = 'policy', limit = 50 } = {}) {
               COUNT(*) FILTER (WHERE decision = 'block')::int AS blocked,
               COUNT(DISTINCT user_id)::int AS members
          FROM policy_hits
-        WHERE created_at >= $1 AND created_at <= $2
+        WHERE created_at >= $1 AND created_at <= $2 ${teamFilter}
         GROUP BY ${group}
         ORDER BY hits DESC
-        LIMIT $3`,
-      [since, until, Math.min(500, Math.max(1, limit))]
+        LIMIT ${limitPlaceholder}`,
+      rowParams
     ),
     pool.query(
       `SELECT date_trunc('hour', created_at) AS bucket,
               COUNT(*)::int AS hits,
               COUNT(*) FILTER (WHERE decision = 'block')::int AS blocked
          FROM policy_hits
-        WHERE created_at >= $1 AND created_at <= $2
+        WHERE created_at >= $1 AND created_at <= $2 ${teamFilter}
         GROUP BY bucket ORDER BY bucket ASC`,
-      [since, until]
+      baseParams
     ),
     pool.query(
       `SELECT COUNT(*)::int AS hits,
               COUNT(*) FILTER (WHERE decision = 'block')::int AS blocked,
               COUNT(DISTINCT user_id)::int AS members,
               COALESCE(AVG(eval_ms), 0) AS avg_eval_ms
-         FROM policy_hits WHERE created_at >= $1 AND created_at <= $2`,
-      [since, until]
+         FROM policy_hits WHERE created_at >= $1 AND created_at <= $2 ${teamFilter}`,
+      baseParams
     ),
   ]);
   return {

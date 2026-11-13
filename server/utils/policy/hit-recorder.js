@@ -157,6 +157,7 @@ async function flush() {
           action: row.action,
           decision: row.decision,
           user_id: row.user_id,
+          team_id: row.team_id,
           api_key_id: row.api_key_id,
           request_source: row.request_source,
           requested_model: row.requested_model,

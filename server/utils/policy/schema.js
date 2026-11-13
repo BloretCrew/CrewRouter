@@ -187,11 +187,13 @@ async function createTables(db) {
   await db.query(`CREATE INDEX IF NOT EXISTS idx_policy_hits_policy_created ON policy_hits (policy_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_policy_hits_source_created ON policy_hits (request_source, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_policy_hits_request ON policy_hits (request_id)`);
+  // 审计记录不依赖策略行存活；删除策略后仍保留命中历史。
+  await db.query(`ALTER TABLE policy_hits DROP CONSTRAINT IF EXISTS policy_hits_policy_id_fkey`);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS policy_channels (
       id SERIAL PRIMARY KEY,
-      type VARCHAR(16) NOT NULL CHECK (type IN ('webhook','feishu','wecom','dingtalk','slack','telegram','email','bark')),
+      type VARCHAR(16) NOT NULL CHECK (type IN ('webhook','feishu','wecom','dingtalk','slack','telegram','email','bark','syslog','otlp')),
       name VARCHAR(80) NOT NULL,
       config JSONB NOT NULL DEFAULT '{}'::jsonb,
       enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -201,6 +203,9 @@ async function createTables(db) {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  await db.query(`ALTER TABLE policy_channels DROP CONSTRAINT IF EXISTS policy_channels_type_check`);
+  await db.query(`ALTER TABLE policy_channels ADD CONSTRAINT policy_channels_type_check CHECK (type IN ('webhook','feishu','wecom','dingtalk','slack','telegram','email','bark','syslog','otlp'))`).catch(() => {});
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS policy_alert_rules (
@@ -247,6 +252,22 @@ async function createTables(db) {
       PRIMARY KEY (day, policy_id, action, decision, request_source, team_id)
     )
   `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS login_events (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      method VARCHAR(24),
+      success BOOLEAN NOT NULL,
+      ip INET,
+      user_agent TEXT,
+      mfa BOOLEAN NOT NULL DEFAULT FALSE,
+      reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_login_events_user_created ON login_events (user_id, created_at DESC)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_login_events_ip_created ON login_events (ip, created_at DESC)`);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS policy_jobs (

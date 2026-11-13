@@ -5,6 +5,7 @@ const Logger = require('../../logger');
 const { expireApprovals } = require('./approvals');
 const { aggregateRecentDays } = require('./metrics');
 const { invalidatePolicyCache } = require('./cache');
+const { scanOutputPolicies } = require('./output-scan');
 
 let timer = null;
 let running = false;
@@ -75,6 +76,8 @@ async function runSchedulerTick({ now = Date.now() } = {}) {
     await archiveExpired();
     await expireExemptions();
     await expireStaleApprovals();
+    await scanOutputPolicies({ limit: 200, sinceMinutes: 10 })
+      .catch(error => Logger.warn(`[策略] 输出策略扫描失败: ${error.message}`));
     if (now - lastMetricsAt > 5 * 60 * 1000) {
       lastMetricsAt = now;
       await aggregateRecentDays(2).catch(error => Logger.warn(`[策略] 指标聚合失败: ${error.message}`));

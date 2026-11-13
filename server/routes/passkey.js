@@ -139,6 +139,24 @@ router.post('/login/verify', requirePasskeyLogin, async (req, res) => {
       passkey.counter = verification.newCounter;
       return current;
     });
+    const { evaluateLoginPolicy } = require('../utils/policy/login-policy');
+    const { recordLoginEvent } = require('../utils/policy/login-events');
+    const policyDecision = await evaluateLoginPolicy({
+      userId: user.id,
+      method: 'passkey',
+      mfa: true,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    }).catch(() => ({ allowed: true }));
+    if (!policyDecision.allowed) {
+      recordLoginEvent({ userId: user.id, method: 'passkey', success: false, ip: req.ip, userAgent: req.headers['user-agent'], mfa: true, reason: policyDecision.code || 'policy_blocked' });
+      return res.status(403).json({
+        error: policyDecision.message || '登录被团队策略拦截',
+        type: 'policy_login_blocked',
+        code: policyDecision.code || 'policy_login_blocked',
+        policy: policyDecision.policy || null,
+      });
+    }
     sessionChanged = true;
     await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
     if (user.two_factor_enabled) {
@@ -150,6 +168,7 @@ router.post('/login/verify', requirePasskeyLogin, async (req, res) => {
     await saveSession(req);
     audit(req, user, ACTIONS.AUTH_LOGIN, { method: 'passkey', credentialIdSha256: crypto.createHash('sha256').update(body.id).digest('hex') });
     require('../utils/login-reporter').reportLoginEvent(req);
+    recordLoginEvent({ userId: user.id, method: 'passkey', success: true, ip: req.ip, userAgent: req.headers['user-agent'], mfa: true });
     res.json({ success: true, user: req.session.user });
   } catch (error) {
     if (sessionChanged) await discardSession(req);

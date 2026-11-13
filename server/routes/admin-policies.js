@@ -40,7 +40,105 @@ const { recordHit } = require('../utils/policy/hit-recorder');
 const { sourceLabel } = require('../utils/request-source');
 
 router.use(requireTeamAdminEdition);
-router.use(requireAuth, requireAdmin);
+router.use(requireAuth);
+router.use(requirePolicyAccess);
+router.use((req, res, next) => {
+  if (req.policyReadOnly && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return res.status(403).json({ error: '只读角色不能修改策略' });
+  }
+  next();
+});
+
+async function requirePolicyAccess(req, res, next) {
+  try {
+    const user = req.authUser || {};
+    if (user.isAdmin === true) {
+      req.policyTeamIds = null;
+      req.policyReadOnly = false;
+      return next();
+    }
+    if (!user.id) return res.status(401).json({ error: '请先登录' });
+    const result = await pool.query(
+      `SELECT team_id, role FROM user_teams WHERE user_id = $1 AND role IN ('owner','admin','viewer')`,
+      [user.id]
+    );
+    const managers = result.rows.filter(row => row.role === 'owner' || row.role === 'admin').map(row => Number(row.team_id));
+    const viewers = result.rows.filter(row => row.role === 'viewer').map(row => Number(row.team_id));
+    const ids = managers.length ? managers : viewers;
+    if (!ids.length) return res.status(403).json({ error: '无策略管理权限' });
+    req.policyTeamIds = ids;
+    req.policyReadOnly = managers.length === 0;
+    return next();
+  } catch (error) {
+    return res.status(503).json({ error: '权限暂不可用' });
+  }
+}
+
+function requireGlobalPolicyAdmin(req, res) {
+  if (req.policyTeamIds) {
+    res.status(403).json({ error: '该操作仅限全局管理员' });
+    return false;
+  }
+  return true;
+}
+
+/** 策略作用域可见性：全局策略可读；Team/成员策略按管理 Team 过滤。 */
+function policyScopePredicate(alias, req, params) {
+  if (!req.policyTeamIds) return '';
+  params.push(req.policyTeamIds);
+  const n = params.length;
+  return `(${alias}.scope_type = 'global' OR (${alias}.scope_type = 'team' AND ${alias}.scope_id = ANY($${n}::int[])) OR (${alias}.scope_type = 'member' AND ${alias}.scope_id IN (SELECT id FROM users WHERE team_id = ANY($${n}::int[]))))`;
+}
+
+async function policyTeamId(policy) {
+  if (!policy) return null;
+  if (policy.scope_type === 'team') return Number(policy.scope_id);
+  if (policy.scope_type === 'member') {
+    const result = await pool.query('SELECT team_id FROM users WHERE id = $1', [policy.scope_id]);
+    return result.rows[0]?.team_id ? Number(result.rows[0].team_id) : null;
+  }
+  return null;
+}
+
+async function canWritePolicy(req, policy) {
+  if (!req.policyTeamIds) return true;
+  if (policy.scope_type === 'global') return false;
+  const teamId = await policyTeamId(policy);
+  return teamId != null && req.policyTeamIds.includes(teamId);
+}
+
+async function canReadPolicy(req, policy) {
+  if (!req.policyTeamIds) return true;
+  if (policy.scope_type === 'global') return true;
+  const teamId = await policyTeamId(policy);
+  return teamId != null && req.policyTeamIds.includes(teamId);
+}
+
+async function ensureScopeAllowed(req, scopeType, scopeId, { write = true } = {}) {
+  if (!req.policyTeamIds) return true;
+  if (scopeType === 'global') return !write;
+  if (scopeType === 'team') return req.policyTeamIds.includes(Number(scopeId));
+  const result = await pool.query('SELECT team_id FROM users WHERE id = $1', [scopeId]);
+  const teamId = result.rows[0]?.team_id;
+  return teamId != null && req.policyTeamIds.includes(Number(teamId));
+}
+
+async function canAccessSubject(req, subjectType, subjectId) {
+  if (!req.policyTeamIds) return true;
+  if (subjectType === 'team') return req.policyTeamIds.includes(Number(subjectId));
+  if (subjectType === 'user') {
+    const result = await pool.query('SELECT team_id FROM users WHERE id = $1', [subjectId]);
+    return req.policyTeamIds.includes(Number(result.rows[0]?.team_id));
+  }
+  if (subjectType === 'api_key') {
+    const result = await pool.query(
+      `SELECT u.team_id FROM api_keys ak JOIN users u ON u.id = ak.user_id WHERE ak.id = $1`,
+      [subjectId]
+    );
+    return req.policyTeamIds.includes(Number(result.rows[0]?.team_id));
+  }
+  return false;
+}
 
 function actor(req) {
   return req.authUser || req.session?.user || {};
@@ -112,10 +210,58 @@ function policyMessage(policy) {
 // 未使用的辅助函数保留位置，便于后续导出功能复用。
 void policyMessage;
 
+// ==================== 策略范围选择 ====================
+
+router.get('/policy-teams', async (req, res) => {
+  try {
+    const params = [];
+    let where = '';
+    if (req.policyTeamIds) {
+      params.push(req.policyTeamIds);
+      where = 'WHERE id = ANY($1::int[])';
+    }
+    const result = await pool.query(`SELECT id, name, is_personal FROM teams ${where} ORDER BY id ASC`, params);
+    res.json(result.rows);
+  } catch (error) {
+    handleError(res, error, 'policy-teams');
+  }
+});
+
+router.get('/policy-users', async (req, res) => {
+  try {
+    const params = [];
+    const where = [];
+    if (req.policyTeamIds) {
+      params.push(req.policyTeamIds);
+      where.push(`team_id = ANY($${params.length}::int[])`);
+    }
+    if (req.query.q) {
+      params.push(`%${req.query.q}%`);
+      where.push(`(username ILIKE $${params.length} OR email ILIKE $${params.length})`);
+    }
+    params.push(Math.min(500, Math.max(1, Number(req.query.limit) || 200)));
+    const result = await pool.query(
+      `SELECT id, username, email, is_admin, team_id FROM users
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY id ASC LIMIT $${params.length}`,
+      params
+    );
+    res.json({ items: result.rows, total: result.rows.length });
+  } catch (error) {
+    handleError(res, error, 'policy-users');
+  }
+});
+
 // ==================== 概览 ====================
 
 router.get('/policies/overview', async (req, res) => {
   try {
+    const teams = req.policyTeamIds;
+    const scopeParams = [];
+    const scope = policyScopePredicate('p', req, scopeParams);
+    const teamWhere = teams ? 'WHERE team_id = ANY($1::int[])' : '';
+    const teamAnd = teams ? 'AND team_id = ANY($1::int[])' : '';
+    const params = teams ? [teams] : [];
     const [policies, members, hits, topPolicies, topClients, pending] = await Promise.all([
       pool.query(`SELECT
           COUNT(*)::int AS total,
@@ -123,27 +269,28 @@ router.get('/policies/overview', async (req, res) => {
           COUNT(*) FILTER (WHERE effect = 'deny')::int AS deny,
           COUNT(*) FILTER (WHERE effect = 'allow')::int AS allow,
           COUNT(*) FILTER (WHERE effect = 'allow' AND action = 'warn')::int AS allowlist
-        FROM access_policies`),
+        FROM access_policies p ${scope ? `WHERE ${scope}` : ''}`, scopeParams),
       pool.query(`SELECT
           COUNT(*) FILTER (WHERE suspended_at IS NOT NULL AND (suspended_until IS NULL OR suspended_until > NOW()))::int AS suspended,
           COUNT(*) FILTER (WHERE suspended_at IS NOT NULL AND suspended_until > NOW() AND suspended_until <= NOW() + INTERVAL '24 hours')::int AS suspended_24h,
           COUNT(*) FILTER (WHERE policy_bypass AND (policy_bypass_until IS NULL OR policy_bypass_until > NOW()))::int AS bypassed
-        FROM users`),
+        FROM users ${teamWhere}`, params),
       pool.query(`SELECT
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours')::int AS last_24h,
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int AS last_7d,
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours' AND decision = 'block')::int AS blocked_24h,
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours' AND action IN ('shadow','warn','notify'))::int AS observed_24h
-        FROM policy_hits`),
+        FROM policy_hits ${teamWhere}`, params),
       pool.query(`SELECT policy_id, policy_name, COUNT(*)::int AS hits
-        FROM policy_hits WHERE created_at >= NOW() - INTERVAL '24 hours' AND policy_id IS NOT NULL
-        GROUP BY policy_id, policy_name ORDER BY hits DESC LIMIT 5`),
+        FROM policy_hits WHERE created_at >= NOW() - INTERVAL '24 hours' AND policy_id IS NOT NULL ${teamAnd}
+        GROUP BY policy_id, policy_name ORDER BY hits DESC LIMIT 5`, params),
       pool.query(`SELECT request_source, COUNT(*)::int AS hits
-        FROM policy_hits WHERE created_at >= NOW() - INTERVAL '24 hours'
-        GROUP BY request_source ORDER BY hits DESC LIMIT 8`),
+        FROM policy_hits WHERE created_at >= NOW() - INTERVAL '24 hours' ${teamAnd}
+        GROUP BY request_source ORDER BY hits DESC LIMIT 8`, params),
       pool.query(`SELECT
-          (SELECT COUNT(*) FROM policy_approvals WHERE status = 'pending')::int AS approvals,
-          (SELECT COUNT(*) FROM policy_appeals WHERE status = 'pending')::int AS appeals`),
+          (SELECT COUNT(*) FROM policy_approvals a WHERE a.status = 'pending' ${teams ? "AND (a.payload->>'team_id')::int = ANY($1::int[])" : ''})::int AS approvals,
+          (SELECT COUNT(*) FROM policy_appeals a LEFT JOIN users u ON u.id = a.user_id WHERE a.status = 'pending' ${teams ? 'AND u.team_id = ANY($1::int[])' : ''})::int AS appeals`,
+        params),
     ]);
     res.json({
       policies: policies.rows[0],
@@ -165,6 +312,8 @@ router.get('/policies', async (req, res) => {
     const { page, limit, offset } = parsePagination(req);
     const params = [];
     const where = [];
+    const scope = policyScopePredicate('p', req, params);
+    if (scope) where.push(scope);
     const add = (sql, value) => { params.push(value); where.push(sql.replace('?', `$${params.length}`)); };
     if (req.query.scope_type) add('p.scope_type = ?', req.query.scope_type);
     if (req.query.category) add('p.category = ?', req.query.category);
@@ -277,6 +426,210 @@ router.post('/policies/simulate', async (req, res) => {
   }
 });
 
+router.post('/policies/output-scan', async (req, res) => {
+  if (!requireGlobalPolicyAdmin(req, res)) return;
+  try {
+    const { scanOutputPolicies } = require('../utils/policy/output-scan');
+    res.json(await scanOutputPolicies({
+      limit: Number(req.body?.limit) || 200,
+      sinceMinutes: Number(req.body?.since_minutes) || 60,
+    }));
+  } catch (error) {
+    handleError(res, error, 'output-scan');
+  }
+});
+
+router.get('/policies/export', async (req, res) => {
+  try {
+    const params = [];
+    const scope = policyScopePredicate('p', req, params);
+    const result = await pool.query(
+      `SELECT * FROM access_policies p ${scope ? `WHERE ${scope}` : ''} ORDER BY p.id ASC`,
+      params
+    );
+    const policies = result.rows.map(row => {
+      const { id, created_by, updated_by, created_at, updated_at, archived_at, version, ...rest } = row;
+      return rest;
+    });
+    res.json({ version: 1, exported_at: new Date().toISOString(), policies });
+  } catch (error) {
+    handleError(res, error, 'export');
+  }
+});
+
+router.get('/policies/schema', (req, res) => {
+  res.json({
+    version: 1,
+    description: 'CrewRouter policy export/import schema',
+    required: ['name', 'scope_type', 'effect', 'action', 'conditions'],
+    enums: {
+      scope_type: ['global', 'team', 'member'],
+      effect: ['deny', 'allow'],
+      action: ['block', 'warn', 'shadow', 'notify', 'throttle', 'queue', 'downgrade', 'approval', 'step_up', 'suspend', 'revoke_key', 'custom'],
+      category: ['client', 'identity', 'model', 'provider', 'network', 'time', 'usage', 'capacity', 'content', 'session', 'combined'],
+      status: ['draft', 'published', 'archived'],
+    },
+    condition_keys: [
+      'clients', 'protocols', 'endpoints', 'semantics', 'models', 'providers', 'tools',
+      'mcp_servers', 'ips', 'countries', 'countries_deny', 'asn', 'tags', 'identities',
+      'api_keys', 'oauth_clients', 'session', 'prompt', 'output', 'media', 'limits',
+      'schedule', 'usage', 'budget', 'concurrency', 'login', 'all', 'any', 'not',
+    ],
+  });
+});
+
+router.post('/policies/import', async (req, res) => {
+  const list = Array.isArray(req.body?.policies) ? req.body.policies : [];
+  const dryRun = req.body?.dry_run === true;
+  if (!list.length) return res.status(400).json({ error: 'policies 不能为空' });
+  if (list.length > 200) return res.status(400).json({ error: '单次最多导入 200 条策略' });
+  const results = [];
+  const client = dryRun ? null : await pool.connect();
+  try {
+    if (client) await client.query('BEGIN');
+    for (let index = 0; index < list.length; index += 1) {
+      const raw = list[index];
+      try {
+        const input = normalizePolicyInput({ ...raw, name: raw?.name || `导入策略 ${index + 1}` });
+        await ensureScope(input.scope_type, input.scope_id);
+        if (!await ensureScopeAllowed(req, input.scope_type, input.scope_id, { write: true })) {
+          throw Object.assign(new Error('无权在该作用域导入策略'), { code: 'policy_forbidden' });
+        }
+        if (dryRun) {
+          results.push({ index, name: input.name, ok: true });
+          continue;
+        }
+        const result = await client.query(
+          `INSERT INTO access_policies (
+            name, description, scope_type, scope_id, effect, action, action_options, ladder,
+            priority, category, conditions, status, version, group_id, tags, rollout_percent,
+            status_code, message_template, notify_channels, starts_at, ends_at, auto_publish_at,
+            bypass_until, enabled, created_by, updated_by
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12,1,$13,$14,$15,$16,$17,$18::jsonb,$19,$20,$21,$22,$23,$24,$24)
+          ON CONFLICT (scope_type, COALESCE(scope_id, 0), name) DO NOTHING
+          RETURNING *`,
+          [
+            input.name, input.description, input.scope_type, input.scope_id, input.effect, input.action,
+            JSON.stringify(input.action_options || {}), JSON.stringify(input.ladder || []),
+            input.priority, input.category, JSON.stringify(input.conditions || {}), input.status || 'draft',
+            input.group_id || null, input.tags || [], input.rollout_percent, input.status_code,
+            input.message_template, JSON.stringify(input.notify_channels || {}), input.starts_at,
+            input.ends_at, input.auto_publish_at || null, input.bypass_until, input.enabled,
+            actor(req).id || null,
+          ]
+        );
+        if (result.rows.length) {
+          await saveVersion(client, result.rows[0], '导入策略', actor(req).id);
+          results.push({ index, name: input.name, ok: true, id: result.rows[0].id });
+        } else {
+          results.push({ index, name: input.name, ok: false, skipped: true, error: '同作用域同名策略已存在' });
+        }
+      } catch (error) {
+        results.push({ index, name: raw?.name || `导入策略 ${index + 1}`, ok: false, error: error.message, details: error.details || [] });
+      }
+    }
+    if (client) await client.query('COMMIT');
+    if (!dryRun) invalidatePolicyCache();
+    audit(req, ACTIONS.POLICY_IMPORT, 'policy', null, dryRun ? '预览导入策略' : '导入策略', { count: list.length, results });
+    res.json({ dry_run: dryRun, results });
+  } catch (error) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    }
+    handleError(res, error, 'import');
+  } finally {
+    client?.release();
+  }
+});
+
+router.get('/policies/report', async (req, res) => {
+  try {
+    const range = String(req.query.range || '30d');
+    const hours = range === '24h' ? 24 : range === '7d' ? 168 : range === '30d' ? 720 : 168;
+    const since = new Date(Date.now() - hours * 3600 * 1000);
+    const teams = req.policyTeamIds;
+    const params = [since, ...(teams ? [teams] : [])];
+    const teamFilter = teams ? 'AND team_id = ANY($2::int[])' : '';
+    const [summary, topPolicies, topClients, exemptions, appeals, approvals, logins] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int AS hits, COUNT(*) FILTER (WHERE decision = 'block')::int AS blocked,
+                COUNT(DISTINCT user_id)::int AS members, COUNT(DISTINCT policy_id)::int AS policies
+           FROM policy_hits WHERE created_at >= $1 ${teamFilter}`,
+        params
+      ),
+      pool.query(
+        `SELECT policy_id, policy_name, COUNT(*)::int AS hits,
+                COUNT(*) FILTER (WHERE decision = 'block')::int AS blocked
+           FROM policy_hits WHERE created_at >= $1 ${teamFilter}
+           GROUP BY policy_id, policy_name ORDER BY hits DESC LIMIT 20`,
+        params
+      ),
+      pool.query(
+        `SELECT request_source, COUNT(*)::int AS hits
+           FROM policy_hits WHERE created_at >= $1 ${teamFilter}
+           GROUP BY request_source ORDER BY hits DESC LIMIT 20`,
+        params
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS active FROM policy_exemptions e WHERE e.status = 'active'
+          ${teams ? `AND (((e.subject_type = 'user' AND e.subject_id IN (SELECT id FROM users WHERE team_id = ANY($1::int[]))) OR (e.subject_type = 'team' AND e.subject_id = ANY($1::int[])) OR (e.subject_type = 'api_key' AND e.subject_id IN (SELECT ak.id FROM api_keys ak JOIN users au ON au.id = ak.user_id WHERE au.team_id = ANY($1::int[])))))` : ''}`,
+        teams ? [teams] : []
+      ),
+      pool.query(
+        `SELECT status, COUNT(*)::int AS count FROM policy_appeals a
+          ${teams ? 'LEFT JOIN users u ON u.id = a.user_id' : ''}
+          ${teams ? 'WHERE u.team_id = ANY($1::int[])' : ''}
+          GROUP BY status`,
+        teams ? [teams] : []
+      ),
+      pool.query(
+        `SELECT status, COUNT(*)::int AS count FROM policy_approvals a
+          ${teams ? "WHERE (a.payload->>'team_id')::int = ANY($1::int[])" : ''}
+          GROUP BY status`,
+        teams ? [teams] : []
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE success)::int AS success,
+                COUNT(*) FILTER (WHERE NOT success)::int AS failed
+           FROM login_events e
+           ${teams
+             ? 'WHERE e.user_id IN (SELECT id FROM users WHERE team_id = ANY($1::int[])) AND e.created_at >= $2'
+             : 'WHERE e.created_at >= $1'}`,
+        teams ? [teams, since] : [since]
+      ),
+    ]);
+    const report = {
+      generated_at: new Date().toISOString(),
+      range: { from: since.toISOString(), to: new Date().toISOString() },
+      summary: summary.rows[0],
+      top_policies: topPolicies.rows,
+      top_clients: topClients.rows.map(row => ({ ...row, label: sourceLabel(row.request_source) })),
+      exemptions: exemptions.rows[0],
+      appeals: appeals.rows,
+      approvals: approvals.rows,
+      logins: logins.rows[0],
+    };
+    if (req.query.format === 'csv') {
+      const lines = [
+        'metric,value',
+        `generated_at,${report.generated_at}`,
+        `hits,${report.summary.hits || 0}`,
+        `blocked,${report.summary.blocked || 0}`,
+        `members,${report.summary.members || 0}`,
+        `policies,${report.summary.policies || 0}`,
+        `active_exemptions,${report.exemptions.active || 0}`,
+        `login_total,${report.logins.total || 0}`,
+        `login_failed,${report.logins.failed || 0}`,
+      ];
+      res.type('text/csv').send(lines.join('\n'));
+      return;
+    }
+    res.json(report);
+  } catch (error) {
+    handleError(res, error, 'report');
+  }
+});
+
 router.get('/policies/analytics', async (req, res) => {
   try {
     const range = String(req.query.range || '7d');
@@ -286,6 +639,7 @@ router.get('/policies/analytics', async (req, res) => {
     const result = await metrics.analytics({
       from, to, groupBy: String(req.query.group_by || 'policy'),
       limit: Number(req.query.limit) || 50,
+      teamIds: req.policyTeamIds,
     });
     res.json(result);
   } catch (error) {
@@ -294,6 +648,7 @@ router.get('/policies/analytics', async (req, res) => {
 });
 
 router.get('/policies/metrics', async (req, res) => {
+  if (!requireGlobalPolicyAdmin(req, res)) return;
   try {
     res.type('text/plain; version=0.0.4').send(await metrics.prometheusText());
   } catch (error) {
@@ -306,6 +661,7 @@ router.post('/policies/:id/publish', async (req, res) => {
     const id = Number(req.params.id);
     const current = await pool.query('SELECT * FROM access_policies WHERE id = $1', [id]);
     if (!current.rows.length) return res.status(404).json({ error: '策略不存在' });
+    if (!await canWritePolicy(req, current.rows[0])) return res.status(403).json({ error: '无权发布该策略' });
     let teamId = null;
     if (current.rows[0].scope_type === 'team') teamId = current.rows[0].scope_id;
     if (current.rows[0].scope_type === 'member') {
@@ -316,7 +672,7 @@ router.post('/policies/:id/publish', async (req, res) => {
     if (settings.require_approval_for_publish) {
       const approval = await createApproval(pool, {
         kind: 'change', policyId: id, requestedBy: actor(req).id || null,
-        payload: { action: 'publish', policy_id: id },
+        payload: { action: 'publish', policy_id: id, team_id: teamId },
         preview: { name: current.rows[0].name, status: current.rows[0].status },
       });
       audit(req, ACTIONS.POLICY_PUBLISH, 'policy', id, `提交发布审批「${current.rows[0].name}」`, { approval_id: approval.id });
@@ -339,6 +695,9 @@ router.post('/policies/:id/publish', async (req, res) => {
 router.post('/policies/:id/unpublish', async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const existing = await pool.query('SELECT * FROM access_policies WHERE id = $1', [id]);
+    if (!existing.rows.length) return res.status(404).json({ error: '策略不存在' });
+    if (!await canWritePolicy(req, existing.rows[0])) return res.status(403).json({ error: '无权修改该策略' });
     const result = await pool.query(
       `UPDATE access_policies SET status = 'draft', updated_by = $2, updated_at = NOW()
         WHERE id = $1 RETURNING *`,
@@ -357,6 +716,9 @@ router.post('/policies/:id/unpublish', async (req, res) => {
 router.post('/policies/:id/archive', async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const existing = await pool.query('SELECT * FROM access_policies WHERE id = $1', [id]);
+    if (!existing.rows.length) return res.status(404).json({ error: '策略不存在' });
+    if (!await canWritePolicy(req, existing.rows[0])) return res.status(403).json({ error: '无权归档该策略' });
     const result = await pool.query(
       `UPDATE access_policies SET status = 'archived', archived_at = NOW(), updated_by = $2, updated_at = NOW()
         WHERE id = $1 RETURNING *`,
@@ -374,6 +736,9 @@ router.post('/policies/:id/archive', async (req, res) => {
 
 router.post('/policies/:id/rollback/:version', async (req, res) => {
   try {
+    const current = await pool.query('SELECT * FROM access_policies WHERE id = $1', [Number(req.params.id)]);
+    if (!current.rows.length) return res.status(404).json({ error: '策略不存在' });
+    if (!await canWritePolicy(req, current.rows[0])) return res.status(403).json({ error: '无权回滚该策略' });
     const policy = await rollbackToVersion({
       policyId: Number(req.params.id),
       version: Number(req.params.version),
@@ -480,6 +845,7 @@ router.get('/policies/:id', async (req, res) => {
         WHERE h.policy_id = $1 ORDER BY h.created_at DESC LIMIT 50`, [id]),
     ]);
     if (!policy.rows.length) return res.status(404).json({ error: '策略不存在' });
+    if (!await canReadPolicy(req, policy.rows[0])) return res.status(403).json({ error: '无权访问该策略' });
     res.json({ policy: policy.rows[0], versions: versions.rows, recent_hits: hits.rows });
   } catch (error) {
     handleError(res, error, 'detail');
@@ -491,6 +857,9 @@ router.post('/policies', async (req, res) => {
   try {
     const input = normalizePolicyInput(req.body || {});
     await ensureScope(input.scope_type, input.scope_id);
+    if (!await ensureScopeAllowed(req, input.scope_type, input.scope_id, { write: true })) {
+      return res.status(403).json({ error: '无权在该作用域创建策略' });
+    }
     if (input.scope_type !== 'global') {
       const teamId = input.scope_type === 'team'
         ? input.scope_id
@@ -544,6 +913,7 @@ router.put('/policies/:id', async (req, res) => {
     const existing = await client.query('SELECT * FROM access_policies WHERE id = $1 FOR UPDATE', [id]);
     if (!existing.rows.length) return res.status(404).json({ error: '策略不存在' });
     const current = existing.rows[0];
+    if (!await canWritePolicy(req, current)) return res.status(403).json({ error: '无权修改该策略' });
     const merged = {
       ...current,
       ...req.body,
@@ -553,6 +923,9 @@ router.put('/policies/:id', async (req, res) => {
     };
     const input = normalizePolicyInput(merged);
     await ensureScope(input.scope_type, input.scope_id);
+    if (!await ensureScopeAllowed(req, input.scope_type, input.scope_id, { write: true })) {
+      return res.status(403).json({ error: '无权在该作用域修改策略' });
+    }
     const nextVersion = Number(current.version) + 1;
     await client.query('BEGIN');
     const result = await client.query(
@@ -597,6 +970,7 @@ router.delete('/policies/:id', async (req, res) => {
     const existing = await pool.query('SELECT * FROM access_policies WHERE id = $1', [id]);
     if (!existing.rows.length) return res.status(404).json({ error: '策略不存在' });
     const policy = existing.rows[0];
+    if (!await canWritePolicy(req, policy)) return res.status(403).json({ error: '无权删除该策略' });
     let teamId = null;
     if (policy.scope_type === 'team') teamId = policy.scope_id;
     if (policy.scope_type === 'member') {
@@ -607,7 +981,7 @@ router.delete('/policies/:id', async (req, res) => {
     if (settings.require_approval_for_delete) {
       const approval = await createApproval(pool, {
         kind: 'change', policyId: id, requestedBy: actor(req).id || null,
-        payload: { action: 'delete', policy_id: id },
+        payload: { action: 'delete', policy_id: id, team_id: teamId },
         preview: { name: policy.name, scope_type: policy.scope_type },
       });
       audit(req, ACTIONS.POLICY_DELETE, 'policy', id, `提交删除审批「${policy.name}」`, { approval_id: approval.id });
@@ -627,6 +1001,12 @@ router.post('/policies/bulk', async (req, res) => {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isInteger) : [];
     const operation = String(req.body?.operation || '');
     if (!ids.length) return res.status(400).json({ error: '缺少策略 ID' });
+    if (req.policyTeamIds) {
+      const targets = await pool.query('SELECT * FROM access_policies WHERE id = ANY($1)', [ids]);
+      for (const target of targets.rows) {
+        if (!await canWritePolicy(req, target)) return res.status(403).json({ error: `无权操作策略「${target.name}」` });
+      }
+    }
     let result;
     if (operation === 'enable' || operation === 'disable') {
       result = await pool.query('UPDATE access_policies SET enabled = $1, updated_at = NOW() WHERE id = ANY($2) RETURNING id', [operation === 'enable', ids]);
@@ -652,6 +1032,7 @@ router.post('/policies/:id/duplicate', async (req, res) => {
     const source = await pool.query('SELECT * FROM access_policies WHERE id = $1', [id]);
     if (!source.rows.length) return res.status(404).json({ error: '策略不存在' });
     const row = source.rows[0];
+    if (!await canWritePolicy(req, row)) return res.status(403).json({ error: '无权复制该策略' });
     const result = await pool.query(
       `INSERT INTO access_policies (
         name, description, scope_type, scope_id, effect, action, action_options, ladder,
@@ -691,6 +1072,9 @@ router.post('/policies/from-template', async (req, res) => {
       enabled: true,
     });
     await ensureScope(input.scope_type, input.scope_id);
+    if (!await ensureScopeAllowed(req, input.scope_type, input.scope_id, { write: true })) {
+      return res.status(403).json({ error: '无权在该作用域创建策略' });
+    }
     const result = await pool.query(
       `INSERT INTO access_policies (
         name, description, scope_type, scope_id, effect, action, action_options, ladder,
@@ -726,6 +1110,10 @@ router.get('/policy-hits', async (req, res) => {
     const { page, limit, offset } = parsePagination(req, 50);
     const params = [];
     const where = [];
+    if (req.policyTeamIds) {
+      params.push(req.policyTeamIds);
+      where.push(`h.team_id = ANY($${params.length}::int[])`);
+    }
     const add = (column, value) => { params.push(value); where.push(`${column} = $${params.length}`); };
     if (req.query.policy_id) add('h.policy_id', Number(req.query.policy_id));
     if (req.query.user_id) add('h.user_id', Number(req.query.user_id));
@@ -762,6 +1150,7 @@ router.get('/policy-hits/stream', async (req, res) => {
   res.flushHeaders?.();
   res.write(`event: ready\ndata: {"ok":true}\n\n`);
   const unsubscribe = subscribe(event => {
+    if (req.policyTeamIds && !req.policyTeamIds.includes(Number(event.team_id))) return;
     try { res.write(`event: hit\ndata: ${JSON.stringify(event)}\n\n`); } catch (_) { /* ignore */ }
   });
   const keepAlive = setInterval(() => {
@@ -792,6 +1181,10 @@ router.get('/policy-members', async (req, res) => {
     const { page, limit, offset } = parsePagination(req, 50);
     const params = [];
     const where = [];
+    if (req.policyTeamIds) {
+      params.push(req.policyTeamIds);
+      where.push(`u.team_id = ANY($${params.length}::int[])`);
+    }
     if (req.query.team_id) { params.push(Number(req.query.team_id)); where.push(`u.team_id = $${params.length}`); }
     if (req.query.q) { params.push(`%${req.query.q}%`); where.push(`(u.username ILIKE $${params.length} OR u.email ILIKE $${params.length})`); }
     if (req.query.status === 'suspended') where.push(`u.suspended_at IS NOT NULL AND (u.suspended_until IS NULL OR u.suspended_until > NOW())`);
@@ -827,6 +1220,7 @@ router.post('/policy-members/:userId/suspend', async (req, res) => {
     if (userId === Number(me.id)) return res.status(400).json({ error: '不能暂停自己' });
     const target = await pool.query('SELECT id, username, email, team_id, is_admin FROM users WHERE id = $1', [userId]);
     if (!target.rows.length) return res.status(404).json({ error: '成员不存在' });
+    if (!await canAccessSubject(req, 'user', userId)) return res.status(403).json({ error: '无权操作该成员' });
     if (target.rows[0].is_admin && process.env.CR_ALLOW_SUSPEND_ADMIN !== 'true') {
       return res.status(400).json({ error: '默认不允许暂停管理员；如需允许请设置 CR_ALLOW_SUSPEND_ADMIN=true' });
     }
@@ -873,6 +1267,7 @@ router.post('/policy-members/:userId/suspend', async (req, res) => {
 router.post('/policy-members/:userId/resume', async (req, res) => {
   try {
     const userId = Number(req.params.userId);
+    if (!await canAccessSubject(req, 'user', userId)) return res.status(403).json({ error: '无权操作该成员' });
     await resumeUser(pool, userId);
     invalidateSuspensionCache(userId);
     invalidateUserKeyCache(userId);
@@ -887,6 +1282,7 @@ router.post('/policy-members/:userId/resume', async (req, res) => {
 router.post('/policy-members/:userId/bypass', async (req, res) => {
   try {
     const userId = Number(req.params.userId);
+    if (!await canAccessSubject(req, 'user', userId)) return res.status(403).json({ error: '无权操作该成员' });
     const enabled = req.body?.enabled !== false;
     const until = req.body?.until ? new Date(req.body.until) : null;
     await pool.query(
@@ -901,6 +1297,29 @@ router.post('/policy-members/:userId/bypass', async (req, res) => {
   }
 });
 
+router.get('/policy-login-events', async (req, res) => {
+  try {
+    const params = [];
+    const where = [];
+    if (req.policyTeamIds) {
+      params.push(req.policyTeamIds);
+      where.push(`user_id IN (SELECT id FROM users WHERE team_id = ANY($${params.length}::int[]))`);
+    }
+    if (req.query.user_id) { params.push(Number(req.query.user_id)); where.push(`user_id = $${params.length}`); }
+    if (req.query.success === 'true' || req.query.success === 'false') { params.push(req.query.success === 'true'); where.push(`success = $${params.length}`); }
+    params.push(Math.min(500, Math.max(1, Number(req.query.limit) || 100)));
+    const result = await pool.query(
+      `SELECT e.*, u.username FROM login_events e LEFT JOIN users u ON u.id = e.user_id
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY e.created_at DESC LIMIT $${params.length}`,
+      params
+    );
+    res.json(result.rows);
+  } catch (error) {
+    handleError(res, error, 'login-events');
+  }
+});
+
 // ==================== 例外与豁免 ====================
 
 router.get('/policy-exemptions', async (req, res) => {
@@ -908,6 +1327,10 @@ router.get('/policy-exemptions', async (req, res) => {
     const { page, limit, offset } = parsePagination(req, 50);
     const params = [];
     const where = [];
+    if (req.policyTeamIds) {
+      params.push(req.policyTeamIds);
+      where.push(`(((e.subject_type = 'user' AND e.subject_id IN (SELECT id FROM users WHERE team_id = ANY($${params.length}::int[]))) OR (e.subject_type = 'team' AND e.subject_id = ANY($${params.length}::int[])) OR (e.subject_type = 'api_key' AND e.subject_id IN (SELECT ak.id FROM api_keys ak JOIN users au ON au.id = ak.user_id WHERE au.team_id = ANY($${params.length}::int[])))))`);
+    }
     if (req.query.policy_id) { params.push(Number(req.query.policy_id)); where.push(`e.policy_id = $${params.length}`); }
     if (req.query.user_id) { params.push(Number(req.query.user_id)); where.push(`(e.subject_type = 'user' AND e.subject_id = $${params.length})`); }
     if (req.query.status) { params.push(req.query.status); where.push(`e.status = $${params.length}`); }
@@ -941,6 +1364,12 @@ router.post('/policy-exemptions', async (req, res) => {
     const subjectId = Number(req.body?.subject_id);
     if (!subjectId) return res.status(400).json({ error: '缺少主体 ID' });
     const policyId = req.body?.policy_id ? Number(req.body.policy_id) : null;
+    if (!await canAccessSubject(req, subjectType, subjectId)) return res.status(403).json({ error: '无权为该主体创建豁免' });
+    if (policyId) {
+      const target = await pool.query('SELECT * FROM access_policies WHERE id = $1', [policyId]);
+      if (!target.rows.length) return res.status(404).json({ error: '策略不存在' });
+      if (!await canWritePolicy(req, target.rows[0])) return res.status(403).json({ error: '无权为该策略创建豁免' });
+    }
     const endsAt = req.body?.ends_at ? new Date(req.body.ends_at) : null;
     if (endsAt && Number.isNaN(endsAt.getTime())) return res.status(400).json({ error: '结束时间无效' });
     const result = await pool.query(
@@ -959,6 +1388,12 @@ router.post('/policy-exemptions', async (req, res) => {
 
 router.delete('/policy-exemptions/:id', async (req, res) => {
   try {
+    const existing = await pool.query('SELECT * FROM policy_exemptions WHERE id = $1', [Number(req.params.id)]);
+    if (!existing.rows.length) return res.status(404).json({ error: '豁免不存在' });
+    const exemption = existing.rows[0];
+    if (!await canAccessSubject(req, exemption.subject_type, exemption.subject_id)) {
+      return res.status(403).json({ error: '无权撤销该豁免' });
+    }
     const result = await pool.query(
       `UPDATE policy_exemptions SET status = 'revoked' WHERE id = $1 RETURNING *`,
       [Number(req.params.id)]
@@ -978,6 +1413,7 @@ router.post('/policy-exemptions/from-hit/:hitId', async (req, res) => {
     if (!hit.rows.length) return res.status(404).json({ error: '命中记录不存在' });
     const row = hit.rows[0];
     if (!row.user_id) return res.status(400).json({ error: '命中记录缺少成员' });
+    if (!await canAccessSubject(req, 'user', row.user_id)) return res.status(403).json({ error: '无权为该成员创建豁免' });
     const hours = Math.min(720, Math.max(1, Number(req.body?.hours) || 24));
     const result = await pool.query(
       `INSERT INTO policy_exemptions (policy_id, subject_type, subject_id, reason, status, ends_at, max_uses, granted_by)
@@ -1000,6 +1436,10 @@ router.get('/policy-appeals', async (req, res) => {
     const { page, limit, offset } = parsePagination(req, 50);
     const params = [];
     const where = [];
+    if (req.policyTeamIds) {
+      params.push(req.policyTeamIds);
+      where.push(`a.user_id IN (SELECT id FROM users WHERE team_id = ANY($${params.length}::int[]))`);
+    }
     if (req.query.status) { params.push(req.query.status); where.push(`a.status = $${params.length}`); }
     if (req.query.user_id) { params.push(Number(req.query.user_id)); where.push(`a.user_id = $${params.length}`); }
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -1034,6 +1474,10 @@ router.post('/policy-appeals/:id/decide', async (req, res) => {
     if (!current.rows.length) throw Object.assign(new Error('申诉不存在'), { status: 404 });
     const appeal = current.rows[0];
     if (appeal.status !== 'pending') throw Object.assign(new Error(`申诉已处理：${appeal.status}`), { status: 409 });
+    if (!await canAccessSubject(req, 'user', appeal.user_id)) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: '无权处理该申诉' });
+    }
     let exemptionId = null;
     if (decision === 'approve') {
       const hours = Math.min(720, Math.max(1, Number(req.body?.hours) || 24));
@@ -1073,6 +1517,10 @@ router.get('/policy-approvals', async (req, res) => {
       limit,
       offset,
     });
+    if (req.policyTeamIds) {
+      result.items = result.items.filter(item => req.policyTeamIds.includes(Number(item.payload?.team_id)));
+      result.total = result.items.length;
+    }
     res.json({ ...result, page, limit });
   } catch (error) {
     handleError(res, error, 'approvals');
@@ -1083,6 +1531,13 @@ router.post('/policy-approvals/:id/decide', async (req, res) => {
   try {
     const decision = String(req.body?.decision || '');
     if (!['approve', 'reject'].includes(decision)) return res.status(400).json({ error: 'decision 必须是 approve 或 reject' });
+    if (req.policyTeamIds) {
+      const approval = await pool.query('SELECT payload FROM policy_approvals WHERE id = $1', [Number(req.params.id)]);
+      if (!approval.rows.length) return res.status(404).json({ error: '审批不存在' });
+      if (!req.policyTeamIds.includes(Number(approval.rows[0].payload?.team_id))) {
+        return res.status(403).json({ error: '无权处理该审批' });
+      }
+    }
     const result = await decideApproval({
       id: Number(req.params.id),
       approverId: actor(req).id || null,
@@ -1097,6 +1552,11 @@ router.post('/policy-approvals/:id/decide', async (req, res) => {
 });
 
 // ==================== 通知渠道与告警规则 ====================
+
+router.use(['/policy-channels', '/policy-alert-rules'], (req, res, next) => {
+  if (!requireGlobalPolicyAdmin(req, res)) return;
+  next();
+});
 
 router.get('/policy-channels', async (req, res) => {
   try {
@@ -1220,12 +1680,47 @@ router.delete('/policy-alert-rules/:id', async (req, res) => {
 
 // ==================== 成员角色 ====================
 
+router.post('/policy-members/:userId/offboard', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const userId = Number(req.params.userId);
+    if (!await canAccessSubject(req, 'user', userId)) return res.status(403).json({ error: '无权操作该成员' });
+    const target = await client.query('SELECT id, username, is_admin FROM users WHERE id = $1', [userId]);
+    if (!target.rows.length) return res.status(404).json({ error: '成员不存在' });
+    if (target.rows[0].is_admin && process.env.CR_ALLOW_SUSPEND_ADMIN !== 'true') {
+      return res.status(400).json({ error: '默认不允许停用管理员' });
+    }
+    await client.query('BEGIN');
+    await suspendUser(client, {
+      userId,
+      until: null,
+      reason: String(req.body?.reason || '离岗/离职停用').slice(0, 2000),
+      scope: 'all',
+      by: actor(req).id || null,
+    });
+    const keys = await client.query('UPDATE api_keys SET enabled = FALSE WHERE user_id = $1 RETURNING id', [userId]);
+    await client.query('UPDATE oauth_tokens SET revoked = TRUE WHERE user_id = $1', [userId]).catch(() => {});
+    await client.query('COMMIT');
+    invalidateSuspensionCache(userId);
+    invalidateUserKeyCache(userId);
+    audit(req, ACTIONS.POLICY_MEMBER_SUSPEND, 'user', userId, `停用离岗成员「${target.rows[0].username}」`, { keys: keys.rowCount });
+    res.json({ success: true, disabled_keys: keys.rowCount });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    handleError(res, error, 'offboard');
+  } finally {
+    client.release();
+  }
+});
+
 router.post('/policy-members/:userId/role', async (req, res) => {
   try {
     const userId = Number(req.params.userId);
     const teamId = Number(req.body?.team_id);
     const role = String(req.body?.role || '');
     if (!teamId) return res.status(400).json({ error: '缺少 team_id' });
+    if (req.policyTeamIds && !req.policyTeamIds.includes(teamId)) return res.status(403).json({ error: '无权设置该 Team 角色' });
+    if (!await canAccessSubject(req, 'user', userId)) return res.status(403).json({ error: '无权操作该成员' });
     if (!['owner', 'admin', 'member', 'viewer'].includes(role)) return res.status(400).json({ error: '角色无效' });
     await pool.query(
       `INSERT INTO user_teams (user_id, team_id, role) VALUES ($1, $2, $3)
@@ -1243,7 +1738,11 @@ router.post('/policy-members/:userId/role', async (req, res) => {
 
 router.get('/policy-settings', async (req, res) => {
   try {
-    const teamId = req.query.team_id != null ? Number(req.query.team_id) : null;
+    let teamId = req.query.team_id != null ? Number(req.query.team_id) : null;
+    if (req.policyTeamIds) {
+      if (teamId == null) teamId = req.policyTeamIds[0] || null;
+      else if (!req.policyTeamIds.includes(teamId)) return res.status(403).json({ error: '无权访问该 Team 设置' });
+    }
     const result = await pool.query(
       `SELECT * FROM policy_settings WHERE ${teamId == null ? 'team_id IS NULL' : 'team_id = $1'}`,
       teamId == null ? [] : [teamId]
@@ -1251,7 +1750,7 @@ router.get('/policy-settings', async (req, res) => {
     const global = await pool.query('SELECT * FROM policy_settings WHERE team_id IS NULL');
     res.json({
       global: normalizeSettings(global.rows[0]),
-      team: result.rows[0] ? normalizeSettings(result.rows[0]) : null,
+      team: result.rows[0] ? { ...normalizeSettings(result.rows[0]), team_id: result.rows[0].team_id } : null,
     });
   } catch (error) {
     handleError(res, error, 'settings');
@@ -1261,6 +1760,10 @@ router.get('/policy-settings', async (req, res) => {
 router.put('/policy-settings', async (req, res) => {
   try {
     const teamId = req.body?.team_id != null ? Number(req.body.team_id) : null;
+    if (req.policyTeamIds) {
+      if (teamId == null) return res.status(403).json({ error: 'Team 管理员只能修改所属 Team 设置' });
+      if (!req.policyTeamIds.includes(teamId)) return res.status(403).json({ error: '无权修改该 Team 设置' });
+    }
     const input = normalizePolicySettingsInput(req.body || {});
     // 局部保存：未提交的字段保持原值，避免把紧急开关/审批开关等重置。
     for (const key of ['kill_switch', 'kill_switch_until', 'require_approval_for_publish', 'require_approval_for_delete', 'alert_email_enabled', 'alert_email_to', 'metrics_retention_days', 'max_policies_per_team']) {
@@ -1276,6 +1779,7 @@ router.put('/policy-settings', async (req, res) => {
 });
 
 router.post('/policy-settings/kill-switch', async (req, res) => {
+  if (!requireGlobalPolicyAdmin(req, res)) return;
   try {
     const enabled = req.body?.enabled !== false;
     const until = req.body?.until ? new Date(req.body.until) : null;
@@ -1293,14 +1797,26 @@ router.post('/policy-settings/kill-switch', async (req, res) => {
 router.get('/policy-clients', async (req, res) => {
   try {
     const range = req.query.range === '7d' ? '7 days' : '24 hours';
+    const teams = req.policyTeamIds;
+    const usageParams = [range];
+    const hitParams = [range];
+    let usageTeam = '';
+    let hitTeam = '';
+    if (teams) {
+      usageParams.push(teams);
+      hitParams.push(teams);
+      usageTeam = 'AND uu.team_id = ANY($2::int[])';
+      hitTeam = 'AND team_id = ANY($2::int[])';
+    }
     const [usage, hits] = await Promise.all([
-      pool.query(`SELECT request_source, COUNT(*)::int AS requests, SUM(tokens_used)::bigint AS tokens
-        FROM usage_records WHERE created_at >= NOW() - $1::interval
-        GROUP BY request_source`, [range]),
+      pool.query(`SELECT u.request_source, COUNT(*)::int AS requests, SUM(u.tokens_used)::bigint AS tokens
+        FROM usage_records u LEFT JOIN users uu ON uu.id = u.user_id
+        WHERE u.created_at >= NOW() - $1::interval ${usageTeam}
+        GROUP BY u.request_source`, usageParams),
       pool.query(`SELECT request_source, COUNT(*)::int AS hits,
           COUNT(*) FILTER (WHERE decision = 'block')::int AS blocked
-        FROM policy_hits WHERE created_at >= NOW() - $1::interval
-        GROUP BY request_source`, [range]),
+        FROM policy_hits WHERE created_at >= NOW() - $1::interval ${hitTeam}
+        GROUP BY request_source`, hitParams),
     ]);
     const map = new Map();
     for (const row of usage.rows) {
