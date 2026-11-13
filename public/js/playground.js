@@ -1272,7 +1272,7 @@ class PlaygroundApp {
     }
 
     setHTML(list, records.map(r => {
-      const time = new Date(r.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const time = CRTime.formatTime(r.createdAt);
       const hasThinking = r.requestParams?.thinking !== false && r.reasoningContent;
       const preview = r.messages?.[0]?.content?.substring(0, 50) || '';
       const recordId = Number(r.id);
@@ -1314,7 +1314,7 @@ class PlaygroundApp {
     const body = document.getElementById('pgHistoryModalBody');
     if (!modal || !title || !body) return;
 
-    const time = new Date(r.createdAt).toLocaleString('zh-CN');
+    const time = CRTime.formatTime(r.createdAt);
     title.textContent = `${String(r.model || '')} - ${time}`;
 
     let html = '';

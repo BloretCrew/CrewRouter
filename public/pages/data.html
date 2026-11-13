@@ -149,6 +149,7 @@
   </main>
 
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
+  <script src="/js/time-format.js?v=policy-20261113"></script>
   <script src="/js/theme.js?v=restore-0930-20261003"></script>
   <script>
     (function () {
@@ -172,7 +173,7 @@
         if (!iso) return '-';
         var d = new Date(iso);
         if (isNaN(d.getTime())) return '-';
-        return d.toLocaleString();
+        return window.CRTime ? CRTime.formatTime(iso) : d.toLocaleString();
       }
 
       function esc(s) {

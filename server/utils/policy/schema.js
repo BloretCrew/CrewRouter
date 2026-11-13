@@ -56,6 +56,8 @@ async function createTables(db) {
       notify_channels JSONB NOT NULL DEFAULT '{"inapp":true,"webhook":false,"email":false}'::jsonb,
       starts_at TIMESTAMPTZ,
       ends_at TIMESTAMPTZ,
+      auto_publish_at TIMESTAMPTZ,
+      archived_at TIMESTAMPTZ,
       bypass_until TIMESTAMPTZ,
       enabled BOOLEAN NOT NULL DEFAULT TRUE,
       created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -77,6 +79,8 @@ async function createTables(db) {
   await db.query(`CREATE INDEX IF NOT EXISTS idx_access_policies_category ON access_policies (category, enabled)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_access_policies_conditions ON access_policies USING GIN (conditions jsonb_path_ops)`);
   await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_access_policies_name_scope ON access_policies (scope_type, COALESCE(scope_id, 0), name)`);
+  await db.query(`ALTER TABLE access_policies ADD COLUMN IF NOT EXISTS auto_publish_at TIMESTAMPTZ`);
+  await db.query(`ALTER TABLE access_policies ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ`);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS policy_versions (
@@ -182,6 +186,7 @@ async function createTables(db) {
   await db.query(`CREATE INDEX IF NOT EXISTS idx_policy_hits_user_created ON policy_hits (user_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_policy_hits_policy_created ON policy_hits (policy_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_policy_hits_source_created ON policy_hits (request_source, created_at DESC)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_policy_hits_request ON policy_hits (request_id)`);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS policy_channels (
@@ -312,6 +317,9 @@ async function ensureUserColumns(db) {
     await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ${name} ${type}`);
   }
   await db.query(`CREATE INDEX IF NOT EXISTS idx_users_suspended_until ON users (suspended_until) WHERE suspended_until IS NOT NULL`);
+  await db.query(`ALTER TABLE user_teams ADD COLUMN IF NOT EXISTS role VARCHAR(16) NOT NULL DEFAULT 'member'`);
+  await db.query(`UPDATE user_teams SET role = 'member' WHERE role IS NULL`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_user_teams_role ON user_teams (team_id, role)`);
 }
 
 async function ensureRevisionTriggers(db) {

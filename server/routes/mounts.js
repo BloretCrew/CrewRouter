@@ -37,6 +37,7 @@ const REAL_MOUNTS = [
   { id: 'admin-policies', mount: '/api/admin', module: './admin-policies', feature: 'management', runtime: 'index' },
   { id: 'model-trace', mount: '/api/user/model-trace', module: './model-trace', feature: 'tools', runtime: 'index', factory: 'getRouter' },
   { id: 'user', mount: '/api/user', module: './user', feature: 'management', runtime: 'index' },
+  { id: 'user-policies', mount: '/api/user', module: './user-policies', feature: 'management', runtime: 'index' },
   { id: 'balance-alert', mount: '/api/user', module: './balance-alert', feature: 'management', runtime: 'index' },
   { id: 'notifications', mount: '/api/user', module: './notifications', feature: 'management', runtime: 'index' },
   { id: 'popup-notices', mount: '/api/user', module: './popup-notices', feature: 'management', runtime: 'index' },

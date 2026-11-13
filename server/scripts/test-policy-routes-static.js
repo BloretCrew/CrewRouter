@@ -68,9 +68,61 @@ check('policy schema defines core tables', () => {
 
 check('admin policies API exposes CRUD and members', () => {
   const route = read('server/routes/admin-policies.js');
-  for (const endpoint of ['/policies/overview', '/policy-hits', '/policy-members', '/policy-settings', '/policies/preview', '/policies/from-template']) {
+  for (const endpoint of [
+    '/policies/overview', '/policy-hits', '/policy-members', '/policy-settings',
+    '/policies/preview', '/policies/from-template', '/policies/conflicts',
+    '/policies/simulate', '/policies/analytics', '/policies/metrics',
+    '/policy-exemptions', '/policy-appeals', '/policy-approvals',
+    '/policy-channels', '/policy-alert-rules', '/policy-hits/stream',
+  ]) {
     assert.ok(route.includes(endpoint), `${endpoint} missing`);
   }
+});
+
+check('lifecycle endpoints registered', () => {
+  const route = read('server/routes/admin-policies.js');
+  for (const endpoint of ['/publish', '/unpublish', '/archive', '/rollback', '/versions', '/diff']) {
+    assert.ok(route.includes(endpoint), `${endpoint} missing`);
+  }
+});
+
+check('user policy routes mounted and implemented', () => {
+  assert.match(read('server/routes/mounts.js'), /user-policies/);
+  assert.match(read('server/routes/mount-loader.js'), /user-policies/);
+  const route = read('server/routes/user-policies.js');
+  for (const endpoint of ['/policies/mine', '/policies/blocks', '/policy-appeals', '/suspension']) {
+    assert.ok(route.includes(endpoint), `${endpoint} missing`);
+  }
+});
+
+check('policy scheduler registered', () => {
+  assert.match(read('server/index.js'), /startPolicyScheduler/);
+  assert.match(read('server/utils/policy/scheduler.js'), /publishScheduled/);
+});
+
+check('admin UI exposes lifecycle, exemptions, approvals and analytics tabs', () => {
+  const html = read('public/pages/admin.html');
+  for (const value of ['exemptions', 'approvals', 'analytics']) {
+    assert.ok(html.includes(`value="${value}"`), `tab ${value} missing`);
+  }
+  const js = read('public/js/admin-policies.js');
+  for (const method of ['loadExemptions', 'loadApprovals', 'loadAnalytics', 'openVersions']) {
+    assert.ok(js.includes(method), `${method} missing`);
+  }
+});
+
+check('console exposes security and policy page', () => {
+  const html = read('public/pages/console.html');
+  assert.match(html, /id="policyCenterPage"/);
+  assert.match(html, /data-page="policyCenter"/);
+  const app = read('public/js/app.js');
+  assert.match(app, /loadPolicyCenter/);
+  assert.match(app, /'policyCenter'/);
+});
+
+check('time migration tooling exists', () => {
+  assert.ok(fs.existsSync(path.join(root, 'server/scripts/check-timezone-hardcode.js')));
+  assert.ok(fs.existsSync(path.join(root, 'server/scripts/migrate-time-format.js')));
 });
 
 check('console loads suspension banner and time tool', () => {

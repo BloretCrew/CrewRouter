@@ -30,6 +30,56 @@ function invalidateAdminCache() {
   adminCache = { ids: [], at: 0 };
 }
 
+function severityRank(value) {
+  return { info: 1, warning: 2, critical: 3 }[String(value || 'warning')] || 2;
+}
+
+const channelSilence = new Map();
+let alertConfigCache = { at: 0, rules: [], channels: [] };
+const ALERT_CONFIG_TTL_MS = 10_000;
+
+function shouldDispatch(ruleId, channelId, windowSeconds) {
+  const key = `${ruleId}:${channelId}`;
+  const now = Date.now();
+  const until = channelSilence.get(key);
+  if (until && until > now) return false;
+  channelSilence.set(key, now + Math.max(30, Number(windowSeconds) || 300) * 1000);
+  if (channelSilence.size > 2000) {
+    for (const [k, value] of channelSilence) if (value <= now) channelSilence.delete(k);
+  }
+  return true;
+}
+
+async function loadAlertConfig(pool) {
+  if (Date.now() - alertConfigCache.at < ALERT_CONFIG_TTL_MS) return alertConfigCache;
+  const [rules, channels] = await Promise.all([
+    pool.query('SELECT * FROM policy_alert_rules WHERE enabled = TRUE'),
+    pool.query('SELECT * FROM policy_channels WHERE enabled = TRUE'),
+  ]);
+  alertConfigCache = { at: Date.now(), rules: rules.rows, channels: channels.rows };
+  return alertConfigCache;
+}
+
+async function dispatchAlertEvent(event) {
+  const { pool } = require('../../models/database');
+  const { dispatchChannel } = require('./channels');
+  try {
+    const config = await loadAlertConfig(pool);
+    const rules = config.rules.filter(rule => rule.event_type === event.event || rule.event_type === '*');
+    if (!rules.length) return;
+    for (const rule of rules) {
+      for (const channel of config.channels) {
+        if (!(rule.channel_ids || []).includes(channel.id)) continue;
+        if (severityRank(event.severity) < severityRank(channel.min_severity)) continue;
+        if (!shouldDispatch(rule.id, channel.id, rule.silence_window_seconds)) continue;
+        dispatchChannel(channel, event).catch(error => Logger.warn(`[策略] 渠道 ${channel.id} 发送失败: ${error.message}`));
+      }
+    }
+  } catch (error) {
+    Logger.warn(`[策略] 告警分发失败: ${error.message}`);
+  }
+}
+
 /**
  * 命中告警：站内通知 + Bark（由 notifyUser 统一处理）。
  * 同一用户同类型 5 分钟内自动去重。
@@ -66,6 +116,18 @@ async function notifyPolicyHit(signals, decision) {
       }).catch(error => Logger.warn(`[策略] 管理员告警失败: ${error.message}`));
     }
   }
+  dispatchAlertEvent({
+    event: decision.action === 'block' ? 'block' : 'hit',
+    severity: decision.action === 'block' ? 'critical' : 'warning',
+    title: `策略命中：${policyName}`,
+    text: body,
+    policy: { id: decision.policy?.id || null, name: policyName },
+    user: { id: signals.actor?.userId || null, username: user },
+  }).catch(() => {});
 }
 
-module.exports = { notifyPolicyHit, getAdminIds, invalidateAdminCache };
+function invalidateAlertConfigCache() {
+  alertConfigCache = { at: 0, rules: [], channels: [] };
+}
+
+module.exports = { notifyPolicyHit, getAdminIds, invalidateAdminCache, dispatchAlertEvent, invalidateAlertConfigCache };

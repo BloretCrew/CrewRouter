@@ -140,7 +140,8 @@ class ConsoleApp {
   _consolePageIds() {
     return new Set([
       'home', 'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
-      'leaderboard', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent'
+      'leaderboard', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent',
+      'policyCenter'
     ]);
   }
 
@@ -529,6 +530,7 @@ class ConsoleApp {
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
       'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'),
       'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词'), 'sessions': t('会话'),
+      'policyCenter': t('安全与策略'),
       'bloraAgent': 'Blora Agent'
     };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -610,6 +612,7 @@ class ConsoleApp {
       case 'balance': await this.loadBalance(); break;
       case 'settings': this.loadSettings(); break;
       case 'auditLogs': await this.loadAuditLogs(1); break;
+      case 'policyCenter': await this.loadPolicyCenter(); break;
       case 'prompts': await Promise.all([this.loadInjectPrompts(), this.loadCustomPrompts(1)]); break;
       case 'sessions': await this.loadSessions(this._sessionsPage || 1); break;
       case 'bloraAgent':
@@ -632,7 +635,7 @@ class ConsoleApp {
     if (minutes < 60) return `${minutes}${t('分钟前')}`;
     if (hours < 24) return `${hours}${t('小时前')}`;
     if (days < 30) return `${days}${t('天前')}`;
-    return date.toLocaleDateString('zh-CN');
+    return CRTime.formatDate(date);
   }
 
   getKeyStatus(key) {
@@ -817,7 +820,7 @@ class ConsoleApp {
   _formatOAuthTime(v, emptyText) {
     if (!v) return emptyText;
     const d = new Date(v);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleString();
+    return isNaN(d.getTime()) ? '—' : CRTime.formatTime(d);
   }
 
   _renderAuthorizationCard(a) {
@@ -962,7 +965,7 @@ class ConsoleApp {
                   ? `${'<span>' + t('最近')}${escapeHtml(this.formatRelativeTime(key.last_used_at))}</span>`
                   : '<span class="api-key-sub-muted">' + t('尚未使用') + '</span>'}
                 <span class="api-key-dot">·</span>
-                <span class="api-key-sub-muted">创建于 ${new Date(key.created_at).toLocaleDateString('zh-CN')}</span>
+                <span class="api-key-sub-muted">创建于 ${CRTime.formatDate(key.created_at)}</span>
                 ${hasSchedule ? `<span class="api-key-dot">·</span><span class="api-key-sub-muted" title="${t('定时开关')}">${escapeHtml(scheduleText)}</span>` : ''}
                 ${coKeyMeta}
                 <span class="api-key-dot">·</span>
@@ -3559,7 +3562,7 @@ class ConsoleApp {
       const fmt = (value) => Number(value || 0).toLocaleString();
       const fmtTok = (value) => { const n = Number(value || 0); return `<span title="${n.toLocaleString()}">${this._formatBigNumber(n)}</span>`; };
       const money = (value) => Number(value || 0).toFixed(2);
-      const date = (value) => value ? new Date(value).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '-';
+      const date = (value) => value ? CRTime.formatDate(value) : '-';
       const status = summary.analysis_status || {};
       if (statusEl) statusEl.textContent = status.pending_requests ? `${t('后台还有')}${fmt(status.pending_requests)}${t('条记录待整理')}` : `${t('已同步 · 最近更新')}${date(status.last_scanned_at)}`;
         if (!projects.length) {
@@ -3915,7 +3918,7 @@ class ConsoleApp {
       const parts = this._latencyRateLimitParts(row.rateLimit);
       return `<tr>
         <td>${renderProviderNameTag(row.providerName || row.providerId) || escapeHtml(row.providerName || row.providerId || '-')}</td>
-        <td>${row.observedAt ? escapeHtml(new Date(row.observedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })) : '-'}</td>
+        <td>${row.observedAt ? escapeHtml(CRTime.formatTime(row.observedAt)) : '-'}</td>
         <td>${escapeHtml(parts.requests)}</td>
         <td>${escapeHtml(parts.tokens)}</td>
         <td>${escapeHtml(parts.reset)}</td>
@@ -5150,7 +5153,7 @@ class ConsoleApp {
     const d = this._statsData;
     if (!d || !d.daily || d.daily.length === 0 || typeof Chart === 'undefined') return;
     const rows = d.daily;
-    const labels = rows.map(r => new Date(r.date).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }));
+    const labels = rows.map(r => CRTime.formatDate(r.date));
     const requests = rows.map(r => parseInt(r.requests || 0));
     const tokens = rows.map(r => parseInt(r.tokens || 0));
     const costs = rows.map(r => parseFloat(r.cost || 0));
@@ -5257,7 +5260,7 @@ class ConsoleApp {
       const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
       const cacheColor = cachedTokens > 0 ? 'var(--success)' : 'var(--muted-foreground)';
       return `<tr>
-        <td style="padding:8px;border-bottom:1px solid var(--border);">${new Date(r.date).toLocaleDateString('zh-CN')}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);">${CRTime.formatDate(r.date)}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(r.requests).toLocaleString()}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${parseInt(r.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(r.completion_tokens || 0))}</td>
@@ -5700,7 +5703,7 @@ class ConsoleApp {
     const harnessMeta = this._usageRequestSourceMeta(item.harness);
     const cached = Number(item.totalCachedTokens || 0);
     const summaryBadge = item.summaryCreatedAt
-      ? `<span class="blora-badge" data-variant="success" title="${t('最近更新')} ${escapeHtml(new Date(item.summaryCreatedAt).toLocaleString())}">${t('缓存摘要')} · ${escapeHtml(this.formatRelativeTime(item.summaryCreatedAt))}</span>`
+      ? `<span class="blora-badge" data-variant="success" title="${t('最近更新')} ${escapeHtml(CRTime.formatTime(item.summaryCreatedAt))}">${t('缓存摘要')} · ${escapeHtml(this.formatRelativeTime(item.summaryCreatedAt))}</span>`
       : '';
     const previewSource = item.summary || item.lastMessagePreview || '';
     const previewText = String(previewSource).split(/[。.!！？?\n]/)[0].slice(0, 60);
@@ -5788,7 +5791,7 @@ class ConsoleApp {
     const previews = (Array.isArray(item.previews) ? item.previews : [])
       .map(p => `
         <div class="session-search-excerpt">
-          <span class="session-search-excerpt__time">${escapeHtml(new Date(p.ts).toLocaleString())} · </span>${this._renderSearchExcerpt(p.excerpt)}
+          <span class="session-search-excerpt__time">${escapeHtml(CRTime.formatTime(p.ts))} · </span>${this._renderSearchExcerpt(p.excerpt)}
         </div>`).join('');
     return `
       <button type="button" class="blora-card session-card" data-variant="hover" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
@@ -5909,7 +5912,7 @@ class ConsoleApp {
           <span>${this._detailTotal} ${t('次请求')}</span>
           <span class="blora-badge" data-variant="neutral" title="${t('本页 Token 合计')}">${t('Token')} ${this._formatBigNumber(totalTokens)}</span>
           ${totalCached ? `<span class="blora-badge" data-variant="success">${t('缓存')} ${this._formatBigNumber(totalCached)}</span>` : ''}
-          ${records.length ? `<span class="session-card__range">${escapeHtml(new Date(records[0].ts).toLocaleString())} ${this._libIcon('arrow.right', 10)} ${escapeHtml(new Date(records[records.length - 1].ts).toLocaleString())}</span>` : ''}
+          ${records.length ? `<span class="session-card__range">${escapeHtml(CRTime.formatTime(records[0].ts))} ${this._libIcon('arrow.right', 10)} ${escapeHtml(CRTime.formatTime(records[records.length - 1].ts))}</span>` : ''}
         `);
         setHTML(timeline, '');
         // refresh / 首次加载都从空白时间线开始。
@@ -5948,7 +5951,7 @@ class ConsoleApp {
         return `
           <li>
             <div class="timeline-record-head">
-              <span title="${escapeHtml(new Date(record.ts).toISOString())}">${escapeHtml(new Date(record.ts).toLocaleTimeString())}</span>
+              <span title="${escapeHtml(new Date(record.ts).toISOString())}">${escapeHtml(CRTime.formatTime(record.ts, { mode: 'time' }))}</span>
               <span>${this._libIcon('text.bubble', 12)} ${escapeHtml(record.model ? String(record.model).slice(0, 20) : '-')}</span>
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
               ${Number(record.cachedTokens || 0) ? `<span class="timeline-record-cached">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
@@ -6227,8 +6230,8 @@ class ConsoleApp {
                 <td>${this._usageRequestSourceBadge(item.source)}</td>
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(CRTime.formatTime(item.first_seen))}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(CRTime.formatTime(item.last_seen))}</td>
                 <td class="cell-actions"><button type="button" class="blora-button" data-prompt-view-idx="${idx}" data-variant="secondary" data-size="sm">${t('查看内容')}</button></td>
               </tr>
             `).join('')}
@@ -6284,7 +6287,7 @@ class ConsoleApp {
       const titleEl = document.getElementById('promptDetailTitle');
       if (titleEl) titleEl.textContent = `${t('提示词详情')} · ${data.file || t('(未知文件)')}`;
 
-      const fmtTime = (v) => v ? new Date(v).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '-';
+      const fmtTime = (v) => v ? CRTime.formatTime(v) : '-';
       const rows = [
         [t('文件名'), escapeHtml(data.file || t('(未知文件)'))],
         [t('客户端'), this._usageRequestSourceBadge(data.source)],
@@ -6598,7 +6601,7 @@ class ConsoleApp {
                 : costVal.toFixed(6);
               return `
               <tr style="cursor:pointer;" onclick="app.showUsageDetail(${idx})">
-                <td style="white-space:nowrap;">${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;">${escapeHtml(CRTime.formatTime(log.created_at))}</td>
                 <td style="white-space:normal;overflow-wrap:anywhere;">${escapeHtml(modelLabel)}${ModelIdentity.summary(log)}</td>
                 <td>${escapeHtml(log.series || '-')}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}</td>
@@ -6705,7 +6708,7 @@ class ConsoleApp {
       ? t('0（配额内）')
       : costVal.toFixed(6);
     const rows = [
-      [t('调用时间'), escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
+      [t('调用时间'), escapeHtml(CRTime.formatTime(log.created_at))],
       [t('模型'), escapeHtml(modelLabel)],
       [t('系列'), escapeHtml(log.series || '-')],
       [t('供应商'), renderProviderNameTag(log.provider_name) || '<span class="model-provider-missing">-</span>'],
@@ -8040,6 +8043,82 @@ class ConsoleApp {
 
   _auditLogPage = 1;
 
+  async loadPolicyCenter() {
+    const statusEl = document.getElementById('policyCenterStatus');
+    const policiesEl = document.getElementById('policyCenterPolicies');
+    const exemptionsEl = document.getElementById('policyCenterExemptions');
+    const blocksEl = document.getElementById('policyCenterBlocks');
+    const appealsEl = document.getElementById('policyCenterAppeals');
+    if (!statusEl) return;
+    const fmt = value => window.CRTime ? window.CRTime.formatTimeHtml(value) : escapeHtml(value ? CRTime.formatTime(value) : '-');
+    const esc = value => escapeHtml(value == null ? '' : String(value));
+    try {
+      const [mine, blocks, appeals] = await Promise.all([
+        fetch('/api/user/policies/mine', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}),
+        fetch('/api/user/policies/blocks', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []),
+        fetch('/api/user/policy-appeals', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : []),
+      ]);
+      const suspension = mine.suspension || {};
+      statusEl.innerHTML = `
+        <div class="policy-stat-grid">
+          <div class="policy-stat-card"><span class="policy-stat-value">${suspension.suspended ? '已暂停' : '正常'}</span><span class="policy-stat-label">账号状态</span><span class="policy-stat-hint">${suspension.suspended ? esc(suspension.reason || '') : '可正常使用'}</span></div>
+          <div class="policy-stat-card"><span class="policy-stat-value">${(mine.policies || []).length}</span><span class="policy-stat-label">生效策略</span><span class="policy-stat-hint">${esc(mine.settings?.enforcement_mode || 'enforce')}</span></div>
+          <div class="policy-stat-card"><span class="policy-stat-value">${(mine.exemptions || []).length}</span><span class="policy-stat-label">临时豁免</span><span class="policy-stat-hint">${mine.bypass ? '已开启策略豁免' : '未开启'}</span></div>
+          <div class="policy-stat-card"><span class="policy-stat-value">${(blocks || []).length}</span><span class="policy-stat-label">最近拦截</span><span class="policy-stat-hint">decision=block</span></div>
+        </div>
+      `;
+      policiesEl.innerHTML = `<table class="blora-table"><thead><tr><th>名称</th><th>作用域</th><th>效果</th><th>动作</th><th>分类</th><th>有效期</th></tr></thead><tbody>${
+        (mine.policies || []).map(policy => `<tr><td>${esc(policy.name)}</td><td>${esc(policy.scope_type)}</td><td>${esc(policy.effect)}</td><td>${esc(policy.action)}</td><td>${esc(policy.category)}</td><td>${policy.ends_at ? fmt(policy.ends_at) : '长期'}</td></tr>`).join('') || '<tr><td colspan="6" class="policy-empty">暂无策略</td></tr>'
+      }</tbody></table>`;
+      exemptionsEl.innerHTML = `<table class="blora-table"><thead><tr><th>策略</th><th>原因</th><th>到期</th><th>次数</th></tr></thead><tbody>${
+        (mine.exemptions || []).map(item => `<tr><td>${esc(item.policy_id || '全部')}</td><td>${esc(item.reason || '-')}</td><td>${item.ends_at ? fmt(item.ends_at) : '永久'}</td><td>${item.used_count || 0}${item.max_uses ? ` / ${item.max_uses}` : ''}</td></tr>`).join('') || '<tr><td colspan="4" class="policy-empty">暂无豁免</td></tr>'
+      }</tbody></table>`;
+      blocksEl.innerHTML = `<table class="blora-table"><thead><tr><th>时间</th><th>策略</th><th>客户端</th><th>模型</th><th>原因</th><th>操作</th></tr></thead><tbody>${
+        (blocks || []).map(hit => `<tr><td>${fmt(hit.created_at)}</td><td>${esc(hit.policy_name || '-')}</td><td>${esc(hit.request_source || '-')}</td><td>${esc(hit.requested_model || '-')}</td><td>${esc(hit.reason || '-')}</td><td><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-appeal-hit="${hit.id}" data-policy-id="${hit.policy_id || ''}">申诉</button></td></tr>`).join('') || '<tr><td colspan="6" class="policy-empty">暂无拦截</td></tr>'
+      }</tbody></table>`;
+      appealsEl.innerHTML = `<table class="blora-table"><thead><tr><th>时间</th><th>策略</th><th>原因</th><th>状态</th><th>处理结果</th></tr></thead><tbody>${
+        (appeals || []).map(item => `<tr><td>${fmt(item.created_at)}</td><td>${esc(item.policy_name || item.policy_id || '-')}</td><td>${esc(item.reason || '-')}</td><td>${esc(item.status)}</td><td>${esc(item.resolution || '-')}</td></tr>`).join('') || '<tr><td colspan="5" class="policy-empty">暂无申诉</td></tr>'
+      }</tbody></table>`;
+      blocksEl.querySelectorAll('[data-appeal-hit]').forEach(button => {
+        button.addEventListener('click', () => this.openPolicyAppeal(Number(button.dataset.appealHit), button.dataset.policyId ? Number(button.dataset.policyId) : null));
+      });
+    } catch (error) {
+      statusEl.innerHTML = `<p class="policy-error">${esc(error.message || '加载失败')}</p>`;
+    }
+  }
+
+  openPolicyAppeal(hitId, policyId) {
+    const dialog = Dialog.showModal({
+      title: '提交策略申诉',
+      width: 'min(520px, 96vw)',
+      content: `
+        <label class="blora-field"><span class="blora-field__label">申诉原因</span>
+          <textarea class="blora-textarea" id="appealReason" rows="5" placeholder="请说明为什么需要解除该限制"></textarea>
+        </label>
+      `,
+      footer: '<button type="button" class="blora-button" data-variant="secondary" data-dialog-cancel>取消</button><button type="button" class="blora-button" data-variant="primary" id="appealSubmit">提交申诉</button>',
+    });
+    dialog.element.querySelector('#appealSubmit')?.addEventListener('click', async () => {
+      try {
+        const reason = dialog.element.querySelector('#appealReason').value.trim();
+        if (!reason) throw new Error('请填写申诉原因');
+        const response = await fetch('/api/user/policy-appeals', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: await this._csrfHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ hit_id: hitId, policy_id: policyId, reason }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || '提交失败');
+        dialog.close('submitted');
+        this.showToast('申诉已提交', 'success');
+        await this.loadPolicyCenter();
+      } catch (error) {
+        this.showToast(error.message || '提交失败', 'error');
+      }
+    });
+  }
+
   async loadAuditLogs(page = 1) {
     this._auditLogPage = page;
     const listEl = document.getElementById('auditLogsList');
@@ -8074,7 +8153,7 @@ class ConsoleApp {
             </div>
             ${log.details ? `<details style="margin-top:4px;"><summary style="font-size:12px;color:var(--muted-foreground);cursor:pointer;">${t('详情')}</summary><pre style="font-size:12px;margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
           </div>
-          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
+          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(CRTime.formatTime(log.created_at))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
         </div>`).join(''));
 
       const totalPages = Math.ceil(total / limit);
@@ -9102,7 +9181,7 @@ ${extractorBody}
               ID: ${pk.credentialID ? pk.credentialID.substring(0, 12) + '...' : 'Unknown'}
             </div>
             <div style="font-size:12px;color:var(--muted-foreground);">
-              创建于: ${pk.createdAt ? new Date(pk.createdAt).toLocaleDateString('zh-CN') : t('未知')}
+              创建于: ${pk.createdAt ? CRTime.formatDate(pk.createdAt) : t('未知')}
             </div>
           </div>
           <button class="blora-button" onclick="app.deletePasskey('${safeId}')" data-variant="danger" data-size="sm">删除</button>
@@ -9294,7 +9373,7 @@ ${extractorBody}
       const title = reasonCodes.length ? ` title="${escapeHtml(reasonCodes.join(', '))}"` : '';
       return `<span class="badge"${title} style="color:${meta.color};border:1px solid ${meta.color};">${escapeHtml(meta.label)}</span>`;
     };
-    const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
+    const rows = events.map(e => `<tr><td>${escapeHtml(CRTime.formatTime(e.created_at))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
     const detail = document.createElement('div');
     detail.className = 'trace-report-modal lg-scope';
     detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="blora-button" onclick="this.closest(\'.trace-report-modal\').remove()" data-variant="secondary" data-size="sm">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
@@ -11627,7 +11706,7 @@ ${extractorBody}
           ${periods.map(period => {
             const periodPct = period.percent == null || period.percent === '' ? null : Math.max(0, Math.min(100, Number(period.percent)));
             const periodLabel = period.label || period.key || t('额度');
-            const resetTitle = period.resetsAt ? new Date(period.resetsAt).toLocaleString('zh-CN', { hour12: false }) : '';
+            const resetTitle = period.resetsAt ? CRTime.formatTime(period.resetsAt) : '';
             const periodRange = period.startsAt || period.resetsAt
               ? `${period.startsAt ? this.formatQuotaResetTime(period.startsAt) : ''}${period.startsAt && period.resetsAt ? t(' 至 ') : ''}${period.resetsAt ? this.formatQuotaResetTime(period.resetsAt) : t('未知')}`
               : '';
@@ -12131,9 +12210,9 @@ ${extractorBody}
       const d = new Date(dateStr);
       if (Number.isNaN(d.getTime())) return String(dateStr);
       if (granularity === '15m' || granularity === 'hour') {
-        return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        return CRTime.formatTime(d);
       }
-      return d.toLocaleDateString('zh-CN');
+      return CRTime.formatDate(d);
     } catch (_) {
       return String(dateStr);
     }

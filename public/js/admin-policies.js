@@ -88,6 +88,9 @@ class AdminPoliciesApp {
     if (tab === 'members') await this.loadMembers();
     if (tab === 'clients') await this.loadClients();
     if (tab === 'hits') await this.loadHits();
+    if (tab === 'exemptions') await this.loadExemptions();
+    if (tab === 'approvals') await this.loadApprovals();
+    if (tab === 'analytics') await this.loadAnalytics();
     if (tab === 'settings') await this.loadSettings();
   }
 
@@ -276,6 +279,8 @@ class AdminPoliciesApp {
       <td class="policy-row-actions">
         <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-policy-action="edit" data-id="${policy.id}">编辑</button>
         <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-policy-action="toggle" data-id="${policy.id}">${policy.enabled ? '停用' : '启用'}</button>
+        ${policy.status !== 'published' ? `<button type="button" class="blora-button" data-variant="outline" data-size="sm" data-policy-action="publish" data-id="${policy.id}">发布</button>` : ''}
+        <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-policy-action="versions" data-id="${policy.id}">版本</button>
         <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-policy-action="duplicate" data-id="${policy.id}">复制</button>
         <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-policy-action="delete" data-id="${policy.id}">删除</button>
       </td>
@@ -321,6 +326,16 @@ class AdminPoliciesApp {
         await this.loadPolicies();
         return;
       }
+      if (action === 'publish') {
+        const result = await this._request(`/api/admin/policies/${id}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        this.toast(result.pending_approval ? '已提交发布审批' : '策略已发布');
+        await this.loadPolicies();
+        return;
+      }
+      if (action === 'versions') {
+        await this.openVersions(id);
+        return;
+      }
       if (action === 'delete') {
         if (!window.confirm('确定删除该策略？')) return;
         await this._request(`/api/admin/policies/${id}`, { method: 'DELETE' });
@@ -340,6 +355,7 @@ class AdminPoliciesApp {
       effect: 'deny', action: 'block', priority: 100, category: 'combined',
       conditions: {}, action_options: {}, ladder: [], status_code: 403,
       notify_channels: { inapp: true, webhook: false, email: false }, enabled: true,
+      status: 'published', auto_publish_at: null,
     };
     const dialog = Dialog.showModal({
       title: policy ? '编辑策略' : '新建策略',
@@ -394,6 +410,44 @@ class AdminPoliciesApp {
           <label class="blora-field"><span class="blora-field__label">条件 JSON</span>
             <textarea class="blora-textarea" id="peConditions" rows="10" spellcheck="false">${this.esc(JSON.stringify(draft.conditions || {}, null, 2))}</textarea>
           </label>
+          <div class="policy-editor-grid">
+            <label class="blora-field"><span class="blora-field__label">状态</span>
+              <select class="blora-select" id="peStatus">
+                <option value="draft" ${draft.status === 'draft' ? 'selected' : ''}>草稿</option>
+                <option value="published" ${draft.status === 'published' || !draft.status ? 'selected' : ''}>已发布</option>
+                <option value="archived" ${draft.status === 'archived' ? 'selected' : ''}>已归档</option>
+              </select>
+            </label>
+            <label class="blora-field"><span class="blora-field__label">定时发布（本地）</span>
+              <input class="blora-input" type="datetime-local" id="peAutoPublish" value="${this._localInput(draft.auto_publish_at)}">
+            </label>
+          </div>
+          <div class="policy-editor-grid">
+            <label class="blora-field"><span class="blora-field__label">限速毫秒</span>
+              <input class="blora-input" type="number" id="peThrottleMs" value="${draft.action_options?.throttle_ms ?? ''}">
+            </label>
+            <label class="blora-field"><span class="blora-field__label">排队等待毫秒</span>
+              <input class="blora-input" type="number" id="peQueueWaitMs" value="${draft.action_options?.queue_wait_ms ?? ''}">
+            </label>
+            <label class="blora-field"><span class="blora-field__label">并发上限</span>
+              <input class="blora-input" type="number" id="peQueueMax" value="${draft.action_options?.queue_max ?? ''}">
+            </label>
+            <label class="blora-field"><span class="blora-field__label">降级模型</span>
+              <input class="blora-input" id="peDowngradeTo" value="${this.esc(draft.action_options?.downgrade_to || '')}">
+            </label>
+            <label class="blora-field"><span class="blora-field__label">暂停秒数</span>
+              <input class="blora-input" type="number" id="peSuspendSeconds" value="${draft.action_options?.suspend_seconds ?? ''}">
+            </label>
+            <label class="blora-field"><span class="blora-field__label">策略 RPM</span>
+              <input class="blora-input" type="number" id="peRpm" value="${draft.action_options?.rpm ?? ''}">
+            </label>
+            <label class="blora-field"><span class="blora-field__label">策略 TPM</span>
+              <input class="blora-input" type="number" id="peTpm" value="${draft.action_options?.tpm ?? ''}">
+            </label>
+            <label class="blora-field"><span class="blora-field__label">自定义消息</span>
+              <input class="blora-input" id="peCustomMessage" value="${this.esc(draft.action_options?.custom_message || '')}">
+            </label>
+          </div>
           <div class="policy-editor-grid">
             <label class="blora-field"><span class="blora-field__label">动作参数 JSON</span>
               <textarea class="blora-textarea" id="peOptions" rows="5" spellcheck="false">${this.esc(JSON.stringify(draft.action_options || {}, null, 2))}</textarea>
@@ -521,6 +575,26 @@ class AdminPoliciesApp {
     const scopeIdValue = el.querySelector('#peScopeId').value;
     const startsAt = el.querySelector('#peStartsAt').value;
     const endsAt = el.querySelector('#peEndsAt').value;
+    const autoPublish = el.querySelector('#peAutoPublish').value;
+    const actionOptions = parseJson('#peOptions', {});
+    const numberField = (id) => {
+      const raw = el.querySelector(id)?.value;
+      if (raw === '' || raw == null) return null;
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
+    };
+    for (const [id, key] of [
+      ['#peThrottleMs', 'throttle_ms'], ['#peQueueWaitMs', 'queue_wait_ms'],
+      ['#peQueueMax', 'queue_max'], ['#peSuspendSeconds', 'suspend_seconds'],
+      ['#peRpm', 'rpm'], ['#peTpm', 'tpm'],
+    ]) {
+      const value = numberField(id);
+      if (value != null) actionOptions[key] = value;
+    }
+    const downgradeTo = el.querySelector('#peDowngradeTo')?.value?.trim();
+    if (downgradeTo) actionOptions.downgrade_to = downgradeTo;
+    const customMessage = el.querySelector('#peCustomMessage')?.value?.trim();
+    if (customMessage) actionOptions.custom_message = customMessage;
     const payload = {
       name: el.querySelector('#peName').value.trim(),
       description: el.querySelector('#peDescription').value,
@@ -532,14 +606,15 @@ class AdminPoliciesApp {
       category: el.querySelector('#peCategory').value,
       status_code: Number(el.querySelector('#peStatusCode').value),
       conditions: parseJson('#peConditions', {}),
-      action_options: parseJson('#peOptions', {}),
+      action_options: actionOptions,
       ladder: parseJson('#peLadder', []),
       notify_channels: { inapp: true, webhook: el.querySelector('#peWebhook').checked, email: false },
       starts_at: startsAt ? new Date(startsAt).toISOString() : null,
       ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+      auto_publish_at: autoPublish ? new Date(autoPublish).toISOString() : null,
+      status: el.querySelector('#peStatus')?.value || (forSave ? 'published' : 'draft'),
       enabled: el.querySelector('#peEnabled').checked,
     };
-    if (forSave) payload.status = 'published';
     return payload;
   }
 
@@ -785,6 +860,383 @@ class AdminPoliciesApp {
     } catch (error) {
       this.toast(error.message, 'error');
     }
+  }
+
+  async openVersions(policyId) {
+    try {
+      const versions = await this._request(`/api/admin/policies/${policyId}/versions`);
+      const dialog = Dialog.showModal({
+        title: '策略版本',
+        width: 'min(760px, 96vw)',
+        content: `
+          <div class="blora-table-wrap"><table class="blora-table">
+            <thead><tr><th>版本</th><th>变更说明</th><th>时间</th><th>操作</th></tr></thead>
+            <tbody>${(versions || []).map(version => `<tr>
+              <td>v${version.version}</td>
+              <td>${this.esc(version.change_summary || '-')}</td>
+              <td>${this.fmt(version.created_at)}</td>
+              <td><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-rollback="${version.version}">回滚</button></td>
+            </tr>`).join('') || '<tr><td colspan="4" class="policy-empty">暂无版本</td></tr>'}</tbody>
+          </table></div>
+        `,
+        footer: '<button type="button" class="blora-button" data-variant="secondary" data-dialog-cancel>关闭</button>',
+      });
+      dialog.element.querySelectorAll('[data-rollback]').forEach(button => {
+        button.addEventListener('click', async () => {
+          if (!window.confirm(`回滚到 v${button.dataset.rollback}？`)) return;
+          try {
+            await this._request(`/api/admin/policies/${policyId}/rollback/${button.dataset.rollback}`, { method: 'POST' });
+            this.toast('已回滚');
+            dialog.close('rolledback');
+            await this.loadPolicies();
+          } catch (error) {
+            this.toast(error.message, 'error');
+          }
+        });
+      });
+    } catch (error) {
+      this.toast(error.message, 'error');
+    }
+  }
+
+  // ==================== 例外与申诉 ====================
+
+  async loadExemptions() {
+    const pane = this.pane('Exemptions');
+    if (!pane) return;
+    this.loading(pane);
+    try {
+      const [exemptions, appeals] = await Promise.all([
+        this._request('/api/admin/policy-exemptions?limit=100'),
+        this._request('/api/admin/policy-appeals?limit=100'),
+      ]);
+      pane.innerHTML = `
+        <section class="policy-card">
+          <div class="policy-card-head"><h3>临时豁免</h3>
+            <button type="button" class="blora-button" data-variant="secondary" data-size="sm" id="createExemptionBtn">新建豁免</button>
+          </div>
+          <div class="blora-table-wrap"><table class="blora-table">
+            <thead><tr><th>主体</th><th>策略</th><th>原因</th><th>到期</th><th>次数</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>${(exemptions.items || []).map(item => `<tr>
+              <td>${this.esc(item.subject_type)} · ${this.esc(item.username || item.subject_id)}</td>
+              <td>${this.esc(item.policy_name || '全部策略')}</td>
+              <td>${this.esc(item.reason || '-')}</td>
+              <td>${item.ends_at ? this.fmt(item.ends_at) : '永久'}</td>
+              <td>${item.used_count || 0}${item.max_uses ? ` / ${item.max_uses}` : ''}</td>
+              <td>${item.status === 'active' ? '<span class="blora-badge" data-variant="success">生效</span>' : `<span class="blora-badge" data-variant="neutral">${this.esc(item.status)}</span>`}</td>
+              <td>${item.status === 'active' ? `<button type="button" class="blora-button" data-variant="outline" data-size="sm" data-exemption-revoke="${item.id}">撤销</button>` : '-'}</td>
+            </tr>`).join('') || '<tr><td colspan="7" class="policy-empty">暂无豁免</td></tr>'}</tbody>
+          </table></div>
+        </section>
+        <section class="policy-card">
+          <div class="policy-card-head"><h3>成员申诉</h3></div>
+          <div class="blora-table-wrap"><table class="blora-table">
+            <thead><tr><th>成员</th><th>策略</th><th>原因</th><th>SLA</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>${(appeals.items || []).map(item => `<tr>
+              <td>${this.esc(item.username || item.user_id)}</td>
+              <td>${this.esc(item.policy_name || '-')}</td>
+              <td>${this.esc(item.reason || '-')}</td>
+              <td>${item.sla_due_at ? this.fmt(item.sla_due_at) : '-'}</td>
+              <td>${item.status === 'pending' ? '<span class="blora-badge" data-variant="warning">待处理</span>' : `<span class="blora-badge" data-variant="neutral">${this.esc(item.status)}</span>`}</td>
+              <td class="policy-row-actions">${item.status === 'pending' ? `
+                <button type="button" class="blora-button" data-variant="primary" data-size="sm" data-appeal-decide="approve" data-id="${item.id}">通过</button>
+                <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-appeal-decide="reject" data-id="${item.id}">驳回</button>` : '-'}</td>
+            </tr>`).join('') || '<tr><td colspan="6" class="policy-empty">暂无申诉</td></tr>'}</tbody>
+          </table></div>
+        </section>
+      `;
+      pane.querySelector('#createExemptionBtn')?.addEventListener('click', () => this.openExemptionDialog());
+      pane.querySelectorAll('[data-exemption-revoke]').forEach(button => {
+        button.addEventListener('click', async () => {
+          try {
+            await this._request(`/api/admin/policy-exemptions/${button.dataset.exemptionRevoke}`, { method: 'DELETE' });
+            this.toast('豁免已撤销');
+            await this.loadExemptions();
+          } catch (error) { this.toast(error.message, 'error'); }
+        });
+      });
+      pane.querySelectorAll('[data-appeal-decide]').forEach(button => {
+        button.addEventListener('click', async () => {
+          try {
+            await this._request(`/api/admin/policy-appeals/${button.dataset.id}/decide`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ decision: button.dataset.appealDecide }),
+            });
+            this.toast(button.dataset.appealDecide === 'approve' ? '申诉已通过并生成豁免' : '申诉已驳回');
+            await this.loadExemptions();
+          } catch (error) { this.toast(error.message, 'error'); }
+        });
+      });
+    } catch (error) {
+      this.error(pane, error);
+    }
+  }
+
+  openExemptionDialog() {
+    const dialog = Dialog.showModal({
+      title: '新建策略豁免',
+      width: 'min(560px, 96vw)',
+      content: `
+        <div class="policy-editor-grid">
+          <label class="blora-field"><span class="blora-field__label">主体类型</span>
+            <select class="blora-select" id="exSubjectType"><option value="user">成员</option><option value="team">Team</option><option value="api_key">API Key</option></select>
+          </label>
+          <label class="blora-field"><span class="blora-field__label">主体 ID</span><input class="blora-input" type="number" id="exSubjectId"></label>
+          <label class="blora-field"><span class="blora-field__label">策略 ID（留空=全部）</span><input class="blora-input" type="number" id="exPolicyId"></label>
+          <label class="blora-field"><span class="blora-field__label">有效小时数（留空=永久）</span><input class="blora-input" type="number" id="exHours" value="24"></label>
+          <label class="blora-field"><span class="blora-field__label">最大使用次数（留空=不限）</span><input class="blora-input" type="number" id="exMaxUses"></label>
+        </div>
+        <label class="blora-field"><span class="blora-field__label">原因</span><textarea class="blora-textarea" id="exReason" rows="3"></textarea></label>
+      `,
+      footer: '<button type="button" class="blora-button" data-variant="secondary" data-dialog-cancel>取消</button><button type="button" class="blora-button" data-variant="primary" id="exCreate">创建</button>',
+    });
+    dialog.element.querySelector('#exCreate')?.addEventListener('click', async () => {
+      try {
+        const hours = Number(dialog.element.querySelector('#exHours').value);
+        await this._request('/api/admin/policy-exemptions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject_type: dialog.element.querySelector('#exSubjectType').value,
+            subject_id: Number(dialog.element.querySelector('#exSubjectId').value),
+            policy_id: dialog.element.querySelector('#exPolicyId').value ? Number(dialog.element.querySelector('#exPolicyId').value) : null,
+            ends_at: hours > 0 ? new Date(Date.now() + hours * 3600 * 1000).toISOString() : null,
+            max_uses: dialog.element.querySelector('#exMaxUses').value ? Number(dialog.element.querySelector('#exMaxUses').value) : null,
+            reason: dialog.element.querySelector('#exReason').value,
+          }),
+        });
+        this.toast('豁免已创建');
+        dialog.close('created');
+        await this.loadExemptions();
+      } catch (error) { this.toast(error.message, 'error'); }
+    });
+  }
+
+  // ==================== 审批中心 ====================
+
+  async loadApprovals() {
+    const pane = this.pane('Approvals');
+    if (!pane) return;
+    this.loading(pane);
+    try {
+      const data = await this._request('/api/admin/policy-approvals?limit=100');
+      pane.innerHTML = `
+        <div class="blora-table-wrap"><table class="blora-table">
+          <thead><tr><th>类型</th><th>策略</th><th>申请人</th><th>预览</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+          <tbody>${(data.items || []).map(item => `<tr>
+            <td>${item.kind === 'request' ? '运行时放行' : '策略变更'}</td>
+            <td>${this.esc(item.policy_name || item.policy_id || '-')}</td>
+            <td>${this.esc(item.requested_by_name || '-')}</td>
+            <td><code class="policy-desc">${this.esc(JSON.stringify(item.preview || {}))}</code></td>
+            <td>${item.status === 'pending' ? '<span class="blora-badge" data-variant="warning">待审批</span>' : `<span class="blora-badge" data-variant="neutral">${this.esc(item.status)}</span>`}</td>
+            <td>${this.fmt(item.created_at)}</td>
+            <td class="policy-row-actions">${item.status === 'pending' ? `
+              <button type="button" class="blora-button" data-variant="primary" data-size="sm" data-approval="approve" data-id="${item.id}">通过</button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-approval="reject" data-id="${item.id}">驳回</button>` : '-'}</td>
+          </tr>`).join('') || '<tr><td colspan="7" class="policy-empty">暂无审批</td></tr>'}</tbody>
+        </table></div>
+        <p class="policy-summary">共 ${data.total || 0} 条</p>
+      `;
+      pane.querySelectorAll('[data-approval]').forEach(button => {
+        button.addEventListener('click', async () => {
+          try {
+            await this._request(`/api/admin/policy-approvals/${button.dataset.id}/decide`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ decision: button.dataset.approval }),
+            });
+            this.toast(button.dataset.approval === 'approve' ? '审批已通过' : '审批已驳回');
+            await this.loadApprovals();
+          } catch (error) { this.toast(error.message, 'error'); }
+        });
+      });
+    } catch (error) {
+      this.error(pane, error);
+    }
+  }
+
+  // ==================== 通知与分析 ====================
+
+  async loadAnalytics() {
+    const pane = this.pane('Analytics');
+    if (!pane) return;
+    this.loading(pane);
+    try {
+      const [analytics, channels, rules] = await Promise.all([
+        this._request('/api/admin/policies/analytics?range=7d&group_by=policy'),
+        this._request('/api/admin/policy-channels'),
+        this._request('/api/admin/policy-alert-rules'),
+      ]);
+      const totals = analytics.totals || {};
+      const maxHits = Math.max(1, ...(analytics.rows || []).map(row => Number(row.hits) || 0));
+      pane.innerHTML = `
+        <div class="policy-stat-grid">
+          ${this._statCard('7d 命中', totals.hits || 0, '策略命中总数')}
+          ${this._statCard('7d 拦截', totals.blocked || 0, 'decision=block')}
+          ${this._statCard('涉及成员', totals.members || 0, '去重成员数')}
+          ${this._statCard('平均耗时', `${Number(totals.avg_eval_ms || 0).toFixed(2)} ms`, '策略评估耗时')}
+        </div>
+        <section class="policy-card">
+          <h3>Top 策略</h3>
+          ${(analytics.rows || []).map(row => `<div class="policy-bar-row">
+            <span>${this.esc(row.policy_name || row.group || '-')}</span>
+            <div class="policy-bar"><span style="width:${Math.round((Number(row.hits) || 0) / maxHits * 100)}%"></span></div>
+            <strong>${row.hits}</strong>
+          </div>`).join('') || '<p class="policy-empty">暂无数据</p>'}
+        </section>
+        <section class="policy-card">
+          <div class="policy-card-head"><h3>通知渠道</h3>
+            <button type="button" class="blora-button" data-variant="secondary" data-size="sm" id="addChannelBtn">新建渠道</button>
+          </div>
+          <div class="blora-table-wrap"><table class="blora-table">
+            <thead><tr><th>名称</th><th>类型</th><th>最低级别</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>${(channels || []).map(channel => `<tr>
+              <td>${this.esc(channel.name)}</td><td>${this.esc(channel.type)}</td>
+              <td>${this.esc(channel.min_severity)}</td>
+              <td>${channel.enabled ? '<span class="blora-badge" data-variant="success">启用</span>' : '<span class="blora-badge" data-variant="neutral">停用</span>'}</td>
+              <td class="policy-row-actions">
+                <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-channel-test="${channel.id}">测试</button>
+                <button type="button" class="blora-button" data-variant="outline" data-size="sm" data-channel-delete="${channel.id}">删除</button>
+              </td>
+            </tr>`).join('') || '<tr><td colspan="5" class="policy-empty">暂无渠道</td></tr>'}</tbody>
+          </table></div>
+        </section>
+        <section class="policy-card">
+          <div class="policy-card-head"><h3>告警规则</h3>
+            <button type="button" class="blora-button" data-variant="secondary" data-size="sm" id="addRuleBtn">新建规则</button>
+          </div>
+          <div class="blora-table-wrap"><table class="blora-table">
+            <thead><tr><th>名称</th><th>事件</th><th>级别</th><th>渠道</th><th>静默</th><th>操作</th></tr></thead>
+            <tbody>${(rules || []).map(rule => `<tr>
+              <td>${this.esc(rule.name)}</td><td>${this.esc(rule.event_type)}</td><td>${this.esc(rule.severity)}</td>
+              <td>${(rule.channel_ids || []).join(', ') || '-'}</td><td>${rule.silence_window_seconds}s</td>
+              <td><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-rule-delete="${rule.id}">删除</button></td>
+            </tr>`).join('') || '<tr><td colspan="6" class="policy-empty">暂无规则</td></tr>'}</tbody>
+          </table></div>
+        </section>
+      `;
+      pane.querySelector('#addChannelBtn')?.addEventListener('click', () => this.openChannelDialog());
+      pane.querySelector('#addRuleBtn')?.addEventListener('click', () => this.openRuleDialog(channels || []));
+      pane.querySelectorAll('[data-channel-test]').forEach(button => {
+        button.addEventListener('click', async () => {
+          try {
+            const result = await this._request(`/api/admin/policy-channels/${button.dataset.channelTest}/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            this.toast(result.ok ? `测试成功（${result.latency_ms}ms）` : `测试失败：${result.error}`, result.ok ? 'success' : 'error');
+          } catch (error) { this.toast(error.message, 'error'); }
+        });
+      });
+      pane.querySelectorAll('[data-channel-delete]').forEach(button => {
+        button.addEventListener('click', async () => {
+          if (!window.confirm('删除该渠道？')) return;
+          try {
+            await this._request(`/api/admin/policy-channels/${button.dataset.channelDelete}`, { method: 'DELETE' });
+            await this.loadAnalytics();
+          } catch (error) { this.toast(error.message, 'error'); }
+        });
+      });
+      pane.querySelectorAll('[data-rule-delete]').forEach(button => {
+        button.addEventListener('click', async () => {
+          try {
+            await this._request(`/api/admin/policy-alert-rules/${button.dataset.ruleDelete}`, { method: 'DELETE' });
+            await this.loadAnalytics();
+          } catch (error) { this.toast(error.message, 'error'); }
+        });
+      });
+    } catch (error) {
+      this.error(pane, error);
+    }
+  }
+
+  openChannelDialog() {
+    const dialog = Dialog.showModal({
+      title: '新建通知渠道',
+      width: 'min(600px, 96vw)',
+      content: `
+        <div class="policy-editor-grid">
+          <label class="blora-field"><span class="blora-field__label">名称</span><input class="blora-input" id="chName"></label>
+          <label class="blora-field"><span class="blora-field__label">类型</span>
+            <select class="blora-select" id="chType">
+              ${['webhook','feishu','wecom','dingtalk','slack','telegram','email','bark'].map(value => `<option value="${value}">${value}</option>`).join('')}
+            </select>
+          </label>
+          <label class="blora-field"><span class="blora-field__label">最低级别</span>
+            <select class="blora-select" id="chSeverity"><option value="info">info</option><option value="warning" selected>warning</option><option value="critical">critical</option></select>
+          </label>
+        </div>
+        <label class="blora-field"><span class="blora-field__label">Webhook / 机器人 URL</span><input class="blora-input" id="chUrl" placeholder="https://..."></label>
+        <div class="policy-editor-grid">
+          <label class="blora-field"><span class="blora-field__label">Secret / Token / Key</span><input class="blora-input" id="chSecret"></label>
+          <label class="blora-field"><span class="blora-field__label">邮件收件人</span><input class="blora-input" id="chTo"></label>
+          <label class="blora-field"><span class="blora-field__label">Telegram chat_id</span><input class="blora-input" id="chChat"></label>
+        </div>
+        <p class="policy-hint">Secret 会加密存储；URL 必须通过 SSRF 校验。</p>
+      `,
+      footer: '<button type="button" class="blora-button" data-variant="secondary" data-dialog-cancel>取消</button><button type="button" class="blora-button" data-variant="primary" id="chCreate">创建</button>',
+    });
+    dialog.element.querySelector('#chCreate')?.addEventListener('click', async () => {
+      try {
+        const config = {};
+        const url = dialog.element.querySelector('#chUrl').value.trim();
+        const secret = dialog.element.querySelector('#chSecret').value.trim();
+        const to = dialog.element.querySelector('#chTo').value.trim();
+        const chat = dialog.element.querySelector('#chChat').value.trim();
+        if (url) config.url = url;
+        if (secret) config.secret = secret;
+        if (to) config.to = to;
+        if (chat) config.chat_id = chat;
+        await this._request('/api/admin/policy-channels', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: dialog.element.querySelector('#chName').value,
+            type: dialog.element.querySelector('#chType').value,
+            min_severity: dialog.element.querySelector('#chSeverity').value,
+            config,
+          }),
+        });
+        this.toast('渠道已创建');
+        dialog.close('created');
+        await this.loadAnalytics();
+      } catch (error) { this.toast(error.message, 'error'); }
+    });
+  }
+
+  openRuleDialog(channels) {
+    const dialog = Dialog.showModal({
+      title: '新建告警规则',
+      width: 'min(600px, 96vw)',
+      content: `
+        <div class="policy-editor-grid">
+          <label class="blora-field"><span class="blora-field__label">名称</span><input class="blora-input" id="ruleName" value="策略告警"></label>
+          <label class="blora-field"><span class="blora-field__label">事件</span>
+            <select class="blora-select" id="ruleEvent"><option value="hit">hit</option><option value="block">block</option><option value="suspend">suspend</option><option value="approval">approval</option><option value="appeal">appeal</option><option value="*">全部</option></select>
+          </label>
+          <label class="blora-field"><span class="blora-field__label">级别</span>
+            <select class="blora-select" id="ruleSeverity"><option value="info">info</option><option value="warning" selected>warning</option><option value="critical">critical</option></select>
+          </label>
+          <label class="blora-field"><span class="blora-field__label">静默秒数</span><input class="blora-input" type="number" id="ruleSilence" value="300"></label>
+        </div>
+        <fieldset class="policy-dimensions"><legend>发送渠道</legend>
+          ${(channels || []).map(channel => `<label class="policy-check"><input type="checkbox" data-rule-channel="${channel.id}"> ${this.esc(channel.name)}（${this.esc(channel.type)}）</label>`).join('') || '<p class="policy-hint">请先创建渠道</p>'}
+        </fieldset>
+      `,
+      footer: '<button type="button" class="blora-button" data-variant="secondary" data-dialog-cancel>取消</button><button type="button" class="blora-button" data-variant="primary" id="ruleCreate">创建</button>',
+    });
+    dialog.element.querySelector('#ruleCreate')?.addEventListener('click', async () => {
+      try {
+        const channelIds = [...dialog.element.querySelectorAll('[data-rule-channel]')].filter(input => input.checked).map(input => Number(input.dataset.ruleChannel));
+        await this._request('/api/admin/policy-alert-rules', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: dialog.element.querySelector('#ruleName').value,
+            event_type: dialog.element.querySelector('#ruleEvent').value,
+            severity: dialog.element.querySelector('#ruleSeverity').value,
+            silence_window_seconds: Number(dialog.element.querySelector('#ruleSilence').value),
+            channel_ids: channelIds,
+          }),
+        });
+        this.toast('规则已创建');
+        dialog.close('created');
+        await this.loadAnalytics();
+      } catch (error) { this.toast(error.message, 'error'); }
+    });
   }
 
   // ==================== 客户端 ====================

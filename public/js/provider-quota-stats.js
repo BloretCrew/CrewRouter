@@ -5,7 +5,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const finite = value => value !== null && value !== undefined && value !== '' && typeof value !== 'boolean' && Number.isFinite(Number(value));
   const number = (value, digits = 0) => finite(value) ? Number(value).toLocaleString('zh-CN', { minimumFractionDigits: digits, maximumFractionDigits: digits }) : '—';
-  const date = value => !value || Number.isNaN(new Date(value).getTime()) ? '—' : new Date(value).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+  const date = value => !value || Number.isNaN(new Date(value).getTime()) ? '—' : CRTime.formatTime(value);
   const array = value => Array.isArray(value) ? value : [];
   const labels = { monthly: '每月', weekly: '每周', daily: '每日', primary: '主要窗口', secondary: '次要窗口', 'account-primary': '账户主要额度', 'account-secondary': '账户次要额度', seven_day: '7 天', five_hour: '5 小时', seven_day_opus: 'Opus · 7 天', seven_day_sonnet: 'Sonnet · 7 天', USD: '美元', CNY: '人民币', EUR: '欧元', GBP: '英镑', tokens: 'Token', credits: '积分', requests: '请求次数', balance: '余额', window: '使用窗口', percent: '使用率', unknown: '单位未提供' };
   const friendly = value => value ? tr(labels[value] || String(value).replace(/seven[_-]day/g, '7 天').replace(/five[_-]hour/g, '5 小时').replace(/[_-]/g, ' ')) : '—';

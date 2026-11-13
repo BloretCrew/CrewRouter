@@ -4,7 +4,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const rows = value => Array.isArray(value) ? value : [];
   const num = value => value == null || value === '' || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString(window.I18N?.lang === 'en' ? 'en-US' : 'zh-CN', { maximumFractionDigits: 2 });
-  const date = value => !value || Number.isNaN(new Date(value).getTime()) ? '—' : new Date(value).toLocaleString(window.I18N?.lang === 'en' ? 'en-US' : 'zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+  const date = value => !value || Number.isNaN(new Date(value).getTime()) ? '—' : CRTime.formatTime(value);
   const statusLabels = { complete: '完整周期', partial: '部分周期', pending: '待对账', pending_reconciliation: '待对账', open: '进行中', active: '进行中', exhausted_pending_reconciliation: '待对账', reset_before_exhaustion: '重置前未耗尽', adjusted: '额度调整', invalidated: '报告失效', adjustment: '额度调整', topup: '充值', unchanged: '额度未变化', unknown: '状态未提供', cancelled: '已取消', rate_limited: '采集限流', unsupported: '不支持采集', running: '进行中', certain: '确定关联', candidate: '候选关联', reset: '重置', exhausted: '额度耗尽', increase: '额度增加', consumption: '观测消耗', initial: '首次观测', correction: '观测修订', gap: '采样缺口', success: '正常', failed: '查询失败', error: '查询失败' };
   const windowLabel = value => tr(({ monthly: '每月', weekly: '每周', daily: '每日', primary: '主要窗口', secondary: '次要窗口', seven_day: '7 天', five_hour: '5 小时', percent: '使用率' })[value] || value || '—');
   const label = value => tr(statusLabels[value] || '状态未提供');

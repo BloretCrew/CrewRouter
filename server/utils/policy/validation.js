@@ -483,7 +483,15 @@ function normalizePolicyInput(input, { partial = false } = {}) {
     const options = out.action_options;
     if (options.throttle_ms != null) options.throttle_ms = asNumber(options.throttle_ms, 'action_options.throttle_ms', details, { min: 0, max: 60000, integer: true });
     if (options.queue_wait_ms != null) options.queue_wait_ms = asNumber(options.queue_wait_ms, 'action_options.queue_wait_ms', details, { min: 0, max: 120000, integer: true });
+    if (options.queue_max != null) options.queue_max = asNumber(options.queue_max, 'action_options.queue_max', details, { min: 1, max: 1000, integer: true });
+    if (options.queue_max_length != null) options.queue_max_length = asNumber(options.queue_max_length, 'action_options.queue_max_length', details, { min: 1, max: 10000, integer: true });
+    if (options.queue_aggregate != null) options.queue_aggregate = String(options.queue_aggregate);
+    if (options.rpm != null) options.rpm = asNumber(options.rpm, 'action_options.rpm', details, { min: 0, max: 1000000, integer: true });
+    if (options.tpm != null) options.tpm = asNumber(options.tpm, 'action_options.tpm', details, { min: 0, max: 1000000000, integer: true });
+    if (options.ladder_window_seconds != null) options.ladder_window_seconds = asNumber(options.ladder_window_seconds, 'action_options.ladder_window_seconds', details, { min: 60, max: 2592000, integer: true });
+    if (options.approval_ttl_seconds != null) options.approval_ttl_seconds = asNumber(options.approval_ttl_seconds, 'action_options.approval_ttl_seconds', details, { min: 60, max: 604800, integer: true });
     if (options.suspend_seconds != null) options.suspend_seconds = asNumber(options.suspend_seconds, 'action_options.suspend_seconds', details, { min: 60, max: 31536000, integer: true });
+    if (options.suspend_scope != null) options.suspend_scope = options.suspend_scope === 'api' ? 'api' : 'all';
     if (options.custom_status != null) options.custom_status = asNumber(options.custom_status, 'action_options.custom_status', details, { min: 100, max: 599, integer: true });
     if (options.downgrade_to != null) options.downgrade_to = String(options.downgrade_to).trim().slice(0, 200);
     if (options.custom_message != null) options.custom_message = String(options.custom_message).slice(0, 2000);
@@ -522,6 +530,7 @@ function normalizePolicyInput(input, { partial = false } = {}) {
   }
   if (!partial || source.starts_at !== undefined) out.starts_at = normalizeIso(source.starts_at, 'starts_at', details);
   if (!partial || source.ends_at !== undefined) out.ends_at = normalizeIso(source.ends_at, 'ends_at', details);
+  if (!partial || source.auto_publish_at !== undefined) out.auto_publish_at = normalizeIso(source.auto_publish_at, 'auto_publish_at', details);
   if (!partial || source.bypass_until !== undefined) out.bypass_until = normalizeIso(source.bypass_until, 'bypass_until', details);
   if (!partial || source.enabled !== undefined) out.enabled = source.enabled == null ? true : asBoolean(source.enabled);
 

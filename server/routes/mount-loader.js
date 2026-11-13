@@ -19,6 +19,7 @@ const routeModules = {
   './admin-policies': () => require('./admin-policies'),
   './model-trace': () => require('./model-trace'),
   './user': () => require('./user'),
+  './user-policies': () => require('./user-policies'),
   './balance-alert': () => require('./balance-alert'),
   './notifications': () => require('./notifications'),
   './popup-notices': () => require('./popup-notices'),

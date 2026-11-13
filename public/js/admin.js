@@ -850,7 +850,7 @@ class AdminApp {
       return;
     }
     const statusLabel = { active: '有效', used: '已用完', expired: '已过期' };
-    const fmt = (value) => value ? new Date(value).toLocaleString() : '-';
+    const fmt = (value) => value ? CRTime.formatTime(value) : '-';
     list.innerHTML = `<table class="blora-table"><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
       const status = statusLabel[row.status] || row.status;
       const actions = [
@@ -904,9 +904,9 @@ class AdminApp {
         if (data.id && data.url) this._inviteUrlMap[data.id] = data.url;
         if (navigator.clipboard?.writeText && data.url) await navigator.clipboard.writeText(data.url);
         const result = document.getElementById('inviteResult');
-        if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;color:var(--muted-foreground);font-size:12px;">人数 ${data.max_uses} · ${days} 天 · 有效期至 ${new Date(data.expires_at).toLocaleString()}</div>`;
+        if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;color:var(--muted-foreground);font-size:12px;">人数 ${data.max_uses} · ${days} 天 · 有效期至 ${CRTime.formatTime(data.expires_at)}</div>`;
         modal?.close?.();
-        alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
+        alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${CRTime.formatTime(data.expires_at)}`);
         await this.loadInvites();
       } catch (err) {
         alert(err.message || '生成邀请链接失败');
@@ -967,7 +967,7 @@ class AdminApp {
               <td style="font-variant-numeric:tabular-nums;">${parseFloat(user.balance || 0).toFixed(0)}</td>
               <td>${user.is_admin ? '<span class="blora-badge" data-variant="info">' + t('管理员') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('普通用户') + '</span>'}</td>
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
-              <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
+              <td style="color:var(--muted-foreground);font-size:12px;">${CRTime.formatDate(user.created_at)}</td>
               <td>
                 <button class="blora-button" title="${t('编辑')}" aria-label="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="outline" data-size="sm">
                   <span>${t('编辑')}</span>
@@ -1756,9 +1756,9 @@ class AdminApp {
       const d = new Date(dateStr);
       if (Number.isNaN(d.getTime())) return String(dateStr);
       if (granularity === '15m' || granularity === 'hour') {
-        return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        return CRTime.formatTime(d);
       }
-      return d.toLocaleDateString('zh-CN');
+      return CRTime.formatDate(d);
     } catch (_) {
       return String(dateStr);
     }
@@ -5517,7 +5517,7 @@ class AdminApp {
       const res = await fetch(`/api/admin/providers/${providerId}/refresh-key`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        alert(t('✅ 密钥刷新成功') + (data.expiresAt ? '\n' + t('过期时间: ') + new Date(data.expiresAt).toLocaleString('zh-CN') : ''));
+        alert(t('✅ 密钥刷新成功') + (data.expiresAt ? '\n' + t('过期时间: ') + CRTime.formatTime(data.expiresAt) : ''));
         this.loadProviders();
       } else {
         const errMsg = data.error || t('未知错误');
@@ -6382,7 +6382,7 @@ async function(ctx) {
   _formatQuotaDate(value) {
     if (!value) return '';
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return Number.isNaN(date.getTime()) ? String(value) : CRTime.formatTime(date);
   }
 
   async checkProviderQuota(providerId) {
@@ -6813,7 +6813,7 @@ async function(ctx) {
     const checkedAt = new Date(provider.quota_last_checked_at);
     const timeText = Number.isNaN(checkedAt.getTime())
       ? String(provider.quota_last_checked_at)
-      : checkedAt.toLocaleString('zh-CN');
+      : CRTime.formatTime(checkedAt);
     if (provider.quota_last_ok) {
       const remaining = provider.quota_last_result?.remaining;
       meta.textContent = remaining != null
@@ -7285,7 +7285,7 @@ async function(ctx) {
                       : '<span style="color:var(--muted-foreground);">-</span>';
                     return `
                     <tr>
-                      <td>${new Date(usage.date).toLocaleDateString('zh-CN')}</td>
+                      <td>${CRTime.formatDate(usage.date)}</td>
                       <td>${(usage.requests || 0).toLocaleString()}</td>
                       <td title="${Number(usage.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(usage.tokens || 0))}</td>
                       <td>${cacheDisplay}</td>
@@ -7661,7 +7661,7 @@ async function(ctx) {
       const parts = this._latencyRateLimitParts(row.rateLimit);
       return `<tr>
         <td>${renderProviderNameTag(row.providerName || row.providerId) || escapeHtml(row.providerName || row.providerId || '-')}</td>
-        <td>${row.observedAt ? escapeHtml(new Date(row.observedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })) : '-'}</td>
+        <td>${row.observedAt ? escapeHtml(CRTime.formatTime(row.observedAt)) : '-'}</td>
         <td>${escapeHtml(parts.requests)}</td>
         <td>${escapeHtml(parts.tokens)}</td>
         <td>${escapeHtml(parts.reset)}</td>
@@ -7905,7 +7905,7 @@ async function(ctx) {
     if (typeof Chart === 'undefined') return;
 
     const usage = [...this.stats.daily].reverse();
-    const labels = usage.map(u => new Date(u.date).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }));
+    const labels = usage.map(u => CRTime.formatDate(u.date));
     const requests = usage.map(u => parseInt(u.requests || 0, 10));
     const tokens = usage.map(u => parseInt(u.tokens || 0, 10));
     const costs = usage.map(u => parseFloat(u.cost || 0));
@@ -7998,7 +7998,7 @@ async function(ctx) {
     if (typeof Chart === 'undefined') return;
 
     const usage = [...this.stats.daily].reverse();
-    const labels = usage.map(u => new Date(u.date).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }));
+    const labels = usage.map(u => CRTime.formatDate(u.date));
     const requests = usage.map(u => parseInt(u.requests || 0, 10));
     const costs = usage.map(u => parseFloat(u.cost || 0));
     const anomalyPoints = usage.map(u => u.suspected_compaction_boundary ? 6 : 0);
@@ -8709,7 +8709,7 @@ async function(ctx) {
                 : '<span style="margin-left:4px;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--muted);color:var(--muted-foreground);">' + t('重试') + '</span>';
               return `
               <tr style="cursor:pointer;" onclick="adminApp.showErrorDetail(${idx})">
-                <td style="white-space:nowrap;">${new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</td>
+                <td style="white-space:nowrap;">${CRTime.formatTime(log.created_at)}</td>
                 <td>${escapeHtml(log.username || String(log.user_id || '-'))}</td>
                 <td>${escapeHtml(log.model_name || log.model_id || '-')}${finalTag}</td>
                 <td>${renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'}</td>
@@ -8748,7 +8748,7 @@ async function(ctx) {
     if (!log) return;
 
     const rows = [
-      [t('时间'), new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })],
+      [t('时间'), CRTime.formatTime(log.created_at)],
       [t('用户'), escapeHtml(log.username || (log.user_id != null ? `ID: ${log.user_id}` : '-'))],
       [t('模型'), escapeHtml(log.model_name || log.model_id || '-')],
       [t('系列'), escapeHtml(log.series || '-')],
@@ -9019,7 +9019,7 @@ async function(ctx) {
               ].filter(Boolean).join(' · ');
               return `
               <tr style="cursor:pointer;" data-usage-log-idx="${idx}" title="${t('点击查看详情')}">
-                <td style="white-space:nowrap;">${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;">${escapeHtml(CRTime.formatTime(log.created_at))}</td>
                 <td class="cell-clip-sm" title="${escapeHtml(log.username || String(log.user_id || ''))}">${escapeHtml(log.username || String(log.user_id || '-'))}</td>
                 <td style="white-space:normal;overflow-wrap:anywhere;" title="${escapeHtml(modelLabel)}">
                   <div style="font-weight:500;">${escapeHtml(modelLabel)}</div>
@@ -9206,7 +9206,7 @@ async function(ctx) {
       ? t('0（配额内）')
       : costVal.toFixed(6);
     const rows = [
-      [t('调用时间'), escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
+      [t('调用时间'), escapeHtml(CRTime.formatTime(log.created_at))],
       [t('用户'), escapeHtml(log.username || (log.user_id != null ? `ID: ${log.user_id}` : '-'))],
       [t('模型'), escapeHtml(modelLabel)],
       [t('系列'), escapeHtml(log.series || '-')],
@@ -10281,7 +10281,7 @@ async function(ctx) {
         proxyEnabled,
         p.enabled ? t('启用') : t('禁用'),
         p.username || (p.created_by ? t('用户') : t('系统')) || '',
-        p.created_at ? new Date(p.created_at).toLocaleString('zh-CN') : ''
+        p.created_at ? CRTime.formatTime(p.created_at) : ''
       ];
     });
 
@@ -11178,7 +11178,7 @@ async function(ctx) {
         </div>
         <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
         <div class="team-card-footer">
-          <span class="text-muted">${new Date(team.created_at).toLocaleDateString()}</span>
+          <span class="text-muted">${CRTime.formatDate(team.created_at)}</span>
           <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><img src="https://img.bloret.net/SF/chevron.right?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="chevron.right"></button>
         </div>
       </div>
@@ -11482,7 +11482,7 @@ async function(ctx) {
     </tr></thead><tbody>${pg.items.map(m => `<tr>
       <td>${escapeHtml(m.username)}</td>
       <td>${escapeHtml(m.email || '-')}</td>
-      <td>${new Date(m.created_at).toLocaleDateString()}</td>
+      <td>${CRTime.formatDate(m.created_at)}</td>
       ${isPersonal ? '' : `<td><button class="blora-button" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})" data-variant="danger" data-size="sm">${t('移除')}</button></td>`}
     </tr>`).join('')}</tbody></table>
     ${pg.totalPages > 1 ? this._renderPagination('teamMember', pg.page, pg.totalPages, pg.total) : ''}`);
@@ -12833,7 +12833,7 @@ async function(ctx) {
     if (minutes < 60) return `${minutes}${t('分钟前')}`;
     if (hours < 24) return `${hours}${t('小时前')}`;
     if (days < 30) return `${days}${t('天前')}`;
-    return date.toLocaleDateString('zh-CN');
+    return CRTime.formatDate(date);
   }
 
   // ========== 操作日志 ==========
@@ -12878,7 +12878,7 @@ async function(ctx) {
             </div>
             ${log.details ? `<details style="margin-top:4px;"><summary style="font-size:12px;color:var(--muted-foreground);cursor:pointer;">详情</summary><pre style="font-size:12px;margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
           </div>
-          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
+          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(CRTime.formatTime(log.created_at))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
         </div>`).join(''));
 
       const totalPages = Math.ceil(total / limit);
@@ -12960,8 +12960,8 @@ async function(ctx) {
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.user_count, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(CRTime.formatTime(item.first_seen))}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(CRTime.formatTime(item.last_seen))}</td>
                 <td class="cell-actions"><button type="button" class="blora-button" data-admin-prompt-view-idx="${idx}" data-variant="secondary" data-size="sm">${t('查看内容')}</button></td>
               </tr>
             `).join('')}
@@ -13016,7 +13016,7 @@ async function(ctx) {
       const titleEl = document.getElementById('adminPromptDetailTitle');
       if (titleEl) titleEl.textContent = `${t('提示词详情')} · ${data.file || t('(未知文件)')}`;
 
-      const fmtTime = (v) => v ? new Date(v).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '-';
+      const fmtTime = (v) => v ? CRTime.formatTime(v) : '-';
       const rows = [
         [t('文件名'), escapeHtml(data.file || t('(未知文件)'))],
         [t('客户端'), this._usageRequestSourceBadge(data.source)],
@@ -13308,7 +13308,7 @@ async function(ctx) {
     }
     if (checkedEl) {
       checkedEl.textContent = data.lastCheckedAt
-        ? new Date(data.lastCheckedAt).toLocaleString('zh-CN')
+        ? CRTime.formatTime(data.lastCheckedAt)
         : '-';
     }
     if (hintEl) {

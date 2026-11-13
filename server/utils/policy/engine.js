@@ -154,19 +154,29 @@ async function evaluatePolicies(signals, deps = {}) {
 
   const exemptions = activeExemptions(snapshot, { userId, teamId, keyId: signals.actor?.keyId, now })
     .filter(exemption => exemption.policy_id == null || snapshot.policies.some(policy => exemptionReason(exemption, policy.id)));
-  const exemptAll = exemptions.some(exemption => exemption.policy_id == null);
-  const exemptPolicyIds = new Set(exemptions.filter(e => e.policy_id != null).map(e => Number(e.policy_id)));
-  if (exemptAll) {
-    base.exemptionsApplied = exemptions.map(e => e.id);
-    return { ...base, evalMs: Date.now() - started, trace: [{ reason: 'exemption_all' }] };
+  const exemptAllIds = exemptions.filter(exemption => exemption.policy_id == null).map(exemption => exemption.id);
+  const exemptByPolicy = new Map();
+  for (const exemption of exemptions) {
+    if (exemption.policy_id == null) continue;
+    const key = Number(exemption.policy_id);
+    const list = exemptByPolicy.get(key) || [];
+    list.push(exemption.id);
+    exemptByPolicy.set(key, list);
   }
+  const usedExemptions = new Set();
+  const consumeExemption = (policyId) => {
+    const ids = [...exemptAllIds, ...(exemptByPolicy.get(Number(policyId)) || [])];
+    if (!ids.length) return false;
+    for (const id of ids) usedExemptions.add(id);
+    return true;
+  };
+  const exemptAll = exemptAllIds.length > 0;
 
   const matchDeps = {
     queryUsage: deps.queryUsage || queryUsage,
     getConcurrency: deps.getConcurrency || concurrency.getActive,
   };
   const policies = applicablePolicies(snapshot, { userId, teamId, now })
-    .filter(policy => !exemptPolicyIds.has(Number(policy.id)))
     .filter(policy => inRollout(policy, userId));
 
   const decisions = [];
@@ -179,6 +189,7 @@ async function evaluatePolicies(signals, deps = {}) {
       allowPolicies.push(policy);
       continue;
     }
+    if (consumeExemption(policy.id)) continue;
     let action = policy.action;
     let options = policy.action_options || {};
     if (Array.isArray(policy.ladder) && policy.ladder.length) {
@@ -201,16 +212,26 @@ async function evaluatePolicies(signals, deps = {}) {
     });
   }
 
-  if (exemptions.length) {
-    base.exemptionsApplied = exemptions.map(e => e.id);
-  }
-
   // 白名单维度
   const misses = [];
-  for (const dimension of settings.allowlist_dimensions || []) {
-    const candidates = allowPolicies.filter(policy => hasConditionDimension(policy.conditions, dimension));
-    const covered = candidates.length > 0;
-    if (!covered) misses.push(dimension);
+  if (exemptAll && (settings.allowlist_dimensions || []).length) {
+    for (const id of exemptAllIds) usedExemptions.add(id);
+  } else {
+    for (const dimension of settings.allowlist_dimensions || []) {
+      const candidates = allowPolicies.filter(policy => hasConditionDimension(policy.conditions, dimension));
+      const covered = candidates.length > 0;
+      if (!covered) misses.push(dimension);
+    }
+  }
+  if (usedExemptions.size) {
+    try {
+      const { pool } = require('../../models/database');
+      pool.query(
+        `UPDATE policy_exemptions SET used_count = used_count + 1 WHERE id = ANY($1)`,
+        [[...usedExemptions]]
+      ).catch(() => {});
+    } catch (_) { /* ignore */ }
+    base.exemptionsApplied = [...usedExemptions];
   }
   if (misses.length) {
     decisions.push({

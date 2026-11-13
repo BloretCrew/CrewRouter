@@ -48,6 +48,7 @@
   <link rel="stylesheet" href="/css/balance-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/audit-logs-blora.css?v=lg-9">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/admin-policies-blora.css?v=policy-20261113">
   <link rel="stylesheet" href="/css/settings-blora.css?v=lg-2">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=lg-10">
   <link rel="stylesheet" href="/css/blora-agent.css?v=agent-materials-20261111">
@@ -157,6 +158,10 @@
 
         <div class="nav-section">
           <div class="nav-section-title"><span data-i18n="设置">设置</span></div>
+          <div class="nav-item" data-page="policyCenter" data-capability="teamPolicies">
+            <img src="https://img.bloret.net/SF/shield.lefthalf.filled?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="shield.lefthalf.filled">
+            <span><span data-i18n="安全与策略">安全与策略</span></span>
+          </div>
           <div class="nav-item" data-page="settings">
             <img src="https://img.bloret.net/SF/gearshape?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="gearshape">
             <span><span data-i18n="用户设置">用户设置</span></span>
@@ -1392,6 +1397,25 @@
         </div>
       </div>
 
+      <!-- 安全与策略页面 -->
+      <div id="policyCenterPage" class="page lg-page blora-policy-center-page">
+        <div class="content-section">
+          <div class="section-header">
+            <h2><span data-i18n="安全与策略">安全与策略</span></h2>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadPolicyCenter()"><span data-i18n="刷新">刷新</span></button>
+          </div>
+          <div id="policyCenterStatus" class="policy-center-status"></div>
+          <h3 class="policy-center-title"><span data-i18n="我的生效策略">我的生效策略</span></h3>
+          <div id="policyCenterPolicies" class="blora-table-wrap"></div>
+          <h3 class="policy-center-title"><span data-i18n="临时豁免">临时豁免</span></h3>
+          <div id="policyCenterExemptions" class="blora-table-wrap"></div>
+          <h3 class="policy-center-title"><span data-i18n="最近拦截">最近拦截</span></h3>
+          <div id="policyCenterBlocks" class="blora-table-wrap"></div>
+          <h3 class="policy-center-title"><span data-i18n="我的申诉">我的申诉</span></h3>
+          <div id="policyCenterAppeals" class="blora-table-wrap"></div>
+        </div>
+      </div>
+
       <!-- 用户设置页面 -->
       <div id="settingsPage" class="page lg-page blora-settings-page">
         <div id="settingsOverview" class="settings-overview">
@@ -2308,16 +2332,16 @@
   <script src="/js/session-tool-groups.js?v=restore-0930-20261003"></script>
   <script src="/js/vendor/marked.min.js?v=restore-0930-20261003"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
-  <script src="/js/quota-cycle-report.js?v=lg-21"></script>
-  <script src="/js/provider-quota-stats.js?v=lg-21"></script>
+  <script src="/js/quota-cycle-report.js?v=policy-20261113"></script>
+  <script src="/js/provider-quota-stats.js?v=policy-20261113"></script>
   <script src="/js/multi-dimension-chart.js?v=lg-4"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=harness-20261111"></script>
   <script type="module" src="/js/model-trace.js?v=lg-21"></script>
-  <script src="/js/time-format.js?v=policy-20261112"></script>
-  <script src="/js/suspension-banner.js?v=policy-20261112"></script>
-  <script src="/js/app.js?v=harness-20261111"></script>
+  <script src="/js/time-format.js?v=policy-20261113"></script>
+  <script src="/js/suspension-banner.js?v=policy-20261113"></script>
+  <script src="/js/app.js?v=policy-20261113"></script>
   <script src="/js/blora-agent.js?v=agent-materials-20261111"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

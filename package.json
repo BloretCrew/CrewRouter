@@ -71,7 +71,7 @@
     "test:money-precision": "node server/scripts/test-money-precision.js",
     "test:task5a-static": "node server/scripts/test-task5a-static.js",
     "test:request-policy": "node server/scripts/test-request-policy.js",
-    "test:policies": "node server/scripts/test-policy-engine.js && node server/scripts/test-policy-validation.js && node server/scripts/test-policy-routes-static.js && node server/scripts/test-time-format.js",
+    "test:policies": "node server/scripts/test-policy-engine.js && node server/scripts/test-policy-validation.js && node server/scripts/test-policy-lifecycle.js && node server/scripts/test-policy-routes-static.js && node server/scripts/test-time-format.js",
     "test:time-format": "node server/scripts/test-time-format.js",
     "test:config-center": "node server/scripts/test-config-center.js",
     "test:instance-edition": "node server/scripts/test-instance-edition.js && node server/scripts/test-instance-edition-persistence.js",

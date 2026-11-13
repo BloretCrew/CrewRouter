@@ -148,6 +148,23 @@ async function flush() {
        )`,
       [JSON.stringify(batch.map(row => ({ ...row, matched_conditions: row.matched_conditions || '{}', metadata: row.metadata || '{}' })))]
     );
+    try {
+      const { emitPolicyEvent } = require('./events');
+      for (const row of batch) {
+        emitPolicyEvent({
+          policy_id: row.policy_id,
+          policy_name: row.policy_name,
+          action: row.action,
+          decision: row.decision,
+          user_id: row.user_id,
+          api_key_id: row.api_key_id,
+          request_source: row.request_source,
+          requested_model: row.requested_model,
+          status_code: row.status_code,
+          at: new Date().toISOString(),
+        });
+      }
+    } catch (_) { /* ignore */ }
   } catch (error) {
     Logger.warn(`[策略] 写入命中记录失败: ${error.message}`);
   } finally {

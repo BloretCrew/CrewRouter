@@ -3293,6 +3293,8 @@ async function startServer(options = {}) {
           const agg = require('./utils/usage-agg');
           agg.startDailyAggScheduler();
           agg.startRetentionScheduler();
+          backgroundHandles.push(require('./utils/policy/scheduler').startPolicyScheduler());
+          Logger.info('[策略] 调度器已启动');
           Logger.info('[每日聚合] 调度器已启动');
           Logger.info('[保留调度] 调度器已启动（每日 04:05）');
         } catch (err) {

@@ -111,8 +111,65 @@
 | GET/PUT | `/policy-settings` | 全局/Team 设置 |
 | POST | `/policy-settings/kill-switch` | 紧急停止 |
 | GET | `/policy-clients` | 客户端请求/命中统计 |
+| POST | `/policies/:id/publish`、`/unpublish`、`/archive` | 发布/转草稿/归档；可配置发布审批 |
+| POST | `/policies/:id/rollback/:version` | 回滚到指定版本 |
+| GET | `/policies/:id/versions`、`/policies/:id/diff` | 版本历史与差异 |
+| GET | `/policies/conflicts` | 同作用域 deny/allow 冲突检测 |
+| POST | `/policies/simulate` | 按策略 ID 或草稿回放样本/最近用量 |
+| GET | `/policies/analytics`、`/policies/metrics` | 分析报表与 Prometheus 指标 |
+| GET | `/policy-hits/stream` | SSE 实时命中流 |
+| GET/POST/DELETE | `/policy-exemptions`、`/policy-exemptions/from-hit/:hitId` | 临时豁免 |
+| GET | `/policy-appeals`、`POST /policy-appeals/:id/decide` | 申诉处理 |
+| GET | `/policy-approvals`、`POST /policy-approvals/:id/decide` | 审批中心 |
+| GET/POST/PUT/DELETE | `/policy-channels`、`POST /policy-channels/:id/test` | 通知渠道 |
+| GET/POST/PUT/DELETE | `/policy-alert-rules` | 告警规则 |
+| POST | `/policy-members/:userId/role` | 设置 Team 角色（owner/admin/member/viewer） |
 
-## 6. 运维与注意事项
+用户端 `/api/user`：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/policies/mine` | 我的生效策略、豁免、暂停状态 |
+| GET | `/policies/blocks` | 我的最近拦截 |
+| GET/POST | `/policy-appeals` | 我的申诉与提交申诉 |
+| GET | `/policy-approvals/:id` | 运行时审批状态 |
+| GET | `/suspension` | 暂停详情 |
+
+## 6. 生命周期、审批与例外
+
+- 状态：`draft` / `published` / `archived`；`auto_publish_at` 到达后由调度器自动发布；`ends_at` 到期自动归档。
+- 每次创建/更新/发布/回滚都会写入 `policy_versions`，支持查看、diff 与回滚。
+- `policy_settings.require_approval_for_publish/delete` 开启后，发布/删除进入审批中心；另一个管理员通过后才应用。
+- 运行时动作 `approval` 会生成 `policy_approvals(kind='request')`；管理员通过后自动创建一次性豁免（1 小时、1 次），成员重试即可放行。
+- 临时豁免支持成员/Team/API Key、指定策略或全部策略、到期时间、最大使用次数；引擎每次实际使用时累加 `used_count`。
+- 成员可在控制台「安全与策略」页面查看生效策略与最近拦截，并提交申诉；申诉通过后自动生成 24 小时豁免。
+- 成员暂停与策略豁免分开管理：暂停立即阻断网关/控制台；豁免只跳过策略匹配。
+
+## 7. 通知渠道与告警
+
+- 支持站内、Bark、邮件、通用 Webhook、飞书、企业微信、钉钉、Slack、Telegram。
+- Secret/Token/Key 使用 `secret-crypto` 加密存储，读取时掩码；URL 发送前经过 `validateUrl` SSRF 校验。
+- 告警规则按事件（hit/block/suspend/approval/appeal/*）、严重级别、渠道、静默窗口匹配；同一规则+渠道在静默窗口内不重复发送。
+- 命中仍会通过站内通知与 Bark 提醒管理员/成员（5 分钟去重），渠道告警独立分发。
+- `/api/admin/policy-hits/stream` 提供 SSE 实时事件流，供管理页面或外部监控消费。
+
+## 8. 分析与指标
+
+- `/api/admin/policies/analytics` 支持按策略/成员/Team/客户端/模型/动作聚合、时间序列与 TopN。
+- `policy_metrics_daily` 由调度器每 5 分钟聚合最近两天，供长期报表使用。
+- `/api/admin/policies/metrics` 输出 Prometheus 文本指标：24h 命中/拦截、1h 命中、启用策略数、并发与队列长度。
+- 策略命中保留天数由 `policy_settings.hit_retention_days` 控制，调度器每 6 小时分批清理。
+
+## 9. 时间展示
+
+- 数据库统一 `TIMESTAMPTZ` / UTC，API 输出 ISO 8601。
+- 前端 `public/js/time-format.js` 暴露 `window.CRTime`：按浏览器时区格式化，时间悬停显示本地、UTC、Asia/Shanghai、America/New_York、Europe/London。
+- 迁移工具：
+  - `node server/scripts/check-timezone-hardcode.js`：扫描剩余时间展示硬编码。
+  - `node server/scripts/migrate-time-format.js --write`：把常见 `new Date(x).toLocaleString('zh-CN', ...)` 替换为 `CRTime`。
+- 业务自然日分桶（图表横轴）仍按业务时区聚合，页面需标注或通过 tooltip 说明。
+
+## 10. 运维与注意事项
 
 - **客户端识别可绕过**：自定义 system prompt 或 UA 可能让 Claude Code 被识别为 `unknown`。建议先使用 `shadow` 观察，或开启客户端白名单并禁止 `unknown`。这是检测能力，不是 DRM。
 - **IP 可信度**：`ip` 来自 `x-forwarded-for` / `req.ip`，仅在可信代理部署下用于强策略。

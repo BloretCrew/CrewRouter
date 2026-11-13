@@ -57,7 +57,7 @@
 
     const rows = Object.entries(byDate).map(([date, data]) => `
       <tr>
-        <td>${escapeHtml(new Date(date).toLocaleDateString('zh-CN'))}</td>
+        <td>${escapeHtml(CRTime.formatDate(date))}</td>
         <td>${data.requests.toLocaleString()}</td>
         <td title="${data.tokens.toLocaleString()}">${formatBigNumber(data.tokens)}</td>
         <td>${data.cost.toFixed(4)}</td>

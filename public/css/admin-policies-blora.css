@@ -89,6 +89,45 @@
   background: var(--card);
 }
 
+.policy-card + .policy-card {
+  margin-top: 14px;
+}
+
+.policy-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.policy-card-head h3 {
+  margin: 0;
+}
+
+.policy-bar-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) minmax(120px, 3fr) 60px;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.policy-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.policy-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
 .policy-card h3 {
   margin: 0 0 10px;
   font-size: 14px;
@@ -249,8 +288,16 @@
   word-break: break-all;
 }
 
-@media (max-width: 760px) {
-  .policy-header {
+.blora-policy-center-page .policy-center-status {
+  margin-bottom: 16px;
+}
+
+.policy-center-title {
+  margin: 18px 0 8px;
+  font-size: 14px;
+}
+
+@media (max-width: 760px) {  .policy-header {
     flex-direction: column;
   }
   .policy-header-actions,
