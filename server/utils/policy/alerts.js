@@ -60,6 +60,17 @@ async function loadAlertConfig(pool) {
   return alertConfigCache;
 }
 
+function renderAlertTemplate(template, event) {
+  if (!template) return event.text;
+  return String(template)
+    .split('{policy}').join(String(event.policy?.name || event.policy?.id || ''))
+    .split('{user}').join(String(event.user?.username || event.user?.id || ''))
+    .split('{client}').join(String(event.client || ''))
+    .split('{action}').join(String(event.action || event.event || ''))
+    .split('{message}').join(String(event.text || ''))
+    .split('{time}').join(new Date().toISOString());
+}
+
 async function dispatchAlertEvent(event) {
   const { pool } = require('../../models/database');
   const { dispatchChannel } = require('./channels');
@@ -68,11 +79,12 @@ async function dispatchAlertEvent(event) {
     const rules = config.rules.filter(rule => rule.event_type === event.event || rule.event_type === '*');
     if (!rules.length) return;
     for (const rule of rules) {
+      const payload = { ...event, text: renderAlertTemplate(rule.template, event) };
       for (const channel of config.channels) {
         if (!(rule.channel_ids || []).includes(channel.id)) continue;
         if (severityRank(event.severity) < severityRank(channel.min_severity)) continue;
         if (!shouldDispatch(rule.id, channel.id, rule.silence_window_seconds)) continue;
-        dispatchChannel(channel, event).catch(error => Logger.warn(`[策略] 渠道 ${channel.id} 发送失败: ${error.message}`));
+        dispatchChannel(channel, payload).catch(error => Logger.warn(`[策略] 渠道 ${channel.id} 发送失败: ${error.message}`));
       }
     }
   } catch (error) {

@@ -297,6 +297,96 @@
   font-size: 14px;
 }
 
+.policy-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--muted);
+  font-size: 13px;
+}
+
+.policy-bulk-bar[hidden] {
+  display: none;
+}
+
+.policy-select-col {
+  width: 36px;
+  text-align: center;
+}
+
+.policy-select-col input {
+  width: 16px;
+  height: 16px;
+}
+
+.policy-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.policy-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.policy-condition-summary {
+  max-width: 320px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.policy-muted {
+  color: var(--muted-foreground);
+}
+
+.policy-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  font-size: 12px;
+}
+
+.policy-health-grid span {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.policy-health-grid strong {
+  color: var(--foreground);
+}
+
+.policy-quick-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
 @media (max-width: 760px) {  .policy-header {
     flex-direction: column;
   }

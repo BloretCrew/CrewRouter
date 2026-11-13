@@ -76,7 +76,8 @@ check('admin policies API exposes CRUD and members', () => {
     '/policy-channels', '/policy-alert-rules', '/policy-hits/stream',
     '/policies/export', '/policies/import', '/policies/schema',
     '/policies/output-scan', '/policy-login-events', '/policy-teams', '/policy-users',
-    '/offboard',
+    '/policy-groups', '/policy-tags', '/policy-members/bulk', '/policies/health',
+    '/policies/report', '/offboard',
   ]) {
     assert.ok(route.includes(endpoint), `${endpoint} missing`);
   }

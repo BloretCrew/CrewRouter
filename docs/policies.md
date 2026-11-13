@@ -133,7 +133,11 @@
 | GET | `/policy-teams`、`/policy-users` | 策略范围选择（按管理 Team 隔离） |
 | GET | `/policies/export`、`POST /policies/import`、`/policies/schema` | 导出/导入（支持 dry-run）与 IaC schema |
 | POST | `/policies/output-scan` | 手动扫描最近响应内容 |
-| GET/POST | `/policies/metrics`、`/policies/analytics` | 指标与分析 |
+| GET/POST/PUT/DELETE | `/policy-groups` | 策略分组（列表含策略数） |
+| GET | `/policy-tags` | 标签聚合 |
+| GET | `/policies/health` | 健康检查（到期、零命中、孤立作用域、过期豁免及明细） |
+| POST | `/policy-members/bulk` | 批量暂停/恢复/离岗 |
+| GET/POST | `/policies/report` | 审计报告（JSON/CSV） |
 
 用户端 `/api/user`：
 
@@ -213,7 +217,17 @@
 - `POST /api/admin/policy-members/:userId/offboard` 一键离岗：永久暂停、禁用全部 API Key、吊销 OAuth token、写审计与通知。
 - 可通过外部 HR/SCIM 系统在成员离职时调用该端点完成自动吊销。
 
-## 14. 运维与注意事项
+## 14. 管理效率
+
+- 策略列表支持：分组/标签筛选、条件摘要、分页、全选与批量启停/删除/改优先级。
+- 「管理分组」可创建/删除分组，策略编辑器可直接选择分组与填写标签。
+- 编辑器提供条件快捷添加（客户端、模型、IP、工作时间、每日用量、MCP、登录 MFA、输出关键词），无需手写 JSON。
+- 概览提供一键场景：禁止 Claude Code、仅允许 Claude Code、工作时段、每日 500 请求。
+- 健康检查面板展示 7 天内到期、30 天零命中、孤立作用域与过期豁免。
+- 成员页支持批量暂停/恢复/离岗、Team 角色下拉、成员详情（生效策略 + 登录事件 + 离岗）。
+- 命中、审批、申诉、登录事件均可按时间与成员筛选；审计报告与策略导出可直接下载。
+
+## 15. 运维与注意事项
 
 - **客户端识别可绕过**：自定义 system prompt 或 UA 可能让 Claude Code 被识别为 `unknown`。建议先使用 `shadow` 观察，或开启客户端白名单并禁止 `unknown`。这是检测能力，不是 DRM。
 - **IP 可信度**：`ip` 来自 `x-forwarded-for` / `req.ip`，仅在可信代理部署下用于强策略。
