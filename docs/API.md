@@ -75,6 +75,41 @@ modes.
   `/api/admin/update/*`, `/oauth/authorize*`, `/oauth/authorizations*`,
   `/api/user/model-trace/*`) never accept API keys.
 
+### Reply signatures
+
+Signatures are optional display footers, not cryptographic signatures or access policies.
+User defaults are off. A Key can inherit the owner's switch (`null`), explicitly enable it
+(`true`), or disable it (`false`). The Key template independently overrides the user's
+when non-empty; `null` or blank inherits the user template. An empty effective template
+produces no signature and never falls back to the suggested template.
+
+- `GET /api/user/signature`: `{ enabled, template, defaults: { template, variables } }`.
+- `PUT /api/user/signature`: complete body `{ "enabled": false, "template": "" }`.
+- `GET /api/user/api-keys/{id}/signature`: `{ enabled, template, inherited, effective }`.
+- `PUT /api/user/api-keys/{id}/signature`: complete body
+  `{ "enabled": null, "template": null }` restores both defaults.
+
+Both PUT fields are required. Templates are trimmed and limited to 2000 UTF-16 code
+units; invalid types, missing fields or conflicting legacy fields return 400 without
+changing settings. The user endpoint requires `account.profile.read/write`; Key endpoints
+require `keys.read/write` and ownership/shared-Key management access. Shared Keys inherit
+the owner's defaults, not the managing member's defaults.
+
+For one compatibility release, Key responses also include `key_signature_*` and
+`user_signature_*`; Key writes accept `signature_enabled/signature_template` and
+`key_signature_*`. Legacy `PUT /api/user/settings` remains a partial update for
+`api_signature_enabled/api_signature_template`. New clients should use `/signature`.
+
+`X-CrewRouter-Signature-Mode` controls delivery, not whether the signature is enabled:
+`header` sends headers only, `content` only appends to existing text, and `both` does both.
+Streaming has no late response headers; `header` therefore leaves the body untouched and
+returns no signature. Structured JSON, tool-only and empty outputs never receive a footer.
+Signature text is excluded from recorded model output and token-based billing.
+
+Existing stored templates are preserved. An existing enabled setting with an empty
+template now produces no footer. Resetting the template does not enable the switch.
+OpenCode Go footer warnings are no longer appended when signatures are off or empty.
+
 ## Errors
 
 Gateway errors follow the client protocol:

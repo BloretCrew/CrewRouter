@@ -69,16 +69,10 @@ const { policyGate } = require('../middleware/policy-gate');
 const { recordUsageAndDeduct } = require('../utils/balance');
 const { sha256Hex } = require('../utils/key-hash');
 const {
-  getQuotaInfo,
-  getGroupName,
-  getTeamName,
-  getTodayStats,
-  resolveSignatureMode,
-  planStreamSignatureInjection,
-  injectSignatureIntoOpenAIResponse,
-  injectSignatureIntoAnthropicResponse,
-  injectSignatureIntoResponsesBody,
-  buildSignatureForRequest
+  resolveSignatureConfig,
+  preloadSignatureData,
+  finalizeJsonSignature,
+  finalizeStreamSignature
 } = require('../utils/api-signature');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { oauthBearer } = require('../middleware/oauth-bearer');
@@ -117,6 +111,8 @@ const { canRetryUpstreamError } = require('../utils/upstream-retry-policy');
 const protocolBridge = require('../protocol/bridge');
 const wireShapes = require('../protocol/wire-shapes');
 const bridgeProxy = require('../gateway/bridge-proxy');
+const { formatSSE } = require('../protocol/sse');
+const { relaySignatureStream } = require('../utils/signature-stream-relay');
 const { createStreamWriter } = require('../protocol/stream-writers');
 const geminiCodec = require('../protocol/gemini');
 const interactionsCodec = require('../protocol/interactions');
@@ -491,16 +487,15 @@ async function refreshApiUserModelAuthorization(apiUser) {
   apiUser.fusionJudgeModelId = key.fusion_judge_model_id || '';
   apiUser.fusionOuterModelId = key.fusion_outer_model_id || '';
   // Read signature policy on every request so all workers observe saved choices.
-  apiUser.signatureEnabled = key.signature_enabled != null
-    ? key.signature_enabled === true : key.api_signature_enabled === true;
-  apiUser.signatureTemplate = key.signature_template || key.api_signature_template || null;
-  apiUser.keySignatureEnabled = key.signature_enabled;
+  apiUser.signature = resolveSignatureConfig({ key, user: key });
   return apiUser;
 }
 
 async function refreshApiUserForRequest(req, res) {
   try {
     await refreshApiUserModelAuthorization(req.apiUser);
+    // Start signature preloading in parallel with the upstream request.
+    req._signaturePreloadPromise = preloadSignatureData(req.apiUser);
     return true;
   } catch (error) {
     if (!(error instanceof ApiKeyLifecycleError)) throw error;
@@ -1307,19 +1302,11 @@ async function validateApiKey(req, res, next, boundKey = null) {
     const result = await pool.query(
       `SELECT ak.*, u.id as user_id, u.username, u.balance, u.team_id,
               u.rate_limit_rpm as user_rate_limit_rpm, u.rate_limit_tpm as user_rate_limit_tpm,
-              u.api_signature_enabled, u.api_signature_template,
               u.is_admin, u.tags, u.timezone, u.policy_bypass, u.policy_bypass_until,
               u.suspended_at, u.suspended_until, u.suspended_reason, u.suspended_scope
        FROM api_keys ak
        JOIN users u ON ak.user_id = u.id
        WHERE ${boundKey ? 'ak.id = $1 AND ak.user_id = $2' : 'ak.key_value = $1 OR ak.key_hash = $2'}`,
-      boundKey ? [boundKey.keyId, boundKey.userId] : [apiKey, sha256Hex(apiKey)]
-    );
-
-    // 重新查询以获取 key 级别签名设置
-    const keySignatureResult = await pool.query(
-      `SELECT signature_enabled, signature_template FROM api_keys
-       WHERE ${boundKey ? 'id = $1 AND user_id = $2' : 'key_value = $1 OR key_hash = $2'}`,
       boundKey ? [boundKey.keyId, boundKey.userId] : [apiKey, sha256Hex(apiKey)]
     );
 
@@ -1381,13 +1368,6 @@ async function validateApiKey(req, res, next, boundKey = null) {
       fusionOuterModelId: keyData.fusion_outer_model_id || '',
       fusionEnabled: keyData.fusion_enabled !== false,
       fusionSynthesisPromptEnabled: keyData.fusion_synthesis_prompt_enabled !== false,
-      // 优先使用 key 级别签名设置，回退到用户级别设置
-      signatureEnabled: keySignatureResult.rows[0]?.signature_enabled != null
-        ? keySignatureResult.rows[0].signature_enabled === true
-        : keyData.api_signature_enabled === true,
-      signatureTemplate: keySignatureResult.rows[0]?.signature_template || keyData.api_signature_template || null,
-      keySignatureEnabled: keySignatureResult.rows[0]?.signature_enabled,  // 保留原始值用于前端显示
-      keySignatureTemplate: keySignatureResult.rows[0]?.signature_template,
       quotaWarningEnabled: keyData.quota_warning_enabled === true,
       keyName: keyData.name || '',
       enabled: keyData.enabled !== false,
@@ -1547,55 +1527,6 @@ function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provi
 // 清理 base_url 与拼接上游端点：统一走 url-validator（保留 /v1、/api/v1 版本前缀）
 const { cleanBaseUrl, upstreamUrl } = require('../utils/url-validator');
 
-// 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
-async function preloadSignatureData(userId, teamId, template) {
-  if (!template) return {};
-
-  const preloaded = {};
-
-  // 检查模板中使用了哪些变量，并行预加载
-  const promises = [];
-
-  if (/\{quota_info\}/.test(template)) {
-    promises.push(
-      getQuotaInfo(userId)
-        .then(info => { preloaded.quotaInfo = info; })
-        .catch(err => Logger.warn('[预加载] 获取 quotaInfo 失败:', err.message))
-    );
-  }
-
-  if (/\{group_name\}/.test(template)) {
-    promises.push(
-      getGroupName(teamId)
-        .then(name => { preloaded.groupName = name; })
-        .catch(err => Logger.warn('[预加载] 获取 groupName 失败:', err.message))
-    );
-  }
-
-  if (/\{team_name\}/.test(template)) {
-    promises.push(
-      getTeamName(userId)
-        .then(name => { preloaded.teamName = name; })
-        .catch(err => Logger.warn('[预加载] 获取 teamName 失败:', err.message))
-    );
-  }
-
-  if (/\{today_requests\}/.test(template) || /\{today_tokens\}/.test(template)) {
-    promises.push(
-      getTodayStats(userId)
-        .then(stats => { preloaded.todayStats = stats; })
-        .catch(err => Logger.warn('[预加载] 获取 todayStats 失败:', err.message))
-    );
-  }
-
-  // 并行执行所有预加载
-  if (promises.length > 0) {
-    await Promise.all(promises);
-  }
-
-  return preloaded;
-}
-
 // 转发到上游 OpenAI 格式
 async function proxyOpenAI(provider, model, body, stream, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
@@ -1618,15 +1549,6 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
-  // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
-  let preloadedSignatureData = {};
-  if (req.apiUser.signatureEnabled && req.apiUser.signatureTemplate) {
-    preloadedSignatureData = await preloadSignatureData(
-      req.apiUser.userId,
-      req.apiUser.teamId,
-      req.apiUser.signatureTemplate
-    );
-  }
 
   const upstreamBody = {
     model: model,
@@ -1739,6 +1661,9 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     let buffer = '';
     let totalContent = '';
     let lastUsage = null;
+    let hasToolCalls = false;
+    let finishReason = null;
+    const pendingFinishChunks = [];
     const streamChunkId = genChatCompletionId();
     const streamCreated = Math.floor(Date.now() / 1000);
     const streamNormLog = { logged: false };
@@ -1799,6 +1724,8 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
         }
         if (parsed.service_tier) attempt.setServiceTier(parsed.service_tier);
         totalContent += content;
+        if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) hasToolCalls = true;
+        if (parsed.choices?.[0]?.finish_reason) finishReason = parsed.choices[0].finish_reason;
         if (parsed.usage) lastUsage = parsed.usage;
         const normalizedChunk = ensureChatCompletionChunk(parsed, {
           id: streamChunkId,
@@ -1807,6 +1734,14 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
           logPrefix: `proxyOpenAI/${provider.id}`,
           logOnceRef: streamNormLog
         });
+        if (parsed.choices?.some(choice => choice.finish_reason != null)) {
+          pendingFinishChunks.push(normalizedChunk);
+          return;
+        }
+        if (pendingFinishChunks.length && !(parsed.choices?.length)) {
+          pendingFinishChunks.push(normalizedChunk);
+          return;
+        }
         const ok = writeWithDrain(`data: ${JSON.stringify(normalizedChunk)}\n\n`);
         if (!ok) await waitForDrain();
       } catch (e) {
@@ -1904,32 +1839,29 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     // 流式签名：headers 已 flush，仅按智能跳过决定是否追加 content
     if (gotDone && !clientDisconnected) {
       try {
-        const signature = await buildSignatureForRequest(req, {
-          model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
-        });
-        if (signature) {
-          const mode = resolveSignatureMode(req);
-          const plan = planStreamSignatureInjection({
-            mode,
-            requestBody: body,
-            hasTextContent: totalContent.length > 0,
-            hasToolCalls: false,
-            format: 'openai'
-          });
-          Logger.info(`[proxyOpenAI] 流式签名: append=${plan.appendContent}, reason=${plan.reason}, mode=${mode}`);
-          if (plan.appendContent) {
+        await finalizeStreamSignature(req, { model, normalized, providerName: provider.name, provider }, {
+          format: 'openai',
+          requestBody: body,
+          hasTextContent: totalContent.length > 0,
+          hasToolCalls,
+          finishReason,
+          emitText: async text => {
             const sigChunk = JSON.stringify(buildChatCompletionChunk({
               id: streamChunkId,
               created: streamCreated,
               model,
-              delta: { content: `\n\n${signature}` }
+              delta: { content: text }
             }));
             const ok = writeWithDrain(`data: ${sigChunk}\n\n`);
             if (!ok) await waitForDrain();
           }
-        }
+        });
       } catch (e) {
         Logger.warn(`[proxyOpenAI] 签名生成失败: ${e.message}`);
+      }
+      for (const chunk of pendingFinishChunks) {
+        const ok = writeWithDrain(`data: ${JSON.stringify(chunk)}\n\n`);
+        if (!ok) await waitForDrain();
       }
       writeWithDrain('data: [DONE]\n\n');
     }
@@ -2011,28 +1943,22 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     });
 
     const normalized = normalizeUsageTokens(data.usage, 'openai');
-    try {
-      const signature = await buildSignatureForRequest(req, {
-        model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
-      });
-      if (signature) {
-        injectSignatureIntoOpenAIResponse(res, data, signature, {
-          mode: resolveSignatureMode(req),
-          requestBody: body
-        });
-      }
-    } catch (e) {
-      Logger.warn(`[proxyOpenAI] 非流式签名生成失败: ${e.message}`);
-    }
-
     // 插件 gateway:finalResponse 钩子：追加自定义响应头
     await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyOpenAI' });
     // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
     if (req.apiUser?.injectPrompt) {
       scrubOpenAiChatCompletion(data, req.apiUser.injectPrompt);
     }
+    const recordedContent = data.choices?.[0]?.message?.content || '';
     if (data.service_tier) attempt.setServiceTier(data.service_tier);
     forwardUpstreamHeaders(res, response.headers);
+    try {
+      await finalizeJsonSignature(req, res, 'openai', data, {
+        model, normalized, providerName: provider.name, provider
+      });
+    } catch (e) {
+      Logger.warn(`[proxyOpenAI] 非流式签名生成失败: ${e.message}`);
+    }
     res.json(data);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyOpenAI] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, id=${data.id}, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -2041,7 +1967,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       completionTokens: normalized.completionTokens,
       completed: true
     });
-    return { ...normalized, content: data.choices?.[0]?.message?.content || '', metrics: metricsSnapshot };
+    return { ...normalized, content: recordedContent, metrics: metricsSnapshot };
   }
 }
 
@@ -2138,7 +2064,29 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
       logPrefix: 'proxyChatToResponses',
       scrubber: createStreamScrubber(req.apiUser?.injectPrompt),
       onFirstByte: () => attempt.markFirstByte(),
-      onToken: kind => attempt.markToken(kind)
+      onToken: kind => attempt.markToken(kind),
+      onBeforeFinish: async ({ hasTextContent, hasToolCalls, finishReason, usage: finalUsage }) => {
+        const u = finalUsage || {};
+        const normalized = {
+          promptTokens: u.input_tokens || 0,
+          completionTokens: u.output_tokens || 0,
+          cachedTokens: u.cached_tokens || u.input_tokens_details?.cached_tokens || 0
+        };
+        let captured = null;
+        try {
+          await finalizeStreamSignature(req, { model, normalized, providerName: provider.name, provider }, {
+            format: 'openai',
+            requestBody: body,
+            hasTextContent,
+            hasToolCalls,
+            finishReason,
+            emitText: async text => { captured = text; }
+          });
+        } catch (e) {
+          Logger.warn(`[proxyChatToResponses] 签名生成失败: ${e.message}`);
+        }
+        return captured;
+      }
     });
 
     const streamUsage = usage || {};
@@ -2171,6 +2119,13 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     : ResponsesUpstream.extractResponsesText(data);
   if (data.service_tier) attempt.setServiceTier(data.service_tier);
   forwardUpstreamHeaders(res, response.headers);
+  try {
+    await finalizeJsonSignature(req, res, 'openai', completion, {
+      model, normalized, providerName: provider.name, provider
+    });
+  } catch (e) {
+    Logger.warn(`[proxyChatToResponses] 签名生成失败: ${e.message}`);
+  }
   res.json(completion);
   Logger.info(`[proxyChatToResponses] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens}, completion_tokens=${normalized.completionTokens}`);
   const metricsSnapshot = attempt.finish({
@@ -2305,18 +2260,64 @@ async function proxyViaBridge({ provider, model, body, sourceDialect, clientDial
     let lastUsage;
     let lastFinish;
     let content = '';
+    const historyWriter = clientDialect === 'interactions'
+      ? createStreamWriter('interactions', { model, id: options.clientResponseId, write: async () => {} }) : null;
+    const trailingEvents = [];
+    let hasToolCalls = false;
     try {
       if (writer.start) await writer.start();
+      if (historyWriter?.start) await historyWriter.start();
       for await (const event of bridgeProxy.readUpstreamEvents(response, format, { signal: req._requestLifecycle?.signal })) {
         geminiSignatures.rememberBlocks(event.delta?.blocks);
         scrubPromptFromBlocks(event.delta?.blocks, scrubPrompt);
-        for (const block of event.delta?.blocks || []) {
-          if (block.type === 'text') content += block.text || '';
-        }
+        if (historyWriter) await historyWriter.push(structuredClone(event));
         if (event.usage) lastUsage = event.usage;
         if (event.finishReason) lastFinish = event.finishReason;
-        await writer.push(event);
+        const blocks = event.delta?.blocks || [];
+        if (blocks.some(block => block.type === 'text' && block.text)) {
+          for (const pending of trailingEvents.splice(0)) await writer.push(pending);
+        }
+        for (const block of blocks) {
+          const single = { delta: { ...event.delta, blocks: [block] } };
+          if (block.type === 'text' && block.text) {
+            for (const pending of trailingEvents.splice(0)) await writer.push(pending);
+            content += block.text;
+            await writer.push(single);
+          } else {
+            if (block.type && /tool/i.test(block.type)) hasToolCalls = true;
+            if (content.length > 0) trailingEvents.push(single);
+            else await writer.push(single);
+          }
+        }
+        const metadata = { ...event, delta: event.delta ? { ...event.delta, blocks: [] } : undefined };
+        if (trailingEvents.length) trailingEvents.push(metadata);
+        else await writer.push(metadata);
       }
+      if (historyWriter) await historyWriter.end({ finishReason: lastFinish || 'stop', usage: lastUsage });
+      try {
+        await finalizeStreamSignature(req, {
+          model,
+          normalized: {
+            promptTokens: lastUsage?.inputTokens || 0,
+            completionTokens: lastUsage?.outputTokens || 0,
+            cachedTokens: lastUsage?.cachedInputTokens || 0
+          },
+          providerName: provider.name,
+          provider
+        }, {
+          format: 'ir',
+          requestBody: body,
+          hasTextContent: content.length > 0,
+          hasToolCalls,
+          finishReason: lastFinish,
+          emitText: async text => {
+            await writer.push({ delta: { blocks: [{ type: 'text', text }] } });
+          }
+        });
+      } catch (e) {
+        Logger.warn(`[Bridge] 签名生成失败: ${e.message}`);
+      }
+      for (const event of trailingEvents) await writer.push(event);
       await writer.end({ finishReason: lastFinish || 'stop', usage: lastUsage });
     } catch (error) {
       Logger.warn(`[Bridge] stream error: ${error.message}`);
@@ -2336,7 +2337,7 @@ async function proxyViaBridge({ provider, model, body, sourceDialect, clientDial
       cachedTokens: usage.cachedInputTokens || 0,
       content,
       metrics,
-      interactionSteps: writer.getSteps ? writer.getSteps() : undefined
+      interactionSteps: historyWriter?.getSteps()
     };
   }
 
@@ -2359,8 +2360,24 @@ async function proxyViaBridge({ provider, model, body, sourceDialect, clientDial
     irResponse.created = new Date().toISOString();
     irResponse.updated = irResponse.created;
   }
-  const out = protocolBridge.encodeResponse(clientDialect, irResponse);
+  const recordedContent = irText(irResponse.message?.blocks);
+  const recordedIrResponse = structuredClone(irResponse);
   forwardUpstreamHeaders(res, response.headers);
+  try {
+    await finalizeJsonSignature(req, res, 'ir', irResponse, {
+      model,
+      normalized: {
+        promptTokens: irResponse.usage?.inputTokens || 0,
+        completionTokens: irResponse.usage?.outputTokens || 0,
+        cachedTokens: irResponse.usage?.cachedInputTokens || 0
+      },
+      providerName: provider.name,
+      provider
+    });
+  } catch (e) {
+    Logger.warn(`[Bridge] 签名生成失败: ${e.message}`);
+  }
+  const out = protocolBridge.encodeResponse(clientDialect, irResponse);
   res.json(out);
   const usage = irResponse.usage || {};
   const metrics = attempt.finish({
@@ -2372,10 +2389,10 @@ async function proxyViaBridge({ provider, model, body, sourceDialect, clientDial
     promptTokens: usage.inputTokens || 0,
     completionTokens: usage.outputTokens || 0,
     cachedTokens: usage.cachedInputTokens || 0,
-    content: irText(irResponse.message?.blocks),
+    content: recordedContent,
     metrics,
     response: out,
-    irResponse
+    irResponse: recordedIrResponse
   };
 }
 
@@ -2405,21 +2422,46 @@ function scrubPromptFromBlocks(blocks, prompt) {
   return blocks;
 }
 
-async function streamBridgeAsClient({ response, upstreamFormat, clientDialect, req, res, id, model, write, alt }) {
+async function streamBridgeAsClient({ response, upstreamFormat, clientDialect, req, res, id, model, write, alt, provider }) {
   const writer = createStreamWriter(clientDialect, { model, id, alt, write });
   let usage;
   let finishReason;
   let content = '';
+  let hasToolCalls = false;
   if (writer.start) await writer.start();
   for await (const event of bridgeProxy.readUpstreamEvents(response, upstreamFormat, { signal: req._requestLifecycle?.signal })) {
     geminiSignatures.rememberBlocks(event.delta?.blocks);
     scrubPromptFromBlocks(event.delta?.blocks, req.apiUser?.injectPrompt);
     for (const block of event.delta?.blocks || []) {
       if (block.type === 'text') content += block.text || '';
+      else if (block.type && /tool/i.test(block.type)) hasToolCalls = true;
     }
     if (event.usage) usage = event.usage;
     if (event.finishReason) finishReason = event.finishReason;
     await writer.push(event);
+  }
+  try {
+    await finalizeStreamSignature(req, {
+      model,
+      normalized: {
+        promptTokens: usage?.inputTokens || 0,
+        completionTokens: usage?.outputTokens || 0,
+        cachedTokens: usage?.cachedInputTokens || 0
+      },
+      providerName: provider?.name,
+      provider
+    }, {
+      format: 'ir',
+      requestBody: req.body,
+      hasTextContent: content.length > 0,
+      hasToolCalls,
+      finishReason,
+      emitText: async text => {
+        await writer.push({ delta: { blocks: [{ type: 'text', text }] } });
+      }
+    });
+  } catch (e) {
+    Logger.warn(`[Bridge] 签名生成失败: ${e.message}`);
   }
   await writer.end({ finishReason: finishReason || 'stop', usage });
   return {
@@ -2467,15 +2509,6 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
-  // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
-  let preloadedSignatureData = {};
-  if (req.apiUser.signatureEnabled && req.apiUser.signatureTemplate) {
-    preloadedSignatureData = await preloadSignatureData(
-      req.apiUser.userId,
-      req.apiUser.teamId,
-      req.apiUser.signatureTemplate
-    );
-  }
 
   // 将 OpenAI 格式的 messages 转换为 Anthropic 格式
   // 支持: system/developer、tool_calls、tool 结果、image_url 多模态
@@ -2893,24 +2926,14 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     // 流式签名：仅在有正文且非纯 tool 时追加 content
     if (gotDone && !clientDisconnected) {
       try {
-        const signature = await buildSignatureForRequest(req, {
-          model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
+        await finalizeStreamSignature(req, { model, normalized, providerName: provider.name, provider }, {
+          format: 'openai',
+          requestBody: body,
+          hasTextContent: totalContent.length > 0,
+          hasToolCalls,
+          finishReason: streamFinishReason,
+          emitText: text => emitOpenAIChunk({ content: text })
         });
-        if (signature) {
-          const mode = resolveSignatureMode(req);
-          const plan = planStreamSignatureInjection({
-            mode,
-            requestBody: body,
-            hasTextContent: totalContent.length > 0,
-            hasToolCalls,
-            finishReason: streamFinishReason,
-            format: 'openai'
-          });
-          Logger.info(`[proxyAnthropic] 流式签名: append=${plan.appendContent}, reason=${plan.reason}, mode=${mode}`);
-          if (plan.appendContent) {
-            await emitOpenAIChunk({ content: `\n\n${signature}` });
-          }
-        }
       } catch (e) {
         Logger.warn(`[proxyAnthropic] 签名生成失败: ${e.message}`);
       }
@@ -3040,19 +3063,6 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     };
 
     const normalized = normalizedUsage;
-    try {
-      const signature = await buildSignatureForRequest(req, {
-        model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
-      });
-      if (signature) {
-        injectSignatureIntoOpenAIResponse(res, openaiResponse, signature, {
-          mode: resolveSignatureMode(req),
-          requestBody: body
-        });
-      }
-    } catch (e) {
-      Logger.warn(`[proxyAnthropic] 非流式签名生成失败: ${e.message}`);
-    }
 
     // 插件 gateway:finalResponse 钩子：追加自定义响应头
     await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyAnthropic' });
@@ -3060,7 +3070,15 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     if (req.apiUser?.injectPrompt) {
       scrubOpenAiChatCompletion(openaiResponse, req.apiUser.injectPrompt);
     }
+    const recordedContent = openaiResponse.choices[0].message.content;
     forwardUpstreamHeaders(res, response.headers);
+    try {
+      await finalizeJsonSignature(req, res, 'openai', openaiResponse, {
+        model, normalized, providerName: provider.name, provider
+      });
+    } catch (e) {
+      Logger.warn(`[proxyAnthropic] 非流式签名生成失败: ${e.message}`);
+    }
     res.json(openaiResponse);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -3069,7 +3087,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       completionTokens: normalized.completionTokens,
       completed: true
     });
-    return { ...normalized, content: openaiResponse.choices[0].message.content, metrics: metricsSnapshot };
+    return { ...normalized, content: recordedContent, metrics: metricsSnapshot };
   }
 }
 
@@ -3535,6 +3553,18 @@ async function handleFusionRequest(req, res, format = 'openai') {
           fusion: result.fusion
         };
         // 对外 usage 用外层合成模型的 token；全链路汇总仅用于内部计费
+        try {
+          await finalizeJsonSignature(req, res, 'anthropic', response, {
+            model: 'fusion',
+            normalized: {
+              promptTokens: result.usage?.promptTokens || 0,
+              completionTokens: result.usage?.completionTokens || 0,
+              cachedTokens: result.usage?.cachedTokens || 0
+            }
+          });
+        } catch (e) {
+          Logger.warn(`[Fusion] 签名生成失败: ${e.message}`);
+        }
         res.json(response);
       } else {
         const response = {
@@ -3557,6 +3587,18 @@ async function handleFusionRequest(req, res, format = 'openai') {
           },
           fusion: result.fusion
         };
+        try {
+          await finalizeJsonSignature(req, res, 'openai', response, {
+            model: 'fusion',
+            normalized: {
+              promptTokens: result.usage?.promptTokens || 0,
+              completionTokens: result.usage?.completionTokens || 0,
+              cachedTokens: result.usage?.cachedTokens || 0
+            }
+          });
+        } catch (e) {
+          Logger.warn(`[Fusion] 签名生成失败: ${e.message}`);
+        }
         res.json(response);
       }
     }
@@ -4248,15 +4290,6 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   }
   // anthropic-beta 等协议级头由 buildUpstreamHeaders 统一透传
 
-  // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
-  let preloadedSignatureData = {};
-  if (req.apiUser.signatureEnabled && req.apiUser.signatureTemplate) {
-    preloadedSignatureData = await preloadSignatureData(
-      req.apiUser.userId,
-      req.apiUser.teamId,
-      req.apiUser.signatureTemplate
-    );
-  }
 
   // 前向兼容：整包透传上游 Anthropic 字段（含 safeguards、context_management 等新能力），
   // 只覆盖网关自有的 model/stream。协议桥在同方言往返中保留未知顶层字段。
@@ -4317,264 +4350,49 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
 
     Logger.stream(`[proxyAnthropicToAnthropic] SSE 头已发送, 开始流式传输: provider=${provider.id}(${provider.name}), model=${model}, url=${url}`);
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let totalContent = '';
-    let promptTokens = 0;
-    let completionTokens = 0;
-    let cachedTokens = 0;
-    let responseId = '';
-    let stopReason = null;
-    let currentBlockType = null;
-    let chunkCount = 0;
-    let sseLineCount = 0;
-    let jsonParseErrors = 0;
-    let firstChunkTime = null;
-    let clientDisconnected = false;
-    let backpressureCount = 0;
-    let gotDone = false;
-    const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
-
-    // 检测客户端断开连接
-    res.once('close', () => {
-      clientDisconnected = true;
-      Logger.stream(`[proxyAnthropicToAnthropic] 客户端断开连接: provider=${provider.id}, model=${model}, 已接收 ${chunkCount} 个chunk, ${sseLineCount} 行SSE`);
-    });
-
-    // 背压处理
-    const writeWithDrain = (data) => {
-      if (clientDisconnected || res.destroyed || res.writableEnded) return false;
-      const ok = res.write(data);
-      if (!ok) {
-        backpressureCount++;
-        if (backpressureCount <= 3 || backpressureCount % 10 === 0) {
-          Logger.warn(`[proxyAnthropicToAnthropic] 背压等待drain: provider=${provider.id}, model=${model}, 累计=${backpressureCount}次`);
-        }
-      }
-      return ok;
+    const writeWithDrain = async data => {
+      if (!res.write(data)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
     };
-
-    const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
-
+    let relay;
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (clientDisconnected) {
-          Logger.stream(`[proxyAnthropicToAnthropic] 客户端已断开, 停止读取上游: provider=${provider.id}, model=${model}`);
-          break;
-        }
-
-        if (!firstChunkTime) {
-          firstChunkTime = Date.now();
-          attempt.markFirstByte();
-          Logger.stream(`[proxyAnthropicToAnthropic] 收到首个上游chunk: 等待耗时=${firstChunkTime - startTime}ms, chunk大小=${value.length}bytes`);
-        }
-        chunkCount++;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          // Forward event: lines (Anthropic SSE protocol includes event: before data:)
-          if (line.startsWith('event: ')) {
-            const eventName = line.slice(7).trim();
-            // Don't forward event: message_stop yet; inject signature first, then send both event: and data: together.
-            if (eventName === 'message_stop') {
-              continue;
-            }
-            const ok = writeWithDrain(line + '\n');
-            if (!ok) await waitForDrain();
-            continue;
-          }
-          if (line.startsWith('data: ')) {
-            sseLineCount++;
-            const data = line.slice(6).trim();
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-              if (parsed.type === 'message_start') {
-                responseId = parsed.message?.id || '';
-                promptTokens = parsed.message?.usage?.input_tokens || 0;
-                cachedTokens = parsed.message?.usage?.cache_read_input_tokens || 0;
-              } else if (parsed.type === 'content_block_start') {
-                currentBlockType = parsed.content_block?.type || null;
-                if (currentBlockType === 'tool_use') attempt.markToken('tool');
-              } else if (parsed.type === 'content_block_delta') {
-                if (currentBlockType === 'text') {
-                  const scrubbedText = streamScrubber.feed(parsed.delta?.text || '');
-                  parsed.delta.text = scrubbedText;
-                  totalContent += scrubbedText;
-                  if (scrubbedText) attempt.markToken('content');
-                } else if (currentBlockType === 'thinking') {
-                  // Thinking content tracked but not added to totalContent
-                  if (parsed.delta?.thinking) attempt.markToken('reasoning');
-                }
-              } else if (parsed.type === 'content_block_stop') {
-                currentBlockType = null;
-              } else if (parsed.type === 'message_delta') {
-                completionTokens = parsed.usage?.output_tokens || 0;
-                stopReason = parsed.delta?.stop_reason;
-              } else if (parsed.type === 'message_stop') {
-                Logger.stream(`[proxyAnthropicToAnthropic] 收到上游 message_stop 事件`);
-                gotDone = true;
-                // Don't forward message_stop yet; inject signature first below.
-                continue;
-              }
-              // 插件 gateway:responseChunk 钩子：改写/丢弃直通帧
-              let frameOut = JSON.stringify(parsed);
-              if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
-                if (!out) continue;
-                frameOut = out;
-              }
-              const ok = writeWithDrain(`data: ${frameOut}\n\n`);
-              if (!ok) await waitForDrain();
-            } catch (e) {
-              if (e?.name !== 'SyntaxError') throw e;
-          jsonParseErrors++;
-              Logger.warn(`[proxyAnthropicToAnthropic] JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
-            }
+      relay = await relaySignatureStream({
+        response, req, res, format: 'anthropic', model, provider,
+        write: writeWithDrain,
+        rewriteEvent: async data => {
+          if (!pluginHooks.hasSubscribers('gateway:responseChunk')) return data;
+          const rewritten = await pluginHooks.maybeRewriteChunk(JSON.stringify(data), {
+            model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body)
+          });
+          return rewritten ? JSON.parse(rewritten) : null;
+        },
+        onEvent: event => {
+          if (event.type === 'message_start') attempt.markFirstByte();
+          if (event.type === 'content_block_delta') {
+            attempt.markToken(event.delta?.type === 'thinking_delta' ? 'reasoning' : 'content');
           }
         }
-      }
-
-      // Process any residual data left in the buffer
-      if (buffer.trim() && !clientDisconnected) {
-        Logger.stream(`[proxyAnthropicToAnthropic] 处理残余缓冲区: ${buffer.length} bytes`);
-        const lines = buffer.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            const eventName = line.slice(7).trim();
-            if (eventName === 'message_stop') {
-              gotDone = true;
-              continue;
-            }
-            res.write(line + '\n');
-          } else if (line.startsWith('data: ')) {
-            sseLineCount++;
-            const data = line.slice(6).trim();
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-              if (parsed.type === 'message_delta') {
-                completionTokens = parsed.usage?.output_tokens || 0;
-                stopReason = parsed.delta?.stop_reason;
-              } else if (parsed.type === 'message_stop') {
-                gotDone = true;
-                continue;
-              }
-              // 插件 gateway:responseChunk 钩子（残余缓冲区路径）
-              let frameOut2 = JSON.stringify(parsed);
-              if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
-                if (!out) continue;
-                frameOut2 = out;
-              }
-              res.write(`data: ${frameOut2}\n\n`);
-            } catch (e) {
-              if (e?.name !== 'SyntaxError') throw e;
-          jsonParseErrors++;
-              Logger.warn(`[proxyAnthropicToAnthropic] 残余缓冲区JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
-            }
-          }
-        }
-      }
-      const residualScrubbed = streamScrubber.flush();
-      if (residualScrubbed && !clientDisconnected) {
-        const residualEvent = { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: residualScrubbed } };
-        const ok = writeWithDrain(`data: ${JSON.stringify(residualEvent)}\n\n`);
-        if (!ok) await waitForDrain();
-        totalContent += residualScrubbed;
-      }
-      if (!gotDone && !clientDisconnected) {
-        const failure = new Error('Upstream stream ended without a completion event');
-        failure.code = 'upstream_stream_incomplete';
-        throw failure;
-      }
-    } catch (err) {
-      if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-        Logger.error(`[proxyAnthropicToAnthropic] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
-      } else if (clientDisconnected) {
-        Logger.warn(`[proxyAnthropicToAnthropic] 上游读取中断(客户端已断开): url=${url}, model=${model}, error=${err.message}`);
-      } else {
-        Logger.error(`[proxyAnthropicToAnthropic] 流式读取错误: ${err.message}, chunkCount=${chunkCount}`);
-      }
+      });
+      await relay.finish();
+    } catch (error) {
       if (!res.destroyed && !res.writableEnded) {
-        const failure = { type: 'error', error: { type: 'api_error', message: 'Upstream stream interrupted', code: 'upstream_stream_interrupted' } };
-        res.write(`event: error\ndata: ${JSON.stringify(failure)}\n\n`);
+        res.write(formatSSE({ event: 'error', data: {
+          type: 'error', error: { type: 'api_error', message: 'Upstream stream interrupted', code: 'upstream_stream_interrupted' }
+        } }));
         res.end();
       }
-      throw err;
-    } finally {
-      await reader.cancel?.().catch(() => {});
-      reader.releaseLock?.();
+      throw error;
     }
-
+    const normalized = normalizeUsageTokens(relay.usage, 'anthropic');
+    const { promptTokens, completionTokens, cachedTokens } = normalized;
+    const totalContent = relay.content;
     const latency = Date.now() - startTime;
-
-    // 流式签名：有正文时追加到现有 text 流语义；纯 tool 则跳过（避免 index 999 空块）
-    if (gotDone && !clientDisconnected) {
-      try {
-        const signature = await buildSignatureForRequest(req, {
-          model,
-          normalized: { promptTokens, completionTokens, cachedTokens },
-          providerName: provider.name,
-          provider,
-          preloaded: preloadedSignatureData
-        });
-        if (signature) {
-          const mode = resolveSignatureMode(req);
-          const plan = planStreamSignatureInjection({
-            mode,
-            requestBody: body,
-            hasTextContent: totalContent.length > 0,
-            hasToolCalls: false, // 流式 A2A 未细粒度跟踪 tool，有正文才 append
-            stopReason,
-            format: 'anthropic'
-          });
-          // 若 stop_reason 为 tool_use 且无正文，强制跳过
-          const append = plan.appendContent && totalContent.length > 0 && stopReason !== 'tool_use';
-          Logger.info(`[proxyAnthropicToAnthropic] 流式签名: append=${append}, reason=${plan.reason}, stop=${stopReason}, mode=${mode}`);
-          if (append) {
-            // 上游 text block 通常已 stop，另开 index=1 文本块注入签名（仅有正文时）
-            const blockIndex = 1;
-            const safeEvents = [
-              { type: 'content_block_start', index: blockIndex, content_block: { type: 'text', text: '' } },
-              { type: 'content_block_delta', index: blockIndex, delta: { type: 'text_delta', text: `\n\n${signature}` } },
-              { type: 'content_block_stop', index: blockIndex }
-            ];
-            for (const evt of safeEvents) {
-              const ok = writeWithDrain(`event: ${evt.type}\ndata: ${JSON.stringify(evt)}\n\n`);
-              if (!ok) await waitForDrain();
-            }
-          }
-        }
-      } catch (e) {
-        Logger.warn(`[proxyAnthropicToAnthropic] 签名生成失败: ${e.message}`);
-      }
-      // Forward the intercepted message_stop event with proper event: line
-      writeWithDrain(`event: message_stop\ndata: {"type":"message_stop"}\n\n`);
-    }
-
     res.end();
     if (currentProxyInfo?.proxyId) {
       proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, Date.now() - startTime);
     }
-    Logger.stream(`[proxyAnthropicToAnthropic] 流式传输统计: chunkCount=${chunkCount}, sseLineCount=${sseLineCount}, jsonParseErrors=${jsonParseErrors}, contentLength=${totalContent.length}, 首chunk耗时=${firstChunkTime ? firstChunkTime - startTime : '-'}ms, 客户端断开=${clientDisconnected}, 背压次数=${backpressureCount}`);
     const cacheHitRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropicToAnthropic] 流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${promptTokens}, completion_tokens=${completionTokens}, cached_tokens=${cachedTokens}, cache_hit_rate=${cacheHitRate}%`);
-    const metricsSnapshot = attempt.finish({ promptTokens, completionTokens, completed: gotDone && !clientDisconnected });
+    const metricsSnapshot = attempt.finish({ promptTokens, completionTokens, completed: true });
     return { promptTokens, completionTokens, cachedTokens, content: totalContent, metrics: metricsSnapshot };
   } else {
     const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
@@ -4620,19 +4438,6 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     }
 
     const normalized = normalizeUsageTokens(hookData.usage, 'anthropic');
-    try {
-      const signature = await buildSignatureForRequest(req, {
-        model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
-      });
-      if (signature) {
-        injectSignatureIntoAnthropicResponse(res, hookData, signature, {
-          mode: resolveSignatureMode(req),
-          requestBody: body
-        });
-      }
-    } catch (e) {
-      Logger.warn(`[proxyAnthropicToAnthropic] 非流式签名生成失败: ${e.message}`);
-    }
 
     // 插件 gateway:finalResponse 钩子：追加自定义响应头
     await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyAnthropicToAnthropic' });
@@ -4640,8 +4445,16 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     if (req.apiUser?.injectPrompt) {
       scrubAnthropicResponse(hookData, req.apiUser.injectPrompt);
     }
+    const recordedContent = hookData.content?.map(b => b.text || '').join('') || '';
     if (hookData.service_tier) attempt.setServiceTier(hookData.service_tier);
     forwardUpstreamHeaders(res, response.headers);
+    try {
+      await finalizeJsonSignature(req, res, 'anthropic', hookData, {
+        model, normalized, providerName: provider.name, provider
+      });
+    } catch (e) {
+      Logger.warn(`[proxyAnthropicToAnthropic] 非流式签名生成失败: ${e.message}`);
+    }
     res.json(hookData);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropicToAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -4650,7 +4463,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       completionTokens: normalized.completionTokens,
       completed: true
     });
-    return { ...normalized, content: hookData.content?.map(b => b.text || '').join('') || '', metrics: metricsSnapshot };
+    return { ...normalized, content: recordedContent, metrics: metricsSnapshot };
   }
 }
 
@@ -4691,15 +4504,6 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
-  // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
-  let preloadedSignatureData = {};
-  if (req.apiUser.signatureEnabled && req.apiUser.signatureTemplate) {
-    preloadedSignatureData = await preloadSignatureData(
-      req.apiUser.userId,
-      req.apiUser.teamId,
-      req.apiUser.signatureTemplate
-    );
-  }
 
   const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
     (proxyInfo) => ({
@@ -4960,33 +4764,26 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
 
   // 流式签名：有正文才追加；纯 tool 跳过，避免凭空 ensureTextBlockStarted
   try {
-    const signature = await buildSignatureForRequest(req, {
+    await finalizeStreamSignature(req, {
       model,
       normalized: normalizedForSig,
       providerName: provider.name,
-      provider,
-      preloaded: preloadedSignatureData
-    });
-    if (signature) {
-      const mode = resolveSignatureMode(req);
-      const plan = planStreamSignatureInjection({
-        mode,
-        requestBody: openaiBody,
-        hasTextContent: totalContent.length > 0 || textBlockStarted,
-        hasToolCalls: toolAssembler.entries.size > 0,
-        stopReason,
-        format: 'anthropic'
-      });
-      Logger.info(`[proxyOpenAIToAnthropic] 流式签名: append=${plan.appendContent}, reason=${plan.reason}, mode=${mode}`);
-      if (plan.appendContent && (totalContent.length > 0 || textBlockStarted)) {
+      provider
+    }, {
+      format: 'anthropic',
+      requestBody: openaiBody,
+      hasTextContent: totalContent.length > 0 || textBlockStarted,
+      hasToolCalls: toolAssembler.entries.size > 0,
+      stopReason,
+      emitText: async text => {
         await ensureTextBlockStarted();
         await emitSSE({
           type: 'content_block_delta',
           index: textBlockIndex,
-          delta: { type: 'text_delta', text: `\n\n${signature}` }
+          delta: { type: 'text_delta', text }
         });
       }
-    }
+    });
   } catch (e) {
     Logger.warn(`[proxyOpenAIToAnthropic] 签名生成失败: ${e.message}`);
   }
@@ -5055,15 +4852,6 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
   const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
-  // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
-  let preloadedSignatureData = {};
-  if (req.apiUser.signatureEnabled && req.apiUser.signatureTemplate) {
-    preloadedSignatureData = await preloadSignatureData(
-      req.apiUser.userId,
-      req.apiUser.teamId,
-      req.apiUser.signatureTemplate
-    );
-  }
 
   const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
     (proxyInfo) => ({
@@ -5106,26 +4894,21 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
 
   const anthropicResp = convertOpenAIToAnthropicResponse(data, model);
   const normalized = normalizeUsageTokens(data.usage, 'openai');
-  try {
-    const signature = await buildSignatureForRequest(req, {
-      model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
-    });
-    if (signature) {
-      injectSignatureIntoAnthropicResponse(res, anthropicResp, signature, {
-        mode: resolveSignatureMode(req),
-        requestBody: openaiBody
-      });
-    }
-  } catch (e) {
-    Logger.warn(`[proxyOpenAIToAnthropic] 非流式签名生成失败: ${e.message}`);
-  }
 
   // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
   if (req.apiUser?.injectPrompt) {
     scrubAnthropicResponse(anthropicResp, req.apiUser.injectPrompt);
   }
+  const recordedContent = anthropicResp.content.map(b => b.text || '').join('');
   if (data.service_tier) attempt.setServiceTier(data.service_tier);
   forwardUpstreamHeaders(res, response.headers);
+  try {
+    await finalizeJsonSignature(req, res, 'anthropic', anthropicResp, {
+      model, normalized, providerName: provider.name, provider
+    });
+  } catch (e) {
+    Logger.warn(`[proxyOpenAIToAnthropic] 非流式签名生成失败: ${e.message}`);
+  }
   res.json(anthropicResp);
   const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
   Logger.info(`[proxyOpenAIToAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -5134,7 +4917,7 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
     completionTokens: normalized.completionTokens,
     completed: true
   });
-  return { ...normalized, content: anthropicResp.content.map(b => b.text || '').join(''), metrics: metricsSnapshot };
+  return { ...normalized, content: recordedContent, metrics: metricsSnapshot };
 }
 
 // ==================== OpenAI Responses API ====================
@@ -5364,7 +5147,7 @@ function convertChatCompletionToResponse(data, respId, body) {
 }
 
 // 流式代理 OpenAI 上游，输出 Responses API SSE 事件
-async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model, body, writeWithDrain, waitForDrain) {
+async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model, body, writeWithDrain, waitForDrain, signatureMeta = {}) {
   let buffer = '';
   let totalContent = '';
   let lastUsage = null;
@@ -5378,6 +5161,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
   let textStarted = false;
   let textDone = false;
   let textOutputIndex = 0;
+  let hasToolCalls = false;
   let nextOutputIndex = 0;
   let sawReasoning = false;
   let reasoningDone = false;
@@ -5488,8 +5272,8 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
     }
 
     if (delta.tool_calls) {
+      hasToolCalls = true;
       await closeReasoning();
-      await closeText();
       for (const tc of delta.tool_calls) {
         const idx = tc.index ?? 0;
         if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', arguments: '' };
@@ -5554,6 +5338,26 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
   }
 
   await closeReasoning();
+  const recordedContent = totalContent;
+  try {
+    await finalizeStreamSignature(req, {
+      model,
+      normalized: normalizeUsageTokens(lastUsage, 'openai'),
+      ...signatureMeta
+    }, {
+      format: 'responses',
+      requestBody: body,
+      hasTextContent: totalContent.length > 0,
+      hasToolCalls,
+      finishReason: rawFinish,
+      emitText: async text => {
+        totalContent += text;
+        await emit({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, delta: text });
+      }
+    });
+  } catch (e) {
+    Logger.warn(`[Responses/OpenAI] 签名生成失败: ${e.message}`);
+  }
   await closeText();
 
   const toolCatalog = wireShapes.createResponsesToolCatalog(wireShapes.collectResponsesTools(body));
@@ -5597,11 +5401,11 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
 
   const latency = Date.now() - startTime;
   Logger.info(`[Responses/OpenAI] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${emittedTools}`);
-  return { ...normalized, content: totalContent };
+  return { ...normalized, content: recordedContent };
 }
 
 // 流式代理 Anthropic 上游，输出 Responses API SSE 事件
-async function streamAnthropicAsResponses(reader, decoder, res, req, respId, model, body, writeWithDrain, waitForDrain) {
+async function streamAnthropicAsResponses(reader, decoder, res, req, respId, model, body, writeWithDrain, waitForDrain, signatureMeta = {}) {
   let buffer = '';
   let totalContent = '';
   let anthropicUsage = { input_tokens: 0 };
@@ -5726,8 +5530,6 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         for (const event of wireShapes.reasoningDoneEvents(`rs_${respId}`, reasoningIndex, reasoningText)) await emit(event);
         outputItems.push({ index: reasoningIndex, item: wireShapes.reasoningItem(`rs_${respId}`, reasoningText) });
       }
-      if (currentBlockType === 'tool_use' && currentToolIndex >= 0) await closeText();
-      if (currentBlockType === 'image') await closeText();
       currentBlockType = null;
     } else if (parsed.type === 'message_start' && parsed.message?.usage) {
       anthropicUsage = parsed.message.usage;
@@ -5802,6 +5604,31 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
     for (const event of wireShapes.reasoningDoneEvents(`rs_${respId}`, reasoningIndex, reasoningText)) await emit(event);
     outputItems.push({ index: reasoningIndex, item: wireShapes.reasoningItem(`rs_${respId}`, reasoningText) });
   }
+  const recordedContent = totalContent;
+  try {
+    await finalizeStreamSignature(req, {
+      model,
+      normalized: normalizeUsageTokens({
+        input_tokens: anthropicUsage.input_tokens || 0,
+        output_tokens: completionTokens,
+        cache_read_input_tokens: anthropicUsage.cache_read_input_tokens || 0,
+        cache_creation_input_tokens: anthropicUsage.cache_creation_input_tokens || 0
+      }, 'anthropic'),
+      ...signatureMeta
+    }, {
+      format: 'responses',
+      requestBody: body,
+      hasTextContent: totalContent.length > 0,
+      hasToolCalls: toolUseBlocks.length > 0,
+      finishReason: stopReason,
+      emitText: async text => {
+        totalContent += text;
+        await emit({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, delta: text });
+      }
+    });
+  } catch (e) {
+    Logger.warn(`[Responses/Anthropic] 签名生成失败: ${e.message}`);
+  }
   await closeText();
 
   const toolCatalog = wireShapes.createResponsesToolCatalog(wireShapes.collectResponsesTools(body));
@@ -5845,7 +5672,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
 
   const latency = Date.now() - startTime;
   Logger.info(`[Responses/Anthropic] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${emittedTools}`);
-  return { ...normalized, content: totalContent };
+  return { ...normalized, content: recordedContent };
 }
 
 async function proxyOpenAIForResponses(provider, model, chatBody, res, req, respId, body, options = {}) {
@@ -5870,15 +5697,6 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
 
   Logger.info(`[Responses/OpenAI] 非流式请求: provider=${provider.id}(${provider.name}), model=${model}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
 
-  // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
-  let preloadedSignatureData = {};
-  if (req.apiUser.signatureEnabled && req.apiUser.signatureTemplate) {
-    preloadedSignatureData = await preloadSignatureData(
-      req.apiUser.userId,
-      req.apiUser.teamId,
-      req.apiUser.signatureTemplate
-    );
-  }
 
   const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
     (proxyInfo) => ({
@@ -5912,25 +5730,20 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
   const normalized = normalizeUsageTokens(data.usage, 'openai');
   let result = convertChatCompletionToResponse(data, respId, body);
 
-  // 签名注入
-  try {
-    const signature = await buildSignatureForRequest(req, {
-      model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
-    });
-    if (signature) {
-      injectSignatureIntoResponsesBody(res, result, signature, {
-        mode: resolveSignatureMode(req),
-        requestBody: body
-      });
-    }
-  } catch (e) { Logger.warn(`[Responses/OpenAI] 签名生成失败: ${e.message}`); }
-
   // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
   if (req.apiUser?.injectPrompt) {
     scrubResponsesApiResult(result, req.apiUser.injectPrompt);
   }
+  const recordedContent = result.output_text || '';
   if (data.service_tier) attempt.setServiceTier(data.service_tier);
   forwardUpstreamHeaders(res, response.headers);
+  try {
+    await finalizeJsonSignature(req, res, 'responses', result, {
+      model, normalized, providerName: provider.name, provider
+    });
+  } catch (e) {
+    Logger.warn(`[Responses/OpenAI] 签名生成失败: ${e.message}`);
+  }
   res.json(result);
   Logger.info(`[Responses/OpenAI] 非流式完成: provider=${provider.id}, model=${model}, latency=${latency}ms, prompt=${normalized.promptTokens}, completion=${normalized.completionTokens}`);
   const metricsSnapshot = attempt.finish({
@@ -5938,7 +5751,7 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
     completionTokens: normalized.completionTokens,
     completed: true
   });
-  return { ...normalized, content: result.output_text || '', metrics: metricsSnapshot };
+  return { ...normalized, content: recordedContent, metrics: metricsSnapshot };
 }
 
 // 非流式代理 Anthropic 上游，返回 Responses API 格式
@@ -6120,7 +5933,15 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   if (req.apiUser?.injectPrompt) {
     scrubResponsesApiResult(result, req.apiUser.injectPrompt);
   }
+  const recordedContent = result.output_text || '';
   forwardUpstreamHeaders(res, response.headers);
+  try {
+    await finalizeJsonSignature(req, res, 'responses', result, {
+      model, normalized, providerName: provider.name, provider
+    });
+  } catch (e) {
+    Logger.warn(`[Responses/Anthropic] 签名生成失败: ${e.message}`);
+  }
   res.json(result);
   Logger.info(`[Responses/Anthropic] 非流式完成: provider=${provider.id}, model=${model}, latency=${latency}ms`);
   const metricsSnapshot = attempt.finish({
@@ -6128,7 +5949,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     completionTokens: normalized.completionTokens,
     completed: true
   });
-  return { ...normalized, content: result.output_text || '', metrics: metricsSnapshot };
+  return { ...normalized, content: recordedContent, metrics: metricsSnapshot };
 }
 
 // OpenAI 兼容: /v1/responses 和 /api/responses
@@ -6382,6 +6203,14 @@ async function handleResponses(req, res) {
           }
         }
         forwardUpstreamHeaders(res, upstreamResp.headers);
+        try {
+          await finalizeJsonSignature(req, res, 'responses', responseData, {
+            model: upstreamModel, normalized: { promptTokens, completionTokens, cachedTokens },
+            providerName: pwk.name, provider: pwk
+          });
+        } catch (error) {
+          Logger.warn(`[Responses/Passthru] 签名生成失败: ${error.message}`);
+        }
         return res.json(responseData);
       };
 
@@ -6617,84 +6446,28 @@ async function handleResponses(req, res) {
       res.setHeader('X-Accel-Buffering', 'no');
       forwardUpstreamHeaders(res, upstreamResp.headers);
       res.flushHeaders();
-      const reader = upstreamResp.body.getReader();
-      const decoder = new TextDecoder();
-      let totalContent = '';
-      let streamCompleted = false;
-      let frameBuffer = '';
-      let streamUsage = null; // { input_tokens, output_tokens, cached_tokens }
-      const scrubEnabled = !!req.apiUser?.injectPrompt;
-      const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
-      let residualFlushed = false;
-      const writePassthroughEvent = async (parsed) => {
-        if (!scrubEnabled || res.writableEnded) return;
-        const eventText = `data: ${JSON.stringify(parsed)}\n\n`;
-        if (!res.write(eventText)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
-      };
-      const flushScrubResidual = async () => {
-        if (!scrubEnabled || residualFlushed) return;
-        residualFlushed = true;
-        const residual = streamScrubber.flush();
-        if (!residual || res.writableEnded) return;
-        totalContent += residual;
-        await writePassthroughEvent({ type: 'response.output_text.delta', delta: residual });
-      };
-      const consumePassthrough = async (parsed) => {
-        if (parsed.error || ['error', 'response.failed'].includes(parsed.type)) throw new Error('Upstream stream reported an error');
-        const terminal = parsed.type === 'response.completed' || parsed.type === 'response.incomplete';
-        if (terminal) streamCompleted = true;
-        if (parsed.type === 'response.output_text.delta') {
-          const delta = streamScrubber.feed(parsed.delta || '');
-          parsed.delta = delta;
-          totalContent += delta;
-          if (delta) attempt.markToken('content');
-        } else if (parsed.type === 'response.reasoning_summary_text.delta' || parsed.type === 'response.reasoning_text.delta') {
-          if (parsed.delta) attempt.markToken('reasoning');
-        } else if (parsed.type === 'response.function_call_arguments.delta') {
-          if (parsed.delta) attempt.markToken('tool');
-        }
-        if (parsed.service_tier) attempt.setServiceTier(parsed.service_tier);
-        if (terminal) await flushScrubResidual();
-        await writePassthroughEvent(parsed);
-        const u = parsed.response?.usage || parsed.usage || null;
-        if (u && (u.input_tokens != null || u.output_tokens != null || u.prompt_tokens != null)) {
-          streamUsage = u;
-        }
-      };
+      let relay;
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          attempt.markFirstByte();
-          const text = decoder.decode(value, { stream: true });
-          if (!scrubEnabled) {
-            if (!res.write(text)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
+        relay = await relaySignatureStream({
+          response: upstreamResp, req, res, format: 'responses', model: upstreamModel,
+          provider: providerWithKey,
+          write: async data => {
+            if (!res.write(data)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
+          },
+          onEvent: event => {
+            attempt.markFirstByte();
+            if (event.type === 'response.output_text.delta' && event.delta) attempt.markToken('content');
+            if (event.type === 'response.function_call_arguments.delta') attempt.markToken('tool');
+            if (event.service_tier) attempt.setServiceTier(event.service_tier);
           }
-          frameBuffer += text;
-          const lines = frameBuffer.split('\n');
-          frameBuffer = lines.pop() || '';
-          for (const line of lines) {
-            if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
-            try {
-              await consumePassthrough(JSON.parse(line.slice(6)));
-            } catch (error) { if (error.name !== 'SyntaxError') throw error; }
-          }
-        }
-        frameBuffer += decoder.decode();
-        if (frameBuffer.startsWith('data: ')) {
-          try {
-            await consumePassthrough(JSON.parse(frameBuffer.slice(6)));
-          } catch (error) { if (error.name !== 'SyntaxError') throw error; }
-        }
-        if (!streamCompleted) throw new Error('Upstream stream ended without a completion event');
+        });
       } catch (error) {
         sendGenerationFailure(res, respId, 502, { error: { message: error.message, code: 'upstream_error' } });
         return;
-      } finally {
-        await reader.cancel?.().catch(() => {});
-        reader.releaseLock?.();
-        if (!res.destroyed && !res.writableEnded) res.end();
       }
+      const totalContent = relay.content;
+      const streamUsage = Object.keys(relay.usage).length ? relay.usage : null;
+      const streamCompleted = true;
 
       // 计费 + 写入调用记录（此前只扣积分不落库，导致列表/配额不准）
       // 约定：有上游 usage → 精确；无 usage 时 prompt=0、completion≈输出字符/4，并标记 estimated
@@ -6771,6 +6544,9 @@ async function handleResponses(req, res) {
           }
         }
       }
+
+      await relay.finish();
+      if (!res.destroyed && !res.writableEnded) res.end();
       return;
     }
 
@@ -6856,6 +6632,16 @@ async function handleResponses(req, res) {
     }
 
     forwardUpstreamHeaders(res, upstreamResp.headers);
+    try {
+      await finalizeJsonSignature(req, res, 'responses', responseData, {
+        model,
+        normalized: { promptTokens, completionTokens, cachedTokens },
+        providerName: provider?.name,
+        provider
+      });
+    } catch (e) {
+      Logger.warn(`[Responses/Passthru] 签名生成失败: ${e.message}`);
+    }
     res.json(responseData);
     return;
   }
@@ -6967,11 +6753,12 @@ async function handleResponses(req, res) {
           res,
           id: respId,
           model: upstreamModel,
+          provider: providerWithKey,
           write: writeWithDrain
         })
         : (streamEndpoint?.format === 'anthropic'
-          ? await streamAnthropicAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain)
-          : await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain));
+          ? await streamAnthropicAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain, { provider: providerWithKey, providerName: providerWithKey.name })
+          : await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain, { provider: providerWithKey, providerName: providerWithKey.name }));
 
       const streamMetrics = streamAttempt.finish({
         promptTokens: result?.promptTokens,

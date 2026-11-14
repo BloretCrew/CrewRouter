@@ -326,6 +326,37 @@
   :is(#hookNotifySelectModal) .ak-check-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* 签名模板是阅读/编辑密集内容，仅本弹窗使用实底，避免底层 Key 文本穿透。
+   Blora 2.1 的 panel/backdrop 均是公开 part；不依赖私有 shadow class。 */
+#keySignatureModal {
+  --signature-panel-bg: #f7fafb;
+  --signature-panel-fg: #172a2e;
+  --signature-panel-secondary: #4c6065;
+  --signature-backdrop: rgb(10 25 31 / 48%);
+  --lg-fg: var(--signature-panel-fg);
+  --lg-fg-secondary: var(--signature-panel-secondary);
+}
+:root:is(.dark, [data-theme="dark"], [data-blora-color-scheme="dark"]) #keySignatureModal {
+  --signature-panel-bg: #202b30;
+  --signature-panel-fg: #f1f6f7;
+  --signature-panel-secondary: #c1ced2;
+  --signature-backdrop: rgb(0 7 12 / 68%);
+}
+#keySignatureModal::part(panel) {
+  background: var(--signature-panel-bg);
+  background-image: none;
+  color: var(--signature-panel-fg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  opacity: 1;
+}
+#keySignatureModal::part(backdrop) {
+  background: var(--signature-backdrop);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+#keySignatureModal .ak-preview { overflow-wrap: anywhere; }
+
 /* 新建 / 编辑标签弹窗 */
 #createKeyTagPopover .ak-dialog-stack { display: grid; gap: 16px; }
 #createKeyTagPopover .ak-tag-radios { display: flex; flex-wrap: wrap; gap: 10px 16px; }

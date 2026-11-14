@@ -6,6 +6,14 @@ const proxyPool = require('../proxy-pool');
 const OPENCODE_GO_USAGE_URL = 'https://opencode.ai/zen/go/v1/usage';
 
 const DEFAULT_TEMPLATE = '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}';
+const SIGNATURE_TEMPLATE_MAX_LENGTH = 2000;
+
+// Keep this list in sync with the placeholders handled by buildSignature().
+const SIGNATURE_VARIABLES = [
+  'model', 'tokens', 'cache_hit', 'cached_tokens', 'provider', 'cost',
+  'username', 'key_name', 'balance', 'quota_info', 'team_name',
+  'today_requests', 'today_tokens'
+];
 
 /**
  * Format token count for display: >=1000 shows as "12.3k", with " tokens" suffix.
@@ -28,18 +36,64 @@ function formatCost(n) {
   return `${n.toFixed(2)} 积分`;
 }
 
-/**
- * Fetch the Team name used by the legacy group_name signature variable.
- */
-async function getGroupName(teamId) {
-  if (!teamId) return null;
-  try {
-    const r = await pool.query('SELECT name FROM teams WHERE id = $1', [teamId]);
-    return r.rows[0]?.name || null;
-  } catch (err) {
-    Logger.warn(`[Signature] 获取用户组名失败: ${err.message}`);
-    return null;
+function normalizeSignatureTemplate(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function signatureValidationError(message, code) {
+  const error = new Error(message);
+  error.status = 400;
+  error.code = code;
+  return error;
+}
+
+function validateSignatureTemplate(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value !== 'string') {
+    throw signatureValidationError('签名模板格式不正确', 'invalid_signature_template');
   }
+  const template = value.trim();
+  if (template.length > SIGNATURE_TEMPLATE_MAX_LENGTH) {
+    throw signatureValidationError(`签名模板不能超过 ${SIGNATURE_TEMPLATE_MAX_LENGTH} 个字符`, 'invalid_signature_template');
+  }
+  return template;
+}
+
+function validateSignatureEnabled(value) {
+  if (typeof value !== 'boolean') {
+    throw signatureValidationError('签名开关值无效', 'invalid_signature_enabled');
+  }
+  return value;
+}
+
+function validateSignatureTriState(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'boolean') {
+    throw signatureValidationError('签名开关值无效', 'invalid_signature_enabled');
+  }
+  return value;
+}
+
+/**
+ * Resolve a Key's signature settings against the owning user's defaults.
+ * This is the only place that implements the inheritance rules.
+ */
+function resolveSignatureConfig({ key = {}, user = {} } = {}) {
+  const keyEnabled = key.signature_enabled === true ? true
+    : key.signature_enabled === false ? false
+      : null;
+  const userEnabled = user.api_signature_enabled === true;
+  const keyTemplate = normalizeSignatureTemplate(key.signature_template);
+  const userTemplate = normalizeSignatureTemplate(user.api_signature_template);
+  return {
+    enabled: keyEnabled === null ? userEnabled : keyEnabled,
+    template: keyTemplate || userTemplate,
+    source: keyEnabled === null ? 'user' : 'key',
+    keyEnabled,
+    keyTemplate: keyTemplate || null,
+    userEnabled,
+    userTemplate
+  };
 }
 
 /**
@@ -91,12 +145,6 @@ async function getTodayStats(userId) {
   }
 }
 
-/**
- * Compute a user's quota usage percentages from their Team rules.
- *
- * @param {number} userId
- * @returns {Promise<string|null>} - Quota string, or null if no rules.
- */
 async function getOpenCodeGoQuotaWarning(provider, enabled = false) {
   if (!enabled || provider?.quota_mode !== 'opencode_go' || !provider?.api_key) return '';
   try {
@@ -173,36 +221,64 @@ async function getQuotaInfo(userId) {
 }
 
 /**
+ * Preload only the DB-backed values the effective template actually uses.
+ * Returns {} when signature is off or the template is empty.
+ */
+async function preloadSignatureData(apiUser) {
+  const config = apiUser?.signature;
+  if (!config?.enabled || !config.template) return {};
+
+  const template = config.template;
+  const needsQuota = /\{quota_info\}/.test(template);
+  const needsTeam = /\{team_name\}/.test(template) || /\{group_name\}/.test(template);
+  const needsToday = /\{today_requests\}/.test(template) || /\{today_tokens\}/.test(template);
+  if (!needsQuota && !needsTeam && !needsToday) return {};
+
+  const userId = apiUser.userId;
+  const [quotaInfo, teamName, todayStats] = await Promise.all([
+    needsQuota ? getQuotaInfo(userId) : undefined,
+    needsTeam ? getTeamName(userId) : undefined,
+    needsToday ? getTodayStats(userId) : undefined,
+  ]);
+
+  const preloaded = {};
+  if (needsQuota) preloaded.quotaInfo = quotaInfo;
+  if (needsTeam) preloaded.teamName = teamName;
+  if (needsToday) preloaded.todayStats = todayStats;
+  return preloaded;
+}
+
+/**
+ * Request-scoped memoized preload. The promise is created once per request.
+ */
+async function ensureSignaturePreload(req) {
+  if (!req) return {};
+  if (!req._signaturePreloadPromise) {
+    req._signaturePreloadPromise = preloadSignatureData(req.apiUser);
+  }
+  return req._signaturePreloadPromise;
+}
+
+/**
  * Build the signature string by applying template variable substitution.
- * Only queries the database for variables that are actually used in the template.
  *
  * Supported variables (no DB query needed):
  *   {model}, {tokens}, {cache_hit}, {cached_tokens}, {provider},
  *   {cost}, {username}, {key_name}, {balance}
  *
- * Supported variables (require DB query, loaded lazily):
- *   {quota_info}, {group_name}, {team_name}, {today_requests}, {today_tokens}
+ * Supported variables (require DB query unless preloaded):
+ *   {quota_info}, {team_name}, {today_requests}, {today_tokens}
+ *   {group_name} is a legacy alias of {team_name}.
  *
- * @param {object} opts
- * @param {boolean} opts.enabled
- * @param {string} opts.template
- * @param {object} opts.meta - See below for fields.
- * @param {number} opts.userId
- * @param {object} [opts.preloaded] - Preloaded data to avoid DB queries
- * @param {string} [opts.preloaded.quotaInfo] - Preloaded quota info
- * @param {string} [opts.preloaded.groupName] - Preloaded group name
- * @param {string} [opts.preloaded.teamName] - Preloaded team name
- * @param {object} [opts.preloaded.todayStats] - Preloaded today stats {tokens, requests}
- * @returns {Promise<string>}
+ * An empty template means "no signature" — there is no default-template fallback.
  */
-async function buildSignature({ enabled, template, meta, userId, preloaded }) {
-  if (enabled === false) return '';
-  const tmpl = template || DEFAULT_TEMPLATE;
-  if (!tmpl.trim()) return '';
+async function buildSignature({ template, meta = {}, userId, preloaded = {} }) {
+  const tmpl = normalizeSignatureTemplate(template);
+  if (!tmpl) return '';
 
   const totalTokens = (meta.promptTokens || 0) + (meta.completionTokens || 0);
   const cacheHit = meta.promptTokens > 0
-    ? Math.round((meta.cachedTokens / meta.promptTokens) * 100)
+    ? Math.min(100, Math.max(0, Math.round(((meta.cachedTokens || 0) / meta.promptTokens) * 100)))
     : 0;
 
   // Fast replacements — no DB queries
@@ -218,10 +294,8 @@ async function buildSignature({ enabled, template, meta, userId, preloaded }) {
     .replace(/\{balance\}/g, (meta.balance ?? '').toString());
 
   // Lazy DB queries — only if the template actually uses these variables
-  // Use preloaded data if available, otherwise query the database
   const needsQuota = /\{quota_info\}/.test(tmpl);
-  const needsGroupName = /\{group_name\}/.test(tmpl);
-  const needsTeamName = /\{team_name\}/.test(tmpl);
+  const needsTeam = /\{team_name\}/.test(tmpl) || /\{group_name\}/.test(tmpl);
   const needsToday = /\{today_requests\}/.test(tmpl) || /\{today_tokens\}/.test(tmpl);
 
   if (needsQuota) {
@@ -234,24 +308,16 @@ async function buildSignature({ enabled, template, meta, userId, preloaded }) {
     result = result.replace(/\{quota_info\}/g, quotaInfo || '');
   }
 
-  if (needsGroupName) {
-    let groupName;
-    if (preloaded && preloaded.groupName !== undefined) {
-      groupName = preloaded.groupName;
-    } else {
-      groupName = meta.teamId ? await getGroupName(meta.teamId) : null;
-    }
-    result = result.replace(/\{group_name\}/g, groupName || '');
-  }
-
-  if (needsTeamName) {
+  if (needsTeam) {
     let teamName;
     if (preloaded && preloaded.teamName !== undefined) {
       teamName = preloaded.teamName;
     } else {
       teamName = userId ? await getTeamName(userId) : null;
     }
-    result = result.replace(/\{team_name\}/g, teamName || '');
+    result = result
+      .replace(/\{team_name\}/g, teamName || '')
+      .replace(/\{group_name\}/g, teamName || '');
   }
 
   if (needsToday) {
@@ -272,7 +338,7 @@ async function buildSignature({ enabled, template, meta, userId, preloaded }) {
   return result.trim();
 }
 
-// ---------- 双通道注入 + 智能跳过（Phase 1）----------
+// ---------- 双通道注入 + 智能跳过 ----------
 
 const SIGNATURE_HEADER = 'X-CrewRouter-Signature';
 const SIGNATURE_HEADER_B64 = 'X-CrewRouter-Signature-B64';
@@ -297,7 +363,7 @@ function resolveSignatureMode(req) {
  */
 function isHeaderSafe(text) {
   if (!text) return false;
-  return !/[\r\n]/.test(text) && text.length <= 2048;
+  return /^[\x20-\x7e]*$/.test(text) && text.length <= 2048;
 }
 
 /**
@@ -332,29 +398,28 @@ function setSignatureHeaders(res, signature) {
   }
 }
 
+function isStructuredOutputRequest(requestBody = {}) {
+  const rf = requestBody.response_format?.type || requestBody.text?.format?.type;
+  if (rf === 'json_object' || rf === 'json_schema') return true;
+  const config = requestBody.generationConfig;
+  const gemini = requestBody.passthrough?.gemini?.generationConfigExtras
+    || requestBody.ir?.passthrough?.gemini?.generationConfigExtras;
+  return [config, gemini].some(value => value && (
+    /^(?:application\/json|text\/x\.enum)(?:\s*;|$)/i.test(value.responseMimeType || '')
+    || value.responseSchema != null || value.responseJsonSchema != null
+  )) || requestBody.response_format?.type === 'json';
+}
+
 /**
  * 判断是否应把签名追加进 content。
- *
- * @param {object} opts
- * @param {'openai'|'anthropic'|'responses'} opts.format
- * @param {object} [opts.requestBody]
- * @param {object} [opts.responseShape] - 依 format 不同
- * @param {string} [opts.mode] - both|header|content
- * @param {boolean} [opts.hasTextContent]
- * @param {boolean} [opts.hasToolCalls]
- * @param {string} [opts.finishReason] - openai finish_reason
- * @param {string} [opts.stopReason] - anthropic stop_reason
- * @returns {{ append: boolean, reason: string }}
+ * 只追加到已存在的正文结构，绝不新建 message/text block。
  */
 function shouldAppendSignatureToContent(opts = {}) {
   const mode = opts.mode || 'both';
   if (mode === 'header') {
     return { append: false, reason: 'mode_header' };
   }
-
-  const body = opts.requestBody || {};
-  const rf = body.response_format?.type || body.text?.format?.type;
-  if (rf === 'json_object' || rf === 'json_schema') {
+  if (isStructuredOutputRequest(opts.requestBody)) {
     return { append: false, reason: 'json_response_format' };
   }
 
@@ -369,9 +434,13 @@ function shouldAppendSignatureToContent(opts = {}) {
       ?? null;
     const hasTools = opts.hasToolCalls
       ?? !!(msg?.tool_calls && msg.tool_calls.length > 0);
-    const text = msg?.content;
-    const hasText = opts.hasTextContent
-      ?? (text != null && String(text).length > 0);
+    let hasText = opts.hasTextContent;
+    if (hasText === undefined) {
+      const content = msg?.content;
+      hasText = typeof content === 'string'
+        ? content.length > 0
+        : Array.isArray(content) && content.some(part => typeof part?.text === 'string' && part.text.length > 0);
+    }
 
     if (hasTools && !hasText) {
       return { append: false, reason: 'tool_calls_only' };
@@ -379,25 +448,21 @@ function shouldAppendSignatureToContent(opts = {}) {
     if (finishReason === 'tool_calls' && !hasText) {
       return { append: false, reason: 'finish_tool_calls_no_text' };
     }
+    if (!hasText) {
+      return { append: false, reason: 'no_text_content' };
+    }
     return { append: true, reason: 'ok' };
   }
 
   if (format === 'anthropic') {
     const content = opts.responseShape?.content;
-    const stopReason = opts.stopReason ?? opts.responseShape?.stop_reason ?? null;
     let hasText = opts.hasTextContent;
     if (hasText === undefined) {
-      if (Array.isArray(content)) {
-        hasText = content.some(b => b.type === 'text' && (b.text || '').length > 0);
-      } else {
-        hasText = false;
-      }
+      hasText = Array.isArray(content)
+        && content.some(b => b.type === 'text' && (b.text || '').length > 0);
     }
-    const hasTools = opts.hasToolCalls
-      ?? (Array.isArray(content) && content.some(b => b.type === 'tool_use'));
-
-    if ((stopReason === 'tool_use' || hasTools) && !hasText) {
-      return { append: false, reason: 'anthropic_tool_use_no_text' };
+    if (!hasText) {
+      return { append: false, reason: 'no_text_content' };
     }
     return { append: true, reason: 'ok' };
   }
@@ -409,12 +474,18 @@ function shouldAppendSignatureToContent(opts = {}) {
       && Array.isArray(o.content)
       && o.content.some(c => (c.text || '').length > 0)
     );
-    const hasFc = output.some(o => o.type === 'function_call');
-    if (hasFc && !hasMessageText) {
-      return { append: false, reason: 'responses_function_call_only' };
+    if (!hasMessageText) {
+      return { append: false, reason: 'no_text_content' };
     }
-    if (!hasMessageText && opts.hasTextContent === false) {
-      return { append: false, reason: 'responses_no_text' };
+    return { append: true, reason: 'ok' };
+  }
+
+  if (format === 'ir') {
+    const blocks = opts.responseShape?.message?.blocks;
+    const hasText = opts.hasTextContent
+      ?? (Array.isArray(blocks) && blocks.some(b => b?.type === 'text' && (b.text || '').length > 0));
+    if (!hasText) {
+      return { append: false, reason: 'no_text_content' };
     }
     return { append: true, reason: 'ok' };
   }
@@ -464,12 +535,21 @@ function planStreamSignatureInjection({
               ...(hasToolCalls ? [{ type: 'tool_use' }] : [])
             ]
           }
-        : {
-            output: [
-              ...(hasTextContent ? [{ type: 'message', content: [{ text: 'x' }] }] : []),
-              ...(hasToolCalls ? [{ type: 'function_call' }] : [])
-            ]
-          }
+        : format === 'ir'
+          ? {
+              message: {
+                blocks: [
+                  ...(hasTextContent ? [{ type: 'text', text: 'x' }] : []),
+                  ...(hasToolCalls ? [{ type: 'tool_use' }] : [])
+                ]
+              }
+            }
+          : {
+              output: [
+                ...(hasTextContent ? [{ type: 'message', content: [{ text: 'x' }] }] : []),
+                ...(hasToolCalls ? [{ type: 'function_call' }] : [])
+              ]
+            }
   });
   return {
     appendContent: decision.append,
@@ -484,122 +564,118 @@ function appendSignatureText(existing, signature) {
   return `${existing}\n\n${signature}`;
 }
 
+function appendToOpenAIMessage(message, signature) {
+  if (!message) return false;
+  const content = message.content;
+  if (typeof content === 'string') {
+    if (!content) return false;
+    message.content = appendSignatureText(content, signature);
+    return true;
+  }
+  if (Array.isArray(content)) {
+    for (let i = content.length - 1; i >= 0; i--) {
+      const part = content[i];
+      if (part && typeof part.text === 'string' && part.text.length > 0) {
+        part.text = appendSignatureText(part.text, signature);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function appendToAnthropicContent(blocks, signature) {
+  if (!Array.isArray(blocks)) return false;
+  const block = [...blocks].reverse().find(b => b?.type === 'text' && typeof b.text === 'string' && b.text.length > 0);
+  if (!block) return false;
+  block.text = appendSignatureText(block.text, signature);
+  return true;
+}
+
+function appendToResponsesPayload(payload, signature) {
+  const output = payload?.output || [];
+  const message = [...output].reverse().find(o => o?.type === 'message' && o.content?.some(c =>
+    (c?.type === 'output_text' || c?.type === 'text') && typeof c.text === 'string' && c.text.length > 0));
+  const part = message?.content?.slice().reverse().find(c =>
+    (c?.type === 'output_text' || c?.type === 'text') && typeof c.text === 'string' && c.text.length > 0
+  );
+  if (!part) return false;
+  part.text = appendSignatureText(part.text, signature);
+  if (typeof payload.output_text === 'string') {
+    payload.output_text = appendSignatureText(payload.output_text, signature);
+  }
+  return true;
+}
+
+function appendToIrPayload(payload, signature) {
+  const blocks = payload?.message?.blocks;
+  if (!Array.isArray(blocks)) return false;
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const block = blocks[i];
+    if (block?.type === 'text' && typeof block.text === 'string' && block.text.length > 0) {
+      block.text = appendSignatureText(block.text, signature);
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
- * 非流式 OpenAI chat.completion 响应：设头 + 按需改 content
+ * 非流式统一投放。
+ * @param {'openai'|'anthropic'|'responses'|'ir'} format
  * @returns {{ header: boolean, appendContent: boolean, reason: string }}
  */
-function injectSignatureIntoOpenAIResponse(res, data, signature, opts = {}) {
+function applySignatureToJson(res, format, payload, signature, opts = {}) {
   if (!signature) return { header: false, appendContent: false, reason: 'empty' };
 
   const mode = opts.mode || 'both';
-  const header = (mode === 'header' || mode === 'both' || mode === 'content')
+  const header = (mode === 'header' || mode === 'both')
     ? setSignatureHeaders(res, signature)
     : false;
 
-  // mode content 也设头（Phase 1：头始终尽量设置，便于自动化）
-  // 若 mode 为 content，仍设头；仅 append 决策不同
   const decision = shouldAppendSignatureToContent({
-    format: 'openai',
-    mode: mode === 'header' ? 'header' : 'both',
+    format,
+    mode,
     requestBody: opts.requestBody,
-    responseShape: data
-  });
-
-  let appendContent = false;
-  if (decision.append && mode !== 'header' && data?.choices?.[0]?.message) {
-    const msg = data.choices[0].message;
-    if (msg.content != null) {
-      msg.content = appendSignatureText(msg.content || '', signature);
-      appendContent = true;
-    } else if (!msg.tool_calls) {
-      msg.content = signature;
-      appendContent = true;
-    }
-  }
-
-  Logger.info(`[Signature] openai inject: header=${header}, appendContent=${appendContent}, reason=${decision.reason}, mode=${mode}`);
-  return { header, appendContent, reason: decision.reason };
-}
-
-/**
- * 非流式 Anthropic message 响应
- */
-function injectSignatureIntoAnthropicResponse(res, data, signature, opts = {}) {
-  if (!signature) return { header: false, appendContent: false, reason: 'empty' };
-
-  const mode = opts.mode || 'both';
-  const header = setSignatureHeaders(res, signature);
-  const decision = shouldAppendSignatureToContent({
-    format: 'anthropic',
-    mode: mode === 'header' ? 'header' : 'both',
-    requestBody: opts.requestBody,
-    responseShape: data
+    responseShape: payload
   });
 
   let appendContent = false;
   if (decision.append && mode !== 'header') {
-    data.content = data.content || [];
-    const textBlock = data.content.find(b => b.type === 'text');
-    if (textBlock) {
-      textBlock.text = appendSignatureText(textBlock.text || '', signature);
-      appendContent = true;
-    } else {
-      // 无 text 且 decision 允许时（罕见）追加 text 块到末尾
-      data.content.push({ type: 'text', text: signature });
-      appendContent = true;
+    if (format === 'openai') {
+      appendContent = appendToOpenAIMessage(payload?.choices?.[0]?.message, signature)
+        || appendToOpenAIMessage(payload?.message, signature);
+    } else if (format === 'anthropic') {
+      appendContent = appendToAnthropicContent(payload?.content, signature);
+    } else if (format === 'responses') {
+      appendContent = appendToResponsesPayload(payload, signature);
+    } else if (format === 'ir') {
+      appendContent = appendToIrPayload(payload, signature);
     }
   }
 
-  Logger.info(`[Signature] anthropic inject: header=${header}, appendContent=${appendContent}, reason=${decision.reason}, mode=${mode}`);
+  Logger.info(`[Signature] ${format} inject: header=${header}, appendContent=${appendContent}, reason=${decision.reason}, mode=${mode}`);
   return { header, appendContent, reason: decision.reason };
 }
 
 /**
- * 非流式 Responses API 响应
- */
-function injectSignatureIntoResponsesBody(res, result, signature, opts = {}) {
-  if (!signature) return { header: false, appendContent: false, reason: 'empty' };
-
-  const mode = opts.mode || 'both';
-  const header = setSignatureHeaders(res, signature);
-  const decision = shouldAppendSignatureToContent({
-    format: 'responses',
-    mode: mode === 'header' ? 'header' : 'both',
-    requestBody: opts.requestBody,
-    responseShape: result
-  });
-
-  let appendContent = false;
-  if (decision.append && mode !== 'header') {
-    const textItem = (result.output || []).find(o => o.type === 'message');
-    if (textItem?.content?.[0]) {
-      textItem.content[0].text = appendSignatureText(textItem.content[0].text || '', signature);
-      result.output_text = appendSignatureText(result.output_text || '', signature);
-      appendContent = true;
-    }
-  }
-
-  Logger.info(`[Signature] responses inject: header=${header}, appendContent=${appendContent}, reason=${decision.reason}, mode=${mode}`);
-  return { header, appendContent, reason: decision.reason };
-}
-
-/**
- * 从 apiUser + usage 构建签名（减少路由层重复）
+ * 从 apiUser.signature 构建签名（减少路由层重复）。
+ * 关闭或空模板时返回空串；此时也不会追加 OpenCode Go 额度预警。
  */
 async function buildSignatureForRequest(req, {
   model,
   normalized,
   providerName,
-  provider,
-  preloaded
+  provider
 } = {}) {
-  if (!req?.apiUser) return '';
+  const config = req?.apiUser?.signature;
+  if (!config?.enabled || !config.template) return '';
+
   const promptTokens = normalized?.promptTokens || 0;
   const completionTokens = normalized?.completionTokens || 0;
-  const quotaWarning = await getOpenCodeGoQuotaWarning(provider, req.apiUser.quotaWarningEnabled === true);
+  const preloaded = await ensureSignaturePreload(req);
   const signature = await buildSignature({
-    enabled: req.apiUser.signatureEnabled,
-    template: req.apiUser.signatureTemplate,
+    template: config.template,
     meta: {
       model,
       modelDisplayName: model,
@@ -615,20 +691,73 @@ async function buildSignatureForRequest(req, {
         + (completionTokens / 1000) * (req.apiUser._outputPrice || 0)
     },
     userId: req.apiUser.userId,
-    preloaded: preloaded || {}
+    preloaded
   });
+
+  if (!signature) return '';
+  const quotaWarning = await getOpenCodeGoQuotaWarning(provider, req.apiUser.quotaWarningEnabled === true);
   return [signature, quotaWarning].filter(Boolean).join('\n\n');
+}
+
+/**
+ * 非流式路由统一入口：构建 + 投放。
+ */
+async function finalizeJsonSignature(req, res, format, payload, meta = {}) {
+  const signature = await buildSignatureForRequest(req, meta);
+  if (!signature) return { header: false, appendContent: false, reason: 'empty' };
+  return applySignatureToJson(res, format, payload, signature, {
+    mode: resolveSignatureMode(req),
+    requestBody: req.body
+  });
+}
+
+/**
+ * 流式路由统一入口：决定是否在流末追加正文。
+ * state.emitText(text) 由各协议路径提供；header 模式下不投任何内容（流式无法设头）。
+ */
+async function finalizeStreamSignature(req, meta = {}, state = {}) {
+  const plan = planStreamSignatureInjection({
+    mode: state.mode || resolveSignatureMode(req),
+    requestBody: state.requestBody || req.body,
+    hasTextContent: state.hasTextContent === true,
+    hasToolCalls: state.hasToolCalls === true,
+    finishReason: state.finishReason,
+    stopReason: state.stopReason,
+    format: state.format || 'openai'
+  });
+
+  if (!plan.appendContent || typeof state.emitText !== 'function') {
+    return { appended: false, reason: plan.reason };
+  }
+  if (req?._requestLifecycle?.signal?.aborted || req?.res?.destroyed || req?.res?.writableEnded) {
+    return { appended: false, reason: 'disconnected' };
+  }
+  const signature = await buildSignatureForRequest(req, meta);
+  if (!signature) return { appended: false, reason: 'empty' };
+  if (req?._requestLifecycle?.signal?.aborted || req?.res?.destroyed || req?.res?.writableEnded) {
+    return { appended: false, reason: 'disconnected' };
+  }
+  await state.emitText(`\n\n${signature}`);
+  return { appended: true, reason: plan.reason, signature };
 }
 
 module.exports = {
   buildSignature,
   getQuotaInfo,
-  getGroupName,
   getTeamName,
   getTodayStats,
   formatTokens,
   formatCost,
   DEFAULT_TEMPLATE,
+  SIGNATURE_VARIABLES,
+  SIGNATURE_TEMPLATE_MAX_LENGTH,
+  normalizeSignatureTemplate,
+  validateSignatureTemplate,
+  validateSignatureEnabled,
+  validateSignatureTriState,
+  resolveSignatureConfig,
+  preloadSignatureData,
+  ensureSignaturePreload,
   // 双通道注入
   SIGNATURE_HEADER,
   SIGNATURE_HEADER_B64,
@@ -637,8 +766,8 @@ module.exports = {
   shouldAppendSignatureToContent,
   planStreamSignatureInjection,
   appendSignatureText,
-  injectSignatureIntoOpenAIResponse,
-  injectSignatureIntoAnthropicResponse,
-  injectSignatureIntoResponsesBody,
-  buildSignatureForRequest
+  applySignatureToJson,
+  buildSignatureForRequest,
+  finalizeJsonSignature,
+  finalizeStreamSignature
 };

@@ -854,8 +854,8 @@ async function resolveSummaryModelId(apiKeyId) {
 }
 
 // 内部推理：本地网关 + 当前会话 Key 的绑定模型。
-// max_tokens 需容纳推理型模型的思考开销；正文为空时网关可能把 API 签名当作正文返回，
-// 因此这里显式要求网关按「仅响应头」模式投放签名，避免签名污染总结正文。
+// max_tokens 需容纳推理型模型的思考开销；内部推理显式使用「仅响应头」模式，
+// 网关不会向正文注入签名，总结正文只包含真实模型输出。
 const INTERNAL_LLM_MAX_TOKENS = 8000;
 
 async function callInternalLLM(promptText, userId, apiKeyId = null, modelId = null) {
@@ -908,7 +908,7 @@ async function* streamInternalLLM(promptText, userId, apiKeyId = null, modelId =
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
       'Accept': 'text/event-stream',
-      // 网关在空正文时会把 API 签名追加为正文；总结只接受真实内容，改为仅头模式
+      // header 模式保证正文不包含签名，流式下也不会向正文注入任何内容
       'X-CrewRouter-Signature-Mode': 'header',
       'X-CrewRouter-Call-Purpose': 'session_summary',
     },
@@ -1046,7 +1046,6 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
         return res.status(502).json({ error: err.message || '总结生成失败' });
       }
       if (!summary) return res.status(502).json({ error: '模型未返回内容' });
-      if (/·.*tokens·.*缓存命中/.test(summary)) return res.status(502).json({ error: '模型未返回内容（仅收到签名行）' });
       await persistSummary(summary);
       const saved = await pool.query(
         'SELECT created_at FROM session_summaries WHERE user_id = $1 AND session_key = $2',
@@ -1075,9 +1074,9 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
         writeEvent({ type: 'error', error: '模型未返回内容' });
         return res.end();
       }
-      // 空正文场景已被签名污染（历史上把「模型 · tokens · 缓存命中」签名行当成总结落库）
-      if (/·.*tokens·.*缓存命中/.test(full) || /^[^a-zA-Z0-9\u4e00-\u9fa5#\-*|`\s]*$/.test(full.slice(0, 20))) {
-        writeEvent({ type: 'error', error: '模型未返回内容（仅收到签名行）' });
+      // 网关以 header 模式投放签名，正文不会混入签名行；这里只兜底纯符号输出
+      if (/^[^a-zA-Z0-9\u4e00-\u9fa5#\-*|`\s]*$/.test(full.slice(0, 20))) {
+        writeEvent({ type: 'error', error: '模型未返回有效内容' });
         return res.end();
       }
       await persistSummary(full);

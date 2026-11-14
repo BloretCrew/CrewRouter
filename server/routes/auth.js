@@ -198,9 +198,7 @@ router.post('/login', async (req, res) => {
       avatar: user.avatar,
       isAdmin: user.is_admin,
       balance: user.balance,
-      refund_balance: user.refund_balance || 0,
-      api_signature_enabled: user.api_signature_enabled === true,
-      api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'
+      refund_balance: user.refund_balance || 0
     };
 
     Logger.info(`[登录] 用户登录: ${email}`);
@@ -311,9 +309,7 @@ router.post('/login/2fa', async (req, res) => {
       avatar: user.avatar,
       isAdmin: user.is_admin,
       balance: user.balance,
-      refund_balance: user.refund_balance || 0,
-      api_signature_enabled: user.api_signature_enabled === true,
-      api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'
+      refund_balance: user.refund_balance || 0
     };
 
     Logger.info(`[登录] 用户 ${user.username} 通过 2FA 验证登录`);
@@ -394,7 +390,7 @@ router.get('/me', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT password_hash, suspended_at, suspended_until, suspended_reason, suspended_scope,
-              policy_bypass, policy_bypass_until
+              policy_bypass, policy_bypass_until, api_signature_enabled, api_signature_template
          FROM users WHERE id = $1`,
       [req.session.user.id]
     );
@@ -412,6 +408,9 @@ router.get('/me', async (req, res) => {
     const suspended = suspensionState(row);
     res.json({
       ...req.session.user,
+      // 兼容旧控制台一个版本；签名设置的权威值始终来自数据库。
+      api_signature_enabled: row.api_signature_enabled === true,
+      api_signature_template: typeof row.api_signature_template === 'string' ? row.api_signature_template.trim() : '',
       needsPasswordSetup,
       suspended: suspended.suspended,
       suspended_until: suspended.until ? suspended.until.toISOString() : null,

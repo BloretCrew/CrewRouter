@@ -894,9 +894,7 @@ class ConsoleApp {
     const scheduleText = this._formatKeyScheduleSummary(key);
 
     const sigExplicit = key.signature_enabled !== null && key.signature_enabled !== undefined;
-    const sigOn = sigExplicit
-      ? !!key.signature_enabled
-      : (this.user?.api_signature_enabled === true);
+    const sigOn = sigExplicit && key.signature_enabled === true;
     const sigLabel = sigExplicit ? (sigOn ? t('签名开') : t('签名关')) : t('签名继承');
     const sigKind = sigExplicit ? (sigOn ? 'ok' : 'off') : 'muted';
     const swallowOn = key.swallow_images === true;
@@ -3224,113 +3222,75 @@ class ConsoleApp {
   _currentSignatureKeyId = null;
 
   async showKeySignature(keyId) {
-    this._currentSignatureKeyId = keyId;
+    const request = this._keySignatureRequest = (this._keySignatureRequest || 0) + 1;
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/signature`);
-      if (!res.ok) {
-        alert(t('加载签名配置失败'));
-        return;
-      }
       const data = await res.json();
-
+      if (!res.ok || data.error || !data.inherited || !data.effective) {
+        throw new Error(data.error || t('加载签名配置失败'));
+      }
+      if (request !== this._keySignatureRequest) return;
+      this._currentSignatureKeyId = keyId;
       const mode = document.getElementById('keySignatureMode');
       const template = document.getElementById('keySignatureTemplate');
-      const preview = document.getElementById('keySignaturePreview');
-
-      // 设置模式
-      if (data.key_signature_enabled === null) {
-        mode.value = 'inherit';
-      } else if (data.key_signature_enabled) {
-        mode.value = 'enable';
-      } else {
-        mode.value = 'disable';
-      }
-
-      // 设置模板
-      template.value = data.key_signature_template || '';
-
-      // 更新 UI 状态
+      mode.value = data.enabled == null ? 'inherit' : data.enabled === true ? 'enable' : 'disable';
+      template.value = data.template || '';
+      this._keySignatureInherited = data.inherited;
+      document.getElementById('keySignatureSaveStatus').textContent = '';
+      this._renderSignatureVariables();
       this.toggleKeySignatureMode();
-      this._updateKeySignaturePreview();
-
-      // 绑定预览更新事件
       template.oninput = () => this._updateKeySignaturePreview();
-
       this.showModal('keySignatureModal');
     } catch (error) {
-      console.error(t('加载签名配置失败:'), error);
-      alert(t('加载签名配置失败'));
+      if (request === this._keySignatureRequest) this.showToast(error.message || t('加载签名配置失败'), 'error');
     }
   }
 
   toggleKeySignatureMode() {
-    const mode = document.getElementById('keySignatureMode').value;
-    const templateGroup = document.getElementById('keySignatureTemplateGroup');
-    templateGroup.style.display = mode === 'inherit' ? 'none' : '';
+    // 开关继承和模板继承相互独立：inherit + 自定义模板仍然有效。
     this._updateKeySignaturePreview();
   }
 
   _updateKeySignaturePreview() {
     const preview = document.getElementById('keySignaturePreview');
     if (!preview) return;
-
     const mode = document.getElementById('keySignatureMode').value;
-    if (mode === 'inherit') {
-      preview.textContent = t('预览：将使用用户默认签名设置');
-      return;
-    }
-
-    if (mode === 'disable') {
-      preview.textContent = t('预览：此 API Key 的回复将不包含签名');
-      return;
-    }
-
-    const tpl = document.getElementById('keySignatureTemplate').value || t('{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}');
-    const example = tpl
-      .replace(/\{model\}/g, 'gpt-4o')
-      .replace(/\{tokens\}/g, '12.3k tokens')
-      .replace(/\{cache_hit\}/g, '78%')
-      .replace(/\{cached_tokens\}/g, '8,400')
-      .replace(/\{provider\}/g, 'OpenAI')
-      .replace(/\{cost\}/g, t('0.0123 积分'))
-      .replace(/\{username\}/g, 'demo')
-      .replace(/\{key_name\}/g, t('生产环境'))
-      .replace(/\{balance\}/g, '9999')
-      .replace(/\{group_name\}/g, t('默认组'))
-      .replace(/\{team_name\}/g, t('我的团队'))
-      .replace(/\{quota_info\}/g, t('5小时限额 35% · 周限额 12%'))
-      .replace(/\{today_requests\}/g, '128')
-      .replace(/\{today_tokens\}/g, '50.2k tokens');
-    preview.textContent = example ? `${t('预览：')}${example}` : t('(空模板，不显示签名)');
+    const inherited = this._keySignatureInherited || { enabled: false, template: '' };
+    const enabled = mode === 'inherit' ? inherited.enabled === true : mode === 'enable';
+    const template = document.getElementById('keySignatureTemplate').value.trim() || inherited.template;
+    preview.textContent = this._signaturePreviewText(enabled, template);
   }
 
   async saveKeySignature() {
+    if (this._currentSignatureKeyId == null || this._keySignatureSaving) return;
     const mode = document.getElementById('keySignatureMode').value;
-    const template = document.getElementById('keySignatureTemplate').value;
-
-    let signature_enabled = null;
-    if (mode === 'enable') signature_enabled = true;
-    else if (mode === 'disable') signature_enabled = false;
-
+    const template = document.getElementById('keySignatureTemplate').value.trim();
+    const status = document.getElementById('keySignatureSaveStatus');
+    if (template.length > 2000) {
+      status.textContent = t('签名模板不能超过 2000 个字符');
+      return;
+    }
+    const enabled = mode === 'inherit' ? null : mode === 'enable';
+    const keyId = this._currentSignatureKeyId;
+    this._keySignatureSaving = true;
+    const button = document.querySelector('[onclick="app.saveKeySignature()"]');
+    button.disabled = true;
+    status.textContent = t('保存中...');
     try {
-      const res = await fetch(`/api/user/api-keys/${this._currentSignatureKeyId}/signature`, {
+      const res = await fetch(`/api/user/api-keys/${keyId}/signature`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signature_enabled,
-          signature_template: template || null
-        })
+        body: JSON.stringify({ enabled, template: template || null })
       });
-
-      if (res.ok) {
-        this.closeModals();
-        this.loadApiKeys();  // 刷新列表显示新的签名状态
-      } else {
-        alert(t('保存失败'));
-      }
+      const data = await res.json();
+      if (!res.ok || data.success !== true || data.error) throw new Error(data.error || t('保存失败'));
+      if (this._currentSignatureKeyId === keyId) this.closeModals();
+      this.loadApiKeys();
     } catch (error) {
-      console.error(t('保存签名配置失败:'), error);
-      alert(t('保存失败'));
+      status.textContent = error.message || t('保存失败，请稍后重试');
+    } finally {
+      this._keySignatureSaving = false;
+      button.disabled = false;
     }
   }
 
@@ -7487,93 +7447,149 @@ class ConsoleApp {
     }
   }
 
-  loadSignatureSettings() {
+  async loadSignatureSettings() {
     const toggle = document.getElementById('apiSignatureToggle');
     const template = document.getElementById('apiSignatureTemplate');
-    const group = document.getElementById('signatureTemplateGroup');
-    if (!toggle || !template) return;
+    // 已初始化的表单可能有未保存草稿，导航返回不能用缓存覆盖它。
+    if (!toggle || !template || this._signatureFormReady || this._signatureLoading) return;
+    const status = document.getElementById('signatureSaveStatus');
+    const retry = document.getElementById('signatureLoadRetry');
+    const controls = [toggle, template, ...document.querySelectorAll('[onclick="app.saveSignatureSettings()"], [onclick="app.resetSignatureTemplate()"]')];
+    this._signatureLoading = true;
+    controls.forEach(control => { control.disabled = true; });
+    retry.hidden = true;
+    retry.style.display = 'none';
+    status.textContent = t('加载中...');
+    try {
+      const res = await fetch('/api/user/signature');
+      const config = await res.json();
+      if (!res.ok || config.error || typeof config.enabled !== 'boolean' || typeof config.template !== 'string' || !config.defaults) {
+        throw new Error(config.error || t('加载签名配置失败'));
+      }
+      this.signatureConfig = config;
+      this._signatureDefaults = config.defaults;
+      toggle.checked = config.enabled;
+      template.value = config.template;
+      const update = () => {
+        document.getElementById('signatureTemplateGroup').style.display = toggle.checked ? '' : 'none';
+        this._updateSignaturePreview();
+      };
+      toggle.onchange = update;
+      template.oninput = () => this._updateSignaturePreview();
+      this._signatureFormReady = true;
+      this._renderSignatureVariables();
+      update();
+      status.textContent = '';
+      controls.forEach(control => { control.disabled = false; });
+    } catch (error) {
+      // 不制造默认配置或成功缓存；保留现有字段，允许显式重试。
+      status.textContent = error.message || t('加载签名配置失败');
+      status.style.color = 'var(--destructive)';
+      retry.hidden = false;
+      retry.style.display = '';
+    } finally {
+      this._signatureLoading = false;
+    }
+  }
 
-    const DEFAULT_TEMPLATE = t('{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}');
-    const enabled = this.user.api_signature_enabled === true;
-    const tpl = this.user.api_signature_template || DEFAULT_TEMPLATE;
-
-    toggle.checked = enabled;
-    template.value = tpl;
-    group.style.display = enabled ? '' : 'none';
-
-    toggle.onchange = () => {
-      group.style.display = toggle.checked ? '' : 'none';
-      this._updateSignaturePreview();
+  _signatureVariables() {
+    // 描述、示例值共用一个定义，两个表单不再维护各自的变量 HTML。
+    return {
+      model: [t('模型 ·'), 'gpt-4o'],
+      tokens: [t('Token 数 ·'), '12.3k tokens'],
+      cache_hit: [t('缓存命中率 ·'), '78'],
+      cached_tokens: [t('缓存命中 Token 数 ·'), '8,400'],
+      provider: [t('供应商 ·'), 'OpenAI'],
+      cost: [t('费用 ·'), t('0.01 积分')],
+      username: [t('用户名 ·'), 'demo'],
+      key_name: [t('API Key 名称 ·'), t('生产环境')],
+      balance: [t('积分 ·'), '9999'],
+      team_name: ['Team ·', t('我的团队')],
+      quota_info: [t('限额 ·'), t('5小时限额 35% · 周限额 12%')],
+      today_requests: [t('今日调用次数 ·'), '128'],
+      today_tokens: [t('今日 Token 数'), '50.2k tokens']
     };
-    template.oninput = () => this._updateSignaturePreview();
-    this._updateSignaturePreview();
+  }
+
+  _renderSignatureVariables() {
+    const definitions = this._signatureVariables();
+    const variables = this._signatureDefaults?.variables || Object.keys(definitions);
+    document.querySelectorAll('[data-signature-variables]').forEach(container => {
+      container.replaceChildren(document.createTextNode(t('可用变量：')));
+      variables.forEach(name => {
+        if (!definitions[name]) return;
+        const code = document.createElement('code');
+        code.textContent = `{${name}}`;
+        container.append(code, document.createTextNode(` ${definitions[name][0]} `));
+      });
+    });
+  }
+
+  _signaturePreviewExample(tpl) {
+    const definitions = this._signatureVariables();
+    // group_name 是服务端兼容别名，不再作为新变量展示。
+    definitions.group_name = definitions.team_name;
+    return String(tpl || '').trim().replace(/\{([a-z_]+)\}/g, (match, name) => definitions[name]?.[1] ?? match);
+  }
+
+  _signaturePreviewText(enabled, template) {
+    if (!enabled) return t('预览：签名已关闭，不会注入签名');
+    if (!String(template || '').trim()) return t('空模板：不会注入签名');
+    return `${t('预览：')}${this._signaturePreviewExample(template)}`;
   }
 
   _updateSignaturePreview() {
     const preview = document.getElementById('signaturePreview');
-    if (!preview) return;
-    const tpl = document.getElementById('apiSignatureTemplate')?.value || '';
-    const example = tpl
-      .replace(/\{model\}/g, 'gpt-4o')
-      .replace(/\{tokens\}/g, '12.3k tokens')
-      .replace(/\{cache_hit\}/g, '78%')
-      .replace(/\{cached_tokens\}/g, '8,400')
-      .replace(/\{provider\}/g, 'OpenAI')
-      .replace(/\{cost\}/g, t('0.0123 积分'))
-      .replace(/\{username\}/g, 'demo')
-      .replace(/\{key_name\}/g, t('生产环境'))
-      .replace(/\{balance\}/g, '9999')
-      .replace(/\{group_name\}/g, t('默认组'))
-      .replace(/\{team_name\}/g, t('我的团队'))
-      .replace(/\{quota_info\}/g, t('5小时限额 35% · 周限额 12%'))
-      .replace(/\{today_requests\}/g, '128')
-      .replace(/\{today_tokens\}/g, '50.2k tokens');
-    preview.textContent = example ? `${t('预览：')}${example}` : t('(空模板，不显示签名)');
+    if (preview) preview.textContent = this._signaturePreviewText(
+      document.getElementById('apiSignatureToggle')?.checked === true,
+      document.getElementById('apiSignatureTemplate')?.value
+    );
   }
 
   async saveSignatureSettings() {
+    if (!this._signatureFormReady || this._signatureSaving) return;
     const toggle = document.getElementById('apiSignatureToggle');
     const template = document.getElementById('apiSignatureTemplate');
     const status = document.getElementById('signatureSaveStatus');
-    if (!toggle || !template) return;
-
     const enabled = toggle.checked === true;
-    const signatureTemplate = template.value;
+    const signatureTemplate = template.value.trim();
+    status.style.color = 'var(--destructive)';
+    if (signatureTemplate.length > 2000) {
+      status.textContent = t('签名模板不能超过 2000 个字符');
+      return;
+    }
+    this._signatureSaving = true;
+    const button = document.querySelector('[onclick="app.saveSignatureSettings()"]');
+    button.disabled = true;
     setHTML(status, inlineLoadingHtml(t('保存中...'), 'sm'));
     status.style.color = 'var(--muted-foreground)';
-
     try {
-      const res = await fetch('/api/user/settings', {
+      const res = await fetch('/api/user/signature', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_signature_enabled: enabled,
-          api_signature_template: signatureTemplate
-        })
+        body: JSON.stringify({ enabled, template: signatureTemplate })
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        this.user.api_signature_enabled = enabled;
-        this.user.api_signature_template = signatureTemplate;
-        status.textContent = t('保存成功');
-        status.style.color = 'var(--success)';
-      } else {
-        status.textContent = data.error || t('保存失败');
-        status.style.color = 'var(--destructive)';
+      if (!res.ok || data.success === false || data.error || typeof data.enabled !== 'boolean' || typeof data.template !== 'string') {
+        throw new Error(data.error || t('保存失败'));
       }
-    } catch {
-      status.textContent = t('保存失败，请稍后重试');
+      this.signatureConfig = { enabled: data.enabled, template: data.template, defaults: this._signatureDefaults };
+      // 请求期间继续编辑的草稿不被响应覆盖。
+      status.textContent = t('保存成功');
+      status.style.color = 'var(--success)';
+    } catch (error) {
+      status.textContent = error.message || t('保存失败，请稍后重试');
       status.style.color = 'var(--destructive)';
+    } finally {
+      this._signatureSaving = false;
+      button.disabled = false;
     }
-    setTimeout(() => { if (status) status.textContent = ''; }, 3000);
   }
 
   resetSignatureTemplate() {
-    const DEFAULT_TEMPLATE = t('{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}');
+    if (!this._signatureFormReady) return;
     const template = document.getElementById('apiSignatureTemplate');
-    const toggle = document.getElementById('apiSignatureToggle');
-    if (template) template.value = DEFAULT_TEMPLATE;
-    if (toggle) { toggle.checked = true; toggle.dispatchEvent(new Event('change')); }
+    if (template) template.value = this._signatureDefaults?.template || '';
     this._updateSignaturePreview();
   }
 

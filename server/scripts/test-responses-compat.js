@@ -34,7 +34,8 @@ function mockResponse(headersSent = false) {
 const source = fs.readFileSync(path.join(__dirname, '../routes/api.js'), 'utf8');
 const context = vm.createContext({
   filterResponsesLiteHeader,
-  Logger: { error() {}, info() {} },
+  Logger: { error() {}, info() {}, warn() {} },
+  finalizeStreamSignature: async () => ({ appended: false, reason: 'empty' }),
   pluginHooks: { hasSubscribers: () => false },
   normalizeUsageTokens: () => ({ promptTokens: 0, completionTokens: 0, cachedTokens: 0 }),
   wireShapes: require('../protocol/wire-shapes'),

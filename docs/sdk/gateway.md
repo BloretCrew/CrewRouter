@@ -73,10 +73,20 @@ When signature injection is enabled on the key, CrewRouter may set:
 The SDK exposes `response.signature` and `response.signatureBase64`. For
 human-readable chat responses the signature may also be appended to the content.
 Set `signatureMode` on the client (or `x-crewrouter-signature-mode` per request)
-to request `header`, `content` or `both`.
+to request `header`, `content` or `both` (default). On non-streaming responses,
+`content` never sets signature headers. On streaming responses, final usage is
+not known until headers have already been sent: `header` returns no signature
+and does not modify content; `content`/`both` append only to existing text.
 
-Tool-only responses, `json_object` / `json_schema` responses and Responses calls
-with only function-call items skip content appending.
+Tool-only, empty, `json_object` / `json_schema`, and Gemini structured-JSON
+responses skip content appending. Chinese and other non-ASCII signatures use
+the Base64 header rather than a raw HTTP header value.
+
+User defaults are off. Per-Key switches can inherit (`null`), enable (`true`)
+or disable (`false`); a non-empty Key template independently overrides the user
+template. An empty effective template disables the footer, without a default
+fallback. See [signature settings](../API.md#reply-signatures) for the complete
+PUT contract and one-release legacy-field compatibility.
 
 ## Request limits
 

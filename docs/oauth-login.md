@@ -570,7 +570,7 @@ curl https://your-router/v1/chat/completions \
   -d '{"model":"...","messages":[{"role":"user","content":"hello"}]}'
 ```
 
-访问令牌绑定用户在授权时选择的 API Key；额度、模型授权、限流和签名策略都按该 Key 执行。
+访问令牌绑定用户在授权时选择的 API Key；额度、模型授权、限流和签名设置都按该 Key 执行。
 
 ---
 

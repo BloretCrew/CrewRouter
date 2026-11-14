@@ -77,9 +77,7 @@ function firstBalanced(text, open, close) {
 }
 
 function extractProviderPayload(modelText) {
-  let raw = String(modelText || '')
-    .replace(/^.*·.*tokens·.*缓存命中.*$/gm, '')
-    .trim();
+  let raw = String(modelText || '').trim();
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) raw = fence[1].trim();
   const objectAt = raw.indexOf('{');
@@ -279,9 +277,9 @@ async function completeWithCrewRouterKey(userId, promptText) {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new QuickAddError(formatParseFailure(body, response.status), 502);
   const message = body.choices?.[0]?.message || {};
-  let content = messageText(message).replace(/^.*·.*tokens·.*缓存命中.*$/gm, '').trim();
+  let content = messageText(message).trim();
   if (!content) content = String(message.reasoning_content || '').trim();
-  if (!content || /·.*tokens·.*缓存命中/.test(content)) {
+  if (!content) {
     throw new QuickAddError('模型未返回可解析的供应商信息', 502);
   }
   return content;

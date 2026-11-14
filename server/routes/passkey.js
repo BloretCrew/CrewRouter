@@ -43,8 +43,6 @@ function buildSessionUser(user) {
   return {
     id: user.id, username: user.username, email: user.email, avatar: user.avatar,
     isAdmin: user.is_admin, balance: user.balance, refund_balance: user.refund_balance || 0,
-    api_signature_enabled: user.api_signature_enabled === true,
-    api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}',
   };
 }
 function httpError(status, message) { return Object.assign(new Error(message), { status }); }

@@ -84,13 +84,77 @@ router.put('/api-keys/:id/fusion-config', (req, res) => {
   res.json({ success: true });
 });
 
-// 签名配置
+// 签名核心延迟加载：单独加载演示数据/路由时不初始化生产连接池。
+function demoSignatureInput(body, { key = false, partial = false } = {}) {
+  const { validateSignatureEnabled, validateSignatureTriState, validateSignatureTemplate } = require('../utils/api-signature');
+  const result = {};
+  for (const field of ['enabled', 'template']) {
+    const names = [field, `signature_${field}`, `${key ? 'key' : 'api'}_signature_${field}`]
+      .filter(name => Object.prototype.hasOwnProperty.call(body || {}, name));
+    if (!names.length && partial) continue;
+    if (!names.length || names.some(name => body[name] === undefined)) {
+      throw Object.assign(new Error(`完整 PUT 必须提供 ${field}`), { status: 400, code: 'missing_signature_field' });
+    }
+    const validate = field === 'template' ? validateSignatureTemplate : key ? validateSignatureTriState : validateSignatureEnabled;
+    const values = names.map(name => validate(body[name]));
+    if (values.some(value => value !== values[0])) {
+      throw Object.assign(new Error(`签名字段 ${field} 的新旧值冲突`), { status: 400, code: 'conflicting_signature_fields' });
+    }
+    result[field] = values[0];
+  }
+  return result;
+}
+
+function demoSignatureResponse(key) {
+  const { resolveSignatureConfig } = require('../utils/api-signature');
+  const config = resolveSignatureConfig({ key, user: data.settings() });
+  return {
+    enabled: config.keyEnabled, template: config.keyTemplate,
+    key_signature_enabled: config.keyEnabled, key_signature_template: config.keyTemplate,
+    user_signature_enabled: config.userEnabled, user_signature_template: config.userTemplate,
+    inherited: { enabled: config.userEnabled, template: config.userTemplate },
+    effective: { enabled: config.enabled, template: config.template, source: config.source }
+  };
+}
+
 router.get('/api-keys/:id/signature', (req, res) => {
-  res.json({ signature_enabled: false, signature_template: '' });
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  res.json(demoSignatureResponse(key));
 });
 
 router.put('/api-keys/:id/signature', (req, res) => {
-  res.json({ success: true });
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  try {
+    const settings = demoSignatureInput(req.body, { key: true });
+    key.signature_enabled = settings.enabled;
+    key.signature_template = settings.template || null;
+    res.json({ success: true, ...demoSignatureResponse(key) });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message, code: error.code });
+  }
+});
+
+router.get('/signature', (req, res) => {
+  const { DEFAULT_TEMPLATE, SIGNATURE_VARIABLES, normalizeSignatureTemplate } = require('../utils/api-signature');
+  const settings = data.settings();
+  res.json({
+    enabled: settings.api_signature_enabled === true,
+    template: normalizeSignatureTemplate(settings.api_signature_template),
+    ...settings,
+    defaults: { template: DEFAULT_TEMPLATE, variables: SIGNATURE_VARIABLES }
+  });
+});
+
+router.put('/signature', (req, res) => {
+  try {
+    const settings = demoSignatureInput(req.body);
+    data.updateSignatureSettings(settings);
+    res.json({ success: true, ...settings, ...data.settings() });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message, code: error.code });
+  }
 });
 
 // 启用/禁用
@@ -227,9 +291,21 @@ router.post('/avatar', (req, res) => {
   res.json({ success: true, avatar: null });
 });
 
-// 更新设置
+// 旧用户设置保持部分更新语义，验证完毕后再一次保存。
 router.put('/settings', (req, res) => {
-  res.json({ success: true });
+  try {
+    const body = req.body || {};
+    const legacy = Object.fromEntries(['api_signature_enabled', 'api_signature_template']
+      .filter(name => Object.prototype.hasOwnProperty.call(body, name)).map(name => [name, body[name]]));
+    const update = demoSignatureInput(legacy, { partial: true });
+    if (Object.keys(update).length) {
+      const current = data.settings();
+      data.updateSignatureSettings({ enabled: current.api_signature_enabled, template: current.api_signature_template, ...update });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message, code: error.code });
+  }
 });
 
 // 兑换码

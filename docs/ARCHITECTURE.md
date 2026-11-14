@@ -251,29 +251,24 @@ Normalizes usage from OpenAI, Anthropic, and Gemini formats into:
 ```
 
 ### API Signature (`server/utils/api-signature.js`)
-Template-based **response signature injection** (optional product feature).
+Template-based **response footer** injection (optional product feature).
 
-**Dual-channel delivery (Phase 1):**
+**Configuration model:**
+- User defaults: `users.api_signature_enabled` (default `false`) + `api_signature_template` (default empty).
+- Key overrides: `api_keys.signature_enabled` is tri-state (`NULL` inherits the user, `true`/`false` forces), `api_keys.signature_template` overrides when non-empty.
+- `resolveSignatureConfig()` is the only inheritance implementation; the resolved config is stored on `req.apiUser.signature` on every request.
+- **Empty template means no signature.** There is no fallback to the default template; the default template exists only for the settings UI.
 
-1. **HTTP headers** (non-stream, when headers not yet sent):  
-   - `X-CrewRouter-Signature` — plain text if safe (no CR/LF, ≤2048 chars)  
-   - otherwise `X-CrewRouter-Signature-B64` — base64(utf8)  
-   - Exposed via `Access-Control-Expose-Headers` for browser clients  
-2. **Body content** (default for chat UX): append to OpenAI `message.content`, Anthropic text blocks, or Responses `output_text` / stream deltas  
+**Delivery:**
+1. **HTTP headers** (non-stream): `X-CrewRouter-Signature`, or `X-CrewRouter-Signature-B64` when the text is not header-safe; exposed via `Access-Control-Expose-Headers`.
+2. **Content footer**: appended only to existing text in OpenAI messages, Anthropic text blocks, Responses `output_text`, or IR text blocks.
 
-**Smart skip of content append** (signature still goes to headers when possible):
+`X-CrewRouter-Signature-Mode` request header selects `header`, `content`, or `both` (default). Streaming responses cannot set late headers, so `header` mode produces no signature there; `content`/`both` append to the stream. Structured output (`json_object` / `json_schema` / Gemini `responseMimeType=application/json`), tool-only responses, and empty bodies are always skipped, and content injection never creates a missing message or text block.
 
-- tool-only responses (`tool_calls` / Anthropic `tool_use` with no text)
-- `response_format` / `text.format` of `json_object` or `json_schema`
-- Responses API with only `function_call` items
-- Client request header `X-CrewRouter-Signature-Mode: header` forces header-only (no content rewrite); `content` / `both` (default) keep chat behavior
-
-**Streaming note:** after SSE `flushHeaders`, late response headers cannot be set; stream path relies on smart skip of content only.
+All gateway paths use `finalizeJsonSignature()` / `finalizeStreamSignature()`: Chat Completions (OpenAI and Anthropic upstreams), native Anthropic, Responses (native, converted, and streaming), Gemini/Bridge, and Fusion. Display responses are separated from clean model-output snapshots, so `usage_records.response`, billing estimates, and output-policy scans never include the footer. Native streaming adapters use `signature-stream-relay.js` to insert the footer before text/message completion events without inventing a new text block.
 
 Supported placeholders include:
-`{model}`, `{tokens}`, `{cache_hit}`, `{provider}`, `{cost}`, `{username}`, `{key_name}`, `{balance}`, `{quota_info}`, etc.
-
-**Design note (intentional):** content rewrite remains the default for human-readable footers. Strict clients can disable signature on the key, use mode `header`, or read the custom headers and ignore body footers.
+`{model}`, `{tokens}`, `{cache_hit}`, `{cached_tokens}`, `{provider}`, `{cost}`, `{username}`, `{key_name}`, `{balance}`, `{quota_info}`, `{team_name}`, `{today_requests}`, `{today_tokens}`. `{group_name}` remains a legacy alias of `{team_name}`.
 
 ### Quota Data (`server/utils/quota-data.js`)
 In-memory buffered aggregation, flushed to `quota_data` table every 60 seconds.
@@ -455,7 +450,7 @@ These behaviors look non-standard vs pure OpenAI/Anthropic docs but are **delibe
 |----------|------------------|-----|
 | **Body `model` ignored** | Routing uses API key’s `current_model_id` / queue, or per-harness override when the client is recognized | Per-key lock-in; avoids users bypassing billing/ACL by inventing model IDs in the request |
 | **`GET /v1/models` virtual list** | Returns the key’s display/custom model name + optional `fusion`, not full admin catalog | Public surface stays simple; real catalog is in console (`/api/user/models` / admin) |
-| **Optional response signature** | Dual-channel: response headers + optional content append; smart-skip for tools/JSON | Branding / usage footer without breaking structured/tool outputs; see API Signature section |
+| **Optional response signature** | Dual-channel: response headers + optional content footer; smart-skip for tools/JSON; uniform across all gateway protocols | Branding / usage footer without breaking structured/tool outputs; see API Signature section |
 | **Messages top-level passthrough** | `/v1/messages` forwards every client top-level field to native Anthropic upstreams, overriding only `model`/`stream`/`response_format`; when `safeguards` (or the `dangerous-tool-use-2026-09-03` beta) is present and the selected upstream is not native Anthropic, the gateway returns `400 invalid_request_error` naming `safeguards` | Claude Code auto mode's server-side safety check needs byte-level passthrough; a named 400 makes the client retry without the field and classify locally, while silent stripping would latch “no result” and deny tool calls |
 
 Error shapes and cross-format conversion (tools, images, streaming `finish_reason`, etc.) should still track OpenAI/Anthropic conventions where possible; the rows above are the exceptions.

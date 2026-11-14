@@ -1893,7 +1893,8 @@ async function ensureApiSignatureColumns() {
   try {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS api_signature_enabled BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE users ALTER COLUMN api_signature_enabled SET DEFAULT FALSE`);
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS api_signature_template TEXT DEFAULT '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS api_signature_template TEXT DEFAULT ''`);
+    await pool.query(`ALTER TABLE users ALTER COLUMN api_signature_template SET DEFAULT ''`);
     Logger.info('[迁移] users 表 API 签名字段已就绪');
   } catch (err) {
     Logger.error(`[迁移] users API 签名字段迁移跳过: ${err.message}`);

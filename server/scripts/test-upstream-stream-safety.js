@@ -29,7 +29,7 @@ mock('provider-lookup.js', { getCacheStatus: () => ({}), resetCacheStats: noop }
 mock('middleware/auth.js', { requireAuth: (_req, _res, next) => next(), requireAdmin: (_req, _res, next) => next() });
 mock('middleware/oauth-bearer.js', {
   oauthBearer(req, _res, next) {
-    req.apiUser = { userId: 1, keyId: 1, username: 'isolated-test', balance: 100, signatureEnabled: false, injectPrompt: '', fusionEnabled: false };
+    req.apiUser = { userId: 1, keyId: 1, username: 'isolated-test', balance: 100, signature: { enabled: false, template: '' }, injectPrompt: '', fusionEnabled: false };
     next();
   },
 });
@@ -50,7 +50,7 @@ mock('utils/error-records.js', { captureCallError: noop, clientIp: () => '127.0.
 mock('utils/notifications.js', { notifyUser: asyncNoop, NOTIFICATION_TYPES: {} });
 mock('utils/points-deduct.js', { checkQuotaRules: async () => [], calculatePointsToDeduct: async () => 0 });
 mock('utils/balance.js', { recordUsageAndDeduct: async () => ({ ok: true, id: 1 }) });
-mock('utils/api-signature.js', { buildSignatureForRequest: async () => null });
+mock('utils/api-signature.js', { buildSignatureForRequest: async () => null, resolveSignatureConfig: () => ({ enabled: false, template: '', source: 'user', keyEnabled: null, keyTemplate: null, userEnabled: false, userTemplate: '' }), preloadSignatureData: async () => ({}), finalizeJsonSignature: async () => ({ header: false, appendContent: false, reason: 'empty' }), finalizeStreamSignature: async () => ({ appended: false, reason: 'empty' }) });
 mock('key-refresher.js', { ensureFreshKey: async () => 'local-key-primary' });
 mock('plugins/hooks.js', { hasSubscribers: () => false, applyStatsRecord: async () => ({}), applyFinalResponseHeaders: asyncNoop });
 mock('fusion.js', { processFusion: async () => { throw new Error('Fusion is outside this test'); } });
@@ -186,7 +186,7 @@ async function fixture(frames, endless = false, encoding = null) {
 const body = { model: 'local', messages: [{ role: 'user', content: 'hello' }], max_tokens: 8, stream: true };
 async function invoke(name, f, res) {
   const req = new EventEmitter();
-  Object.assign(req, { body, headers: {}, complete: true, apiUser: { signatureEnabled: false, injectPrompt: '' } });
+  Object.assign(req, { body, headers: {}, complete: true, apiUser: { signature: { enabled: false, template: '' }, injectPrompt: '' } });
   const lifecycle = createRequestLifecycle(req, res);
   req._requestLifecycle = lifecycle;
   req._upstreamAttemptContext = { upstreamAttempts: 0, signal: lifecycle.signal, requestedModel: 'local' };

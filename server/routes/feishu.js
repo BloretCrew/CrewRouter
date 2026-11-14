@@ -398,8 +398,6 @@ router.get('/feishu/callback', async (req, res) => {
       isAdmin: user.is_admin,
       balance: parseFloat(user.balance || 0),
       refund_balance: parseFloat(user.refund_balance || 0),
-      api_signature_enabled: user.api_signature_enabled === true,
-      api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}',
       needsPasswordSetup,
     };
 
@@ -527,8 +525,6 @@ router.post('/feishu/bind', async (req, res) => {
       isAdmin: user.is_admin,
       balance: parseFloat(user.balance || 0),
       refund_balance: parseFloat(user.refund_balance || 0),
-      api_signature_enabled: user.api_signature_enabled === true,
-      api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}',
       needsPasswordSetup,
     };
 

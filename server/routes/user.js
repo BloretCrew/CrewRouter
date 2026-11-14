@@ -15,6 +15,15 @@ const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
+const {
+  DEFAULT_TEMPLATE,
+  SIGNATURE_VARIABLES,
+  normalizeSignatureTemplate,
+  resolveSignatureConfig,
+  validateSignatureEnabled,
+  validateSignatureTemplate,
+  validateSignatureTriState,
+} = require('../utils/api-signature');
 
 router.use(['/providers', '/my-providers', '/models'], requireProviderAccessContext);
 
@@ -1069,7 +1078,7 @@ router.put('/api-keys/:id/fusion-config', requireAuth, auditMiddleware(ACTIONS.A
   }
 });
 
-// 获取 API Key 的签名配置
+// 获取 API Key 的额度预警配置
 router.get('/api-keys/:id/quota-warning', requireAuth, async (req, res) => {
   try {
     const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
@@ -1104,14 +1113,64 @@ router.put('/api-keys/:id/quota-warning', requireAuth, auditMiddleware(ACTIONS.A
   }
 });
 
+// 签名 PUT 是完整替换：enabled/template 均必填；旧字段名兼容一个版本。
+// /settings 仍为部分更新，但使用同一校验和保存路径，避免邮箱/头像部分提交。
+function validateSignatureSettings(body, { key = false, partial = false } = {}) {
+  const result = {};
+  for (const field of ['enabled', 'template']) {
+    const names = [field, `signature_${field}`, `${key ? 'key' : 'api'}_signature_${field}`];
+    const present = names.filter(name => Object.prototype.hasOwnProperty.call(body || {}, name));
+    if (!present.length) {
+      if (partial) continue;
+      const error = new Error(`完整 PUT 必须提供 ${field}（清空模板请显式传 null 或空字符串）`);
+      error.status = 400;
+      error.code = 'missing_signature_field';
+      throw error;
+    }
+    const validate = field === 'template' ? validateSignatureTemplate
+      : key ? validateSignatureTriState : validateSignatureEnabled;
+    const values = present.map(name => {
+      if (body[name] === undefined) {
+        const error = new Error(`签名字段 ${name} 不能为 undefined`);
+        error.status = 400;
+        error.code = 'invalid_signature_field';
+        throw error;
+      }
+      return validate(body[name]);
+    });
+    if (values.some(value => value !== values[0])) {
+      const error = new Error(`签名字段 ${field} 的新旧值冲突`);
+      error.status = 400;
+      error.code = 'conflicting_signature_fields';
+      throw error;
+    }
+    result[field] = values[0];
+  }
+  return result;
+}
+
+function keySignatureResponse(key) {
+  const config = resolveSignatureConfig({ key, user: key });
+  return {
+    enabled: config.keyEnabled,
+    template: config.keyTemplate,
+    key_signature_enabled: config.keyEnabled,
+    key_signature_template: config.keyTemplate,
+    user_signature_enabled: config.userEnabled,
+    user_signature_template: config.userTemplate,
+    inherited: { enabled: config.userEnabled, template: config.userTemplate },
+    effective: { enabled: config.enabled, template: config.template, source: config.source }
+  };
+}
+
+// 获取 API Key 的签名配置
 router.get('/api-keys/:id/signature', requireAuth, async (req, res) => {
   try {
     const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
       `SELECT ak.signature_enabled, ak.signature_template,
-              owner.api_signature_enabled AS owner_signature_enabled,
-              owner.api_signature_template AS owner_signature_template
+              owner.api_signature_enabled, owner.api_signature_template
        FROM api_keys ak
        JOIN users owner ON owner.id = ak.user_id
        WHERE ak.id = $1`,
@@ -1121,13 +1180,7 @@ router.get('/api-keys/:id/signature', requireAuth, async (req, res) => {
       return res.status(404).json({ error: '密钥不存在' });
     }
 
-    const key = keyResult.rows[0];
-    res.json({
-      key_signature_enabled: key.signature_enabled,
-      key_signature_template: key.signature_template,
-      user_signature_enabled: key.owner_signature_enabled,
-      user_signature_template: key.owner_signature_template
-    });
+    res.json(keySignatureResponse(keyResult.rows[0]));
   } catch (error) {
     Logger.error('[获取签名配置] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1139,14 +1192,21 @@ router.put('/api-keys/:id/signature', requireAuth, auditMiddleware(ACTIONS.API_K
   resourceType: 'api_key',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `更新 API Key #${req.params.id} 签名配置`,
-  detailsFrom: (req) => ({ signature_enabled: req.body?.signature_enabled }),
+  detailsFrom: (req) => ({ signature_enabled: req.signatureSettings?.enabled }),
 }), async (req, res) => {
   try {
-    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
-      const { signature_enabled, signature_template } = req.body;
+    const settings = validateSignatureSettings(req.body, { key: true });
+    req.signatureSettings = settings;
+    const signatureEnabled = settings.enabled;
+    const signatureTemplate = settings.template || null;
 
+    return await withApiKeyWrite(req, res, {}, async (db, res, invalidateAfterCommit) => {
       const keyResult = await db.query(
-        'SELECT id FROM api_keys WHERE id = $1',
+        `SELECT ak.id, ak.signature_enabled, ak.signature_template,
+                owner.api_signature_enabled, owner.api_signature_template
+         FROM api_keys ak
+         JOIN users owner ON owner.id = ak.user_id
+         WHERE ak.id = $1`,
         [req.params.id]
       );
       if (keyResult.rows.length === 0) {
@@ -1155,16 +1215,21 @@ router.put('/api-keys/:id/signature', requireAuth, auditMiddleware(ACTIONS.API_K
 
       await db.query(
         `UPDATE api_keys SET signature_enabled = $1, signature_template = $2 WHERE id = $3`,
-        [signature_enabled, signature_template || null, req.params.id]
+        [signatureEnabled, signatureTemplate, req.params.id]
       );
 
       // 失效缓存，使签名配置立即生效
-      invalidateAfterCommit(parseInt(req.params.id));
+      invalidateAfterCommit(parseInt(req.params.id, 10));
 
-      Logger.info(`[签名] 更新 API Key ${req.params.id} 的签名配置: enabled=${signature_enabled}, template=${signature_template ? '有' : '无'}`);
-      res.json({ success: true });
+      res.json({
+        success: true,
+        ...keySignatureResponse({ ...keyResult.rows[0], signature_enabled: signatureEnabled, signature_template: signatureTemplate })
+      });
     });
   } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ error: error.message, code: error.code });
+    }
     Logger.error('[更新签名配置] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
@@ -2018,60 +2083,91 @@ router.post('/avatar', requireAuth, auditMiddleware(ACTIONS.USER_AVATAR, {
   descriptionFrom: (req) => '更新头像',
 }), require('../utils/avatar-upload').createAvatarUploadHandler({ pool, logger: Logger }));
 
+// 验证全部字段后仅执行一次 UPDATE；自动提交成功后才更新会话对象和缓存。
+async function saveUserSettings(req, body, signature) {
+  const updates = {};
+  if (body.email !== undefined) updates.email = normalizeEmail(body.email);
+  if (body.avatar !== undefined) updates.avatar = body.avatar;
+  for (const field of ['enabled', 'template']) {
+    if (Object.prototype.hasOwnProperty.call(signature, field)) updates[`api_signature_${field}`] = signature[field];
+  }
+  const entries = Object.entries(updates);
+  if (!entries.length) return;
+  await pool.query(
+    `UPDATE users SET ${entries.map(([field], i) => `${field} = $${i + 2}`).join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    [req.authUser.id, ...entries.map(([, value]) => value)]
+  );
+  Object.assign(req.authUser, updates);
+  if (Object.keys(signature).length) {
+    try { await invalidateUserApiKeyCache(req.authUser.id); }
+    catch (error) { Logger.warn('[用户签名缓存失效] 写入已提交:', error.message); }
+  }
+}
+
+// 获取用户级签名配置
+router.get('/signature', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT api_signature_enabled, api_signature_template FROM users WHERE id = $1',
+      [req.authUser.id]
+    );
+    const user = result.rows[0] || {};
+    res.json({
+      enabled: user.api_signature_enabled === true,
+      template: normalizeSignatureTemplate(user.api_signature_template),
+      api_signature_enabled: user.api_signature_enabled === true,
+      api_signature_template: normalizeSignatureTemplate(user.api_signature_template),
+      defaults: {
+        template: DEFAULT_TEMPLATE,
+        variables: SIGNATURE_VARIABLES
+      }
+    });
+  } catch (error) {
+    Logger.error('[获取用户签名配置] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 更新用户级签名配置
+router.put('/signature', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
+  resourceType: 'user',
+  descriptionFrom: (req) => `更新用户签名设置（${req.signatureSettings?.enabled ? '开启' : '关闭'}）`,
+  detailsFrom: (req) => ({ api_signature_enabled: req.signatureSettings?.enabled }),
+}), async (req, res) => {
+  try {
+    const settings = validateSignatureSettings(req.body);
+    req.signatureSettings = settings;
+    await saveUserSettings(req, {}, settings);
+    res.json({ success: true, ...settings, api_signature_enabled: settings.enabled, api_signature_template: settings.template });
+  } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ error: error.message, code: error.code });
+    }
+    Logger.error('[更新用户签名配置] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 更新用户设置
 router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
   resourceType: 'user',
   descriptionFrom: (req) => '更新用户设置',
   detailsFrom: (req) => ({ email: req.body?.email, api_signature_enabled: req.body?.api_signature_enabled }),
 }), async (req, res) => {
-  const { email, avatar, api_signature_enabled, api_signature_template } = req.body;
-
   try {
-    // 邮箱统一转小写
-    const normalizedEmail = normalizeEmail(email);
-
-    // Build dynamic UPDATE — only set fields that were provided
-    const sets = [];
-    const params = [req.authUser.id];
-    let idx = 2;
-
-    if (email !== undefined) {
-      sets.push(`email = $${idx++}`);
-      params.push(normalizedEmail);
-    }
-    if (avatar !== undefined) {
-      sets.push(`avatar = $${idx++}`);
-      params.push(avatar);
-    }
-    if (api_signature_enabled !== undefined) {
-      sets.push(`api_signature_enabled = $${idx++}`);
-      params.push(!!api_signature_enabled);
-    }
-    if (api_signature_template !== undefined) {
-      sets.push(`api_signature_template = $${idx++}`);
-      params.push(api_signature_template);
-    }
-
-    if (sets.length === 0) {
-      return res.json({ success: true });
-    }
-
-    sets.push('updated_at = CURRENT_TIMESTAMP');
-    await pool.query(
-      `UPDATE users SET ${sets.join(', ')} WHERE id = $1`,
-      params
-    );
-
-    if (email !== undefined) req.authUser.email = normalizedEmail;
-    if (avatar !== undefined) req.authUser.avatar = avatar;
-    if (api_signature_enabled !== undefined) req.authUser.api_signature_enabled = !!api_signature_enabled;
-    if (api_signature_template !== undefined) req.authUser.api_signature_template = api_signature_template;
-    if (api_signature_enabled !== undefined || api_signature_template !== undefined) {
-      invalidateUserApiKeyCache(req.authUser.id);
-    }
+    const body = req.body || {};
+    // 旧 /settings 只识别 api_signature_*，保留部分更新语义。
+    const legacy = Object.fromEntries(['api_signature_enabled', 'api_signature_template']
+      .filter(name => Object.prototype.hasOwnProperty.call(body, name)).map(name => [name, body[name]]));
+    const signature = validateSignatureSettings(legacy, { partial: true });
+    req.signatureSettings = signature;
+    await saveUserSettings(req, body, signature);
 
     res.json({ success: true });
   } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ error: error.message, code: error.code });
+    }
     Logger.error('[更新用户设置] 错误:', error);
     if (isUniqueViolation(error)) return res.status(409).json({ error: '该邮箱已被其他用户使用' });
     res.status(500).json({ error: '服务器错误' });

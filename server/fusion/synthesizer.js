@@ -12,6 +12,81 @@ const { quotaFetch } = require('../utils/quota-request-context');
 const { combineAbortSignals } = require('../utils/request-lifecycle');
 const { buildAuthHeaders } = require('../utils/request-policy');
 const { upstreamUrl } = require('../utils/url-validator');
+const { finalizeStreamSignature } = require('../utils/api-signature');
+
+function fusionStreamClosed(res, options = {}) {
+  return !res || res.writableEnded || res.destroyed || res.req?.aborted
+    || options.signal?.aborted || res.req?._requestLifecycle?.signal?.aborted;
+}
+
+async function injectFusionSignature(res, { format, model, usage, hasTextContent, hasToolCalls, finishReason, emitText, requestBody, isActive }) {
+  const req = res?.req;
+  if (!req || fusionStreamClosed(res) || !isActive()) return;
+  try {
+    await finalizeStreamSignature(req, { model, normalized: usage }, {
+      format,
+      requestBody: requestBody || req.body,
+      hasTextContent,
+      hasToolCalls,
+      finishReason,
+      stopReason: format === 'anthropic' ? finishReason : undefined,
+      // 构建签名可能异步查询数据库；投放时必须再次确认连接和上游状态。
+      emitText: text => {
+        if (!fusionStreamClosed(res) && isActive()) return emitText(text);
+      }
+    });
+  } catch (e) {
+    Logger.warn(`[Fusion] 签名生成失败: ${e.message}`);
+  }
+}
+
+// 仅供四条 Fusion 流式路径使用：保留跨 chunk 的 SSE 帧，EOF 时处理最后一行。
+// 不把原始残片直接转发给客户端，避免未识别的终止/错误帧越过签名状态机。
+async function* readFusionStreamEvents(reader, isClosed) {
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let event = '';
+  let data = [];
+  const consumeLine = raw => {
+    const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
+    if (!line) {
+      const frame = data.length || event === 'error' ? { event, data: data.join('\n') } : null;
+      event = '';
+      data = [];
+      return frame;
+    }
+    if (line.startsWith(':')) return null;
+    const colon = line.indexOf(':');
+    const field = colon < 0 ? line : line.slice(0, colon);
+    const value = colon < 0 ? '' : line.slice(colon + 1).replace(/^ /, '');
+    if (field === 'data') data.push(value);
+    else if (field === 'event') event = value;
+    else if (field !== 'id' && field !== 'retry') throw new Error('无效的上游 SSE 行');
+    return null;
+  };
+  try {
+    while (!isClosed()) {
+      const { done, value } = await reader.read();
+      if (isClosed()) return;
+      buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
+      let newline;
+      while ((newline = buffer.indexOf('\n')) >= 0) {
+        const frame = consumeLine(buffer.slice(0, newline));
+        buffer = buffer.slice(newline + 1);
+        if (isClosed()) return;
+        if (frame) yield frame;
+      }
+      if (done) {
+        if (buffer) consumeLine(buffer);
+        if (data.length || event === 'error') yield { event, data: data.join('\n') };
+        return;
+      }
+    }
+  } finally {
+    try { await reader.cancel(); } catch (e) { /* 已结束或中断的 reader */ }
+    reader.releaseLock();
+  }
+}
 const {
   ensureChatCompletionChunk,
   buildChatCompletionChunk,
@@ -276,65 +351,98 @@ async function streamOpenAISynthesis(baseUrl, provider, model, messages, res, op
   }
 
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
   let totalContent = '';
   let lastUsage = null;
+  let hasToolCalls = false;
+  let finishReason = null;
   let clientDisconnected = false;
+  let streamFailed = false;
+  let sawDone = false;
+  let terminalChunk = null;
   const streamMeta = getOrCreateStreamMeta(res, { model: model || 'fusion', prefix: 'chatcmpl-fusion' });
   const streamNormLog = { logged: false };
-
-  res.req.on('close', () => {
-    clientDisconnected = true;
-  });
+  const onClose = () => { clientDisconnected = true; };
+  res.req?.on('close', onClose);
+  const isClosed = () => clientDisconnected || fusionStreamClosed(res, options);
+  const writeChunk = chunk => {
+    if (!isClosed()) res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+  };
 
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (clientDisconnected) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') {
-            res.write('data: [DONE]\n\n');
-            continue;
-          }
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content || '';
-            totalContent += content;
-            if (parsed.usage) {
-              lastUsage = parsed.usage;
-            }
-            // 补全 id/object/created/model，与 Fusion 状态 chunk 使用同一 envelope
-            const normalized = ensureChatCompletionChunk(parsed, {
-              id: streamMeta.id,
-              created: streamMeta.created,
-              model: streamMeta.model,
-              logPrefix: 'Synthesizer/OpenAI',
-              logOnceRef: streamNormLog
-            });
-            res.write(`data: ${JSON.stringify(normalized)}\n\n`);
-          } catch (e) {
-            Logger.warn(`[Synthesizer] OpenAI chunk 解析失败: ${e.message}, data=${data.substring(0, 120)}`);
-            res.write(line + '\n\n');
-          }
+    for await (const { event, data } of readFusionStreamEvents(reader, isClosed)) {
+      if (data.trim() === '[DONE]') {
+        if (sawDone) throw new Error('重复的 OpenAI DONE');
+        sawDone = true;
+        continue;
+      }
+      const parsed = JSON.parse(data);
+      if (event === 'error' || parsed.error) throw new Error('上游 OpenAI 错误事件');
+      if (!Array.isArray(parsed.choices) || parsed.choices.length > 1) throw new Error('无效的 Fusion OpenAI choices');
+      if (sawDone) throw new Error('OpenAI DONE 后仍有数据');
+      const choice = parsed.choices?.[0];
+      if (terminalChunk && parsed.choices?.length) throw new Error('OpenAI finish_reason 后仍有 choice');
+      const content = choice?.delta?.content;
+      if (typeof content === 'string') totalContent += content;
+      if (choice?.delta?.tool_calls?.length || choice?.delta?.function_call) hasToolCalls = true;
+      if (parsed.usage) lastUsage = parsed.usage;
+      const normalized = ensureChatCompletionChunk(parsed, {
+        id: streamMeta.id,
+        created: streamMeta.created,
+        model: streamMeta.model,
+        logPrefix: 'Synthesizer/OpenAI',
+        logOnceRef: streamNormLog
+      });
+      // 只在最终发送一次上游 usage；正文/finish 同帧 usage 也不能被重复统计。
+      delete normalized.usage;
+      if (!choice && parsed.usage) continue;
+      if (choice?.finish_reason != null) {
+        finishReason = choice.finish_reason;
+        // 正文与 finish 可在同一帧，拆开后只暂存结束标记，签名须先于它。
+        if (choice.delta && Object.keys(choice.delta).length) {
+          writeChunk({ ...normalized, choices: [{ ...normalized.choices[0], finish_reason: null }] });
         }
+        terminalChunk = { ...normalized, choices: [{ ...normalized.choices[0], delta: {} }] };
+      } else if (terminalChunk) {
+        // finish 后的 usage 留到签名之后，避免整个响应的结束信息提前发送。
+        continue;
+      } else {
+        writeChunk(normalized);
       }
     }
   } catch (err) {
-    if (err.name !== 'AbortError' && err.name !== 'TimeoutError') {
-      Logger.error(`[Synthesizer] 流式读取错误: ${err.message}`);
-    }
+    streamFailed = true;
+    Logger.error(`[Synthesizer] 流式读取错误: ${err.message}`);
   }
 
-  res.end();
+  try {
+    if (!streamFailed && !isClosed() && (sawDone || terminalChunk)) {
+      await injectFusionSignature(res, {
+        format: 'openai',
+        model: streamMeta.model,
+        usage: {
+          promptTokens: lastUsage?.prompt_tokens || 0,
+          completionTokens: lastUsage?.completion_tokens || 0,
+          cachedTokens: lastUsage?.prompt_tokens_details?.cached_tokens || lastUsage?.cached_tokens || 0
+        },
+        hasTextContent: totalContent.length > 0,
+        hasToolCalls,
+        finishReason,
+        requestBody: { ...res.req?.body, response_format: options.response_format || res.req?.body?.response_format },
+        isActive: () => !streamFailed && !isClosed(),
+        emitText: text => writeChunk(buildChatCompletionChunk({
+          id: streamMeta.id, created: streamMeta.created, model: streamMeta.model, delta: { content: text }
+        }))
+      });
+      if (terminalChunk) writeChunk(terminalChunk);
+      if (lastUsage) writeChunk(buildChatCompletionChunk({
+        id: streamMeta.id, created: streamMeta.created, model: streamMeta.model, choices: [], usage: lastUsage
+      }));
+      if (!isClosed()) res.write('data: [DONE]\n\n');
+    }
+    if (!isClosed()) res.end();
+  } finally {
+    res.req?.removeListener('close', onClose);
+  }
 
   const latency = Date.now() - startTime;
   Logger.info(`[Synthesizer] OpenAI 流式完成: latency=${latency}ms, content_length=${totalContent.length}, stream_id=${streamMeta.id}`);
@@ -395,79 +503,75 @@ async function streamOpenAIToAnthropicSynthesis(baseUrl, provider, model, messag
   }
 
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
   let totalContent = '';
   let lastUsage = null;
   let clientDisconnected = false;
   let chunkCount = 0;
   let stopReason = 'end_turn';
-
-  try {
-    res.req.on('close', () => { clientDisconnected = true; });
-  } catch (e) { /* ignore */ }
+  let hasToolCalls = false;
+  let streamFailed = false;
+  let sawFinish = false;
+  let sawDone = false;
+  const onClose = () => { clientDisconnected = true; };
+  res.req?.on('close', onClose);
+  const isClosed = () => clientDisconnected || fusionStreamClosed(res, options);
 
   const writeEvent = (obj) => {
-    if (clientDisconnected || !res || res.writableEnded || res.destroyed) return false;
+    if (isClosed()) return false;
     return res.write(`event: ${obj.type}\ndata: ${JSON.stringify(obj)}\n\n`);
   };
 
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (clientDisconnected) break;
-
+    for await (const { event, data } of readFusionStreamEvents(reader, isClosed)) {
       chunkCount++;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
-
-        try {
-          const parsed = JSON.parse(data);
-          const delta = parsed.choices?.[0]?.delta || {};
-          const finishReason = parsed.choices?.[0]?.finish_reason;
-
-          if (finishReason) {
-            if (finishReason === 'stop') stopReason = 'end_turn';
-            else if (finishReason === 'length') stopReason = 'max_tokens';
-            else if (finishReason === 'tool_calls') stopReason = 'tool_use';
-          }
-
-          // 正文内容 → 追加到 index 0 的 text block
-          if (delta.content) {
-            totalContent += delta.content;
-            writeEvent({
-              type: 'content_block_delta',
-              index: blockIndex,
-              delta: { type: 'text_delta', text: delta.content }
-            });
-          }
-
-          // 推理内容（reasoning_content）丢弃：Fusion 合成阶段只输出最终正文，
-          // 且 Anthropic thinking block 需要 signature 字段并在启用 thinking 的 query 中使用，
-          // Fusion 合成调用未启用 thinking，输出 thinking block 会触发协议错误。
-          if (delta.reasoning_content) {
-            Logger.stream(`[Synthesizer] 丢弃上游 reasoning_content: ${delta.reasoning_content.length} chars`);
-          }
-
-          if (parsed.usage) lastUsage = parsed.usage;
-        } catch (e) { /* ignore */ }
+      if (data.trim() === '[DONE]') {
+        if (sawDone) throw new Error('重复的 OpenAI DONE');
+        sawDone = true;
+        continue;
       }
+      const parsed = JSON.parse(data);
+      if (event === 'error' || parsed.error) throw new Error('上游 OpenAI 错误事件');
+      if (!Array.isArray(parsed.choices) || parsed.choices.length > 1) throw new Error('无效的 Fusion OpenAI choices');
+      if (sawDone || (sawFinish && parsed.choices?.length)) throw new Error('OpenAI 终止后仍有正文');
+      const delta = parsed.choices?.[0]?.delta || {};
+      const finishReason = parsed.choices?.[0]?.finish_reason;
+      if (finishReason != null) {
+        sawFinish = true;
+        if (finishReason === 'length') stopReason = 'max_tokens';
+        else if (finishReason === 'tool_calls' || finishReason === 'function_call') stopReason = 'tool_use';
+      }
+      if (delta.tool_calls?.length || delta.function_call) hasToolCalls = true;
+      if (typeof delta.content === 'string') {
+        totalContent += delta.content;
+        writeEvent({ type: 'content_block_delta', index: blockIndex, delta: { type: 'text_delta', text: delta.content } });
+      }
+      // Fusion 的 Anthropic 输出只向已有 text block 追加正文，不输出 thinking/tool block。
+      if (parsed.usage) lastUsage = parsed.usage;
     }
   } catch (err) {
-    if (err.name !== 'AbortError' && err.name !== 'TimeoutError') {
-      Logger.error(`[Synthesizer] OpenAI->Anthropic 流式读取错误: ${err.message}`);
-    }
+    streamFailed = true;
+    Logger.error(`[Synthesizer] OpenAI->Anthropic 流式读取错误: ${err.message}`);
   }
 
   // 发送 Anthropic 流式结束事件：关闭 index 0 的 text block + message 终止事件
-  if (!clientDisconnected) {
+  if (!streamFailed && !isClosed() && (sawFinish || sawDone)) {
+    await injectFusionSignature(res, {
+      format: 'anthropic',
+      model,
+      usage: {
+        promptTokens: lastUsage?.prompt_tokens || 0,
+        completionTokens: lastUsage?.completion_tokens || 0,
+        cachedTokens: lastUsage?.prompt_tokens_details?.cached_tokens || 0
+      },
+      hasTextContent: totalContent.length > 0,
+      hasToolCalls,
+      finishReason: stopReason,
+      requestBody: { ...res.req?.body, response_format: options.response_format || res.req?.body?.response_format },
+      isActive: () => !streamFailed && !isClosed(),
+      emitText: text => {
+        writeEvent({ type: 'content_block_delta', index: blockIndex, delta: { type: 'text_delta', text } });
+      }
+    });
     writeEvent({ type: 'content_block_stop', index: blockIndex });
     writeEvent({
       type: 'message_delta',
@@ -475,8 +579,9 @@ async function streamOpenAIToAnthropicSynthesis(baseUrl, provider, model, messag
       usage: { output_tokens: lastUsage?.completion_tokens || 0 }
     });
     writeEvent({ type: 'message_stop' });
-    res.end();
   }
+  if (!isClosed()) res.end();
+  res.req?.removeListener('close', onClose);
 
   const latency = Date.now() - startTime;
   Logger.info(`[Synthesizer] OpenAI->Anthropic 流式完成: latency=${latency}ms, chunks=${chunkCount}, content_length=${totalContent.length}`);
@@ -561,142 +666,98 @@ async function streamAnthropicSynthesis(baseUrl, provider, model, messages, res,
   Logger.info(`[Synthesizer] 上游响应 OK, 开始读取流`);
 
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
   let totalContent = '';
   let inputTokens = 0;
   let outputTokens = 0;
   let cachedTokens = 0;
   let clientDisconnected = false;
   let chunkCount = 0;
-
-  // 监听客户端断开
-  try {
-    res.req.on('close', () => {
-      clientDisconnected = true;
-      Logger.info(`[Synthesizer] 客户端断开连接`);
-    });
-  } catch (e) {
-    Logger.warn(`[Synthesizer] 无法监听客户端断开: ${e.message}`);
-  }
-
-  const writeEvent = (obj) => {
-    if (clientDisconnected || !res || res.writableEnded || res.destroyed) return false;
+  let hasToolCalls = false;
+  let streamFailed = false;
+  let sawStop = false;
+  let stopReason = null;
+  let currentBlockType = null;
+  let currentBlockIndex = null;
+  const onClose = () => { clientDisconnected = true; };
+  res.req?.on('close', onClose);
+  const isClosed = () => clientDisconnected || fusionStreamClosed(res, options);
+  const writeEvent = obj => {
+    if (isClosed()) return false;
     return res.write(`event: ${obj.type}\ndata: ${JSON.stringify(obj)}\n\n`);
   };
 
-  // index 0 的 text block 已由 sendAnthropicStreamHeader 开启并被状态消息使用。
-  // 这里只把上游 text_delta 重定向到 index 0，跳过其它 block（thinking/tool_use）和 content_block_start/stop，
-  // 最终由本函数统一发送 content_block_stop + message 终止事件。
-  let currentBlockType = null;
-  let skipCurrentBlock = false;
-  let textDeltaForwarded = false;
-
+  // 下游 index 0 已由 Fusion 的状态头开启。上游 block 只用于验证顺序，绝不另开签名块。
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        Logger.info(`[Synthesizer] 上游流结束 (done=true), chunks=${chunkCount}`);
-        break;
-      }
-      if (clientDisconnected) {
-        Logger.info(`[Synthesizer] 客户端已断开, 停止读取`);
-        break;
-      }
-
+    for await (const { event, data } of readFusionStreamEvents(reader, isClosed)) {
       chunkCount++;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('event: ')) continue; // 不转发上游 event: 行，由我们自己按需构造
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (!data) continue;
-
-        try {
-          const parsed = JSON.parse(data);
-
-          // message_start 已在 processFusion 中发送，跳过
-          if (parsed.type === 'message_start') {
-            inputTokens = parsed.message?.usage?.input_tokens || 0;
-            cachedTokens = parsed.message?.usage?.cache_read_input_tokens || 0;
-            Logger.stream(`[Synthesizer] 上游 message_start (已跳过)`);
-            continue;
-          }
-
-          if (parsed.type === 'content_block_start') {
-            currentBlockType = parsed.content_block?.type || null;
-            skipCurrentBlock = currentBlockType !== 'text';
-            if (skipCurrentBlock) {
-              Logger.stream(`[Synthesizer] 跳过上游 ${currentBlockType} block`);
-            }
-            // 不转发 content_block_start（index 0 已开）
-            continue;
-          }
-
-          if (parsed.type === 'content_block_delta') {
-            if (skipCurrentBlock) continue;
-            const deltaType = parsed.delta?.type;
-            if (deltaType === 'text_delta') {
-              const text = parsed.delta?.text || '';
-              totalContent += text;
-              textDeltaForwarded = true;
-              writeEvent({
-                type: 'content_block_delta',
-                index: 0,
-                delta: { type: 'text_delta', text }
-              });
-            }
-            continue;
-          }
-
-          if (parsed.type === 'content_block_stop') {
-            // 不转发（index 0 由本函数统一关闭）
-            skipCurrentBlock = false;
-            currentBlockType = null;
-            continue;
-          }
-
-          if (parsed.type === 'message_delta') {
-            outputTokens = parsed.usage?.output_tokens || 0;
-            // 不转发，由本函数统一发送
-            continue;
-          }
-
-          if (parsed.type === 'message_stop') {
-            // 不转发，由本函数统一发送
-            continue;
-          }
-
-          // ping 等其他事件忽略
-        } catch (e) {
-          // 忽略解析错误
+      const parsed = JSON.parse(data);
+      if (event === 'error' || parsed.type === 'error' || parsed.error) throw new Error('上游 Anthropic 错误事件');
+      if (parsed.type === 'ping') continue;
+      if (sawStop) throw new Error('Anthropic message_stop 后仍有数据');
+      if (stopReason && parsed.type !== 'message_stop' && parsed.type !== 'message_delta') throw new Error('Anthropic message_delta 后仍有正文');
+      if (parsed.type === 'message_start') {
+        inputTokens = parsed.message?.usage?.input_tokens || 0;
+        cachedTokens = parsed.message?.usage?.cache_read_input_tokens || 0;
+      } else if (parsed.type === 'content_block_start') {
+        if (currentBlockType !== null) throw new Error('Anthropic block 尚未关闭');
+        currentBlockType = parsed.content_block?.type || null;
+        currentBlockIndex = parsed.index;
+        if (currentBlockType === 'tool_use') hasToolCalls = true;
+        const text = parsed.content_block?.text;
+        if (currentBlockType === 'text' && typeof text === 'string' && text.length) {
+          totalContent += text;
+          writeEvent({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
         }
+      } else if (parsed.type === 'content_block_delta') {
+        if (!currentBlockType || parsed.index !== currentBlockIndex) throw new Error('Anthropic delta 无对应 block');
+        if (currentBlockType === 'text' && parsed.delta?.type === 'text_delta') {
+          const text = parsed.delta.text || '';
+          totalContent += text;
+          writeEvent({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
+        }
+      } else if (parsed.type === 'content_block_stop') {
+        if (!currentBlockType || parsed.index !== currentBlockIndex) throw new Error('Anthropic stop 无对应 block');
+        currentBlockType = null;
+        currentBlockIndex = null;
+      } else if (parsed.type === 'message_delta') {
+        if (currentBlockType) throw new Error('Anthropic message_delta 时 block 尚未关闭');
+        if (parsed.usage?.output_tokens != null) outputTokens = parsed.usage.output_tokens;
+        if (parsed.delta?.stop_reason) stopReason = parsed.delta.stop_reason;
+      } else if (parsed.type === 'message_stop') {
+        if (currentBlockType) throw new Error('Anthropic message_stop 时 block 尚未关闭');
+        sawStop = true;
       }
     }
   } catch (err) {
-    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-      Logger.error(`[Synthesizer] 上游流超时`);
-    } else {
-      Logger.error(`[Synthesizer] 流式读取错误: ${err.message}`);
-    }
+    streamFailed = true;
+    Logger.error(`[Synthesizer] 流式读取错误: ${err.message}`);
   }
 
-  Logger.info(`[Synthesizer] 上游流处理完毕, chunks=${chunkCount}, contentLength=${totalContent.length}, clientDisconnected=${clientDisconnected}, textDeltaForwarded=${textDeltaForwarded}`);
-
   // 统一发送结束事件：关闭 index 0 的 text block + message 终止事件
-  if (!clientDisconnected && !res.writableEnded) {
+  if (!streamFailed && !isClosed() && sawStop && stopReason) {
+    await injectFusionSignature(res, {
+      format: 'anthropic',
+      model,
+      usage: { promptTokens: inputTokens, completionTokens: outputTokens, cachedTokens },
+      hasTextContent: totalContent.length > 0,
+      hasToolCalls,
+      finishReason: stopReason,
+      requestBody: { ...res.req?.body, response_format: options.response_format || res.req?.body?.response_format },
+      isActive: () => !streamFailed && !isClosed(),
+      emitText: text => {
+        writeEvent({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
+      }
+    });
     writeEvent({ type: 'content_block_stop', index: 0 });
     writeEvent({
       type: 'message_delta',
-      delta: { stop_reason: 'end_turn', stop_sequence: null },
+      delta: { stop_reason: stopReason, stop_sequence: null },
       usage: { output_tokens: outputTokens }
     });
     writeEvent({ type: 'message_stop' });
-    res.end();
   }
+  if (!isClosed()) res.end();
+  res.req?.removeListener('close', onClose);
 
   const latency = Date.now() - startTime;
   Logger.info(`[Synthesizer] Anthropic 流式完成: latency=${latency}ms, content_length=${totalContent.length}`);
@@ -779,24 +840,26 @@ async function streamAnthropicToOpenAISynthesis(baseUrl, provider, model, messag
   }
 
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
   let totalContent = '';
   let inputTokens = 0;
   let outputTokens = 0;
   let cachedTokens = 0;
   let clientDisconnected = false;
   let chunkCount = 0;
+  let hasToolCalls = false;
   let currentBlockType = null;
-
-  try {
-    res.req.on('close', () => { clientDisconnected = true; });
-  } catch (e) { /* ignore */ }
+  let currentBlockIndex = null;
+  let streamFailed = false;
+  let sawStop = false;
+  let stopReason = null;
+  const onClose = () => { clientDisconnected = true; };
+  res.req?.on('close', onClose);
+  const isClosed = () => clientDisconnected || fusionStreamClosed(res, options);
 
   const streamMeta = getOrCreateStreamMeta(res, { model: model || 'fusion', prefix: 'chatcmpl-fusion' });
 
   const writeOpenAIEvent = (partial) => {
-    if (clientDisconnected || !res || res.writableEnded || res.destroyed) return false;
+    if (isClosed()) return false;
     // 始终输出完整 chat.completion.chunk envelope
     let chunk;
     if (partial.usage && (!partial.choices || partial.choices.length === 0)) {
@@ -823,72 +886,67 @@ async function streamAnthropicToOpenAISynthesis(baseUrl, provider, model, messag
   };
 
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (clientDisconnected) break;
-
+    for await (const { event, data } of readFusionStreamEvents(reader, isClosed)) {
       chunkCount++;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (!data) continue;
-
-        try {
-          const parsed = JSON.parse(data);
-
-          if (parsed.type === 'message_start') {
-            inputTokens = parsed.message?.usage?.input_tokens || 0;
-            cachedTokens = parsed.message?.usage?.cache_read_input_tokens || 0;
-            continue;
-          }
-
-          if (parsed.type === 'content_block_start') {
-            currentBlockType = parsed.content_block?.type || null;
-            continue;
-          }
-
-          if (parsed.type === 'content_block_delta') {
-            const deltaType = parsed.delta?.type;
-            if (currentBlockType === 'text' && deltaType === 'text_delta') {
-              const text = parsed.delta?.text || '';
-              totalContent += text;
-              writeOpenAIEvent({ choices: [{ delta: { content: text }, index: 0 }] });
-            } else if (currentBlockType === 'thinking' && deltaType === 'thinking_delta') {
-              writeOpenAIEvent({ choices: [{ delta: { reasoning_content: parsed.delta.thinking }, index: 0 }] });
-            }
-            continue;
-          }
-
-          if (parsed.type === 'content_block_stop') {
-            currentBlockType = null;
-            continue;
-          }
-
-          if (parsed.type === 'message_delta') {
-            outputTokens = parsed.usage?.output_tokens || 0;
-            continue;
-          }
-
-          if (parsed.type === 'message_stop') {
-            continue;
-          }
-        } catch (e) {
-          // 忽略解析错误
+      const parsed = JSON.parse(data);
+      if (event === 'error' || parsed.type === 'error' || parsed.error) throw new Error('上游 Anthropic 错误事件');
+      if (parsed.type === 'ping') continue;
+      if (sawStop) throw new Error('Anthropic message_stop 后仍有数据');
+      if (stopReason && parsed.type !== 'message_stop' && parsed.type !== 'message_delta') throw new Error('Anthropic message_delta 后仍有正文');
+      if (parsed.type === 'message_start') {
+        inputTokens = parsed.message?.usage?.input_tokens || 0;
+        cachedTokens = parsed.message?.usage?.cache_read_input_tokens || 0;
+      } else if (parsed.type === 'content_block_start') {
+        if (currentBlockType !== null) throw new Error('Anthropic block 尚未关闭');
+        currentBlockType = parsed.content_block?.type || null;
+        currentBlockIndex = parsed.index;
+        if (currentBlockType === 'tool_use') hasToolCalls = true;
+        const text = parsed.content_block?.text;
+        if (currentBlockType === 'text' && typeof text === 'string' && text.length) {
+          totalContent += text;
+          writeOpenAIEvent({ choices: [{ delta: { content: text }, index: 0 }] });
         }
+      } else if (parsed.type === 'content_block_delta') {
+        if (!currentBlockType || parsed.index !== currentBlockIndex) throw new Error('Anthropic delta 无对应 block');
+        const deltaType = parsed.delta?.type;
+        if (currentBlockType === 'text' && deltaType === 'text_delta') {
+          const text = parsed.delta.text || '';
+          totalContent += text;
+          writeOpenAIEvent({ choices: [{ delta: { content: text }, index: 0 }] });
+        } else if (currentBlockType === 'thinking' && deltaType === 'thinking_delta') {
+          writeOpenAIEvent({ choices: [{ delta: { reasoning_content: parsed.delta.thinking }, index: 0 }] });
+        }
+      } else if (parsed.type === 'content_block_stop') {
+        if (!currentBlockType || parsed.index !== currentBlockIndex) throw new Error('Anthropic stop 无对应 block');
+        currentBlockType = null;
+        currentBlockIndex = null;
+      } else if (parsed.type === 'message_delta') {
+        if (currentBlockType) throw new Error('Anthropic message_delta 时 block 尚未关闭');
+        if (parsed.usage?.output_tokens != null) outputTokens = parsed.usage.output_tokens;
+        if (parsed.delta?.stop_reason) stopReason = parsed.delta.stop_reason;
+      } else if (parsed.type === 'message_stop') {
+        if (currentBlockType) throw new Error('Anthropic message_stop 时 block 尚未关闭');
+        sawStop = true;
       }
     }
   } catch (err) {
-    if (err.name !== 'AbortError' && err.name !== 'TimeoutError') {
-      Logger.error(`[Synthesizer] Anthropic->OpenAI 流式读取错误: ${err.message}`);
-    }
+    streamFailed = true;
+    Logger.error(`[Synthesizer] Anthropic->OpenAI 流式读取错误: ${err.message}`);
   }
 
-  if (!clientDisconnected) {
+  if (!streamFailed && !isClosed() && sawStop && stopReason) {
+    await injectFusionSignature(res, {
+      format: 'openai',
+      model,
+      usage: { promptTokens: inputTokens, completionTokens: outputTokens, cachedTokens },
+      hasTextContent: totalContent.length > 0,
+      hasToolCalls,
+      finishReason: stopReason === 'tool_use' ? 'tool_calls' : stopReason === 'max_tokens' ? 'length' : 'stop',
+      requestBody: { ...res.req?.body, response_format: options.response_format || res.req?.body?.response_format },
+      isActive: () => !streamFailed && !isClosed(),
+      emitText: text => writeOpenAIEvent({ choices: [{ delta: { content: text }, index: 0 }] })
+    });
+    writeOpenAIEvent({ choices: [{ delta: {}, index: 0, finish_reason: stopReason === 'tool_use' ? 'tool_calls' : stopReason === 'max_tokens' ? 'length' : 'stop' }] });
     writeOpenAIEvent({
       choices: [],
       usage: {
@@ -897,9 +955,10 @@ async function streamAnthropicToOpenAISynthesis(baseUrl, provider, model, messag
         total_tokens: inputTokens + outputTokens
       }
     });
-    res.write('data: [DONE]\n\n');
-    res.end();
+    if (!isClosed()) res.write('data: [DONE]\n\n');
   }
+  if (!isClosed()) res.end();
+  res.req?.removeListener('close', onClose);
 
   const latency = Date.now() - startTime;
   Logger.info(`[Synthesizer] Anthropic->OpenAI 流式完成: latency=${latency}ms, content_length=${totalContent.length}`);

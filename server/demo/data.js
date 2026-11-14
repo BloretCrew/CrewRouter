@@ -327,6 +327,11 @@ const DEMO_CODE_BALANCES = [
 
 // ========== 导出方法 ==========
 
+let DEMO_SIGNATURE_SETTINGS = {
+  api_signature_enabled: false,
+  api_signature_template: ''
+};
+
 module.exports = {
   getUser() {
     return DEMO_USER;
@@ -483,9 +488,13 @@ module.exports = {
   },
 
   settings() {
-    return {
-      api_signature_enabled: false,
-      api_signature_template: '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'
+    return { ...DEMO_SIGNATURE_SETTINGS };
+  },
+
+  updateSignatureSettings({ enabled, template } = {}) {
+    DEMO_SIGNATURE_SETTINGS = {
+      api_signature_enabled: enabled === true,
+      api_signature_template: typeof template === 'string' ? template : ''
     };
   },
 

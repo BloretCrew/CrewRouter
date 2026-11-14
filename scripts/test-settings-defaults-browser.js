@@ -38,13 +38,17 @@ function startServer() {
   const express = require('express');
   const original = express.application.init;
   const data = require('../server/demo/data');
+  const { DEFAULT_TEMPLATE, SIGNATURE_VARIABLES } = require('../server/utils/api-signature');
   let state;
   const reset = () => {
     const user = { ...data.getUser() };
     delete user.api_signature_enabled;
     delete user.api_signature_template;
     const keys = data.apiKeys().slice(0, 2).map((key, i) => ({ ...key, id: i + 1, name: `Settings fixture ${i + 1}`, key_type: 'normal', is_owner: true }));
-    for (const key of keys) { delete key.quota_warning_enabled; delete key.crewrouter_commands; }
+    for (const key of keys) {
+      delete key.quota_warning_enabled; delete key.crewrouter_commands;
+      key.signature_enabled = null; key.signature_template = null;
+    }
     Object.assign(keys[1], { quota_warning_enabled: true, crewrouter_commands: true });
     state = { user, keys, prompts: [{ id: 1, name: 'Disabled fixture', content: 'Local fixture only', enabled: false, bound_key_ids: [], bound_keys: [] }], writes: [], fail: null };
   };
@@ -53,7 +57,7 @@ function startServer() {
     original.call(this);
     this.use(async (req, res, next) => {
       const pathname = new URL(req.url, base).pathname;
-      const handled = pathname.startsWith('/__settings/') || pathname === '/auth/me' || pathname === '/api/user/settings' || pathname === '/api/user/api-keys' || /^\/api\/user\/api-keys\/\d+\/(quota-warning|swallow-images|crewrouter-commands)$/.test(pathname) || pathname.startsWith('/api/user/inject-prompts');
+      const handled = pathname.startsWith('/__settings/') || pathname === '/auth/me' || pathname === '/api/user/signature' || /^\/api\/user\/api-keys\/\d+\/signature$/.test(pathname) || pathname === '/api/user/settings' || pathname === '/api/user/api-keys' || /^\/api\/user\/api-keys\/\d+\/(quota-warning|swallow-images|crewrouter-commands)$/.test(pathname) || pathname.startsWith('/api/user/inject-prompts');
       if (!handled) return next();
       try {
         let body = {};
@@ -64,6 +68,35 @@ function startServer() {
         if (pathname === '/__settings/reset') { reset(); return res.json({ ok: true }); }
         if (pathname === '/__settings/state') return res.json(state);
         if (pathname === '/__settings/fail') { state.fail = body.kind; return res.json({ ok: true }); }
+        if (pathname === '/__settings/config') {
+          if (body.user) Object.assign(state.user, body.user);
+          if (body.key) Object.assign(state.keys.find(key => key.id === body.key.id), body.key);
+          return res.json({ ok: true });
+        }
+        if (pathname === '/api/user/signature' || /^\/api\/user\/api-keys\/\d+\/signature$/.test(pathname)) {
+          const key = pathname === '/api/user/signature' ? null : state.keys.find(key => key.id === Number(pathname.split('/')[4]));
+          if (req.method === 'PUT') state.writes.push({ path: pathname, body });
+          // Chrome may retry a connection closed before headers; keep this fault active until reset.
+          const failure = state.fail; if (failure !== 'network') state.fail = null;
+          if (failure === 'http') return res.status(503).json({ success: true, error: 'Fixture HTTP failure' });
+          if (failure === 'logical') return res.json({ success: false, error: 'Fixture logical failure' });
+          if (failure === 'malformed') return res.type('text').send('Fixture invalid JSON');
+          if (failure === 'network') return req.socket.destroy();
+          if (failure === 'delayed') await sleep(600);
+          if (req.method === 'PUT') {
+            assert.deepEqual(Object.keys(body).sort(), ['enabled', 'template']);
+            assert.ok(typeof body.enabled === 'boolean' || (key && body.enabled === null));
+            assert.ok(typeof body.template === 'string' || (key && body.template === null));
+            const template = (body.template || '').trim();
+            if (template.length > 2000) return res.status(400).json({ error: '签名模板不能超过 2000 个字符' });
+            if (key) Object.assign(key, { signature_enabled: body.enabled, signature_template: template || null });
+            else Object.assign(state.user, { api_signature_enabled: body.enabled, api_signature_template: template });
+          }
+          const inherited = { enabled: state.user.api_signature_enabled === true, template: (state.user.api_signature_template || '').trim() };
+          if (!key) return res.json({ ...(req.method === 'PUT' ? { success: true } : {}), ...inherited, defaults: { template: DEFAULT_TEMPLATE, variables: SIGNATURE_VARIABLES } });
+          const effective = { enabled: key.signature_enabled == null ? inherited.enabled : key.signature_enabled, template: (key.signature_template || '').trim() || inherited.template, source: key.signature_enabled == null ? 'user' : 'key' };
+          return res.json(req.method === 'PUT' ? { success: true, effective } : { enabled: key.signature_enabled, template: key.signature_template, inherited, effective });
+        }
         if (pathname === '/auth/me') return res.json(state.user);
         if (pathname === '/api/user/settings' && req.method === 'PUT') {
           state.writes.push({ path: pathname, body });
@@ -142,6 +175,9 @@ class CDP {
   }
   async click(selector) {
     await this.evaluate(`document.querySelector(${JSON.stringify(selector)})?.scrollIntoView({block:'center',behavior:'instant'})`);
+    // 固定页头和 Liquid Glass 布局会在滚动后一两帧调整，等待真实坐标稳定后点击。
+    await this.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    await sleep(120);
     const pointExpression = `(() => {const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;const r=e.getBoundingClientRect(),x=(Math.max(0,r.left)+Math.min(innerWidth,r.right))/2,y=(Math.max(0,r.top)+Math.min(innerHeight,r.bottom))/2;const hit=document.elementFromPoint(x,y);return r.width&&r.height&&(hit===e||e.contains(hit))?{x,y}:null;})()`;
     await this.wait(pointExpression);
     const point = await this.evaluate(pointExpression);
@@ -152,6 +188,9 @@ class CDP {
   }
   async input(selector, text) {
     await this.click(selector);
+    // 移动端页面导航/滚动的延迟重绘可能抢走首次点击焦点；仍通过真实点击重试。
+    for (let i = 0; i < 5 && !await this.evaluate(`document.activeElement===document.querySelector(${JSON.stringify(selector)})`); i++) await this.click(selector);
+    await this.wait(`document.activeElement===document.querySelector(${JSON.stringify(selector)})`);
     await this.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', modifiers: 2, windowsVirtualKeyCode: 65 });
     await this.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', modifiers: 2, windowsVirtualKeyCode: 65 });
     await this.send('Input.insertText', { text });
@@ -211,6 +250,8 @@ async function main() {
     await ready(`${debugging}/json/version`);
     const pageResponse = await fetch(`${base}/console`);
     check(pageResponse.ok && (await pageResponse.text()).includes('apiSignatureToggle'), 'real console HTML served');
+    const appResponse = await fetch(`${base}/js/app.js`);
+    check(appResponse.ok && (await appResponse.text()).includes('_signaturePreviewText(enabled, template)'), 'isolated server serves the updated signature implementation');
     const target = await fetch(`${debugging}/json/new?about:blank`, { method: 'PUT' }).then(r => r.json());
     cdp = new CDP(target.webSocketDebuggerUrl);
     for (const domain of ['Page', 'Runtime', 'Network']) await cdp.send(`${domain}.enable`);
@@ -242,6 +283,42 @@ async function main() {
       if (page === 'apiKeys') await cdp.wait("document.querySelectorAll('.api-key-card').length===2");
       if (page === 'settings') await cdp.click('[data-settings-category="signature"]');
     };
+    const keySave = '[onclick="app.saveKeySignature()"]';
+    const keyCancel = '#keySignatureModal [data-variant="secondary"]';
+    const screenshot = async name => {
+      await browserCheck("document.readyState==='complete'&&!!app.user&&document.body.innerText.includes('签名')", 'screenshot is live rendered console');
+      const image = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      const file = `/tmp/cr-signature-${name}-fixed.png`;
+      fs.writeFileSync(file, Buffer.from(image.data, 'base64'));
+      console.log(`Screenshot: ${file}`);
+    };
+    const selectMode = async mode => {
+      await cdp.click('#keySignatureMode');
+      const point = await cdp.evaluate(`(() => {const e=document.querySelector('#keySignatureMode').shadowRoot.querySelector('[data-value="${mode}"]');const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point });
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point });
+      await cdp.wait(`document.querySelector('#keySignatureMode').value===${JSON.stringify(mode)}`);
+    };
+    const theme = async value => {
+      await cdp.evaluate(`themeManager.theme=${JSON.stringify(value)};themeManager.applyTheme()`);
+      await sleep(250);
+    };
+    const panelCheck = async dark => browserCheck(`(() => {
+      const root=document.querySelector('#keySignatureModal').shadowRoot;
+      const panel=root.querySelector('[part="panel"]'), backdrop=root.querySelector('[part="backdrop"]');
+      if(!panel||!backdrop)return false;
+      const p=getComputedStyle(panel),b=getComputedStyle(backdrop);
+      const channels=s=>s.match(/[\\d.]+/g).map(Number);
+      const bg=channels(p.backgroundColor),fg=channels(getComputedStyle(document.querySelector('#keySignaturePreview')).color);
+      const lum=c=>{const a=c.slice(0,3).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return a[0]*.2126+a[1]*.7152+a[2]*.0722};
+      const contrast=(Math.max(lum(bg),lum(fg))+.05)/(Math.min(lum(bg),lum(fg))+.05);
+      return (bg.length===3||bg[3]===1)&&Number(p.opacity)===1&&p.backdropFilter==='none'&&channels(b.backgroundColor)[3]>=.45&&contrast>=4.5&&(${dark}?lum(bg)<.1:lum(bg)>.8);
+    })()`, `${dark ? 'dark' : 'light'} Key panel is opaque, backdrop dims background and preview contrast >=4.5`);
+    const openSignature = async () => {
+      await cdp.click(`${card(1)} .api-key-more button`);
+      await cdp.click('[onclick="app.showKeySignature(1)"]');
+      await cdp.wait("document.querySelector('#keySignatureModal').hasAttribute('open')");
+    };
     for (const width of [1440, 390]) {
       const before = assertions;
       await request('/__settings/reset', {});
@@ -252,37 +329,137 @@ async function main() {
       await cdp.wait("document.readyState!=='loading'&&typeof app!=='undefined'&&!!app.user&&!!customElements.get('blora-switch')&&document.querySelector('#settingsPage').classList.contains('active')");
       await sleep(500);
       await cdp.click('[data-settings-category="signature"]');
-      await browserCheck("document.querySelector('#apiSignatureToggle') instanceof customElements.get('blora-switch')&&!document.querySelector('#apiSignatureToggle').checked&&getComputedStyle(document.querySelector('#signatureTemplateGroup')).display==='none'", 'missing signature field defaults off, real Blora switch');
+      await cdp.wait('app._signatureFormReady');
+      await browserCheck("[...document.querySelectorAll('#settingsPage .content-section')].filter(e=>e.getClientRects().length).every(e=>e.classList.contains('settings-category-signature'))&&document.querySelector('#changePasswordForm').getClientRects().length===0&&document.querySelector('#notificationsList').getClientRects().length===0", 'signature category excludes password and notifications, not just marked sections');
+      await cdp.evaluate("app.showSettingsCategory('security')");
+      await browserCheck("document.querySelector('#changePasswordForm').getClientRects().length>0&&document.querySelector('#apiSignatureToggle').getClientRects().length===0", 'password belongs to security');
+      await cdp.evaluate("app.showSettingsCategory('notifications')");
+      await browserCheck("document.querySelector('#notificationsList').getClientRects().length>0&&document.querySelector('#changePasswordForm').getClientRects().length===0", 'notification list belongs to notifications');
+      await cdp.evaluate("app.showSettingsCategory('signature')");
+      await browserCheck("document.querySelector('#apiSignatureToggle') instanceof customElements.get('blora-switch')&&!document.querySelector('#apiSignatureToggle').checked&&getComputedStyle(document.querySelector('#signatureTemplateGroup')).display==='none'&&document.querySelector('#signaturePreview').textContent.includes('关闭')", 'missing signature field defaults off, disabled preview visible');
+      await cdp.click('[onclick="app.resetSignatureTemplate()"]');
+      await browserCheck("!document.querySelector('#apiSignatureToggle').checked&&document.querySelector('#apiSignatureTemplate').value===app._signatureDefaults.template", 'fill default never enables signature');
       await cdp.click('#apiSignatureToggle');
+      await browserCheck("document.querySelector('#signaturePreview').textContent.includes('78%')&&!document.querySelector('#signaturePreview').textContent.includes('%%')", 'default percentage is not duplicated');
       const template = `Browser ${width} {model}`;
       await cdp.input('#apiSignatureTemplate', template);
       await browserCheck(`document.querySelector('#signaturePreview').textContent.includes('Browser ${width} gpt-4o')`, 'template preview responds to real input');
       await cdp.click(save);
       await cdp.wait("document.querySelector('#signatureSaveStatus').textContent==='保存成功'");
       check((await request('/__settings/state')).user.api_signature_enabled === true, 'signature persisted enabled');
-      await reload('settings');
+      await reload('settings'); await cdp.wait('app._signatureFormReady');
       await browserCheck(`document.querySelector('#apiSignatureToggle').checked&&document.querySelector('#apiSignatureTemplate').value===${JSON.stringify(template)}`, 'enabled signature and template survive refresh');
+      await cdp.input('#apiSignatureTemplate', '   ');
+      await browserCheck("document.querySelector('#signaturePreview').textContent.includes('空模板')", 'enabled user empty template injects nothing');
+      await cdp.click(save); await cdp.wait("app.signatureConfig.template===''");
+      await reload('settings'); await cdp.wait('app._signatureFormReady');
+      await browserCheck("document.querySelector('#apiSignatureTemplate').value===''&&document.querySelector('#signaturePreview').textContent.includes('空模板')", 'user empty template persists without default fallback');
       await cdp.click('#apiSignatureToggle');
       await browserCheck(`!document.querySelector('#apiSignatureToggle').checked&&document.querySelector(${JSON.stringify(save)}).getClientRects().length>0&&getComputedStyle(document.querySelector('#signatureTemplateGroup')).display==='none'`, 'save stays visible when signature disabled');
-      await cdp.click(save); await cdp.wait("document.querySelector('#signatureSaveStatus').textContent==='保存成功'");
-      await reload('settings');
-      await browserCheck("!document.querySelector('#apiSignatureToggle').checked&&app.user.api_signature_enabled===false", 'disabled signature survives refresh');
-      for (const kind of ['http', 'logical']) {
+      await cdp.click(save); await cdp.wait("app.signatureConfig.enabled===false");
+      for (const kind of ['http', 'logical', 'malformed', 'network']) {
         await cdp.click('#apiSignatureToggle');
         await cdp.input('#apiSignatureTemplate', `Retry ${kind} ${width}`);
-        const cached = await cdp.evaluate('JSON.stringify(app.user)');
+        const cached = await cdp.evaluate('JSON.stringify(app.signatureConfig)');
         const persisted = (await request('/__settings/state')).user;
-        await sleep(3200);
         await request('/__settings/fail', { kind });
         await cdp.click(save);
-        await cdp.wait(`document.querySelector('#signatureSaveStatus').textContent.includes('Fixture')`);
-        await browserCheck(`JSON.stringify(app.user)===${JSON.stringify(cached)}`, `${kind} failure does not mutate user cache`);
+        await cdp.wait("!app._signatureSaving&&document.querySelector('#signatureSaveStatus').style.color==='var(--destructive)'");
+        await browserCheck(`JSON.stringify(app.signatureConfig)===${JSON.stringify(cached)}&&document.querySelector('#apiSignatureTemplate').value==='Retry ${kind} ${width}'`, `${kind} failure preserves cache and draft`);
         check(JSON.stringify((await request('/__settings/state')).user) === JSON.stringify(persisted), `${kind} failure does not persist`);
-        await cdp.click(save); await cdp.wait(`app.user.api_signature_enabled===true&&app.user.api_signature_template==='Retry ${kind} ${width}'`);
-        await browserCheck(`app.user.api_signature_enabled===true&&app.user.api_signature_template==='Retry ${kind} ${width}'`, `${kind} failure can retry`);
+        await request('/__settings/fail', { kind: null });
+        await cdp.click(save); await cdp.wait(`app.signatureConfig.enabled===true&&app.signatureConfig.template==='Retry ${kind} ${width}'`);
         await cdp.click('#apiSignatureToggle'); await cdp.click(save);
-        await cdp.wait("app.user.api_signature_enabled===false");
+        await cdp.wait('app.signatureConfig.enabled===false');
       }
+      // GET 失败不产生关闭状态的假缓存，重试不丢旧草稿。
+      await cdp.evaluate("app._signatureFormReady=false;document.querySelector('#apiSignatureTemplate').value='unsaved draft'");
+      await request('/__settings/fail', { kind: 'http' });
+      await cdp.evaluate('app.loadSignatureSettings()');
+      await browserCheck("!app._signatureFormReady&&!document.querySelector('#signatureLoadRetry').hidden&&document.querySelector('#apiSignatureTemplate').value==='unsaved draft'&&document.querySelector('[onclick=\"app.saveSignatureSettings()\"]').disabled", 'load failure exposes retry and blocks saving fake defaults');
+      await cdp.click('#signatureLoadRetry'); await cdp.wait('app._signatureFormReady');
+      await cdp.click('#apiSignatureToggle');
+      await cdp.input('#apiSignatureTemplate', 'draft survives navigation');
+      await navigate('apiKeys'); await navigate('settings');
+      await browserCheck("document.querySelector('#apiSignatureTemplate').value==='draft survives navigation'", 'navigation does not replace existing user draft');
+      await cdp.input('#apiSignatureTemplate', 'x'.repeat(2001));
+      await browserCheck("document.querySelector('#apiSignatureTemplate').value.length===2000", 'user textarea limits typed template to 2000');
+      const writesBeforeLength = (await request('/__settings/state')).writes.length;
+      await cdp.evaluate("document.querySelector('#apiSignatureTemplate').value='x'.repeat(2001)");
+      await cdp.click(save);
+      await browserCheck("document.querySelector('#signatureSaveStatus').textContent.includes('2000')", 'user overlength programmatic draft gets validation feedback');
+      check((await request('/__settings/state')).writes.length === writesBeforeLength, 'overlength user draft never sent');
+      await cdp.input('#apiSignatureTemplate', `User ${width} {cache_hit}% {group_name}`);
+      await cdp.click(save); await cdp.wait('!app._signatureSaving');
+      await request('/__settings/fail', { kind: 'delayed' });
+      await cdp.evaluate("window.__signatureSave=app.saveSignatureSettings();document.querySelector('#apiSignatureTemplate').value='edited while saving'");
+      await cdp.evaluate('window.__signatureSave');
+      await browserCheck("document.querySelector('#apiSignatureTemplate').value==='edited while saving'", 'save response does not overwrite newer draft');
+      await cdp.input('#apiSignatureTemplate', `User ${width} {cache_hit}% {group_name}`);
+      await screenshot(`user-${width}`);
+      await theme('dark');
+      await screenshot(`user-dark-${width}`);
+      await theme('light');
+      await navigate('apiKeys'); await cdp.wait("document.querySelectorAll('.api-key-card').length===2");
+      await openSignature();
+      await browserCheck("document.querySelector('#keySignatureMode').value==='inherit'&&document.querySelector('#keySignatureTemplate').getClientRects().length>0&&document.querySelector('#keySignaturePreview').textContent.includes('User')", 'Key inherit uses user state but leaves template editable');
+      await cdp.input('#keySignatureTemplate', `Key ${width} {cache_hit}% {group_name}`);
+      await browserCheck(`document.querySelector('#keySignaturePreview').textContent.includes('Key ${width} 78% 我的团队')`, 'inherit switch plus custom Key template previews override and legacy alias');
+      await cdp.click(keySave); await cdp.wait("!document.querySelector('#keySignatureModal').hasAttribute('open')");
+      check((await request('/__settings/state')).keys[0].signature_enabled === null && (await request('/__settings/state')).keys[0].signature_template.startsWith('Key'), 'Key PUT persists enabled null plus nonempty template');
+      await openSignature();
+      await browserCheck("document.querySelector('#keySignatureTemplate').value.startsWith('Key')", 'Key override survives reopen');
+      await panelCheck(false);
+      await screenshot(`key-${width}`);
+      await theme('dark');
+      await panelCheck(true);
+      await screenshot(`key-dark-${width}`);
+      await theme('light');
+      // 全部开关三态 × 用户开关 × 用户/Key 空非空模板，预览必须匹配服务端解析规则。
+      for (const userEnabled of [false, true]) for (const userTemplate of ['', 'User {model}']) for (const keyTemplate of [null, '', 'Key {model}']) {
+        await cdp.click(keyCancel);
+        await request('/__settings/config', { user: { api_signature_enabled: userEnabled, api_signature_template: userTemplate }, key: { id: 1, signature_enabled: null, signature_template: keyTemplate } });
+        await openSignature();
+        for (const mode of ['inherit', 'enable', 'disable']) {
+          await selectMode(mode);
+          const expectedEnabled = mode === 'inherit' ? userEnabled : mode === 'enable';
+          const expectedTemplate = keyTemplate || userTemplate;
+          const expected = !expectedEnabled ? '关闭' : !expectedTemplate ? '空模板' : expectedTemplate.replace('{model}', 'gpt-4o');
+          await browserCheck(`document.querySelector('#keySignaturePreview').textContent.includes(${JSON.stringify(expected)})&&document.querySelector('#keySignatureTemplate').getClientRects().length>0`, `Key semantics user=${userEnabled}/${userTemplate || 'empty'} key=${keyTemplate === null ? 'null' : keyTemplate || 'empty'} mode=${mode}`);
+        }
+      }
+      await selectMode('enable');
+      await cdp.input('#keySignatureTemplate', 'x'.repeat(2001));
+      await browserCheck("document.querySelector('#keySignatureTemplate').value.length===2000", 'Key textarea typed max length');
+      const keyWritesBeforeLength = (await request('/__settings/state')).writes.length;
+      await cdp.evaluate("document.querySelector('#keySignatureTemplate').value='x'.repeat(2001)");
+      await cdp.click(keySave);
+      await browserCheck("document.querySelector('#keySignatureSaveStatus').textContent.includes('2000')", 'Key overlength draft gets validation feedback');
+      check((await request('/__settings/state')).writes.length === keyWritesBeforeLength, 'overlength Key draft never sent');
+      await cdp.input('#keySignatureTemplate', 'Retry Key');
+      for (const kind of ['http', 'logical', 'malformed', 'network']) {
+        const previous = JSON.stringify((await request('/__settings/state')).keys[0]);
+        await request('/__settings/fail', { kind }); await cdp.click(keySave);
+        await browserCheck("document.querySelector('#keySignatureModal').hasAttribute('open')&&document.querySelector('#keySignatureTemplate').value==='Retry Key'&&!!document.querySelector('#keySignatureSaveStatus').textContent", `${kind} Key failure keeps dialog draft and error`);
+        check(JSON.stringify((await request('/__settings/state')).keys[0]) === previous, `${kind} Key failure does not persist`);
+      }
+      await request('/__settings/fail', { kind: null });
+      await cdp.click(keySave); await cdp.wait("!document.querySelector('#keySignatureModal').hasAttribute('open')");
+      await openSignature(); await selectMode('disable');
+      await cdp.click(keySave); await cdp.wait("!document.querySelector('#keySignatureModal').hasAttribute('open')");
+      await reload('apiKeys'); await openSignature();
+      await browserCheck("document.querySelector('#keySignatureMode').value==='disable'&&document.querySelector('#keySignaturePreview').textContent.includes('关闭')&&document.querySelector('#keySignatureTemplate').value==='Retry Key'", 'Key explicit off persists across page reload without clearing override');
+      check((await request('/__settings/state')).keys[0].signature_enabled === false, 'Key force-off PUT sends false rather than null');
+      await cdp.input('#keySignatureTemplate', ''); await selectMode('inherit');
+      await cdp.click(keySave); await cdp.wait("!document.querySelector('#keySignatureModal').hasAttribute('open')");
+      check((await request('/__settings/state')).keys[0].signature_template === null, 'empty Key template PUT normalizes null inheritance');
+      const previousKey = await cdp.evaluate('app._currentSignatureKeyId');
+      await request('/__settings/fail', { kind: 'http' });
+      await cdp.evaluate('app.showKeySignature(2)');
+      await browserCheck(`!document.querySelector('#keySignatureModal').hasAttribute('open')&&app._currentSignatureKeyId===${previousKey}`, 'failed Key load never opens stale config or changes save target');
+      // 给原脚本非签名部分保持默认关闭初始状态，不运行其余范围测试。
+      await request('/__settings/config', { user: { api_signature_enabled: false, api_signature_template: '' } });
+      await reload('apiKeys');
       if (process.argv.includes('--signature-only')) {
         console.log(`PASS ${width}px signature flow: ${assertions - before} assertions`);
         continue;
@@ -332,7 +509,7 @@ async function main() {
     const exceptions = cdp.events.filter(event => event.method === 'Runtime.exceptionThrown');
     check(exceptions.length === 0, `no uncaught page exceptions: ${JSON.stringify(exceptions.map(event => event.params.exceptionDetails.exception?.description || event.params.exceptionDetails.text))}`);
     console.log(`PASS ${assertions} assertions. Real headless Chrome, real console and Blora; desktop 1440px and mobile 390px.`);
-    console.log('Fixture limitations: settings/key options/prompts/auth are local in-memory endpoints; persistence is verified across navigation/reload, not server restart. No production SQL, authorization, proxy or external upstream is exercised. Other endpoints use isolated demo data. Prompt creation disabled default is fixture-provided, not production route acceptance.');
+    console.log('Fixture limitations: signature/settings/key options/prompts/auth are local in-memory endpoints; signature contracts mirror the current routes. Persistence is verified across navigation/reload, not server restart. No production SQL, authorization, proxy or external upstream is exercised. Other endpoints use isolated demo data.');
   } catch (error) {
     for (const name of ['server', 'chrome']) {
       const file = path.join(scratch, `${name}.log`);

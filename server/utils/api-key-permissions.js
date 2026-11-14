@@ -126,6 +126,11 @@ function normalizePath(pathname) {
 function matchPermission(method, pathname) {
   const verb = String(method || '').toUpperCase();
   const target = normalizePath(pathname);
+  // 独立签名端点沿用个人资料权限；旧目录缓存也可正确鉴权。
+  if (target === '/api/user/signature') {
+    if (verb === 'GET') return CATALOG.byId.get('account.profile.read');
+    if (verb === 'PUT') return CATALOG.byId.get('account.profile.write');
+  }
   for (const rule of ROUTE_RULES) {
     if (!rule.methods.has('*') && !rule.methods.has(verb)) continue;
     if (rule.regex.test(target)) return rule.permission;

@@ -124,7 +124,7 @@ test('startup and initialization change old defaults without rewriting existing 
     }
   }
   // The first signature migration adds a template column; ignore only that schema addition.
-  snapshot.users.forEach(row => { row.api_signature_template = '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'; });
+  snapshot.users.forEach(row => { row.api_signature_template = ''; });
   assert.deepEqual(await before(), snapshot, 'startup must not rewrite true, false, or NULL choices');
   assert(!startup.includes('migration_enable_quota_warning_for_all_api_keys_v1'));
   assert(!/UPDATE api_keys SET quota_warning_enabled = TRUE/.test(startup));
@@ -137,6 +137,7 @@ test('startup and initialization change old defaults without rewriting existing 
   await pool.query('INSERT INTO users DEFAULT VALUES; INSERT INTO api_keys DEFAULT VALUES');
   await pool.query("INSERT INTO inject_prompts(user_id,name,content) VALUES (4,'default','default')");
   assert.equal((await pool.query('SELECT api_signature_enabled FROM users WHERE id=4')).rows[0].api_signature_enabled, false);
+  assert.equal((await pool.query('SELECT api_signature_template FROM users WHERE id=4')).rows[0].api_signature_template, '');
   const key = (await pool.query('SELECT * FROM api_keys WHERE id=4')).rows[0];
   assert.equal(key.quota_warning_enabled, false);
   assert.equal(key.crewrouter_commands, false);

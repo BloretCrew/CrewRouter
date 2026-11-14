@@ -9,6 +9,8 @@ const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { test } = require('node:test');
 const source = fs.readFileSync(path.resolve(__dirname, '../routes/api.js'), 'utf8');
+const signatureSource = fs.readFileSync(path.resolve(__dirname, '../utils/api-signature.js'), 'utf8');
+const suspensionSource = fs.readFileSync(path.resolve(__dirname, '../utils/policy/suspension.js'), 'utf8');
 const pointsSource = fs.readFileSync(path.resolve(__dirname, '../utils/points-deduct.js'), 'utf8');
 function declaration(name, prefix = 'function', code = source) {
   const start = code.indexOf(`${prefix} ${name}`);
@@ -32,7 +34,6 @@ function fixture() {
       assert.deepEqual(Array.from(params), [11, state.token.user_id]);
       return { rows: state.key && state.key.user_id === params[1] ? [state.key] : [] };
     }
-    if (sql.includes('SELECT signature_enabled')) return { rows: state.key ? [state.key] : [] };
     if (sql.includes('JOIN users u ON u.id = ak.user_id')) {
       state.refreshes++;
       return { rows: state.key ? [state.key] : [] };
@@ -61,6 +62,9 @@ function fixture() {
   vm.runInContext([
     declaration('hasAvailableQuota', 'function', pointsSource),
     declaration('canConsumePoints', 'async function', pointsSource),
+    declaration('normalizeSignatureTemplate', 'function', signatureSource),
+    declaration('resolveSignatureConfig', 'function', signatureSource),
+    declaration('suspensionState', 'function', suspensionSource),
     declaration('ApiKeyLifecycleError', 'class'),
     declaration('validateApiKey', 'async function'), declaration('refreshApiUserModelAuthorization', 'async function'),
     ...['isAnthropicApiPath', 'isGeminiApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),
@@ -97,8 +101,8 @@ test('OAuth hydrates ordinary key policy including model access, limits, Fusion,
   assert.equal(req.apiUser.crewrouterCommands, false);
   assert.equal(req.apiUser.fusionEnabled, false);
   assert.equal(req.apiUser.fusionSynthesisPromptEnabled, false);
-  assert.equal(req.apiUser.signatureEnabled, true);
-  assert.equal(req.apiUser.signatureTemplate, 'offline-signature');
+  assert.equal(req.apiUser.signature.enabled, true);
+  assert.equal(req.apiUser.signature.template, 'offline-signature');
   assert.equal(req.apiUser.injectPrompt, 'offline-prompt');
   assert(req.apiUser.modelAuthorization.deniedModelIds.includes('model'));
   assert.equal(req.apiUser.viaOAuth, true);
@@ -157,7 +161,7 @@ for (const value of [undefined, null, false, true]) {
     assert.equal(called, true);
     assert.equal(req.apiUser.crewrouterCommands, value === true);
     assert.equal(req.apiUser.quotaWarningEnabled, value === true);
-    assert.equal(req.apiUser.signatureEnabled, value === true);
+    assert.equal(req.apiUser.signature.enabled, value === true);
   });
 }
 
@@ -167,6 +171,6 @@ test('OAuth null or omitted key signature inherits the explicit user choice', as
     Object.assign(f.state.key, { signature_enabled, api_signature_enabled: true });
     const { req, called } = await f.request();
     assert.equal(called, true);
-    assert.equal(req.apiUser.signatureEnabled, signature_enabled !== false);
+    assert.equal(req.apiUser.signature.enabled, signature_enabled !== false);
   }
 });

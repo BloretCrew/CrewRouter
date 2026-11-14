@@ -8,20 +8,26 @@ const { test } = require('node:test');
 const { Pool } = require('pg');
 const { createIsolatedPostgresFixture } = require('./test-support/isolated-postgres');
 const source = fs.readFileSync(path.join(__dirname, '../routes/api.js'), 'utf8');
-function declaration(name, prefix) {
-  const start = source.indexOf(`${prefix} ${name}`);
-  const end = source.indexOf('\n}', start);
+const signatureSource = fs.readFileSync(path.join(__dirname, '../utils/api-signature.js'), 'utf8');
+function declarationFrom(code, name, prefix) {
+  const start = code.indexOf(`${prefix} ${name}`);
+  const end = code.indexOf('\n}', start);
   assert(start >= 0 && end > start, name);
-  return source.slice(start, end + 2);
+  return code.slice(start, end + 2);
+}
+function declaration(name, prefix) {
+  return declarationFrom(source, name, prefix);
 }
 function worker(pool) {
   const context = vm.createContext({ pool, Date, Map, Set,
     getAuthorizedModelIds: async () => new Set(), invalidateApiKeyCacheByKeyId() {} });
   vm.runInContext(declaration('ApiKeyLifecycleError', 'class') + '\n'
+    + declarationFrom(signatureSource, 'normalizeSignatureTemplate', 'function') + '\n'
+    + declarationFrom(signatureSource, 'resolveSignatureConfig', 'function') + '\n'
     + declaration('refreshApiUserModelAuthorization', 'async function')
     + '\nthis.refresh = refreshApiUserModelAuthorization;', context);
   // Independent worker caches intentionally remain warm across database writes.
-  const cached = { keyId: 11, userId: 7, signatureEnabled: true, signatureTemplate: 'stale' };
+  const cached = { keyId: 11, userId: 7, signature: { enabled: true, template: 'stale' } };
   return { cached, request: () => context.refresh(cached) };
 }
 
@@ -41,9 +47,9 @@ test('independent warm workers refresh inherited and explicit signature policy a
   async function expect(enabled, template, explicit = null) {
     for (const w of workers) {
       const current = await w.request();
-      assert.equal(current.signatureEnabled, enabled);
-      assert.equal(current.signatureTemplate, template);
-      assert.equal(current.keySignatureEnabled, explicit);
+      assert.equal(current.signature.enabled, enabled);
+      assert.equal(current.signature.template, template);
+      assert.equal(current.signature.keyEnabled, explicit);
     }
   }
   await expect(true, 'user-template');
@@ -59,7 +65,7 @@ test('independent warm workers refresh inherited and explicit signature policy a
   await expect(false, 'updated');
   const inFlight = { ...await workers[0].request() };
   await pool.query("UPDATE users SET api_signature_enabled=TRUE,api_signature_template='next-request' WHERE id=7");
-  assert.equal(inFlight.signatureEnabled, false, 'already authorized requests retain their snapshot');
+  assert.equal(inFlight.signature.enabled, false, 'already authorized requests retain their snapshot');
   await expect(true, 'next-request');
   await pool.query('DROP TABLE users CASCADE');
   await assert.rejects(workers[0].request(), /users/);

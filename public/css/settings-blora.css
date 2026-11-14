@@ -98,6 +98,9 @@
 .lg-page.blora-settings-page .settings-category-card small { margin-block-start: 3px; color: var(--lg-fg-secondary); font-size: 12px; }
 .lg-page.blora-settings-page .settings-category-arrow { color: var(--lg-fg-tertiary); font-size: 22px; }
 
+/* hidden 是分类状态，不允许其他 display 布局声明把隐藏组重新显示。 */
+#settingsPage :is(.settings-section, .settings-overview, .settings-detail)[hidden] { display: none !important; }
+
 /* ---------- 详情：返回 + 标题 ---------- */
 .lg-page.blora-settings-page .settings-detail { max-inline-size: none; margin: 0 0 16px; }
 .lg-page.blora-settings-page .settings-back-button {

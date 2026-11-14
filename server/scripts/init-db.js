@@ -79,7 +79,7 @@ async function initDatabase() {
         group_id INTEGER,
         team_id INTEGER,
         api_signature_enabled BOOLEAN DEFAULT FALSE,
-        api_signature_template TEXT DEFAULT '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}',
+        api_signature_template TEXT DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -95,7 +95,7 @@ async function initDatabase() {
       { name: 'github_id', type: 'VARCHAR(255)' },
       { name: 'feishu_open_id', type: 'VARCHAR(255)' },
       { name: 'api_signature_enabled', type: 'BOOLEAN DEFAULT FALSE' },
-      { name: 'api_signature_template', type: "TEXT DEFAULT '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'" },
+      { name: 'api_signature_template', type: "TEXT DEFAULT ''" },
     ];
     for (const col of userCoreCols) {
       const colCheck = await client.query(`
@@ -108,6 +108,7 @@ async function initDatabase() {
       }
     }
     await client.query('ALTER TABLE users ALTER COLUMN api_signature_enabled SET DEFAULT FALSE');
+    await client.query("ALTER TABLE users ALTER COLUMN api_signature_template SET DEFAULT ''");
 
     // 兼容旧表：为 users 添加密码列
     const userPasswordColCheck = await client.query(`

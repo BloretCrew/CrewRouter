@@ -7,15 +7,21 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.resolve(__dirname, '../routes/api.js'), 'utf8');
+const signatureSource = fs.readFileSync(path.resolve(__dirname, '../utils/api-signature.js'), 'utf8');
+const suspensionSource = fs.readFileSync(path.resolve(__dirname, '../utils/policy/suspension.js'), 'utf8');
 const RAW_KEY = 'sk-offline-lifecycle-fixture';
 const NOW = 1800000000000;
 
-function declaration(name, prefix = 'function') {
-  const start = source.indexOf(`${prefix} ${name}`);
+function declarationFrom(code, name, prefix = 'function') {
+  const start = code.indexOf(`${prefix} ${name}`);
   assert(start >= 0, name);
-  const end = source.indexOf('\n}', start);
+  const end = code.indexOf('\n}', start);
   assert(end > start, name);
-  return source.slice(start, end + 2);
+  return code.slice(start, end + 2);
+}
+
+function declaration(name, prefix = 'function') {
+  return declarationFrom(source, name, prefix);
 }
 
 function isolatedPoints(state) {
@@ -55,7 +61,7 @@ function fixture() {
       if (sql.includes('SELECT signature_enabled')) return { rows: [{ signature_enabled: null }] };
       if (sql.includes('FROM api_key_models')) return { rows: [{ model_id: 'fixture-model' }] };
       if (sql.includes('FROM api_key_harness_models')) return { rows: [] };
-      if (sql.startsWith('SELECT team_id, balance FROM users')) return { rows: [{ team_id: state.teamId, balance: state.balance }] };
+      if (sql.startsWith('SELECT team_id, balance')) return { rows: [{ team_id: state.teamId, balance: state.balance }] };
       if (sql.startsWith('UPDATE api_keys SET last_used_at')) { state.writes++; return { rows: [] }; }
       throw new Error(`Unexpected isolated query: ${sql}`);
     } },
@@ -76,6 +82,10 @@ function fixture() {
   };
   const functions = [
     declaration('ApiKeyLifecycleError', 'class'),
+    declarationFrom(signatureSource, 'normalizeSignatureTemplate'),
+    declarationFrom(signatureSource, 'resolveSignatureConfig'),
+    declarationFrom(signatureSource, 'preloadSignatureData', 'async function'),
+    declarationFrom(suspensionSource, 'suspensionState'),
     ...['refreshApiUserModelAuthorization', 'refreshApiUserForRequest', 'validateApiKey',
       'handleChatCompletion', 'handleAnthropicMessage', 'handleResponses'].map(name => declaration(name, 'async function')),
     ...['isAnthropicApiPath', 'isGeminiApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),
@@ -154,7 +164,7 @@ async function main() {
       assert.equal(next, true);
       assert.equal(req.apiUser.crewrouterCommands, value === true);
       assert.equal(req.apiUser.quotaWarningEnabled, value === true);
-      assert.equal(req.apiUser.signatureEnabled, value === true);
+      assert.equal(req.apiUser.signature.enabled, value === true);
     }
   }
   const exhausted = { exceeded: true, duration_hours: 1 };

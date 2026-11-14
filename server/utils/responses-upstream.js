@@ -11,6 +11,7 @@
 
 const Logger = require('../logger');
 const wireShapes = require('../protocol/wire-shapes');
+const { createSSEParser } = require('../protocol/sse');
 
 /**
  * 将 Chat Completions 的 messages 数组转换为 Responses API 的 input。
@@ -311,8 +312,9 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
 
   const reader = upstreamStream.getReader();
   const decoder = new TextDecoder();
+  const parser = createSSEParser();
 
-  let buffer = '';
+  let terminalReceived = false;
   let content = '';
   let reasoning = '';
   let nextToolIndex = 0;
@@ -408,6 +410,9 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
   // 处理单个解析后的 SSE data 对象
   const handleEvent = (obj) => {
     if (!obj || typeof obj !== 'object' || obj.type === 'response.output_text.done') return;
+    if (obj.error || obj.response?.error || ['error', 'response.failed'].includes(obj.type)) {
+      throw Object.assign(new Error('Upstream stream reported an error'), { code: 'upstream_stream_error' });
+    }
     switch (obj.type) {
       case 'response.output_text.delta': {
         const original = obj.delta || '';
@@ -471,9 +476,7 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
       }
       case 'response.incomplete':
       case 'response.completed':
-        if (obj.response?.error) {
-          Logger.warn(`[${logPrefix}] 上游响应含 error: ${JSON.stringify(obj.response.error)}`);
-        }
+        terminalReceived = true;
         streamUsage = obj.response?.usage || streamUsage;
         if (obj.type === 'response.incomplete' || obj.response?.status === 'incomplete') terminalStatus = 'incomplete';
         if (obj.response?.status) terminalStatus = obj.response.status;
@@ -484,32 +487,33 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
     }
   };
 
+  const consumeFrames = frames => {
+    for (const frame of frames) {
+      if (frame.done || !frame.data) continue;
+      let event;
+      try { event = JSON.parse(frame.data); } catch { continue; }
+      handleEvent(event);
+    }
+  };
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       opts.onFirstByte?.();
-      buffer += decoder.decode(value, { stream: true });
-      let idx;
-      while ((idx = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, idx).trim();
-        buffer = buffer.slice(idx + 1);
-        if (!line.startsWith('data:')) continue;
-        const payload = line.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        try {
-          handleEvent(JSON.parse(payload));
-        } catch { /* ignore parse errors */ }
-      }
+      consumeFrames(parser.push(decoder.decode(value, { stream: true })));
+    }
+    consumeFrames(parser.push(decoder.decode()));
+    consumeFrames(parser.end());
+    if (!terminalReceived) {
+      throw Object.assign(new Error('Upstream stream ended without a completion event'), { code: 'upstream_stream_incomplete' });
     }
   } catch (err) {
     Logger.warn(`[${logPrefix}] 上游流读取异常: ${err.message}`);
     if (!res.writableEnded) res.end();
-    return {
-      content: sawContentDelta ? content : (sawReasoningDelta ? '' : content),
-      reasoning,
-      usage: streamUsage
-    };
+    throw err;
+  } finally {
+    await reader.cancel?.().catch(() => {});
+    reader.releaseLock?.();
   }
 
   const residual = opts.scrubber ? opts.scrubber.flush() : '';
@@ -520,6 +524,18 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
 
   for (const row of toolBuffer.forceRemaining()) emitToolRow(row);
 
+  // 收尾前允许调用方追加内容（例如签名页脚），仍作为普通 content chunk 发送。
+  const finishReason = wireShapes.chatFinishReason(terminalStatus, null, sawToolCall, incompleteReason);
+  if (typeof opts.onBeforeFinish === 'function' && !res.writableEnded) {
+    const extra = await opts.onBeforeFinish({
+      hasTextContent: content.length > 0,
+      hasToolCalls: sawToolCall,
+      finishReason,
+      usage: streamUsage
+    });
+    if (extra && !res.writableEnded) sendChunk({ content: extra });
+  }
+
   // 流结束：发送带 finish_reason 的收尾 chunk + usage（须在 res.end() 之前）
   const finishChunk = {
     id,
@@ -529,7 +545,7 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
     choices: [{
       index: 0,
       delta: {},
-      finish_reason: wireShapes.chatFinishReason(terminalStatus, null, sawToolCall, incompleteReason)
+      finish_reason: finishReason
     }]
   };
   if (streamUsage && (streamUsage.input_tokens != null || streamUsage.output_tokens != null || streamUsage.total_tokens != null || streamUsage.prompt_tokens != null)) {

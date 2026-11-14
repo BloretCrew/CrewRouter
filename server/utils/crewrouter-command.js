@@ -6,6 +6,7 @@ const { logAction, ACTIONS } = require('./audit-log');
 const { HARNESS_SOURCES, isHarnessSource, sourceLabel, clientMetaFromReq } = require('./request-source');
 const { startSession, endSession, getActiveSession, recordEvent } = require('./trace-session');
 const { extractRequestIdentity } = require('./session-identity');
+const { resolveSignatureConfig } = require('./api-signature');
 
 const TRIGGER_RE = /@(?:crewrouter|cr)\b/i;
 const USER_QUERY_RE = /<user_query\b[^>]*>([\s\S]*?)<\/user_query>/i;
@@ -73,19 +74,19 @@ function register(cmd) {
 function matchCommand(rest) {
   const text = String(rest || '').trim();
   if (!text) return { cmd: COMMANDS.find(c => c.id === 'help'), args: { topic: '' } };
-  const ranked = [...COMMANDS].sort((a, b) => {
-    const al = Math.max(...a.aliases.map(x => x.length));
-    const bl = Math.max(...b.aliases.map(x => x.length));
-    return bl - al;
-  });
+  const signatureState = parseSignatureState(text);
+  if (/(签名|signature)/i.test(text) && signatureState !== undefined) {
+    return { cmd: COMMANDS.find(c => c.id === 'signature'), args: { state: signatureState } };
+  }
+  // 按实际命中的 alias 长度排序；不能用某命令最长龙别名让 signature 抢走 signature config。
+  const ranked = COMMANDS.flatMap(cmd => cmd.aliases.map(alias => ({ cmd, alias })))
+    .sort((a, b) => b.alias.length - a.alias.length);
   const lower = text.toLowerCase();
-  for (const cmd of ranked) {
-    for (const alias of cmd.aliases) {
-      const a = alias.toLowerCase();
-      if (lower === a || lower.startsWith(`${a} `) || lower.startsWith(`${a}：`) || lower.startsWith(`${a}:`)) {
-        const argText = text.slice(alias.length).replace(/^[\s:：]+/, '').trim();
-        return { cmd, args: cmd.parse ? cmd.parse(argText, text) : { rest: argText } };
-      }
+  for (const { cmd, alias } of ranked) {
+    const a = alias.toLowerCase();
+    if (lower === a || lower.startsWith(`${a} `) || lower.startsWith(`${a}：`) || lower.startsWith(`${a}:`)) {
+      const argText = text.slice(alias.length).replace(/^[\s:：]+/, '').trim();
+      return { cmd, args: cmd.parse ? cmd.parse(argText, text) : { rest: argText } };
     }
   }
   return { cmd: null, args: { rest: text } };
@@ -111,7 +112,7 @@ function helpText(topic = '') {
     ],
     开关: [
       ['开启/关闭吞图', 'enable/disable swallow'],
-      ['开启/关闭签名', 'enable/disable signature'],
+      ['开启/关闭/签名继承', 'enable/disable/inherit signature'],
       ['开启/关闭 Fusion', 'enable/disable fusion'],
       ['开启/关闭定时', 'enable/disable schedule'],
       ['确认停用密钥', 'confirm disable key'],
@@ -146,6 +147,11 @@ function flag(value) {
   return value ? '开' : '关';
 }
 
+function flag3(value) {
+  if (value === null || value === undefined) return '继承';
+  return value ? '开' : '关';
+}
+
 function linesOf(pairs) {
   const width = Math.max(0, ...pairs.map(([k]) => String(k).length));
   return pairs.map(([k, v]) => `${String(k).padEnd(width, ' ')}  ${v == null || v === '' ? '-' : v}`).join('\n');
@@ -154,7 +160,8 @@ function linesOf(pairs) {
 async function loadKeySnapshot(apiUser) {
   const keyId = apiUser.keyId;
   const key = await pool.query(
-    `SELECT ak.id, ak.name, ak.key_prefix, ak.enabled, ak.swallow_images, ak.signature_enabled,
+    `SELECT ak.id, ak.name, ak.key_prefix, ak.enabled, ak.swallow_images, ak.signature_enabled, ak.signature_template,
+            u.api_signature_enabled, u.api_signature_template,
             ak.fusion_enabled, ak.schedule_enabled, ak.crewrouter_commands, ak.current_model_id, ak.fusion_panel_models,
             ak.fusion_judge_model_id, ak.fusion_outer_model_id,
             m.name AS model_name, p.name AS provider_name,
@@ -191,7 +198,7 @@ function formatFooter(snap) {
     linesOf([
       ['名称', `${r.name || '-'}  (#${r.id || '-'})`],
       ['模型', r.model_name || r.current_model_id || '未绑定'],
-      ['开关', `指令 ${flag(r.crewrouter_commands)} · 吞图 ${flag(r.swallow_images)} · 签名 ${flag(r.signature_enabled)} · Fusion ${flag(r.fusion_enabled !== false)} · 密钥 ${flag(r.enabled !== false)} · 定时 ${flag(r.schedule_enabled)}`],
+      ['开关', `指令 ${flag(r.crewrouter_commands)} · 吞图 ${flag(r.swallow_images)} · 签名 ${flag3(r.signature_enabled)} · Fusion ${flag(r.fusion_enabled !== false)} · 密钥 ${flag(r.enabled !== false)} · 定时 ${flag(r.schedule_enabled)}`],
       ['客户端', harness],
       ['余额', Number(r.balance || 0).toFixed(4)],
     ]),
@@ -535,8 +542,53 @@ function switchCommand(id, aliases, keywords, column, action, yes, no) {
 
 switchCommand('swallow', ['开启吞图', '关闭吞图', '打开吞图', '禁用吞图', '启用吞图', '吞图', 'enable swallow', 'disable swallow', 'swallow'],
   ['吞图', 'swallow'], 'swallow_images', ACTIONS.API_KEY_SWALLOW_IMAGES, '已开启吞图', '已关闭吞图');
-switchCommand('signature', ['开启签名', '关闭签名', '启用签名', '禁用签名', '签名', 'enable signature', 'disable signature', 'signature'],
-  ['签名', 'signature'], 'signature_enabled', ACTIONS.API_KEY_SIGNATURE, '已开启签名', '已关闭签名');
+
+function parseSignatureState(text) {
+  const t = String(text || '').trim().toLowerCase();
+  const state = '(开启|打开|启用|关闭|禁用|停用|继承|跟随用户默认|跟随默认|on|off|enable|disable|true|false|inherit)';
+  const match = t.match(new RegExp(`^${state}$`, 'i'))
+    || t.match(new RegExp(`^(?:签名|signature)\\s*${state}$`, 'i'))
+    || t.match(new RegExp(`^${state}\\s*(?:签名|signature)$`, 'i'));
+  if (!match) return undefined;
+  if (/^(继承|跟随用户默认|跟随默认|inherit)$/.test(match[1])) return null;
+  return normalizeSwitch(match[1]) ?? undefined;
+}
+
+function signatureStatus(config) {
+  return `当前：${flag(config.enabled)}；${config.template ? '模板已配置' : '模板为空，不附加签名'}`;
+}
+
+register({
+  id: 'signature',
+  aliases: ['开启签名', '关闭签名', '启用签名', '禁用签名', '签名继承', '继承签名', '跟随用户默认签名',
+    '签名', 'on signature', 'off signature', 'enable signature', 'disable signature', 'inherit signature', 'signature inherit', 'signature'],
+  parse: (rest, full) => {
+    let state = parseSignatureState(rest);
+    if (state === undefined) state = parseSignatureState(full);
+    return state === undefined ? {} : { state };
+  },
+  async run({ req, apiUser, args }) {
+    if (!Object.prototype.hasOwnProperty.call(args, 'state')) {
+      return composeReply('用法不对', '请使用：@CrewRouter 开启签名 / 关闭签名 / 签名继承', apiUser);
+    }
+    const state = args.state;
+    const result = await pool.query('UPDATE api_keys SET signature_enabled = $1 WHERE id = $2 RETURNING id', [state, apiUser.keyId]);
+    if (!result.rows.length) throw new Error('密钥不存在');
+    await require('../routes/api').invalidateApiKeyCacheByKeyId(apiUser.keyId);
+    await logAction({
+      userId: apiUser.userId, username: apiUser.username, action: ACTIONS.API_KEY_SIGNATURE,
+      resourceType: 'api_key', resourceId: String(apiUser.keyId),
+      description: state === null ? '签名设为继承用户默认（指令）' : `${state ? '已开启签名' : '已关闭签名'}（指令）`,
+      details: { signature_enabled: state }, ip: req.ip,
+    });
+    // 从所属用户实时读取，不能用请求进入时已缓存的默认值。
+    const snap = await loadKeySnapshot(apiUser);
+    const config = resolveSignatureConfig({ key: snap.row, user: snap.row });
+    const headline = state === null ? '已设为继承用户默认' : state ? '已开启签名' : '已关闭签名';
+    return composeReply(headline, signatureStatus(config), apiUser);
+  },
+});
+
 switchCommand('fusion', ['开启 fusion', '关闭 fusion', '启用 fusion', '禁用 fusion', 'fusion', 'enable fusion', 'disable fusion'],
   ['fusion'], 'fusion_enabled', ACTIONS.API_KEY_FUSION, '已开启 Fusion', '已关闭 Fusion');
 switchCommand('schedule', ['开启定时', '关闭定时', '启用定时', '禁用定时', '定时', 'enable schedule', 'disable schedule', 'schedule'],
@@ -694,7 +746,12 @@ register({
   aliases: ['签名配置', 'signature config'],
   async run({ apiUser }) {
     const snap = await loadKeySnapshot(apiUser);
-    return composeReply('签名配置', `${linesOf([['签名', flag(snap.row.signature_enabled)]])}\n模板内容不在指令中回显。`, apiUser);
+    const config = resolveSignatureConfig({ key: snap.row, user: snap.row });
+    return composeReply('签名配置', `${linesOf([
+      ['签名', config.keyEnabled === null ? `继承（当前${flag(config.enabled)}）` : flag(config.enabled)],
+      ['模板', config.keyTemplate ? '已自定义' : '继承用户默认'],
+      ['生效状态', signatureStatus(config)],
+    ])}\n模板内容不在指令中回显。`, apiUser);
   },
 });
 
