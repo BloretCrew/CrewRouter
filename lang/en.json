@@ -234,6 +234,7 @@
   "密钥用量详情": "Key usage details",
   "生成配置": "Generate config",
   "选择你要配置的工具：": "Choose the tool to configure:",
+  "模型 API": "Model API",
   "模型测试结果": "Model test results",
   "模型调用状态": "Model call status",
   "调用详情": "Call details",
