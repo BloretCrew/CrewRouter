@@ -8104,7 +8104,7 @@ class ConsoleApp {
       let config;
       const name = 'CrewRouter';
 
-      if (app === 'claude') {
+      if (app === 'claude' || app === 'claude-desktop') {
         config = { env: { ANTHROPIC_AUTH_TOKEN: apiKey, ANTHROPIC_BASE_URL: baseUrl, ANTHROPIC_MODEL: 'claude-fable-5' } };
       } else if (app === 'codex') {
         config = {
