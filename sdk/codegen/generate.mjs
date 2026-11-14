@@ -379,6 +379,60 @@ function openApiPath(expressPath) {
   return expressPath.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
 }
 
+function signatureSchemas() {
+  const object = (properties, required = Object.keys(properties)) => ({ type: 'object', properties, required, additionalProperties: false });
+  const template = {
+    type: ['string', 'null'], maxLength: 2000,
+    description: 'Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values.',
+  };
+  const userEnabled = { type: 'boolean' };
+  const keyEnabled = { type: ['boolean', 'null'], description: 'true enables, false disables, null inherits the owning user default (not the Co-Key member default).' };
+  const text = { type: 'string', maxLength: 2000 };
+  const legacy = schema => ({ ...schema, deprecated: true, description: `${schema.description || ''} Compatibility alias, retained for one release.`.trim() });
+  const put = key => {
+    const enabled = key ? keyEnabled : userEnabled;
+    const aliases = field => [field, `signature_${field}`, `${key ? 'key' : 'api'}_signature_${field}`];
+    return {
+      type: 'object',
+      description: 'Complete replacement, not PATCH: both enabled and template are mandatory. Legacy aliases may supply either required field for one release, including mixed new/legacy names. If multiple aliases are present their normalized values must agree; conflicts return 400. Unrecognized properties are ignored. All fields are validated before any database write.',
+      properties: Object.fromEntries(['enabled', 'template'].flatMap(field => aliases(field).map((name, i) => [name, i ? legacy(field === 'enabled' ? enabled : template) : field === 'enabled' ? enabled : template]))),
+      anyOf: [
+        { required: ['enabled', 'template'] },
+        { allOf: ['enabled', 'template'].map(field => ({ anyOf: aliases(field).map(name => ({ required: [name] })) })) },
+      ],
+      additionalProperties: true,
+    };
+  };
+  const inherited = object({ enabled: userEnabled, template: text });
+  const effective = object({
+    enabled: { type: 'boolean', description: 'Resolved switch; an empty resolved template still produces no signature.' },
+    template: { ...text, description: 'Trimmed Key template, or the owning user template when the Key template is empty. Empty means no signature; the example default is never inserted automatically.' },
+    source: { type: 'string', enum: ['user', 'key'], description: 'Source of the enabled switch, independent of template inheritance.' },
+  });
+  const userProperties = {
+    enabled: userEnabled, template: text,
+    api_signature_enabled: legacy(userEnabled), api_signature_template: legacy(text),
+  };
+  const keyProperties = {
+    enabled: keyEnabled, template,
+    key_signature_enabled: legacy(keyEnabled), key_signature_template: legacy(template),
+    user_signature_enabled: legacy(userEnabled), user_signature_template: legacy(text),
+    inherited, effective,
+  };
+  return {
+    UserSignaturePut: put(false),
+    KeySignaturePut: put(true),
+    UserSignature: object({ ...userProperties, defaults: object({ template: text, variables: { type: 'array', items: { type: 'string' } } }) }),
+    UserSignatureUpdated: object({ success: { const: true }, ...userProperties }),
+    KeySignature: object(keyProperties),
+    KeySignatureUpdated: object({ success: { const: true }, ...keyProperties }),
+    SignatureValidationError: object({
+      error: { type: 'string' },
+      code: { type: 'string', enum: ['missing_signature_field', 'invalid_signature_field', 'conflicting_signature_fields', 'invalid_signature_enabled', 'invalid_signature_template'] },
+    }),
+  };
+}
+
 function buildOpenApi(operations) {
   const paths = {};
   for (const op of operations) {
@@ -418,6 +472,28 @@ function buildOpenApi(operations) {
         content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
       };
     }
+    const signatureKey = op.path === '/api/user/api-keys/:id/signature';
+    if ((signatureKey || op.path === '/api/user/signature') && ['GET', 'PUT'].includes(op.method)) {
+      const name = signatureKey ? 'Key' : 'User';
+      const ref = schema => ({ $ref: `#/components/schemas/${schema}` });
+      operation.responses[200].content = {
+        'application/json': { schema: ref(`${name}Signature${op.method === 'PUT' ? 'Updated' : ''}`) },
+      };
+      operation.description = signatureKey
+        ? 'Key signature configuration. Co-Key members with management access read and update this Key, while inherited/effective values always use the owning user defaults. An empty resolved template produces no signature.'
+        : 'User default signature configuration. The example defaults.template is informational only, never an automatic fallback. Empty templates produce no signature.';
+      if (op.method === 'PUT') {
+        operation.description += ' Complete PUT requires enabled and template (or their legacy aliases); omitted fields return 400 rather than resetting existing values. Validation precedes the atomic write and cache invalidation follows successful commit.';
+        operation.requestBody = {
+          required: true,
+          content: { 'application/json': { schema: ref(`${name}SignaturePut`) } },
+        };
+        operation.responses[400] = {
+          description: 'Invalid signature settings: missing enabled/template (including accepted aliases), undefined field, conflicting aliases after normalization, non-boolean switch (only Key accepts null), non-string/non-null template, or template longer than 2000 after trim. No fields are written and no cache is invalidated.',
+          content: { 'application/json': { schema: ref('SignatureValidationError') } },
+        };
+      }
+    }
     paths[apiPath][op.method.toLowerCase()] = operation;
   }
 
@@ -430,6 +506,7 @@ function buildOpenApi(operations) {
     },
     servers: [{ url: 'https://your-host', description: 'CrewRouter instance' }],
     components: {
+      schemas: signatureSchemas(),
       securitySchemes: {
         bearerApiKey: { type: 'http', scheme: 'bearer', description: 'API Key: Authorization: Bearer sk-...' },
         xApiKey: { type: 'apiKey', in: 'header', name: 'x-api-key' },

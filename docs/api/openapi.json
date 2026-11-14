@@ -12,6 +12,530 @@
     }
   ],
   "components": {
+    "schemas": {
+      "UserSignaturePut": {
+        "type": "object",
+        "description": "Complete replacement, not PATCH: both enabled and template are mandatory. Legacy aliases may supply either required field for one release, including mixed new/legacy names. If multiple aliases are present their normalized values must agree; conflicts return 400. Unrecognized properties are ignored. All fields are validated before any database write.",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "signature_enabled": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "api_signature_enabled": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values."
+          },
+          "signature_template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values. Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "api_signature_template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values. Compatibility alias, retained for one release.",
+            "deprecated": true
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "enabled",
+              "template"
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "anyOf": [
+                  {
+                    "required": [
+                      "enabled"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "signature_enabled"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "api_signature_enabled"
+                    ]
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "required": [
+                      "template"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "signature_template"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "api_signature_template"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "additionalProperties": true
+      },
+      "KeySignaturePut": {
+        "type": "object",
+        "description": "Complete replacement, not PATCH: both enabled and template are mandatory. Legacy aliases may supply either required field for one release, including mixed new/legacy names. If multiple aliases are present their normalized values must agree; conflicts return 400. Unrecognized properties are ignored. All fields are validated before any database write.",
+        "properties": {
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true enables, false disables, null inherits the owning user default (not the Co-Key member default)."
+          },
+          "signature_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true enables, false disables, null inherits the owning user default (not the Co-Key member default). Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "key_signature_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true enables, false disables, null inherits the owning user default (not the Co-Key member default). Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values."
+          },
+          "signature_template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values. Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "key_signature_template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values. Compatibility alias, retained for one release.",
+            "deprecated": true
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "enabled",
+              "template"
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "anyOf": [
+                  {
+                    "required": [
+                      "enabled"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "signature_enabled"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "key_signature_enabled"
+                    ]
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "required": [
+                      "template"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "signature_template"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "key_signature_template"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "additionalProperties": true
+      },
+      "UserSignature": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "template": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "api_signature_enabled": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "api_signature_template": {
+            "type": "string",
+            "maxLength": 2000,
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "defaults": {
+            "type": "object",
+            "properties": {
+              "template": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "variables": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "template",
+              "variables"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "enabled",
+          "template",
+          "api_signature_enabled",
+          "api_signature_template",
+          "defaults"
+        ],
+        "additionalProperties": false
+      },
+      "UserSignatureUpdated": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "template": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "api_signature_enabled": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "api_signature_template": {
+            "type": "string",
+            "maxLength": 2000,
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          }
+        },
+        "required": [
+          "success",
+          "enabled",
+          "template",
+          "api_signature_enabled",
+          "api_signature_template"
+        ],
+        "additionalProperties": false
+      },
+      "KeySignature": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true enables, false disables, null inherits the owning user default (not the Co-Key member default)."
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values."
+          },
+          "key_signature_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true enables, false disables, null inherits the owning user default (not the Co-Key member default). Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "key_signature_template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values. Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "user_signature_enabled": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "user_signature_template": {
+            "type": "string",
+            "maxLength": 2000,
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "inherited": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "template": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "enabled",
+              "template"
+            ],
+            "additionalProperties": false
+          },
+          "effective": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Resolved switch; an empty resolved template still produces no signature."
+              },
+              "template": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Trimmed Key template, or the owning user template when the Key template is empty. Empty means no signature; the example default is never inserted automatically."
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "key"
+                ],
+                "description": "Source of the enabled switch, independent of template inheritance."
+              }
+            },
+            "required": [
+              "enabled",
+              "template",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "enabled",
+          "template",
+          "key_signature_enabled",
+          "key_signature_template",
+          "user_signature_enabled",
+          "user_signature_template",
+          "inherited",
+          "effective"
+        ],
+        "additionalProperties": false
+      },
+      "KeySignatureUpdated": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true enables, false disables, null inherits the owning user default (not the Co-Key member default)."
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values."
+          },
+          "key_signature_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "true enables, false disables, null inherits the owning user default (not the Co-Key member default). Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "key_signature_template": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Trimmed before storage and length validation (maximum 2000 UTF-16 code units after trim). Explicit null or an empty/whitespace-only string clears the template. Missing fields never clear existing values. Compatibility alias, retained for one release.",
+            "deprecated": true
+          },
+          "user_signature_enabled": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "user_signature_template": {
+            "type": "string",
+            "maxLength": 2000,
+            "deprecated": true,
+            "description": "Compatibility alias, retained for one release."
+          },
+          "inherited": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "template": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "enabled",
+              "template"
+            ],
+            "additionalProperties": false
+          },
+          "effective": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Resolved switch; an empty resolved template still produces no signature."
+              },
+              "template": {
+                "type": "string",
+                "maxLength": 2000,
+                "description": "Trimmed Key template, or the owning user template when the Key template is empty. Empty means no signature; the example default is never inserted automatically."
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "key"
+                ],
+                "description": "Source of the enabled switch, independent of template inheritance."
+              }
+            },
+            "required": [
+              "enabled",
+              "template",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "enabled",
+          "template",
+          "key_signature_enabled",
+          "key_signature_template",
+          "user_signature_enabled",
+          "user_signature_template",
+          "inherited",
+          "effective"
+        ],
+        "additionalProperties": false
+      },
+      "SignatureValidationError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "missing_signature_field",
+              "invalid_signature_field",
+              "conflicting_signature_fields",
+              "invalid_signature_enabled",
+              "invalid_signature_template"
+            ]
+          }
+        },
+        "required": [
+          "error",
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
     "securitySchemes": {
       "bearerApiKey": {
         "type": "http",
@@ -2312,6 +2836,2664 @@
             }
           }
         }
+      }
+    },
+    "/api/admin/policies": {
+      "get": {
+        "operationId": "admin.policies.list",
+        "summary": "GET /api/admin/policies",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "post": {
+        "operationId": "admin.policies.create",
+        "summary": "POST /api/admin/policies",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/{id}": {
+      "delete": {
+        "operationId": "admin.policies.byId.delete",
+        "summary": "DELETE /api/admin/policies/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "get": {
+        "operationId": "admin.policies.byId.get",
+        "summary": "GET /api/admin/policies/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "put": {
+        "operationId": "admin.policies.byId.update",
+        "summary": "PUT /api/admin/policies/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/{id}/archive": {
+      "post": {
+        "operationId": "admin.policies.byId.archive.create",
+        "summary": "POST /api/admin/policies/:id/archive",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/{id}/diff": {
+      "get": {
+        "operationId": "admin.policies.byId.diff.list",
+        "summary": "GET /api/admin/policies/:id/diff",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/{id}/duplicate": {
+      "post": {
+        "operationId": "admin.policies.byId.duplicate.create",
+        "summary": "POST /api/admin/policies/:id/duplicate",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/{id}/publish": {
+      "post": {
+        "operationId": "admin.policies.byId.publish",
+        "summary": "POST /api/admin/policies/:id/publish",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/{id}/rollback/{version}": {
+      "post": {
+        "operationId": "admin.policies.byId.rollback.byVersion.create",
+        "summary": "POST /api/admin/policies/:id/rollback/:version",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/{id}/unpublish": {
+      "post": {
+        "operationId": "admin.policies.byId.unpublish.create",
+        "summary": "POST /api/admin/policies/:id/unpublish",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/{id}/versions": {
+      "get": {
+        "operationId": "admin.policies.byId.versions.list",
+        "summary": "GET /api/admin/policies/:id/versions",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/analytics": {
+      "get": {
+        "operationId": "admin.policies.analytics.list",
+        "summary": "GET /api/admin/policies/analytics",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/bulk": {
+      "post": {
+        "operationId": "admin.policies.bulk.create",
+        "summary": "POST /api/admin/policies/bulk",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/conflicts": {
+      "get": {
+        "operationId": "admin.policies.conflicts.list",
+        "summary": "GET /api/admin/policies/conflicts",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/effective": {
+      "get": {
+        "operationId": "admin.policies.effective.list",
+        "summary": "GET /api/admin/policies/effective",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/export": {
+      "get": {
+        "operationId": "admin.policies.export",
+        "summary": "GET /api/admin/policies/export",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/from-template": {
+      "post": {
+        "operationId": "admin.policies.fromTemplate.create",
+        "summary": "POST /api/admin/policies/from-template",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/health": {
+      "get": {
+        "operationId": "admin.policies.health.list",
+        "summary": "GET /api/admin/policies/health",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/import": {
+      "post": {
+        "operationId": "admin.policies.import",
+        "summary": "POST /api/admin/policies/import",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/metrics": {
+      "get": {
+        "operationId": "admin.policies.metrics.list",
+        "summary": "GET /api/admin/policies/metrics",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/output-scan": {
+      "post": {
+        "operationId": "admin.policies.outputScan.create",
+        "summary": "POST /api/admin/policies/output-scan",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/overview": {
+      "get": {
+        "operationId": "admin.policies.overview.list",
+        "summary": "GET /api/admin/policies/overview",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/preview": {
+      "post": {
+        "operationId": "admin.policies.preview.create",
+        "summary": "POST /api/admin/policies/preview",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/report": {
+      "get": {
+        "operationId": "admin.policies.report.list",
+        "summary": "GET /api/admin/policies/report",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/schema": {
+      "get": {
+        "operationId": "admin.policies.schema.list",
+        "summary": "GET /api/admin/policies/schema",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policies/simulate": {
+      "post": {
+        "operationId": "admin.policies.simulate.create",
+        "summary": "POST /api/admin/policies/simulate",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policies/templates": {
+      "get": {
+        "operationId": "admin.policies.templates.list",
+        "summary": "GET /api/admin/policies/templates",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-alert-rules": {
+      "get": {
+        "operationId": "admin.policyAlertRules.list",
+        "summary": "GET /api/admin/policy-alert-rules",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "post": {
+        "operationId": "admin.policyAlertRules.create",
+        "summary": "POST /api/admin/policy-alert-rules",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-alert-rules/{id}": {
+      "delete": {
+        "operationId": "admin.policyAlertRules.byId.delete",
+        "summary": "DELETE /api/admin/policy-alert-rules/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "put": {
+        "operationId": "admin.policyAlertRules.byId.update",
+        "summary": "PUT /api/admin/policy-alert-rules/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-appeals": {
+      "get": {
+        "operationId": "admin.policyAppeals.list",
+        "summary": "GET /api/admin/policy-appeals",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-appeals/{id}/decide": {
+      "post": {
+        "operationId": "admin.policyAppeals.byId.decide.create",
+        "summary": "POST /api/admin/policy-appeals/:id/decide",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-approvals": {
+      "get": {
+        "operationId": "admin.policyApprovals.list",
+        "summary": "GET /api/admin/policy-approvals",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-approvals/{id}/decide": {
+      "post": {
+        "operationId": "admin.policyApprovals.byId.decide.create",
+        "summary": "POST /api/admin/policy-approvals/:id/decide",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-channels": {
+      "get": {
+        "operationId": "admin.policyChannels.list",
+        "summary": "GET /api/admin/policy-channels",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "post": {
+        "operationId": "admin.policyChannels.create",
+        "summary": "POST /api/admin/policy-channels",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-channels/{id}": {
+      "delete": {
+        "operationId": "admin.policyChannels.byId.delete",
+        "summary": "DELETE /api/admin/policy-channels/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "put": {
+        "operationId": "admin.policyChannels.byId.update",
+        "summary": "PUT /api/admin/policy-channels/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-channels/{id}/test": {
+      "post": {
+        "operationId": "admin.policyChannels.byId.test",
+        "summary": "POST /api/admin/policy-channels/:id/test",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-clients": {
+      "get": {
+        "operationId": "admin.policyClients.list",
+        "summary": "GET /api/admin/policy-clients",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-exemptions": {
+      "get": {
+        "operationId": "admin.policyExemptions.list",
+        "summary": "GET /api/admin/policy-exemptions",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "post": {
+        "operationId": "admin.policyExemptions.create",
+        "summary": "POST /api/admin/policy-exemptions",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-exemptions/{id}": {
+      "delete": {
+        "operationId": "admin.policyExemptions.byId.delete",
+        "summary": "DELETE /api/admin/policy-exemptions/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-exemptions/from-hit/{hitId}": {
+      "post": {
+        "operationId": "admin.policyExemptions.fromHit.byHitId.create",
+        "summary": "POST /api/admin/policy-exemptions/from-hit/:hitId",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "hitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-groups": {
+      "get": {
+        "operationId": "admin.policyGroups.list",
+        "summary": "GET /api/admin/policy-groups",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "post": {
+        "operationId": "admin.policyGroups.create",
+        "summary": "POST /api/admin/policy-groups",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-groups/{id}": {
+      "delete": {
+        "operationId": "admin.policyGroups.byId.delete",
+        "summary": "DELETE /api/admin/policy-groups/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "put": {
+        "operationId": "admin.policyGroups.byId.update",
+        "summary": "PUT /api/admin/policy-groups/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-hits": {
+      "get": {
+        "operationId": "admin.policyHits.list",
+        "summary": "GET /api/admin/policy-hits",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-hits/{id}": {
+      "get": {
+        "operationId": "admin.policyHits.byId.get",
+        "summary": "GET /api/admin/policy-hits/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-hits/stream": {
+      "get": {
+        "operationId": "admin.policyHits.stream.list",
+        "summary": "GET /api/admin/policy-hits/stream",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-login-events": {
+      "get": {
+        "operationId": "admin.policyLoginEvents.list",
+        "summary": "GET /api/admin/policy-login-events",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-members": {
+      "get": {
+        "operationId": "admin.policyMembers.list",
+        "summary": "GET /api/admin/policy-members",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-members/{userId}/bypass": {
+      "post": {
+        "operationId": "admin.policyMembers.byUserId.bypass.create",
+        "summary": "POST /api/admin/policy-members/:userId/bypass",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-members/{userId}/offboard": {
+      "post": {
+        "operationId": "admin.policyMembers.byUserId.offboard.create",
+        "summary": "POST /api/admin/policy-members/:userId/offboard",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-members/{userId}/resume": {
+      "post": {
+        "operationId": "admin.policyMembers.byUserId.resume.create",
+        "summary": "POST /api/admin/policy-members/:userId/resume",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-members/{userId}/role": {
+      "post": {
+        "operationId": "admin.policyMembers.byUserId.role.create",
+        "summary": "POST /api/admin/policy-members/:userId/role",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-members/{userId}/suspend": {
+      "post": {
+        "operationId": "admin.policyMembers.byUserId.suspend.create",
+        "summary": "POST /api/admin/policy-members/:userId/suspend",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-members/bulk": {
+      "post": {
+        "operationId": "admin.policyMembers.bulk.create",
+        "summary": "POST /api/admin/policy-members/bulk",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-settings": {
+      "get": {
+        "operationId": "admin.policySettings.list",
+        "summary": "GET /api/admin/policy-settings",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "put": {
+        "operationId": "admin.policySettings.update",
+        "summary": "PUT /api/admin/policy-settings",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-settings/kill-switch": {
+      "post": {
+        "operationId": "admin.policySettings.killSwitch.create",
+        "summary": "POST /api/admin/policy-settings/kill-switch",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/policy-tags": {
+      "get": {
+        "operationId": "admin.policyTags.list",
+        "summary": "GET /api/admin/policy-tags",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-teams": {
+      "get": {
+        "operationId": "admin.policyTeams.list",
+        "summary": "GET /api/admin/policy-teams",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/admin/policy-users": {
+      "get": {
+        "operationId": "admin.policyUsers.list",
+        "summary": "GET /api/admin/policy-users",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
       }
     },
     "/api/admin/popup-notices": {
@@ -10194,8 +13376,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/KeySignature"
                 }
               }
             }
@@ -10207,7 +13388,8 @@
           "session"
         ],
         "x-crewrouter-streaming": false,
-        "x-crewrouter-body-limit": "2mb"
+        "x-crewrouter-body-limit": "2mb",
+        "description": "Key signature configuration. Co-Key members with management access read and update this Key, while inherited/effective values always use the owning user defaults. An empty resolved template produces no signature."
       },
       "put": {
         "operationId": "user.apiKeys.byId.signature.update",
@@ -10236,8 +13418,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/KeySignatureUpdated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid signature settings: missing enabled/template (including accepted aliases), undefined field, conflicting aliases after normalization, non-boolean switch (only Key accepts null), non-string/non-null template, or template longer than 2000 after trim. No fields are written and no cache is invalidated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureValidationError"
                 }
               }
             }
@@ -10251,16 +13442,16 @@
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true
+                "$ref": "#/components/schemas/KeySignaturePut"
               }
             }
           }
-        }
+        },
+        "description": "Key signature configuration. Co-Key members with management access read and update this Key, while inherited/effective values always use the owning user defaults. An empty resolved template produces no signature. Complete PUT requires enabled and template (or their legacy aliases); omitted fields return 400 rather than resetting existing values. Validation precedes the atomic write and cache invalidation follows successful commit."
       }
     },
     "/api/user/api-keys/{id}/swallow-images": {
@@ -13107,6 +16298,210 @@
         }
       }
     },
+    "/api/user/policies/blocks": {
+      "get": {
+        "operationId": "user.policies.blocks.list",
+        "summary": "GET /api/user/policies/blocks",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/user/policies/mine": {
+      "get": {
+        "operationId": "user.policies.mine.list",
+        "summary": "GET /api/user/policies/mine",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/user/policy-appeals": {
+      "get": {
+        "operationId": "user.policyAppeals.list",
+        "summary": "GET /api/user/policy-appeals",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      },
+      "post": {
+        "operationId": "user.policyAppeals.create",
+        "summary": "POST /api/user/policy-appeals",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/policy-approvals/{id}": {
+      "get": {
+        "operationId": "user.policyApprovals.byId.get",
+        "summary": "GET /api/user/policy-approvals/:id",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/api/user/policy-role": {
+      "get": {
+        "operationId": "user.policyRole.list",
+        "summary": "GET /api/user/policy-role",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
     "/api/user/popup-notices": {
       "get": {
         "operationId": "user.popupNotices.list",
@@ -14237,6 +17632,94 @@
         }
       }
     },
+    "/api/user/signature": {
+      "get": {
+        "operationId": "user.signature.list",
+        "summary": "GET /api/user/signature",
+        "tags": [
+          "account"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSignature"
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "account.profile.read",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "description": "User default signature configuration. The example defaults.template is informational only, never an automatic fallback. Empty templates produce no signature."
+      },
+      "put": {
+        "operationId": "user.signature.update",
+        "summary": "PUT /api/user/signature",
+        "tags": [
+          "account"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSignatureUpdated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid signature settings: missing enabled/template (including accepted aliases), undefined field, conflicting aliases after normalization, non-boolean switch (only Key accepts null), non-string/non-null template, or template longer than 2000 after trim. No fields are written and no cache is invalidated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureValidationError"
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "account.profile.write",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSignaturePut"
+              }
+            }
+          }
+        },
+        "description": "User default signature configuration. The example defaults.template is informational only, never an automatic fallback. Empty templates produce no signature. Complete PUT requires enabled and template (or their legacy aliases); omitted fields return 400 rather than resetting existing values. Validation precedes the atomic write and cache invalidation follows successful commit."
+      }
+    },
     "/api/user/stats": {
       "get": {
         "operationId": "user.stats.list",
@@ -14445,6 +17928,37 @@
         ],
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb"
+      }
+    },
+    "/api/user/suspension": {
+      "get": {
+        "operationId": "user.suspension.list",
+        "summary": "GET /api/user/suspension",
+        "tags": [
+          "management"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
       }
     },
     "/api/user/task-groups": {

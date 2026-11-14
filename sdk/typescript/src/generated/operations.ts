@@ -983,6 +983,1145 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": null,
     "bodyLimit": "2mb"
   },
+  "admin.policies.list": {
+    "operationId": "admin.policies.list",
+    "method": "GET",
+    "path": "/api/admin/policies",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.create": {
+    "operationId": "admin.policies.create",
+    "method": "POST",
+    "path": "/api/admin/policies",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.delete": {
+    "operationId": "admin.policies.byId.delete",
+    "method": "DELETE",
+    "path": "/api/admin/policies/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.get": {
+    "operationId": "admin.policies.byId.get",
+    "method": "GET",
+    "path": "/api/admin/policies/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.update": {
+    "operationId": "admin.policies.byId.update",
+    "method": "PUT",
+    "path": "/api/admin/policies/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.archive.create": {
+    "operationId": "admin.policies.byId.archive.create",
+    "method": "POST",
+    "path": "/api/admin/policies/:id/archive",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.diff.list": {
+    "operationId": "admin.policies.byId.diff.list",
+    "method": "GET",
+    "path": "/api/admin/policies/:id/diff",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.duplicate.create": {
+    "operationId": "admin.policies.byId.duplicate.create",
+    "method": "POST",
+    "path": "/api/admin/policies/:id/duplicate",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.publish": {
+    "operationId": "admin.policies.byId.publish",
+    "method": "POST",
+    "path": "/api/admin/policies/:id/publish",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.rollback.byVersion.create": {
+    "operationId": "admin.policies.byId.rollback.byVersion.create",
+    "method": "POST",
+    "path": "/api/admin/policies/:id/rollback/:version",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.unpublish.create": {
+    "operationId": "admin.policies.byId.unpublish.create",
+    "method": "POST",
+    "path": "/api/admin/policies/:id/unpublish",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.byId.versions.list": {
+    "operationId": "admin.policies.byId.versions.list",
+    "method": "GET",
+    "path": "/api/admin/policies/:id/versions",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.analytics.list": {
+    "operationId": "admin.policies.analytics.list",
+    "method": "GET",
+    "path": "/api/admin/policies/analytics",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.bulk.create": {
+    "operationId": "admin.policies.bulk.create",
+    "method": "POST",
+    "path": "/api/admin/policies/bulk",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.conflicts.list": {
+    "operationId": "admin.policies.conflicts.list",
+    "method": "GET",
+    "path": "/api/admin/policies/conflicts",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.effective.list": {
+    "operationId": "admin.policies.effective.list",
+    "method": "GET",
+    "path": "/api/admin/policies/effective",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.export": {
+    "operationId": "admin.policies.export",
+    "method": "GET",
+    "path": "/api/admin/policies/export",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.fromTemplate.create": {
+    "operationId": "admin.policies.fromTemplate.create",
+    "method": "POST",
+    "path": "/api/admin/policies/from-template",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.health.list": {
+    "operationId": "admin.policies.health.list",
+    "method": "GET",
+    "path": "/api/admin/policies/health",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.import": {
+    "operationId": "admin.policies.import",
+    "method": "POST",
+    "path": "/api/admin/policies/import",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.metrics.list": {
+    "operationId": "admin.policies.metrics.list",
+    "method": "GET",
+    "path": "/api/admin/policies/metrics",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.outputScan.create": {
+    "operationId": "admin.policies.outputScan.create",
+    "method": "POST",
+    "path": "/api/admin/policies/output-scan",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.overview.list": {
+    "operationId": "admin.policies.overview.list",
+    "method": "GET",
+    "path": "/api/admin/policies/overview",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.preview.create": {
+    "operationId": "admin.policies.preview.create",
+    "method": "POST",
+    "path": "/api/admin/policies/preview",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.report.list": {
+    "operationId": "admin.policies.report.list",
+    "method": "GET",
+    "path": "/api/admin/policies/report",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.schema.list": {
+    "operationId": "admin.policies.schema.list",
+    "method": "GET",
+    "path": "/api/admin/policies/schema",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.simulate.create": {
+    "operationId": "admin.policies.simulate.create",
+    "method": "POST",
+    "path": "/api/admin/policies/simulate",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policies.templates.list": {
+    "operationId": "admin.policies.templates.list",
+    "method": "GET",
+    "path": "/api/admin/policies/templates",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyAlertRules.list": {
+    "operationId": "admin.policyAlertRules.list",
+    "method": "GET",
+    "path": "/api/admin/policy-alert-rules",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyAlertRules.create": {
+    "operationId": "admin.policyAlertRules.create",
+    "method": "POST",
+    "path": "/api/admin/policy-alert-rules",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyAlertRules.byId.delete": {
+    "operationId": "admin.policyAlertRules.byId.delete",
+    "method": "DELETE",
+    "path": "/api/admin/policy-alert-rules/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyAlertRules.byId.update": {
+    "operationId": "admin.policyAlertRules.byId.update",
+    "method": "PUT",
+    "path": "/api/admin/policy-alert-rules/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyAppeals.list": {
+    "operationId": "admin.policyAppeals.list",
+    "method": "GET",
+    "path": "/api/admin/policy-appeals",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyAppeals.byId.decide.create": {
+    "operationId": "admin.policyAppeals.byId.decide.create",
+    "method": "POST",
+    "path": "/api/admin/policy-appeals/:id/decide",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyApprovals.list": {
+    "operationId": "admin.policyApprovals.list",
+    "method": "GET",
+    "path": "/api/admin/policy-approvals",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyApprovals.byId.decide.create": {
+    "operationId": "admin.policyApprovals.byId.decide.create",
+    "method": "POST",
+    "path": "/api/admin/policy-approvals/:id/decide",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyChannels.list": {
+    "operationId": "admin.policyChannels.list",
+    "method": "GET",
+    "path": "/api/admin/policy-channels",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyChannels.create": {
+    "operationId": "admin.policyChannels.create",
+    "method": "POST",
+    "path": "/api/admin/policy-channels",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyChannels.byId.delete": {
+    "operationId": "admin.policyChannels.byId.delete",
+    "method": "DELETE",
+    "path": "/api/admin/policy-channels/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyChannels.byId.update": {
+    "operationId": "admin.policyChannels.byId.update",
+    "method": "PUT",
+    "path": "/api/admin/policy-channels/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyChannels.byId.test": {
+    "operationId": "admin.policyChannels.byId.test",
+    "method": "POST",
+    "path": "/api/admin/policy-channels/:id/test",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyClients.list": {
+    "operationId": "admin.policyClients.list",
+    "method": "GET",
+    "path": "/api/admin/policy-clients",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyExemptions.list": {
+    "operationId": "admin.policyExemptions.list",
+    "method": "GET",
+    "path": "/api/admin/policy-exemptions",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyExemptions.create": {
+    "operationId": "admin.policyExemptions.create",
+    "method": "POST",
+    "path": "/api/admin/policy-exemptions",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyExemptions.byId.delete": {
+    "operationId": "admin.policyExemptions.byId.delete",
+    "method": "DELETE",
+    "path": "/api/admin/policy-exemptions/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyExemptions.fromHit.byHitId.create": {
+    "operationId": "admin.policyExemptions.fromHit.byHitId.create",
+    "method": "POST",
+    "path": "/api/admin/policy-exemptions/from-hit/:hitId",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyGroups.list": {
+    "operationId": "admin.policyGroups.list",
+    "method": "GET",
+    "path": "/api/admin/policy-groups",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyGroups.create": {
+    "operationId": "admin.policyGroups.create",
+    "method": "POST",
+    "path": "/api/admin/policy-groups",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyGroups.byId.delete": {
+    "operationId": "admin.policyGroups.byId.delete",
+    "method": "DELETE",
+    "path": "/api/admin/policy-groups/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyGroups.byId.update": {
+    "operationId": "admin.policyGroups.byId.update",
+    "method": "PUT",
+    "path": "/api/admin/policy-groups/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyHits.list": {
+    "operationId": "admin.policyHits.list",
+    "method": "GET",
+    "path": "/api/admin/policy-hits",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyHits.byId.get": {
+    "operationId": "admin.policyHits.byId.get",
+    "method": "GET",
+    "path": "/api/admin/policy-hits/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyHits.stream.list": {
+    "operationId": "admin.policyHits.stream.list",
+    "method": "GET",
+    "path": "/api/admin/policy-hits/stream",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyLoginEvents.list": {
+    "operationId": "admin.policyLoginEvents.list",
+    "method": "GET",
+    "path": "/api/admin/policy-login-events",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyMembers.list": {
+    "operationId": "admin.policyMembers.list",
+    "method": "GET",
+    "path": "/api/admin/policy-members",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyMembers.byUserId.bypass.create": {
+    "operationId": "admin.policyMembers.byUserId.bypass.create",
+    "method": "POST",
+    "path": "/api/admin/policy-members/:userId/bypass",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyMembers.byUserId.offboard.create": {
+    "operationId": "admin.policyMembers.byUserId.offboard.create",
+    "method": "POST",
+    "path": "/api/admin/policy-members/:userId/offboard",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyMembers.byUserId.resume.create": {
+    "operationId": "admin.policyMembers.byUserId.resume.create",
+    "method": "POST",
+    "path": "/api/admin/policy-members/:userId/resume",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyMembers.byUserId.role.create": {
+    "operationId": "admin.policyMembers.byUserId.role.create",
+    "method": "POST",
+    "path": "/api/admin/policy-members/:userId/role",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyMembers.byUserId.suspend.create": {
+    "operationId": "admin.policyMembers.byUserId.suspend.create",
+    "method": "POST",
+    "path": "/api/admin/policy-members/:userId/suspend",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyMembers.bulk.create": {
+    "operationId": "admin.policyMembers.bulk.create",
+    "method": "POST",
+    "path": "/api/admin/policy-members/bulk",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policySettings.list": {
+    "operationId": "admin.policySettings.list",
+    "method": "GET",
+    "path": "/api/admin/policy-settings",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policySettings.update": {
+    "operationId": "admin.policySettings.update",
+    "method": "PUT",
+    "path": "/api/admin/policy-settings",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policySettings.killSwitch.create": {
+    "operationId": "admin.policySettings.killSwitch.create",
+    "method": "POST",
+    "path": "/api/admin/policy-settings/kill-switch",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyTags.list": {
+    "operationId": "admin.policyTags.list",
+    "method": "GET",
+    "path": "/api/admin/policy-tags",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyTeams.list": {
+    "operationId": "admin.policyTeams.list",
+    "method": "GET",
+    "path": "/api/admin/policy-teams",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "admin.policyUsers.list": {
+    "operationId": "admin.policyUsers.list",
+    "method": "GET",
+    "path": "/api/admin/policy-users",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
   "admin.popupNotices.list": {
     "operationId": "admin.popupNotices.list",
     "method": "GET",
@@ -5461,6 +6600,108 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": null,
     "bodyLimit": "2mb"
   },
+  "user.policies.blocks.list": {
+    "operationId": "user.policies.blocks.list",
+    "method": "GET",
+    "path": "/api/user/policies/blocks",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "user.policies.mine.list": {
+    "operationId": "user.policies.mine.list",
+    "method": "GET",
+    "path": "/api/user/policies/mine",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "user.policyAppeals.list": {
+    "operationId": "user.policyAppeals.list",
+    "method": "GET",
+    "path": "/api/user/policy-appeals",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "user.policyAppeals.create": {
+    "operationId": "user.policyAppeals.create",
+    "method": "POST",
+    "path": "/api/user/policy-appeals",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "user.policyApprovals.byId.get": {
+    "operationId": "user.policyApprovals.byId.get",
+    "method": "GET",
+    "path": "/api/user/policy-approvals/:id",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "user.policyRole.list": {
+    "operationId": "user.policyRole.list",
+    "method": "GET",
+    "path": "/api/user/policy-role",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
   "user.popupNotices.list": {
     "operationId": "user.popupNotices.list",
     "method": "GET",
@@ -5929,6 +7170,42 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": null,
     "bodyLimit": "2mb"
   },
+  "user.signature.list": {
+    "operationId": "user.signature.list",
+    "method": "GET",
+    "path": "/api/user/signature",
+    "aliases": [],
+    "permission": "account.profile.read",
+    "permissionGroup": "account",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "user.signature.update": {
+    "operationId": "user.signature.update",
+    "method": "PUT",
+    "path": "/api/user/signature",
+    "aliases": [],
+    "permission": "account.profile.write",
+    "permissionGroup": "account",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
   "user.stats.list": {
     "operationId": "user.stats.list",
     "method": "GET",
@@ -6035,6 +7312,23 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "dynamic": false,
     "sdkStatus": "generated",
     "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "user.suspension.list": {
+    "operationId": "user.suspension.list",
+    "method": "GET",
+    "path": "/api/user/suspension",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
     "bodyLimit": "2mb"
   },
   "user.taskGroups.list": {

@@ -25,6 +25,8 @@
 | `user.sessions.bySessionKey.summary2` | POST | `/api/user/sessions/:sessionKey/summary` | `usage.write` | api_key, session | no |
 | `user.sessions.search` | GET | `/api/user/sessions/search` | `usage.read` | api_key, session | no |
 | `user.settings.update` | PUT | `/api/user/settings` | `account.profile.write` | api_key, session | no |
+| `user.signature.list` | GET | `/api/user/signature` | `account.profile.read` | api_key, session | no |
+| `user.signature.update` | PUT | `/api/user/signature` | `account.profile.write` | api_key, session | no |
 | `user.stats.list` | GET | `/api/user/stats` | `usage.read` | api_key, session | no |
 | `user.stats.filters.list` | GET | `/api/user/stats/filters` | `usage.read` | api_key, session | no |
 | `user.stats.latency.list` | GET | `/api/user/stats/latency` | `usage.read` | api_key, session | no |
@@ -336,6 +338,85 @@
 | `user.keyTags.byId.delete` | DELETE | `/api/user/key-tags/:id` | `keys.write` | api_key, session | no |
 | `user.keyTags.byId.update` | PUT | `/api/user/key-tags/:id` | `keys.write` | api_key, session | no |
 | `user.keyTags.reorder` | PUT | `/api/user/key-tags/reorder` | `keys.write` | api_key, session | no |
+
+## management
+
+| operationId | Method | Path | Permission | Auth | Streaming |
+| --- | --- | --- | --- | --- | --- |
+| `admin.policies.list` | GET | `/api/admin/policies` | — | session | no |
+| `admin.policies.create` | POST | `/api/admin/policies` | — | session | no |
+| `admin.policies.byId.delete` | DELETE | `/api/admin/policies/:id` | — | session | no |
+| `admin.policies.byId.get` | GET | `/api/admin/policies/:id` | — | session | no |
+| `admin.policies.byId.update` | PUT | `/api/admin/policies/:id` | — | session | no |
+| `admin.policies.byId.archive.create` | POST | `/api/admin/policies/:id/archive` | — | session | no |
+| `admin.policies.byId.diff.list` | GET | `/api/admin/policies/:id/diff` | — | session | no |
+| `admin.policies.byId.duplicate.create` | POST | `/api/admin/policies/:id/duplicate` | — | session | no |
+| `admin.policies.byId.publish` | POST | `/api/admin/policies/:id/publish` | — | session | no |
+| `admin.policies.byId.rollback.byVersion.create` | POST | `/api/admin/policies/:id/rollback/:version` | — | session | no |
+| `admin.policies.byId.unpublish.create` | POST | `/api/admin/policies/:id/unpublish` | — | session | no |
+| `admin.policies.byId.versions.list` | GET | `/api/admin/policies/:id/versions` | — | session | no |
+| `admin.policies.analytics.list` | GET | `/api/admin/policies/analytics` | — | session | no |
+| `admin.policies.bulk.create` | POST | `/api/admin/policies/bulk` | — | session | no |
+| `admin.policies.conflicts.list` | GET | `/api/admin/policies/conflicts` | — | session | no |
+| `admin.policies.effective.list` | GET | `/api/admin/policies/effective` | — | session | no |
+| `admin.policies.export` | GET | `/api/admin/policies/export` | — | session | no |
+| `admin.policies.fromTemplate.create` | POST | `/api/admin/policies/from-template` | — | session | no |
+| `admin.policies.health.list` | GET | `/api/admin/policies/health` | — | session | no |
+| `admin.policies.import` | POST | `/api/admin/policies/import` | — | session | no |
+| `admin.policies.metrics.list` | GET | `/api/admin/policies/metrics` | — | session | no |
+| `admin.policies.outputScan.create` | POST | `/api/admin/policies/output-scan` | — | session | no |
+| `admin.policies.overview.list` | GET | `/api/admin/policies/overview` | — | session | no |
+| `admin.policies.preview.create` | POST | `/api/admin/policies/preview` | — | session | no |
+| `admin.policies.report.list` | GET | `/api/admin/policies/report` | — | session | no |
+| `admin.policies.schema.list` | GET | `/api/admin/policies/schema` | — | session | no |
+| `admin.policies.simulate.create` | POST | `/api/admin/policies/simulate` | — | session | no |
+| `admin.policies.templates.list` | GET | `/api/admin/policies/templates` | — | session | no |
+| `admin.policyAlertRules.list` | GET | `/api/admin/policy-alert-rules` | — | session | no |
+| `admin.policyAlertRules.create` | POST | `/api/admin/policy-alert-rules` | — | session | no |
+| `admin.policyAlertRules.byId.delete` | DELETE | `/api/admin/policy-alert-rules/:id` | — | session | no |
+| `admin.policyAlertRules.byId.update` | PUT | `/api/admin/policy-alert-rules/:id` | — | session | no |
+| `admin.policyAppeals.list` | GET | `/api/admin/policy-appeals` | — | session | no |
+| `admin.policyAppeals.byId.decide.create` | POST | `/api/admin/policy-appeals/:id/decide` | — | session | no |
+| `admin.policyApprovals.list` | GET | `/api/admin/policy-approvals` | — | session | no |
+| `admin.policyApprovals.byId.decide.create` | POST | `/api/admin/policy-approvals/:id/decide` | — | session | no |
+| `admin.policyChannels.list` | GET | `/api/admin/policy-channels` | — | session | no |
+| `admin.policyChannels.create` | POST | `/api/admin/policy-channels` | — | session | no |
+| `admin.policyChannels.byId.delete` | DELETE | `/api/admin/policy-channels/:id` | — | session | no |
+| `admin.policyChannels.byId.update` | PUT | `/api/admin/policy-channels/:id` | — | session | no |
+| `admin.policyChannels.byId.test` | POST | `/api/admin/policy-channels/:id/test` | — | session | no |
+| `admin.policyClients.list` | GET | `/api/admin/policy-clients` | — | session | no |
+| `admin.policyExemptions.list` | GET | `/api/admin/policy-exemptions` | — | session | no |
+| `admin.policyExemptions.create` | POST | `/api/admin/policy-exemptions` | — | session | no |
+| `admin.policyExemptions.byId.delete` | DELETE | `/api/admin/policy-exemptions/:id` | — | session | no |
+| `admin.policyExemptions.fromHit.byHitId.create` | POST | `/api/admin/policy-exemptions/from-hit/:hitId` | — | session | no |
+| `admin.policyGroups.list` | GET | `/api/admin/policy-groups` | — | session | no |
+| `admin.policyGroups.create` | POST | `/api/admin/policy-groups` | — | session | no |
+| `admin.policyGroups.byId.delete` | DELETE | `/api/admin/policy-groups/:id` | — | session | no |
+| `admin.policyGroups.byId.update` | PUT | `/api/admin/policy-groups/:id` | — | session | no |
+| `admin.policyHits.list` | GET | `/api/admin/policy-hits` | — | session | no |
+| `admin.policyHits.byId.get` | GET | `/api/admin/policy-hits/:id` | — | session | no |
+| `admin.policyHits.stream.list` | GET | `/api/admin/policy-hits/stream` | — | session | no |
+| `admin.policyLoginEvents.list` | GET | `/api/admin/policy-login-events` | — | session | no |
+| `admin.policyMembers.list` | GET | `/api/admin/policy-members` | — | session | no |
+| `admin.policyMembers.byUserId.bypass.create` | POST | `/api/admin/policy-members/:userId/bypass` | — | session | no |
+| `admin.policyMembers.byUserId.offboard.create` | POST | `/api/admin/policy-members/:userId/offboard` | — | session | no |
+| `admin.policyMembers.byUserId.resume.create` | POST | `/api/admin/policy-members/:userId/resume` | — | session | no |
+| `admin.policyMembers.byUserId.role.create` | POST | `/api/admin/policy-members/:userId/role` | — | session | no |
+| `admin.policyMembers.byUserId.suspend.create` | POST | `/api/admin/policy-members/:userId/suspend` | — | session | no |
+| `admin.policyMembers.bulk.create` | POST | `/api/admin/policy-members/bulk` | — | session | no |
+| `admin.policySettings.list` | GET | `/api/admin/policy-settings` | — | session | no |
+| `admin.policySettings.update` | PUT | `/api/admin/policy-settings` | — | session | no |
+| `admin.policySettings.killSwitch.create` | POST | `/api/admin/policy-settings/kill-switch` | — | session | no |
+| `admin.policyTags.list` | GET | `/api/admin/policy-tags` | — | session | no |
+| `admin.policyTeams.list` | GET | `/api/admin/policy-teams` | — | session | no |
+| `admin.policyUsers.list` | GET | `/api/admin/policy-users` | — | session | no |
+| `user.policies.blocks.list` | GET | `/api/user/policies/blocks` | — | session | no |
+| `user.policies.mine.list` | GET | `/api/user/policies/mine` | — | session | no |
+| `user.policyAppeals.list` | GET | `/api/user/policy-appeals` | — | session | no |
+| `user.policyAppeals.create` | POST | `/api/user/policy-appeals` | — | session | no |
+| `user.policyApprovals.byId.get` | GET | `/api/user/policy-approvals/:id` | — | session | no |
+| `user.policyRole.list` | GET | `/api/user/policy-role` | — | session | no |
+| `user.suspension.list` | GET | `/api/user/suspension` | — | session | no |
 
 ## models
 

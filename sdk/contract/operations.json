@@ -1893,6 +1893,2281 @@
       "contractVersion": 1
     },
     {
+      "operationId": "admin.policies.list",
+      "method": "GET",
+      "path": "/api/admin/policies",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.create",
+      "method": "POST",
+      "path": "/api/admin/policies",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.delete",
+      "method": "DELETE",
+      "path": "/api/admin/policies/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.get",
+      "method": "GET",
+      "path": "/api/admin/policies/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.update",
+      "method": "PUT",
+      "path": "/api/admin/policies/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.archive.create",
+      "method": "POST",
+      "path": "/api/admin/policies/:id/archive",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.diff.list",
+      "method": "GET",
+      "path": "/api/admin/policies/:id/diff",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.duplicate.create",
+      "method": "POST",
+      "path": "/api/admin/policies/:id/duplicate",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.publish",
+      "method": "POST",
+      "path": "/api/admin/policies/:id/publish",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.rollback.byVersion.create",
+      "method": "POST",
+      "path": "/api/admin/policies/:id/rollback/:version",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.unpublish.create",
+      "method": "POST",
+      "path": "/api/admin/policies/:id/unpublish",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.byId.versions.list",
+      "method": "GET",
+      "path": "/api/admin/policies/:id/versions",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.analytics.list",
+      "method": "GET",
+      "path": "/api/admin/policies/analytics",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.bulk.create",
+      "method": "POST",
+      "path": "/api/admin/policies/bulk",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.conflicts.list",
+      "method": "GET",
+      "path": "/api/admin/policies/conflicts",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.effective.list",
+      "method": "GET",
+      "path": "/api/admin/policies/effective",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.export",
+      "method": "GET",
+      "path": "/api/admin/policies/export",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.fromTemplate.create",
+      "method": "POST",
+      "path": "/api/admin/policies/from-template",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.health.list",
+      "method": "GET",
+      "path": "/api/admin/policies/health",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.import",
+      "method": "POST",
+      "path": "/api/admin/policies/import",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.metrics.list",
+      "method": "GET",
+      "path": "/api/admin/policies/metrics",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.outputScan.create",
+      "method": "POST",
+      "path": "/api/admin/policies/output-scan",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.overview.list",
+      "method": "GET",
+      "path": "/api/admin/policies/overview",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.preview.create",
+      "method": "POST",
+      "path": "/api/admin/policies/preview",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.report.list",
+      "method": "GET",
+      "path": "/api/admin/policies/report",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.schema.list",
+      "method": "GET",
+      "path": "/api/admin/policies/schema",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.simulate.create",
+      "method": "POST",
+      "path": "/api/admin/policies/simulate",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policies.templates.list",
+      "method": "GET",
+      "path": "/api/admin/policies/templates",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyAlertRules.list",
+      "method": "GET",
+      "path": "/api/admin/policy-alert-rules",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyAlertRules.create",
+      "method": "POST",
+      "path": "/api/admin/policy-alert-rules",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyAlertRules.byId.delete",
+      "method": "DELETE",
+      "path": "/api/admin/policy-alert-rules/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyAlertRules.byId.update",
+      "method": "PUT",
+      "path": "/api/admin/policy-alert-rules/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyAppeals.list",
+      "method": "GET",
+      "path": "/api/admin/policy-appeals",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyAppeals.byId.decide.create",
+      "method": "POST",
+      "path": "/api/admin/policy-appeals/:id/decide",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyApprovals.list",
+      "method": "GET",
+      "path": "/api/admin/policy-approvals",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyApprovals.byId.decide.create",
+      "method": "POST",
+      "path": "/api/admin/policy-approvals/:id/decide",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyChannels.list",
+      "method": "GET",
+      "path": "/api/admin/policy-channels",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyChannels.create",
+      "method": "POST",
+      "path": "/api/admin/policy-channels",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyChannels.byId.delete",
+      "method": "DELETE",
+      "path": "/api/admin/policy-channels/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyChannels.byId.update",
+      "method": "PUT",
+      "path": "/api/admin/policy-channels/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyChannels.byId.test",
+      "method": "POST",
+      "path": "/api/admin/policy-channels/:id/test",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyClients.list",
+      "method": "GET",
+      "path": "/api/admin/policy-clients",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyExemptions.list",
+      "method": "GET",
+      "path": "/api/admin/policy-exemptions",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyExemptions.create",
+      "method": "POST",
+      "path": "/api/admin/policy-exemptions",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyExemptions.byId.delete",
+      "method": "DELETE",
+      "path": "/api/admin/policy-exemptions/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyExemptions.fromHit.byHitId.create",
+      "method": "POST",
+      "path": "/api/admin/policy-exemptions/from-hit/:hitId",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyGroups.list",
+      "method": "GET",
+      "path": "/api/admin/policy-groups",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyGroups.create",
+      "method": "POST",
+      "path": "/api/admin/policy-groups",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyGroups.byId.delete",
+      "method": "DELETE",
+      "path": "/api/admin/policy-groups/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyGroups.byId.update",
+      "method": "PUT",
+      "path": "/api/admin/policy-groups/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyHits.list",
+      "method": "GET",
+      "path": "/api/admin/policy-hits",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyHits.byId.get",
+      "method": "GET",
+      "path": "/api/admin/policy-hits/:id",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyHits.stream.list",
+      "method": "GET",
+      "path": "/api/admin/policy-hits/stream",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyLoginEvents.list",
+      "method": "GET",
+      "path": "/api/admin/policy-login-events",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyMembers.list",
+      "method": "GET",
+      "path": "/api/admin/policy-members",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyMembers.byUserId.bypass.create",
+      "method": "POST",
+      "path": "/api/admin/policy-members/:userId/bypass",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyMembers.byUserId.offboard.create",
+      "method": "POST",
+      "path": "/api/admin/policy-members/:userId/offboard",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyMembers.byUserId.resume.create",
+      "method": "POST",
+      "path": "/api/admin/policy-members/:userId/resume",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyMembers.byUserId.role.create",
+      "method": "POST",
+      "path": "/api/admin/policy-members/:userId/role",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyMembers.byUserId.suspend.create",
+      "method": "POST",
+      "path": "/api/admin/policy-members/:userId/suspend",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyMembers.bulk.create",
+      "method": "POST",
+      "path": "/api/admin/policy-members/bulk",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policySettings.list",
+      "method": "GET",
+      "path": "/api/admin/policy-settings",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policySettings.update",
+      "method": "PUT",
+      "path": "/api/admin/policy-settings",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policySettings.killSwitch.create",
+      "method": "POST",
+      "path": "/api/admin/policy-settings/kill-switch",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyTags.list",
+      "method": "GET",
+      "path": "/api/admin/policy-tags",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyTeams.list",
+      "method": "GET",
+      "path": "/api/admin/policy-teams",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "admin.policyUsers.list",
+      "method": "GET",
+      "path": "/api/admin/policy-users",
+      "aliases": [],
+      "module": "server/routes/admin-policies.js",
+      "mount": "/api/admin",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
       "operationId": "admin.popupNotices.list",
       "method": "GET",
       "path": "/api/admin/popup-notices",
@@ -10613,6 +12888,206 @@
       "contractVersion": 1
     },
     {
+      "operationId": "user.policies.blocks.list",
+      "method": "GET",
+      "path": "/api/user/policies/blocks",
+      "aliases": [],
+      "module": "server/routes/user-policies.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.policies.mine.list",
+      "method": "GET",
+      "path": "/api/user/policies/mine",
+      "aliases": [],
+      "module": "server/routes/user-policies.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.policyAppeals.list",
+      "method": "GET",
+      "path": "/api/user/policy-appeals",
+      "aliases": [],
+      "module": "server/routes/user-policies.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.policyAppeals.create",
+      "method": "POST",
+      "path": "/api/user/policy-appeals",
+      "aliases": [],
+      "module": "server/routes/user-policies.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.policyApprovals.byId.get",
+      "method": "GET",
+      "path": "/api/user/policy-approvals/:id",
+      "aliases": [],
+      "module": "server/routes/user-policies.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.policyRole.list",
+      "method": "GET",
+      "path": "/api/user/policy-role",
+      "aliases": [],
+      "module": "server/routes/user-policies.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
       "operationId": "user.popupNotices.list",
       "method": "GET",
       "path": "/api/user/popup-notices",
@@ -11517,6 +13992,76 @@
       "contractVersion": 1
     },
     {
+      "operationId": "user.signature.list",
+      "method": "GET",
+      "path": "/api/user/signature",
+      "aliases": [],
+      "module": "server/routes/user.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": "account.profile.read",
+      "permissionGroup": "account",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.signature.update",
+      "method": "PUT",
+      "path": "/api/user/signature",
+      "aliases": [],
+      "module": "server/routes/user.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": "account.profile.write",
+      "permissionGroup": "account",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
       "operationId": "user.stats.list",
       "method": "GET",
       "path": "/api/user/stats",
@@ -11718,6 +14263,39 @@
       },
       "sdkStatus": "generated",
       "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.suspension.list",
+      "method": "GET",
+      "path": "/api/user/suspension",
+      "aliases": [],
+      "module": "server/routes/user-policies.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
       "contractVersion": 1
     },
     {
