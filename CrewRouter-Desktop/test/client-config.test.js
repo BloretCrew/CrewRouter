@@ -17,12 +17,23 @@ function fixture(t, options = {}) {
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
   const prompts = [];
   const dialog = {
-    showMessageBox: async (_window, details) => { prompts.push(details); return { response: 1 }; },
+    showMessageBox: async (_window, details) => { prompts.push(details); return options.confirmResponse === undefined ? { response: 1 } : { response: options.confirmResponse }; },
     showOpenDialog: async () => ({ canceled: false, filePaths: [path.join(home, 'project')] }),
     ...options.dialog,
   };
   const service = createClientConfigService({ home, env: {}, dialog, ...options });
-  return { home, prompts, service, file: (tool) => service.getClientConfigTarget(tool).path };
+  const clientConfigTargets = (tool) => {
+    if (tool !== 'claude_desktop') return [];
+    const platform = options.platform || process.platform;
+    const root = platform === 'darwin' ? path.join(home, 'Library/Application Support') : platform === 'win32' ? (options.env?.LOCALAPPDATA || path.join(home, 'AppData/Local')) : (options.env?.XDG_CONFIG_HOME || path.join(home, '.config'));
+    return [
+      path.join(root, 'Claude/claude_desktop_config.json'),
+      path.join(root, 'Claude-3p/claude_desktop_config.json'),
+      path.join(root, 'Claude-3p/configLibrary/_meta.json'),
+      path.join(root, 'Claude-3p/configLibrary/00000000-0000-4000-8000-435200000001.json'),
+    ];
+  };
+  return { home, prompts, service, file: (tool) => tool === 'claude_desktop' ? clientConfigTargets(tool)[3] : service.getClientConfigTarget(tool).path, clientConfigTargets };
 }
 function put(file, text) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); }
 function parse(file, tool) {
@@ -32,6 +43,7 @@ function parse(file, tool) {
 }
 const check = {
   claude: (c) => { assert.equal(c.env.ANTHROPIC_AUTH_TOKEN, 'unit-test-key'); assert.equal(c.env.ANTHROPIC_MODEL, 'test-model'); assert.equal(c.env.ANTHROPIC_BASE_URL, 'https://router.example'); assert.equal(c.env.ANTHROPIC_DEFAULT_HAIKU_MODEL, 'test-model'); },
+  claude_desktop: (c) => { assert.equal(c.inferenceProvider, 'gateway'); assert.equal(c.inferenceGatewayApiKey, 'unit-test-key'); assert.equal(c.inferenceGatewayAuthScheme, 'bearer'); assert.equal(c.inferenceGatewayBaseUrl, 'https://router.example'); assert.equal(c.inferenceModels[0].name, 'test-model'); },
   codex: (c) => { assert.equal(c.model_provider, 'crewrouter'); assert.equal(c.model_providers.crewrouter.experimental_bearer_token, 'unit-test-key'); assert.equal(c.model_providers.crewrouter.wire_api, 'responses'); assert.equal(c.model_providers.crewrouter.api_key, undefined); assert.equal(c.model_providers.crewrouter.requires_openai_auth, false); },
   grok: (c) => { assert.equal(c.model.crewrouter.model, 'test-model'); assert.equal(c.model.crewrouter.api_key, 'unit-test-key'); assert.equal(c.model.crewrouter.api_backend, 'chat_completions'); assert.equal(c.models.default, 'crewrouter'); },
   opencode: (c) => { assert.equal(c.provider.crewrouter.options.apiKey, 'unit-test-key'); assert.equal(c.model, 'crewrouter/test-model'); },
@@ -39,10 +51,24 @@ const check = {
   hermes: (c) => { assert.equal(c.model.provider, 'custom:crewrouter'); assert.equal(c.providers.crewrouter.api_key, 'unit-test-key'); assert.equal(c.providers.crewrouter.transport, 'openai_chat'); },
   openclaw: (c) => { assert.equal(c.models.providers.crewrouter.api, 'openai-completions'); assert.equal(c.models.providers.crewrouter.models[0].id, 'test-model'); assert.equal(c.agents.defaults.model.primary, 'crewrouter/test-model'); },
 };
-for (const tool of Object.keys(TOOLS)) {
+for (const tool of Object.keys({ ...TOOLS, claude_desktop: true })) {
   test(`${tool}: first write, native confirmation, permissions, backup and minimal merge`, async (t) => {
     const f = fixture(t);
-    const file = f.file(tool);
+    const file = tool === 'claude_desktop' ? f.clientConfigTargets(tool)[3] : f.file(tool);
+    if (tool === 'claude_desktop') {
+      const files = f.clientConfigTargets(tool);
+      for (const target of files) assert.ok(target.startsWith(f.home + path.sep));
+      const result = await f.service.writeClientConfig(request(tool));
+      assert.equal(result.path, files[3]);
+      assert.equal(result.backupPath, null);
+      const [normalPath, threepPath, metaPath, profilePath] = files;
+      assert.equal(parse(normalPath, 'claude').deploymentMode, '3p');
+      assert.equal(parse(threepPath, 'claude').deploymentMode, '3p');
+      assert.equal(parse(metaPath, 'claude').appliedId, '00000000-0000-4000-8000-435200000001');
+      assert.deepEqual(parse(metaPath, 'claude').entries, [{ id: '00000000-0000-4000-8000-435200000001', name: 'CrewRouter' }]);
+      check.claude_desktop(parse(profilePath, 'claude'));
+      return;
+    }
     const first = await f.service.writeClientConfig(request(tool));
     assert.deepEqual(first, { path: file, backupPath: null, canceled: false });
     check[tool](parse(file, tool));
@@ -67,6 +93,74 @@ for (const tool of Object.keys(TOOLS)) {
     assert.ok(original.length > 0);
   });
 }
+
+test('Claude Desktop direct gateway write preserves profiles and backs up every existing file', async (t) => {
+  const f = fixture(t, { platform: 'darwin' });
+  const files = f.clientConfigTargets('claude_desktop');
+  assert.deepEqual(files.map((file) => path.relative(f.home, file)), [
+    'Library/Application Support/Claude/claude_desktop_config.json',
+    'Library/Application Support/Claude-3p/claude_desktop_config.json',
+    'Library/Application Support/Claude-3p/configLibrary/_meta.json',
+    'Library/Application Support/Claude-3p/configLibrary/00000000-0000-4000-8000-435200000001.json',
+  ]);
+  put(files[0], JSON.stringify({ userPreference: 'dark' }));
+  put(files[1], JSON.stringify({ userPreference: 'compact' }));
+  put(files[2], JSON.stringify({ entries: [{ id: 'other-profile', name: 'Other' }], appliedId: 'other-profile' }));
+  const originalProfile = JSON.stringify({ customFlag: true });
+  put(files[3], originalProfile);
+
+  const result = await f.service.writeClientConfig(request('claude_desktop'));
+  assert.equal(result.path, files[3]);
+  assert.equal(result.canceled, false);
+  const backups = result.backupPath.split('\n');
+  assert.equal(backups.length, 4);
+  for (let i = 0; i < files.length; i += 1) {
+    assert.equal(fs.readFileSync(backups[i], 'utf8'), [
+      JSON.stringify({ userPreference: 'dark' }),
+      JSON.stringify({ userPreference: 'compact' }),
+      JSON.stringify({ entries: [{ id: 'other-profile', name: 'Other' }], appliedId: 'other-profile' }),
+      originalProfile,
+    ][i]);
+    assert.equal(fs.statSync(backups[i]).mode & 0o777, 0o600);
+  }
+  const normal = JSON.parse(fs.readFileSync(files[0], 'utf8'));
+  const threep = JSON.parse(fs.readFileSync(files[1], 'utf8'));
+  const meta = JSON.parse(fs.readFileSync(files[2], 'utf8'));
+  const profile = JSON.parse(fs.readFileSync(files[3], 'utf8'));
+  assert.equal(normal.deploymentMode, '3p');
+  assert.equal(normal.userPreference, 'dark');
+  assert.equal(threep.deploymentMode, '3p');
+  assert.equal(threep.userPreference, 'compact');
+  assert.deepEqual(meta.entries, [{ id: 'other-profile', name: 'Other' }, { id: '00000000-0000-4000-8000-435200000001', name: 'CrewRouter' }]);
+  assert.equal(meta.appliedId, '00000000-0000-4000-8000-435200000001');
+  assert.equal(profile.customFlag, true);
+  check.claude_desktop(profile);
+  assert.equal(profile.coworkEgressAllowedHosts, undefined);
+});
+
+test('Claude Desktop supports native macOS, Windows and Linux profile paths', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-config-platform-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const dialog = { showMessageBox: async () => ({ response: 0 }) };
+  const mac = createClientConfigService({ home, env: {}, platform: 'darwin', dialog });
+  const winRoot = path.join(home, 'AppData/Local');
+  const win = createClientConfigService({ home, env: { LOCALAPPDATA: winRoot }, platform: 'win32', dialog });
+  const linuxRoot = path.join(home, '.config-alt');
+  const linux = createClientConfigService({ home, env: { XDG_CONFIG_HOME: linuxRoot }, platform: 'linux', dialog });
+  assert.match(mac.getClientConfigTarget('claude_desktop').path, /Library\/Application Support\/Claude-3p\/configLibrary/);
+  assert.equal(win.getClientConfigTarget('claude_desktop').path, path.join(winRoot, 'Claude-3p/configLibrary/00000000-0000-4000-8000-435200000001.json'));
+  assert.equal(linux.getClientConfigTarget('claude_desktop').path, path.join(linuxRoot, 'Claude-3p/configLibrary/00000000-0000-4000-8000-435200000001.json'));
+});
+
+test('Claude Desktop cancellation leaves all files and directories untouched', async (t) => {
+  const f = fixture(t, { platform: 'darwin', confirmResponse: 0 });
+  const files = f.clientConfigTargets('claude_desktop');
+  const result = await f.service.writeClientConfig(request('claude_desktop'));
+  assert.equal(result.canceled, true);
+  assert.equal(f.prompts.length, 1);
+  for (const file of files) assert.equal(fs.existsSync(file), false);
+  assert.equal(fs.existsSync(path.dirname(files[3])), false);
+});
 
 test('environment overrides stay within fixed client filenames', (t) => {
   const f = fixture(t);

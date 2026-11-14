@@ -18,7 +18,9 @@ const TOOLS = Object.freeze({
   hermes: ['HERMES_HOME', '.hermes', 'config.yaml', 'yaml'],
   openclaw: ['OPENCLAW_STATE_DIR', '.openclaw', 'openclaw.json', 'json5'],
 });
-const TOOL_NAMES = { claude: 'Claude Code', codex: 'Codex', grok: 'Grok Build', opencode: 'OpenCode', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw' };
+const TOOL_NAMES = { claude: 'Claude Code', claude_desktop: 'Claude Desktop', codex: 'Codex', grok: 'Grok Build', opencode: 'OpenCode', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw' };
+const CLAUDE_DESKTOP_PROFILE_ID = '00000000-0000-4000-8000-435200000001';
+const CLAUDE_DESKTOP_PROFILE_NAME = 'CrewRouter';
 const MAX_FILE = 1024 * 1024;
 class ConfigError extends Error {}
 const fail = (message) => { throw new ConfigError(message); };
@@ -138,6 +140,17 @@ function parseConfig(text, format) {
   return result;
 }
 function applyConfig(config, { tool, baseUrl, apiKey, model }) {
+  switch (tool) {
+    case 'claude_desktop':
+      return {
+        disableDeploymentModeChooser: true,
+        inferenceGatewayApiKey: apiKey,
+        inferenceGatewayAuthScheme: 'bearer',
+        inferenceGatewayBaseUrl: baseUrl.replace(/\/+$/, '').replace(/\/v1$/i, ''),
+        inferenceModels: [{ name: model }],
+        inferenceProvider: 'gateway',
+      };
+  }
   switch (tool) {
     case 'claude':
       merge(config, ['env'], { ANTHROPIC_BASE_URL: baseUrl, ANTHROPIC_AUTH_TOKEN: apiKey, ANTHROPIC_MODEL: model, ANTHROPIC_DEFAULT_HAIKU_MODEL: model, ANTHROPIC_DEFAULT_SONNET_MODEL: model, ANTHROPIC_DEFAULT_OPUS_MODEL: model });
@@ -265,23 +278,45 @@ function serialize(text, before, after, format) {
 }
 function validateRequest(request) {
   if (!plain(request) || Object.keys(request).some((key) => !['tool', 'baseUrl', 'apiKey', 'model', 'project'].includes(key))) fail('配置请求字段无效。');
-  if (!Object.hasOwn(TOOLS, request.tool)) fail('不支持此客户端自动写入。');
+      if (!Object.hasOwn(TOOLS, request.tool) && request.tool !== 'claude_desktop') fail('不支持此客户端自动写入。');
   for (const [key, max] of [['baseUrl', 2048], ['apiKey', 4096], ['model', 256]]) {
     const value = request[key];
     if (typeof value !== 'string' || !value.trim() || value.length > max || /[\x00-\x20\x7f]/.test(value)) fail('配置请求参数无效。');
   }
-  if (['__proto__', 'constructor', 'prototype'].includes(request.model)) fail('模型名称无效。');
+  if (!request.model || ['__proto__', 'constructor', 'prototype'].includes(request.model)) fail('模型名称无效。');
   let url;
   try { url = new URL(request.baseUrl); } catch { fail('服务地址无效。'); }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) fail('服务地址必须是无凭证、无查询参数的 HTTP(S) 地址。');
   if (request.project !== undefined && (typeof request.project !== 'boolean' || request.tool !== 'opencode')) fail('只有 OpenCode 支持项目配置请求。');
 }
 
-function createClientConfigService({ env = process.env, home = os.homedir(), dialog, getWindow = () => null, fsImpl = fs } = {}) {
+function createClientConfigService({ env = process.env, home = os.homedir(), platform = process.platform, dialog, getWindow = () => null, fsImpl = fs } = {}) {
   let busy = false;
   home = safePath(home, os.homedir());
+  function claudeDesktopPaths() {
+    let root;
+    if (platform === 'darwin') root = path.join(home, 'Library', 'Application Support');
+    else if (platform === 'win32') root = safePath(env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'), home);
+    else if (platform === 'linux') root = safePath(env.XDG_CONFIG_HOME || path.join(home, '.config'), home);
+    else fail('当前系统暂不支持 Claude Desktop 一键配置。');
+    const normalDir = path.join(root, 'Claude');
+    const threepDir = path.join(root, 'Claude-3p');
+    const libraryDir = path.join(threepDir, 'configLibrary');
+    return { files: [
+      { path: path.join(normalDir, 'claude_desktop_config.json'), key: 'normal' },
+      { path: path.join(threepDir, 'claude_desktop_config.json'), key: 'threep' },
+      { path: path.join(libraryDir, '_meta.json'), key: 'meta' },
+      { path: path.join(libraryDir, `${CLAUDE_DESKTOP_PROFILE_ID}.json`), key: 'profile' },
+    ] };
+  }
+
   function target(tool) {
     if (typeof tool !== 'string') fail('客户端名称无效。');
+    if (tool === 'claude_desktop') {
+      const paths = claudeDesktopPaths();
+      for (const item of paths.files) inspectPath(item.path);
+      return { path: paths.files[3].path, supported: true, format: 'jsonc', claudeDesktopFiles: paths.files };
+    }
     if (!Object.hasOwn(TOOLS, tool)) return { path: null, supported: false };
     if ((tool === 'hermes' && env.HERMES_PROFILE) || (tool === 'openclaw' && env.OPENCLAW_PROFILE) || (tool === 'opencode' && (env.OPENCODE_CONFIG || env.OPENCODE_CONFIG_DIR || env.OPENCODE_CONFIG_CONTENT))) fail('存在 profile 或额外配置覆盖，请使用手动配置。');
     const [variable, directory, filename, format] = TOOLS[tool];
@@ -316,12 +351,84 @@ function createClientConfigService({ env = process.env, home = os.homedir(), dia
       return { text, config: parseConfig(text, format) };
     } finally { fs.closeSync(handle); }
   }
+  async function writeClaudeDesktopConfig(request, { isTrusted }) {
+    const resolved = target('claude_desktop');
+    const changes = resolved.claudeDesktopFiles.map((item) => {
+      const original = read(item.path, 'jsonc');
+      const config = structuredClone(original.config);
+      if (item.key === 'normal' || item.key === 'threep') config.deploymentMode = '3p';
+      else if (item.key === 'profile') Object.assign(config, applyConfig({}, request));
+      else {
+        if (config.entries !== undefined && !Array.isArray(config.entries)) fail('Claude Desktop profile 清单格式异常，请手动修复。');
+        const entries = Array.isArray(config.entries) ? config.entries : [];
+        const entry = entries.find((row) => row && row.id === CLAUDE_DESKTOP_PROFILE_ID);
+        if (entry) entry.name = CLAUDE_DESKTOP_PROFILE_NAME;
+        else entries.push({ id: CLAUDE_DESKTOP_PROFILE_ID, name: CLAUDE_DESKTOP_PROFILE_NAME });
+        config.entries = entries;
+        config.appliedId = CLAUDE_DESKTOP_PROFILE_ID;
+      }
+      const output = serialize(original.text, original.config, config, 'jsonc');
+      if (Buffer.byteLength(output) > MAX_FILE) fail('Claude Desktop 配置文件过大。');
+      parseConfig(output, 'jsonc');
+      return { ...item, original, output };
+    });
+    const confirmation = await dialog.showMessageBox(getWindow(), {
+      type: 'warning', title: '写入客户端配置？', message: '写入 Claude Desktop 第三方模型配置？',
+      detail: `将创建并启用 CrewRouter gateway profile，保留其他 profile 并备份已有文件。完成后需完全退出并重新打开 Claude Desktop。\n配置文件：\n${changes.map((item) => item.path).join('\n')}`,
+      buttons: ['取消', '写入配置'], defaultId: 0, cancelId: 0, noLink: true,
+    });
+    if (confirmation.response !== 1) return { path: resolved.path, backupPath: null, canceled: true };
+    if (!isTrusted()) fail('页面已变化，请重新打开配置窗口。');
+    for (const item of changes) {
+      const current = read(item.path, 'jsonc');
+      if (current.text !== item.original.text || fs.existsSync(item.path) !== Boolean(item.original.text)) fail('Claude Desktop 配置已变化，请重试。');
+      fs.mkdirSync(path.dirname(item.path), { recursive: true, mode: 0o700 });
+      inspectPath(item.path);
+    }
+    const suffix = crypto.randomUUID();
+    const staged = [];
+    const backups = [];
+    const committed = [];
+    try {
+      for (const item of changes) {
+        const temp = path.join(path.dirname(item.path), `.crewrouter-${item.key}-${suffix}.tmp`);
+        const fd = fs.openSync(temp, 'wx', 0o600);
+        try { fs.writeFileSync(fd, item.output, 'utf8'); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+        staged.push({ ...item, temp });
+        if (item.original.text) {
+          const backupPath = `${item.path}.crewrouter-backup-${suffix}`;
+          fs.writeFileSync(backupPath, item.original.text, { flag: 'wx', mode: 0o600 });
+          backups.push(backupPath);
+        }
+      }
+      if (!isTrusted()) fail('页面已变化，请重新打开配置窗口。');
+      for (const item of staged) if (read(item.path, 'jsonc').text !== item.original.text) fail('Claude Desktop 配置已变化，请重试。');
+      for (const item of staged) { fsImpl.renameSync(item.temp, item.path); committed.push(item); }
+      return { path: resolved.path, backupPath: backups.join('\n') || null, canceled: false };
+    } catch (error) {
+      for (const item of [...committed].reverse()) {
+        try {
+          if (item.original.text) {
+            const rollback = path.join(path.dirname(item.path), `.crewrouter-rollback-${item.key}-${suffix}.tmp`);
+            fs.writeFileSync(rollback, item.original.text, { flag: 'wx', mode: 0o600 });
+            fsImpl.renameSync(rollback, item.path);
+          } else fs.unlinkSync(item.path);
+        } catch {}
+      }
+      if (error instanceof ConfigError) throw error;
+      throw new Error('Claude Desktop 多文件配置写入失败；已尽力恢复原配置。');
+    } finally {
+      for (const item of staged) { try { fs.unlinkSync(item.temp); } catch {} }
+    }
+  }
+
   async function writeClientConfig(input, { isTrusted = () => true } = {}) {
     if (busy) fail('已有配置写入正在进行，请稍候。');
     busy = true;
     let temporary = null;
     try {
       validateRequest(input);
+      if (input.tool === 'claude_desktop') return await writeClaudeDesktopConfig(input, { isTrusted });
       const request = { ...input };
       const base = request.baseUrl.replace(/\/+$/, '');
       request.baseUrl = request.tool === 'claude' ? base.replace(/\/v1$/, '') : (/\/v1$/.test(base) ? base : base + '/v1');
@@ -357,7 +464,7 @@ function createClientConfigService({ env = process.env, home = os.homedir(), dia
       parseConfig(output, resolved.format);
       const confirmation = await dialog.showMessageBox(getWindow(), {
         type: 'warning', title: '写入客户端配置？', message: `写入 ${TOOL_NAMES[request.tool]} 配置？`,
-        detail: `目标文件：${file}\n将更新 CrewRouter 服务地址、认证密钥和默认模型；同名 provider 和默认模型可能被替换。保留其他字段，已有文件自动备份。\n${request.tool === 'hermes' ? 'Hermes 现有凭证池或 profile 可能影响实际认证。' : ''}`,
+        detail: `目标文件：${file}\n将更新 CrewRouter 服务地址、认证密钥和默认模型；保留其他字段，已有文件自动备份。`,
         buttons: ['取消', '写入配置'], defaultId: 0, cancelId: 0, noLink: true,
       });
       if (confirmation.response !== 1) return { path: file, backupPath: null, canceled: true };

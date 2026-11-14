@@ -44,7 +44,7 @@ if (process.type === 'renderer') {
   app.on('window-all-closed', () => {});
   app.setPath('userData', path.join(temporary, 'electron'));
   const home = path.join(temporary, 'home');
-  const tools = ['claude', 'codex', 'opencode', 'grok', 'qwen_code', 'hermes', 'openclaw'];
+  const tools = ['claude', 'claude_desktop', 'codex', 'opencode', 'grok', 'qwen_code', 'hermes', 'openclaw'];
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const key = 'sk-client-config-fixture-only';
   const windows = new Set();
@@ -187,9 +187,25 @@ if (process.type === 'renderer') {
             if (desktopFlow) {
               target = state.service.getClientConfigTarget(tool).path;
               check(target.startsWith(caseHome + path.sep), 'Target is inside temporary home');
-              fs.mkdirSync(path.dirname(target), { recursive: true });
-              before = seeded(tool);
-              fs.writeFileSync(target, before);
+              if (tool === 'claude_desktop') {
+                const prefix = process.platform === 'darwin' ? 'Library/Application Support' : process.platform === 'win32' ? 'AppData/Local' : '.config';
+                const root = path.join(caseHome, prefix);
+                const files = [
+                  path.join(root, 'Claude/claude_desktop_config.json'),
+                  path.join(root, 'Claude-3p/claude_desktop_config.json'),
+                  path.join(root, 'Claude-3p/configLibrary/_meta.json'),
+                  target,
+                ];
+                for (const file of files) {
+                  fs.mkdirSync(path.dirname(file), { recursive: true });
+                  if (file.endsWith('claude_desktop_config.json')) fs.writeFileSync(file, JSON.stringify({ preserve: true }));
+                }
+                before = fs.readFileSync(target, 'utf8');
+              } else {
+                fs.mkdirSync(path.dirname(target), { recursive: true });
+                before = seeded(tool);
+                fs.writeFileSync(target, before);
+              }
             }
             await open(tool);
             check(await execute(`document.getElementById('desktopConfigWrite').hidden === ${!desktopFlow} && document.getElementById('desktopConfigWriteButton').hidden === ${!desktopFlow} && document.getElementById('configManualDetails').open === ${!desktopFlow}`), 'Desktop/manual fallback state');
@@ -197,7 +213,7 @@ if (process.type === 'renderer') {
               await copy('#configCopyButton');
               check(state.calls.length === 0 || tool === 'deepseek', 'Manual fallback does not call write bridge');
             } else {
-              check(await execute(`document.getElementById('desktopConfigPath').textContent === ${JSON.stringify(target)}`), 'Target path shown');
+              check(await execute(`document.getElementById('desktopConfigPath').textContent.includes(${JSON.stringify(target)})`), 'Target path shown');
               await click('#configManualSummary');
               check(await execute("document.getElementById('configManualDetails').open"), 'Manual configuration expands by mouse');
               await copy('#configManualCopy');
@@ -231,8 +247,26 @@ if (process.type === 'renderer') {
               state.delay = 0;
               const result = state.results.at(-1);
               check(result && !result.canceled && result.path === target, `Real write succeeds: ${tool}; failures=${state.failures.join('; ')}`);
-              check(result.backupPath.startsWith(caseHome + path.sep) && fs.readFileSync(result.backupPath, 'utf8') === before, 'Backup preserves exact original bytes');
+              if (tool === 'claude_desktop') {
+                const backupPaths = result.backupPath.split('\n');
+                check(backupPaths.length === 3 && backupPaths.every(file => fs.existsSync(file)), 'Claude Desktop preserves an independent backup for each existing file');
+              } else {
+                check(result.backupPath.startsWith(caseHome + path.sep) && fs.readFileSync(result.backupPath, 'utf8') === before, 'Backup preserves original configuration');
+              }
+              if (tool === 'claude_desktop') {
+                const profile = readConfig(tool, target);
+                check(profile.inferenceProvider === 'gateway' && profile.inferenceGatewayApiKey === key && profile.inferenceGatewayBaseUrl === (mode === 'remote' ? 'https://remote.fixture.invalid' : base), 'Claude Desktop gateway receives the matching endpoint and key');
+                check(profile.inferenceModels[0].name === 'claude-fable-5', 'Claude Desktop model list maps to the CrewRouter alias');
+                check(!Object.hasOwn(profile, 'coworkEgressAllowedHosts'), 'Claude Desktop profile does not widen egress permissions');
+              }
               const config = readConfig(tool, target);
+              if (tool === 'claude_desktop') {
+                const normalPath = path.join(root, 'Claude/claude_desktop_config.json');
+                const threepPath = path.join(root, 'Claude-3p/claude_desktop_config.json');
+                const metaPath = path.join(root, 'Claude-3p/configLibrary/_meta.json');
+                check(readConfig('claude_desktop', normalPath).deploymentMode === '3p' && readConfig('claude_desktop', threepPath).deploymentMode === '3p', 'Claude Desktop main and 3P deployment files enabled');
+                check(readConfig('claude_desktop', metaPath).appliedId === '00000000-0000-4000-8000-435200000001', 'Claude Desktop CrewRouter profile selected');
+              }
               if (tool === 'codex' || tool === 'grok') check(fs.readFileSync(target, 'utf8').includes('# Keep existing comment') && fs.readFileSync(target, 'utf8').includes('# inline comment') && config.hooks.start[0].command === 'echo fixture', 'TOML comments and hook array tables preserved');
               check(config.sentinel === 'keep-existing' && config.permissions.policy === 'ask', 'Existing settings and permissions preserved');
               check(fs.readFileSync(target, 'utf8').includes(key) && fs.readFileSync(target, 'utf8').includes(mode === 'remote' ? 'https://remote.fixture.invalid' : base), 'Real configuration contains local/remote fixture endpoint and key');

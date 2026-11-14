@@ -1984,10 +1984,10 @@
             <span class="config-tool-option-label">Claude Code</span>
             <span class="config-tool-option-path">~/.claude/settings.json</span>
           </button>
-          <button type="button" class="config-tool-option" onclick="app.generateCcSwitchLink('claude-desktop')">
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('claude_desktop')">
             <img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" class="config-tool-option-icon">
             <span class="config-tool-option-label">Claude Desktop</span>
-            <span class="config-tool-option-path">CC Switch 导入</span>
+            <span class="config-tool-option-path">Claude-3p/configLibrary</span>
           </button>
           <button type="button" class="config-tool-option" onclick="app.generateToolConfig('codex')">
             <img src="https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52" alt="" class="config-tool-option-icon">
@@ -2050,11 +2050,6 @@
             <img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
             Claude Code
           </button>
-          <button type="button" class="blora-button" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateCcSwitchLink('claude-desktop')" data-variant="secondary">
-            <img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            Claude Desktop
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;" data-i18n="模型 API">模型 API</span>
-          </button>
           <button type="button" class="blora-button" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateCcSwitchLink('codex')" data-variant="secondary">
             <img src="https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
             Codex
@@ -2093,7 +2088,7 @@
       </div>
       <div class="modal-body">
         <section id="desktopConfigWrite" hidden>
-          <p data-i18n="将配置写入当前电脑，保留其他设置并自动备份已有文件。">将配置写入当前电脑，保留其他设置并自动备份已有文件。</p>
+          <p id="desktopConfigWriteIntro" data-i18n="将配置写入当前电脑，保留其他设置并自动备份已有文件。">将配置写入当前电脑，保留其他设置并自动备份已有文件。</p>
           <code id="desktopConfigPath" class="desktop-config-path"></code>
           <p id="desktopConfigNotice" class="desktop-config-notice"></p>
           <label id="desktopConfigProjectOption" hidden><input id="desktopConfigProject" type="checkbox"> <span data-i18n="选择项目目录写入 OpenCode 配置">选择项目目录写入 OpenCode 配置</span></label>
