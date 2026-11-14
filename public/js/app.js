@@ -8695,23 +8695,34 @@ class ConsoleApp {
       if (generated.supported && bridge?.getClientConfigTarget && bridge?.writeClientConfig) {
         try { target = await bridge.getClientConfigTarget(tool); } catch { /* 旧版或受限 Desktop 保留手动配置。 */ }
       }
-      if (configRequest !== this._configRequestId) return;
+      if (tool === 'claude_desktop' && !target?.supported) {
+        alert(t('Claude Desktop 原生配置需要在 CrewRouter Desktop 应用中写入。'));
+        return;
+      }
       const desktop = !!target?.supported;
       const hasShell = !!(generated.supported && generated.shell);
       this._desktopClientConfig = desktop ? { tool, baseUrl, apiKey, model } : null;
       this._configOutput = { content: generated.content || '', shell: generated.shell || '', hasShell };
       document.getElementById('configOutputTitle').textContent = desktop ? t('写入') + ' ' + generated.title + '？' : generated.title;
-      document.getElementById('configOutputDesc').textContent = !generated.supported && generated.reason
-        ? t(generated.reason)
-        : tool === 'agy'
-          ? t('合并配置到') + ' ' + generated.path + '。' + t('agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。')
-          : t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
+      const configOutputDesc = document.getElementById('configOutputDesc');
+      configOutputDesc.textContent = tool === 'claude_desktop'
+        ? t('Claude Desktop 将使用 CrewRouter 原生 gateway profile。完成写入后请完全退出并重新打开 Claude Desktop。')
+        : !generated.supported && generated.reason
+          ? t(generated.reason)
+          : tool === 'agy'
+            ? t('合并配置到') + ' ' + generated.path + '。' + t('agy 只从进程环境读取密钥；请使用终端命令启动，或通过 CC Switch 导入。')
+            : t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
       document.getElementById('configOutputContent').value = generated.content || '';
       document.getElementById('configShellContent').value = generated.shell || '';
       document.getElementById('desktopConfigWrite').hidden = !desktop;
+      document.getElementById('desktopConfigWriteIntro').textContent = tool === 'claude_desktop'
+        ? t('将直接写入 Claude Desktop 第三方模型配置，不经过 CC Switch。')
+        : t('将配置写入当前电脑，保留其他设置并自动备份已有文件。');
       document.getElementById('desktopConfigPath').textContent = target?.path || '';
       document.getElementById('desktopConfigNotice').textContent = desktop
-        ? t('将更新 CrewRouter 连接和默认模型；不会修改工具权限。写入前将在系统对话框中确认。')
+        ? tool === 'claude_desktop'
+          ? t('将创建 Claude-3p 配置并应用 CrewRouter profile；现有其他 profile 保留。')
+          : t('将更新 CrewRouter 连接和默认模型；不会修改工具权限。写入前将在系统对话框中确认。')
         : '';
       document.getElementById('desktopConfigProjectOption').hidden = !desktop || tool !== 'opencode';
       document.getElementById('desktopConfigProject').checked = false;

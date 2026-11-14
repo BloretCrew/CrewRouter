@@ -123,6 +123,15 @@
     const result = (title, path, content, supported = true, reason = '') => ({ title, path, content, supported, reason });
 
     switch (tool) {
+      case 'claude_desktop':
+        return result('Claude Desktop 配置', 'Claude-3p/configLibrary/CrewRouter.json', json({
+          disableDeploymentModeChooser: true,
+          inferenceGatewayApiKey: apiKey,
+          inferenceGatewayAuthScheme: 'bearer',
+          inferenceGatewayBaseUrl: base.replace(/\/+$/, '').replace(/\/v1$/i, ''),
+          inferenceModels: [{ name: model }],
+          inferenceProvider: 'gateway'
+        }));
       case 'claude':
         return result('Claude Code 配置', '~/.claude/settings.json', json({
           env: {
