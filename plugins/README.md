@@ -77,11 +77,15 @@ ctx.events.on('model.health.changed.v1', async event => {
 ### 用法
 
 ```js
-// 注册
-await ctx.registerWebhook({ url: 'https://hooks.example.com/xx', events: ['order.created'], secret: 's3cret' });
+// 注册：allowedHosts 必须在 plugin.json 的域名白名单中
+await ctx.registerWebhook({ url: 'https://hooks.example.com/xx', events: ['order.created'], secret: '从插件配置读取的共享密钥' });
 
-// 触发（在钩子/cron 里）
-await ctx.webhook.emit('order.created', { id: 123 });
+// 触发（在钩子/cron 里）；逐个订阅顺序投递，失败最多重试 3 次
+const result = await ctx.webhook.emit('order.created', { id: 123 });
+// { matched, delivered, failed, results: [{ webhookId, status, attempts, responseStatus, error }] }
+
+// 最近投递记录仅限本插件，limit 取 1–100，status 可选 delivered / failed
+const recentFailures = await ctx.webhook.deliveries({ status: 'failed', limit: 20 });
 ```
 
 - 触发时 POST JSON `{ event, payload, ts }`，注册的 `secret` 只经 `X-Webhook-Secret` 请求头发送，不进入投递历史。
