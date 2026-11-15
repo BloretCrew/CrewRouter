@@ -25,6 +25,7 @@ const vm = require('vm');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const proxyPool = require('../proxy-pool');
+const { validateConfigSchema } = require('./config-schema');
 
 // 网关类钩子统一要求 gateway:modify 权限
 const GATEWAY_HOOKS = new Set([
@@ -91,6 +92,10 @@ function validateManifest(manifest) {
     for (const h of manifest.allowedHosts) {
       if (typeof h !== 'string' || !/^[a-z0-9.-]+$/i.test(h)) return 'allowedHosts[] 必须是合法域名';
     }
+  }
+  if (manifest.configSchema !== undefined) {
+    const configSchemaError = validateConfigSchema(manifest.configSchema);
+    if (configSchemaError) return configSchemaError;
   }
   if (manifest.pages && !Array.isArray(manifest.pages)) return 'pages 必须是数组';
   if (manifest.slots && !Array.isArray(manifest.slots)) return 'slots 必须是数组';
@@ -382,4 +387,5 @@ module.exports = {
   GATEWAY_HOOKS,
   HOOK_PERMISSIONS,
   HOOK_TIMEOUT_MS,
+  validateConfigSchema,
 };

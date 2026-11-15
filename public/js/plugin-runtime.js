@@ -553,6 +553,26 @@
     ).join('<br>');
     const themesHtml = (pl.themes || []).map(th => esc(th.name || th.id)).join('、');
     const cfgText = esc(JSON.stringify(pl.config || {}, null, 2));
+    const cfgSchema = pl.configSchema && typeof pl.configSchema === 'object' ? pl.configSchema : null;
+    const configEditor = cfgSchema
+      ? Object.entries(cfgSchema).map(([key, field]) => {
+          const value = Object.hasOwn(pl.config || {}, key) ? pl.config[key] : field.default;
+          const attrs = `data-plugin-config-field="${esc(pl.id)}" data-config-key="${esc(key)}" data-config-type="${esc(field.type)}"`;
+          const label = esc(field.label || key);
+          const hint = field.description ? `<small style="display:block;color:var(--muted-foreground);">${esc(field.description)}</small>` : '';
+          let control;
+          if (field.type === 'boolean') {
+            control = `<input type="checkbox" ${attrs} ${value === true ? 'checked' : ''}>`;
+          } else if (Array.isArray(field.options)) {
+            control = `<select ${attrs} style="width:100%;">${field.options.map(option => `<option value="${esc(String(option))}" ${String(value) === String(option) ? 'selected' : ''}>${esc(String(option))}</option>`).join('')}</select>`;
+          } else {
+            const type = field.type === 'number' || field.type === 'integer' ? 'number' : 'text';
+            const step = field.type === 'integer' ? '1' : field.type === 'number' ? 'any' : null;
+            control = `<input type="${type}" ${attrs} value="${esc(value === undefined || value === null ? '' : String(value))}"${step ? ` step="${step}"` : ''}${field.min !== undefined ? ` min="${field.min}"` : ''}${field.max !== undefined ? ` max="${field.max}"` : ''} ${field.required ? 'required' : ''} style="width:100%;">`;
+          }
+          return `<label style="display:block;margin:8px 0;font-size:12px;">${label}${field.required ? ' *' : ''}${hint}${control}</label>`;
+        }).join('') || `<p style="font-size:12px;color:var(--muted-foreground);">${esc(t('此插件没有可配置字段'))}</p>`
+      : `<textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>`;
 
     return `
       <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:4px;">
@@ -562,7 +582,7 @@
         ${pl.cron?.length ? `<div class="msec">${esc(t('定时任务'))}</div><div style="font-size:12px;">${cronHtml}</div>` : ''}
         ${pl.themes?.length ? `<div class="msec">${esc(t('主题'))}</div><div style="font-size:12px;">${themesHtml}</div>` : ''}
         <div class="msec">${esc(t('插件配置'))}(config)</div>
-        <textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>
+        ${configEditor}
         <div style="margin-top:6px;display:flex;gap:8px;">
           <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
           <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
@@ -707,10 +727,25 @@
       } catch (e) { alert(e.message); }
     },
     async saveConfig(id) {
-      const el = document.querySelector(`[data-plugin-cfg="${id}"]`);
-      if (!el) return;
+      const formFields = [...document.querySelectorAll(`[data-plugin-config-field="${id}"]`)];
+      const textarea = document.querySelector(`[data-plugin-cfg="${id}"]`);
       let config;
-      try { config = JSON.parse(el.value); } catch (e) { msg(id, `JSON 无效: ${e.message}`, false); return; }
+      if (formFields.length) {
+        config = {};
+        for (const field of formFields) {
+          const key = field.dataset.configKey;
+          let value;
+          if (field.type === 'checkbox') value = field.checked;
+          else if (field.dataset.configType === 'number' || field.dataset.configType === 'integer') value = field.value === '' ? undefined : Number(field.value);
+          else if (field.tagName === 'SELECT' && field.dataset.configType === 'number') value = Number(field.value);
+          else if (field.tagName === 'SELECT' && field.dataset.configType === 'integer') value = Number(field.value);
+          else value = field.value;
+          if (value !== undefined) config[key] = value;
+        }
+      } else {
+        if (!textarea) return;
+        try { config = JSON.parse(textarea.value); } catch (e) { msg(id, `JSON 无效: ${e.message}`, false); return; }
+      }
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/config`, {
           method: 'PUT',

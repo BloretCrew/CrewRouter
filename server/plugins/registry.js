@@ -372,7 +372,23 @@ async function reload(id) {
 }
 
 async function setConfig(id, config) {
-  await pool.query('UPDATE plugins SET config = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id, JSON.stringify(config || {})]);
+  const manifest = knownManifests.get(id);
+  if (manifest?.configSchema) {
+    const schemaTools = require('./config-schema');
+    const error = schemaTools.validateConfig(config, manifest.configSchema);
+    if (error) {
+      const validationError = new Error(error);
+      validationError.statusCode = 400;
+      throw validationError;
+    }
+    config = schemaTools.applyDefaults(config, manifest.configSchema);
+  } else if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    const validationError = new Error('config 必须是对象');
+    validationError.statusCode = 400;
+    throw validationError;
+  }
+  const result = await pool.query('UPDATE plugins SET config = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id', [id, JSON.stringify(config || {})]);
+  if (!result.rows.length) throw new Error(`插件不存在: ${id}`);
   // 运行中的插件热更新内存里的 config 引用
   const p = loaded.get(id);
   if (p) p.config = config || {};
@@ -393,6 +409,7 @@ async function listAll() {
     enabled: row.enabled,
     permissions: row.permissions || [],
     config: row.config || {},
+    configSchema: knownManifests.get(row.id)?.configSchema || null,
     errorCount: row.error_count || 0,
     lastError: row.last_error || null,
     onDisk: knownManifests.has(row.id),

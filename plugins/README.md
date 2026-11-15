@@ -73,6 +73,45 @@ const recentFailures = await ctx.webhook.deliveries({ status: 'failed', limit: 2
 - `allowedHosts` 白名单按完整主机名精确匹配；每次注册和实际投递前都会执行 SSRF 检查，拒绝非 HTTPS 与内网目标。
 - 后端 `main.js` 在 CrewRouter 主进程运行。Node VM 不是安全边界；后端插件代码默认关闭，只有管理员审查源码后显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 才会运行。权限清单用于 API 收口，不应当作不可信代码沙箱。
 
+## 插件声明式配置
+
+插件可选在 `plugin.json` 提供 `configSchema`，管理页会生成字段表单，并在保存时由服务端再次校验。未声明 schema 的旧插件仍使用原有 JSON 编辑方式。
+
+```json
+{
+  "configSchema": {
+    "endpoint": {
+      "type": "string",
+      "label": "服务地址",
+      "description": "插件调用的 HTTPS 服务地址。",
+      "required": true,
+      "min": 8,
+      "max": 200
+    },
+    "retryCount": {
+      "type": "integer",
+      "label": "重试次数",
+      "default": 2,
+      "min": 0,
+      "max": 5
+    },
+    "mode": {
+      "type": "string",
+      "label": "运行模式",
+      "options": ["safe", "fast"],
+      "default": "safe"
+    },
+    "enabled": { "type": "boolean", "label": "启用功能", "default": true }
+  }
+}
+```
+
+- 支持 `string`、`number`、`integer`、`boolean`；`label`/`description` 为可选展示文本。
+- `required`、`default`、`options`、`min`、`max` 可选。字符串的 min/max 表示长度，数字字段表示数值范围；`options` 限定字符串或数字枚举值。
+- 默认值在保存时填充；必填缺失、类型/范围/枚举不符、未知字段都会被拒绝，API 返回 HTTP 400，原有配置不会更新。
+- schema 本身在插件清单加载时校验。没有 schema 的现有插件配置保持原行为；增加 schema 后应迁移旧配置使其符合新字段约束。
+- `ctx.config` 是插件初始化时传入的配置快照；保存会更新数据库和运行中插件对象的 config 引用，但不会自动重新执行插件 `main.js`。需要重新初始化逻辑时，请在管理页保存后显式重载插件。
+
 ## 示例插件
 
 - `plugins/usage-stats/` — 演示 `usage:read` / `models:read` / `meta:read`
