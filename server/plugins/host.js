@@ -72,6 +72,8 @@ function validateManifest(manifest) {
     return 'plugin.json 缺少合法 id（小写字母数字与连字符）';
   }
   if (!manifest.name) return 'plugin.json 缺少 name';
+  const configSchemaError = require('./config-schema').validateConfigSchema(manifest.configSchema);
+  if (configSchemaError) return configSchemaError;
   const perms = manifest.permissions || [];
   if (!Array.isArray(perms)) return 'permissions 必须是数组';
   // 未知权限只警告不阻断，保证旧插件（或超前版本插件）仍可加载

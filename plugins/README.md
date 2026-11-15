@@ -84,9 +84,39 @@ await ctx.registerWebhook({ url: 'https://hooks.example.com/xx', events: ['order
 await ctx.webhook.emit('order.created', { id: 123 });
 ```
 
-- 触发时 POST JSON `{ event, payload, ts }`，`secret` 走 `X-Webhook-Secret` 头。
-- 投递超时 10s，失败记日志不阻断主流程。
-- 存储表 `plugin_webhooks`（懒建，幂等）。
+- 触发时 POST JSON `{ event, payload, ts }`，注册的 `secret` 只经 `X-Webhook-Secret` 请求头发送，不进入投递历史。
+- 每个目标超时 10 秒；网络错误、非 2xx 响应和 SSRF 复验失败最多尝试 3 次（间隔 250ms、1s）。失败记录日志并继续其他目标，不阻断主流程。
+- `matched` 是匹配订阅数；`delivered` 是最终成功数；`failed` 是耗尽重试仍失败数。`responseStatus`/`error` 给出最终结果。
+- 历史存于 `plugin_webhook_deliveries`，保存插件 ID、订阅 ID、事件、状态、尝试数、HTTP 状态、错误及时间，不含 URL、payload 或 secret。查询始终按当前插件 ID 限定。
+- `deliveries({ limit, status })` 返回最新记录；目前不提供自动清理，运维可按部署的数据保留策略清理旧记录。
+
+### 能力权限与安全说明
+
+- 在 `plugin.json` 的 `permissions` 声明 `webhook:register` 后才会挂载 `ctx.registerWebhook` 与 `ctx.webhook`；未声明时二者不可用。
+- `allowedHosts` 白名单按完整主机名精确匹配；每次注册和实际投递前都会执行 SSRF 检查，拒绝非 HTTPS 与内网目标。
+- 后端 `main.js` 在 CrewRouter 主进程运行。Node VM 不是安全边界；后端插件代码默认关闭，只有管理员审查源码后显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 才会运行。权限清单用于 API 收口，不应当作不可信代码沙箱。
+
+## 插件声明式配置
+
+插件可选在 `plugin.json` 提供 `configSchema`，管理页会生成字段表单，并在保存时由服务端再次校验。未声明 schema 的旧插件仍使用原有 JSON 编辑方式。
+
+```json
+{
+  "configSchema": {
+    "endpoint": { "type": "string", "label": "服务地址", "required": true, "min": 8, "max": 200 },
+    "retryCount": { "type": "integer", "label": "重试次数", "default": 2, "min": 0, "max": 5 },
+    "mode": { "type": "string", "label": "运行模式", "options": ["safe", "fast"], "default": "safe" },
+    "enabled": { "type": "boolean", "label": "启用功能", "default": true },
+    "apiToken": { "type": "secret", "label": "API Token", "required": true }
+  }
+}
+```
+
+- 支持 `string`、`number`、`integer`、`boolean`、`secret`；`label`/`description` 为可选展示文本。`secret` 在管理 API 响应中只返回是否已设置，表单不回显原值；保存时留空或省略字段都会保留已保存的密钥，输入新值才会替换。secret 不支持默认值或枚举选项。
+- `required`、`default`、`options`、`min`、`max` 可选。字符串/secret 的 min/max 表示长度，数字字段表示数值范围；`options` 限定枚举值。
+- 默认值在保存时填充；必填缺失、类型/范围/枚举不符、未知字段都会被拒绝，API 返回 HTTP 400，原有配置不会更新。
+- schema 本身在插件清单加载时校验。没有 schema 的现有插件配置保持旧版 JSON 编辑行为；增加 schema 后应迁移旧配置使其符合字段约束。
+- `ctx.config` 是插件初始化时传入的配置快照；保存会更新数据库和运行中插件对象的 config 引用，但不会自动重新执行插件 `main.js`。需要重新初始化逻辑时，请在管理页保存后显式重载插件。
 
 ## 示例插件
 

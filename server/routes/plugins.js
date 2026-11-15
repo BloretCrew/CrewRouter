@@ -328,7 +328,7 @@ function createPluginsRoutes() {
   adminRouter.put('/:id/config', async (req, res) => {
     try {
       const config = req.body?.config;
-      if (config === undefined || typeof config !== 'object') {
+      if (config === undefined || typeof config !== 'object' || Array.isArray(config)) {
         return res.status(400).json({ error: 'config 必须是对象' });
       }
       await registry().setConfig(req.params.id, config);
@@ -336,7 +336,7 @@ function createPluginsRoutes() {
         `更新插件「${req.params.id}」配置`, { keyCount: Object.keys(config).length });
       res.json({ ok: true });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(err.statusCode || 500).json({ error: err.message });
     }
   });
 

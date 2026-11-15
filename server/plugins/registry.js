@@ -136,7 +136,9 @@ async function loadOne(id, manifest, rowConfig) {
   const isolatedTasks = manifest.executionMode === 'isolated-task';
   const isolatedHooks = manifest.executionMode === 'isolated-hooks';
   const isolatedRoutes = manifest.executionMode === 'isolated-routes';
-  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), cronHandlers: Object.create(null), isolatedTasks, isolatedHooks, isolatedRoutes };
+  const schemaTools = require('./config-schema');
+  const config = schemaTools.applyDefaults(rowConfig || {}, manifest.configSchema);
+  const plugin = { id, dir, manifest, config, taskHandlers: new Map(), cronHandlers: Object.create(null), isolatedTasks, isolatedHooks, isolatedRoutes };
   loaded.set(id, plugin);
   taskHandlers.set(id, plugin.taskHandlers);
 
@@ -473,7 +475,27 @@ async function reload(id) {
 }
 
 async function setConfig(id, config) {
-  await pool.query('UPDATE plugins SET config = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id, JSON.stringify(config || {})]);
+  const manifest = knownManifests.get(id);
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    const validationError = new Error('config 必须是对象');
+    validationError.statusCode = 400;
+    throw validationError;
+  }
+  if (manifest?.configSchema) {
+    const schemaTools = require('./config-schema');
+    const existingResult = await pool.query('SELECT config FROM plugins WHERE id = $1', [id]);
+    if (!existingResult.rows.length) throw new Error(`插件不存在: ${id}`);
+    config = schemaTools.preserveSecrets(config, existingResult.rows[0].config || {}, manifest.configSchema);
+    const error = schemaTools.validateConfig(config, manifest.configSchema);
+    if (error) {
+      const validationError = new Error(error);
+      validationError.statusCode = 400;
+      throw validationError;
+    }
+    config = schemaTools.applyDefaults(config, manifest.configSchema);
+  }
+  const result = await pool.query('UPDATE plugins SET config = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id', [id, JSON.stringify(config)]);
+  if (!result.rows.length) throw new Error(`插件不存在: ${id}`);
   // 运行中的插件热更新内存里的 config 引用
   const p = loaded.get(id);
   if (p) p.config = config || {};
@@ -485,7 +507,12 @@ async function setConfig(id, config) {
  */
 async function listAll() {
   const rows = (await pool.query('SELECT * FROM plugins ORDER BY id')).rows;
-  return rows.map(row => ({
+  return rows.map(row => {
+    const configSchema = knownManifests.get(row.id)?.configSchema || null;
+    const configTools = require('./config-schema');
+    const configWithDefaults = configTools.applyDefaults(row.config || {}, configSchema);
+    const safeConfig = configTools.redactConfig(configWithDefaults, configSchema);
+    return {
     id: row.id,
     name: row.name,
     version: row.version,
@@ -493,7 +520,9 @@ async function listAll() {
     author: row.author,
     enabled: row.enabled,
     permissions: row.permissions || [],
-    config: row.config || {},
+    config: safeConfig.config,
+    configSecrets: safeConfig.configSecrets,
+    configSchema,
     errorCount: row.error_count || 0,
     lastError: row.last_error || null,
     onDisk: knownManifests.has(row.id),
@@ -512,7 +541,8 @@ async function listAll() {
     storeLatestVersion: row.store_latest_version || null,
     storeLatest: row.store_latest || null,
     storeCheckedAt: row.store_checked_at || null,
-  }));
+  };
+  });
 }
 
 /**
