@@ -30,7 +30,7 @@ function createOfficialLogin({ electron, demoUrl, fetchImpl, state, connect, val
   }
 
   async function finish({ routerUrl, code, verifier }) {
-    const target = await validateRemoteUrl(routerUrl, { resolveDns: false });
+    const target = await validateRemoteUrl(routerUrl);
     if (!target.ok) throw new Error(target.error);
     state.step(1, 3, '正在交换登录会话');
     const exchange = await fetchImpl(new URL('/oauth/desktop-session', target.url), {
@@ -76,7 +76,7 @@ function createOfficialLogin({ electron, demoUrl, fetchImpl, state, connect, val
   }
 
   async function start() {
-    const demo = await validateRemoteUrl(demoUrl, { resolveDns: false });
+    const demo = await validateRemoteUrl(demoUrl);
     if (!demo.ok) throw new Error(`官方站地址无效：${demo.error}`);
     closeCurrent();
     const nonce = crypto.randomBytes(24).toString('base64url');

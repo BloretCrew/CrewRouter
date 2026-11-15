@@ -1,6 +1,7 @@
 # CrewRouter Go SDK
 
-Official Go SDK for the CrewRouter AI model gateway.
+Official Go SDK for the CrewRouter AI model gateway. Current planned pre-release: **27.0 Beta** (`v27.0.0-beta.1`).
+
 
 - OpenAI Chat Completions, Anthropic Messages and OpenAI Responses, including SSE streaming.
 - Full management API coverage through the generated operation catalog.

@@ -30,13 +30,13 @@ function parseInstanceResponse(body, { allowLocalRuntime = false } = {}) {
 }
 
 class ConnectionManager {
-  constructor({ store, fetchImpl = globalThis.fetch, now = () => Date.now() } = {}) {
+  constructor({ store, fetchImpl = globalThis.fetch, now = () => Date.now(), lookup = undefined } = {}) {
     if (!store) throw new Error('需要 ProfileStore');
-    this.store = store; this.fetch = fetchImpl; this.now = now;
+    this.store = store; this.fetch = fetchImpl; this.now = now; this.lookup = lookup;
   }
 
   async inspect(url, options = {}) {
-    const result = await validateRemoteUrl(url, options);
+    const result = await validateRemoteUrl(url, { ...(this.lookup ? { lookup: this.lookup } : {}), ...options });
     if (!result.ok) throw new Error(result.error);
     let response;
     try { response = await this.fetch(new URL('/api/instance', result.url), { headers: { accept: 'application/json' } }); }

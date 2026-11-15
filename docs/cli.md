@@ -1,20 +1,15 @@
 # CrewRouter CLI (`cr`)
 
-CrewRouter CLI 是零第三方依赖的终端客户端，包含非交互式命令和全屏 TUI。它既能连接已有的远程 CrewRouter，也能从本机启动同包的 CrewRouter Server。
+CrewRouter CLI 是 GPL-3.0 终端客户端，包含非交互式命令和全屏 TUI。27.0 Beta 提供独立 npm 测试版包：
 
-激活命令为 `cr`：
+正式 npm 发布前，可在仓库根目录使用 `npm link` 运行源码 CLI 开发版本。测试版安装示例 `npm install -g crewrouter-cli@beta` 只在独立包通过候选发布门禁、并完成 npm 发布后有效；目前该 beta 包尚未发布。
+CLI 同时支持远程管理；本机 `start` / `serve` 需要兼容的 CrewRouter Server 已安装在本机，不会由 standalone CLI 包内嵌服务器。无外网发布权限前，可从仓库根目录 `npm link` 做源码开发。
 
-```bash
-# 在仓库根目录
-npm link
 
-# 或全局安装
-npm install -g .
+## 源码开发
 
-cr
-```
+在仓库根目录执行 `npm link`，可在源码开发时同时创建 `cr` 和 `crewrouter` 两个入口。Standalone beta npm CLI 只包含 CLI 客户端，不嵌入 CrewRouter Server；其本机 `start` / `serve` 需另行安装 compatible 的 CrewRouter Server。
 
-`npm link` / `npm install -g` 会同时创建 `cr` 和 `crewrouter` 两个入口。
 
 ## 首次使用
 

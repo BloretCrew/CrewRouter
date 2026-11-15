@@ -8,10 +8,12 @@ process.env.CR_SKIP_AUTOSTART = '1';
 if (process.env.CR_DEMO === '1') process.env.CR_DEMO = 'true';
 
 const http = require('node:http');
+const path = require('node:path');
 
 let serverModule;
+const serverEntry = process.env.CREWROUTER_CLI_SERVER_ENTRY || path.join(__dirname, '..', '..', 'server/index.js');
 try {
-  serverModule = require('../../server/index.js');
+  serverModule = require(serverEntry);
 } catch (error) {
   console.error('[cr] 无法加载 CrewRouter Server:', error && error.stack ? error.stack : error);
   process.exit(1);

@@ -27,7 +27,7 @@ function setup({ fetchImpl, ttlMs } = {}) {
     fetchImpl: fetchImpl || (async (url, options) => { connects.push({ url: String(url), options }); return { ok: true, status: 200, headers: { 'set-cookie': ['crewrouter.sid=abc123; Path=/; HttpOnly'] }, json: async () => ({ ok: true }) }; }),
     state,
     connect: async (url, options) => { connects.push({ connect: url, options }); state.connected({ target: new URL(url).origin, instance: { runtime: 'server', edition: 'personal' }, profile: { id: 'p', name: 'router' } }); return state.snapshot(); },
-    validateRemoteUrl,
+    validateRemoteUrl: (url, options) => validateRemoteUrl(url, { ...options, lookup: async (host) => host === 'demo.example' ? [{ address: '8.8.8.8', family: 4 }] : [{ address: '1.1.1.1', family: 4 }] }),
     ttlMs: ttlMs || 60000,
     logger: silentLogger,
   });

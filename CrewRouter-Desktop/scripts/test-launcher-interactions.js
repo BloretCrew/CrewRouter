@@ -29,10 +29,11 @@ if (process.type === 'renderer') {
   const { app, BrowserWindow } = require('electron');
   app.whenReady().then(async () => {
     const win = new BrowserWindow({ width: 960, height: 700, show: true, webPreferences: { preload: __filename, contextIsolation: false, nodeIntegration: false, backgroundThrottling: false } });
-    const errors = [];
-    win.webContents.on('console-message', (_, level, message) => { if (level === 3) errors.push(message); });
-    const execute = (source) => win.webContents.executeJavaScript(source, true);
-    const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
+      const errors = [];
+      const consoleOutput = [];
+      win.webContents.on('console-message', (_, level, message) => { if (level === 3) errors.push(message); consoleOutput.push({ level, message }); });
+      const execute = (source) => win.webContents.executeJavaScript(source, true);
+      const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
     const midFade = (id) => execute(`new Promise((resolve) => {
       const start = performance.now();
       const sample = () => {
@@ -64,6 +65,7 @@ if (process.type === 'renderer') {
       await win.loadFile(path.join(__dirname, '..', 'src', 'renderer', 'index.html'));
       await pause();
       assert.equal(await view(), 'welcome');
+      console.log('Electron test renderer:', await execute('JSON.stringify({url: location.href, ipc: typeof window.crewrouterDesktop, view: document.getElementById("launcher")?.dataset.view})'));
       assert.equal(await execute("document.querySelector('.launcher__footer, #app-version, [data-i18n=\"footer.note\"]') === null"), true);
       for (const width of [960, 375]) {
         win.setSize(width, 700); await pause();
@@ -154,6 +156,7 @@ if (process.type === 'renderer') {
       assert.deepEqual(errors, []);
       console.log('PASS: launcher interaction, IPC delay/error recovery, keyboard navigation, settings, language/theme, desktop/mobile layout');
       app.exit(0);
+      setTimeout(() => process.exit(0), 300);
     } catch (error) { console.error(error); app.exit(1); }
   });
 }

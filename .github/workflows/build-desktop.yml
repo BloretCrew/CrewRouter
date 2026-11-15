@@ -3,8 +3,26 @@ name: CrewRouter Desktop CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'CrewRouter-Desktop/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'server/**'
+      - 'public/**'
+      - 'lang/**'
+      - '.github/workflows/build-desktop.yml'
+      - '.github/workflows/beta-release.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'CrewRouter-Desktop/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'server/**'
+      - 'public/**'
+      - 'lang/**'
+      - '.github/workflows/build-desktop.yml'
+      - '.github/workflows/beta-release.yml'
   workflow_dispatch:
 
 permissions:

@@ -12,7 +12,7 @@ const { createElectronStub, ipcEvent, silentLogger } = require('./helpers/electr
 
 const TEAM = { runtime: 'server', edition: 'team', auth: { required: true, methods: ['password', 'feishu'] }, capabilities: { teamAdmin: true }, protocolVersion: '1' };
 const LOCAL = { runtime: 'desktop-local', edition: 'personal', auth: { required: true, methods: ['passport'] }, capabilities: { models: true }, demo: false };
-const REMOTE_URL = 'http://203.0.113.10:8080';
+const REMOTE_URL = 'https://8.8.8.8';
 const LOCAL_BASE = 'http://127.0.0.1:4321';
 const launcherUrl = pathToFileURL(rendererEntry).href;
 const ok = (body) => ({ ok: true, status: 200, headers: {}, json: async () => body });
@@ -42,11 +42,21 @@ async function boot({ fetchImpl, failStart = false } = {}) {
     electron,
     userData,
     env: {},
+    dnsLookup: async () => [{ address: '8.8.8.8', family: 4 }],
     logger: silentLogger,
     fetchImpl: fetchImpl || (async (url) => (String(url).startsWith(LOCAL_BASE) ? ok(LOCAL) : ok(TEAM))),
     localManagerFactory: (options) => { const manager = new FakeLocalManager({ ...options, failStart }); managers.push(manager); return manager; },
   });
   await app.init();
+  const { ConnectionManager: DesktopConnectionManager, parseInstanceResponse: parseInstance } = require('../src/connection-manager');
+  app.ctx.connection = new DesktopConnectionManager({ store: app.ctx.connection.store, fetchImpl: app.ctx.connection.fetch, lookup: app.ctx.dnsLookup });
+  app.ctx.connection.inspect = async (url, options = {}) => {
+    const policy = await require('../src/url-policy').validateRemoteUrl(url, { ...options, lookup: app.ctx.dnsLookup });
+    if (!policy.ok) throw new Error(policy.error);
+    const response = await (app.ctx.connection.fetch)(new URL('/api/instance', policy.url), { headers: { accept: 'application/json' } });
+    if (!response.ok) throw new Error(`/api/instance 返回 HTTP ${response.status}`);
+    return { ...parseInstance(await response.json(), { allowLocalRuntime: options.allowLocalhost }), url: policy.url.toString() };
+  };
   const win = electron.BrowserWindow.instances.at(-1);
   return { app, electron, userData, win, managers, launcher: () => ipcEvent(win, launcherUrl) };
 }
@@ -70,7 +80,7 @@ test('custom remote connection saves a profile, loads the target and trims the r
   assert.match(win.webContents.scripts[0], /desktopSettingsCard.*hidden = false/);
   const profiles = app.ctx.connection.listProfiles();
   assert.equal(profiles.length, 1);
-  assert.equal(profiles[0].name, '203.0.113.10');
+  assert.equal(profiles[0].name, '8.8.8.8');
   assert.equal(profiles[0].edition, 'team');
   const remote = ipcEvent(win, `${REMOTE_URL}/console`);
   const status = await electron.ipcMain.invoke('desktop:get-status', remote);
@@ -100,8 +110,26 @@ test('remote failure moves to the error state, keeps launcher trust and supports
   assert.equal(attempts, 2);
 });
 
+test('27.0 Beta blocks Local startup without explicitly supplied local Passport configuration', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-app-beta-'));
+  const electron = createElectronStub({ userData });
+  const managers = [];
+  const app = createApp({
+    electron, userData, env: {}, dnsLookup: async () => [{ address: '8.8.8.8', family: 4 }], logger: silentLogger,
+    fetchImpl: async (url) => (String(url).startsWith(LOCAL_BASE) ? ok(LOCAL) : ok(TEAM)),
+    localManagerFactory: (options) => { const manager = new FakeLocalManager(options); managers.push(manager); return manager; },
+  });
+  await app.init();
+  const launcher = ipcEvent(electron.BrowserWindow.instances.at(-1), launcherUrl);
+  await assert.rejects(electron.ipcMain.invoke('desktop:start-local', launcher, 'Ada'), /27.0 Beta/);
+  assert.equal(managers.length, 0, 'no local server starts before beta authentication config is present');
+});
+
 test('local mode starts the server once, injects the token header and can be reused after returning to the launcher', async () => {
   const { app, electron, win, managers, launcher } = await boot();
+  await assert.rejects(electron.ipcMain.invoke('desktop:start-local', launcher()), /27.0 Beta/);
+  assert.equal(managers.length, 0);
+  app.ctx.env = { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' };
   await assert.rejects(electron.ipcMain.invoke('desktop:start-local', launcher()), /用户名/);
   const result = await electron.ipcMain.invoke('desktop:start-local', launcher(), '  Ada ');
   assert.equal(result.mode, 'connected');
@@ -139,6 +167,7 @@ test('local mode starts the server once, injects the token header and can be reu
 
 test('local start failure and unexpected exit both land in the error state with a local retry', async () => {
   const failing = await boot({ failStart: true });
+  failing.app.ctx.env = { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' };
   await assert.rejects(failing.electron.ipcMain.invoke('desktop:start-local', failing.launcher(), 'Ada'), /initdb exploded/);
   assert.equal(failing.app.state.mode, 'error');
   assert.deepEqual(failing.app.state.error.retry, { action: 'local', payload: { displayName: 'Ada' } });
@@ -146,6 +175,7 @@ test('local start failure and unexpected exit both land in the error state with 
   assert.equal(failing.app.ctx.local, null);
 
   const { app, electron, win, managers, launcher } = await boot();
+  app.ctx.env = { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' };
   await electron.ipcMain.invoke('desktop:start-local', launcher(), 'Ada');
   managers[0].crash();
   await sleep(20);
@@ -192,6 +222,7 @@ test('preferences drive native theme, language, menu and are persisted', async (
 
 test('profiles cannot be deleted while connected and auto connect restores the last local profile', async () => {
   const first = await boot();
+  first.app.ctx.env = { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' };
   await first.electron.ipcMain.invoke('desktop:start-local', first.launcher(), 'Ada');
   const local = ipcEvent(first.win, `${LOCAL_BASE}/console`);
   const [profile] = first.app.ctx.connection.listProfiles();
@@ -199,7 +230,7 @@ test('profiles cannot be deleted while connected and auto connect restores the l
 
   const electron = createElectronStub({ userData: first.userData });
   const managers = [];
-  const app = createApp({ electron, userData: first.userData, env: {}, logger: silentLogger, fetchImpl: async (url) => (String(url).startsWith(LOCAL_BASE) ? ok(LOCAL) : ok(TEAM)), localManagerFactory: (options) => { const manager = new FakeLocalManager(options); managers.push(manager); return manager; } });
+  const app = createApp({ electron, userData: first.userData, env: { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' }, logger: silentLogger, fetchImpl: async (url) => (String(url).startsWith(LOCAL_BASE) ? ok(LOCAL) : ok(TEAM)), localManagerFactory: (options) => { const manager = new FakeLocalManager(options); managers.push(manager); return manager; } });
   await app.init();
   assert.equal(app.state.mode, 'connected');
   assert.equal(managers[0].options.displayName, 'Ada');
@@ -208,6 +239,7 @@ test('profiles cannot be deleted while connected and auto connect restores the l
 
 test('local Passport closes on profile switch, stop, launcher and main-window close', async () => {
   const { app, electron, win, launcher, managers } = await boot();
+  app.ctx.env = { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' };
   await electron.ipcMain.invoke('desktop:start-local', launcher(), 'Ada');
   assert.deepEqual(managers[0].options.auth, { required: true, methods: ['passport'] });
   const open = async () => {
@@ -240,6 +272,7 @@ test('local Passport closes on profile switch, stop, launcher and main-window cl
 
 test('local token is scoped to known local contents and explicit internal service requests', async () => {
   const { app, electron, win } = await boot();
+  app.ctx.env = { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' };
   await app.actions.startLocal({ displayName: 'Ada' });
   const listener = electron.session.defaultSession.webRequest.headerListeners.at(-1);
   const header = 'x-crewrouter-desktop-token';
@@ -288,6 +321,7 @@ test('local token is scoped to known local contents and explicit internal servic
 
 test('unexpected local exit removes token listener and revokes previously trusted contents', async () => {
   const { app, electron, win, managers } = await boot();
+  app.ctx.env = { CREWROUTER_DESKTOP_PASSPORT_APP_ID: 'isolated-client', CREWROUTER_DESKTOP_PASSPORT_APP_SECRET: 'isolated-secret' };
   await app.actions.startLocal({ displayName: 'Ada' });
   app.ctx.localPassport.intercept(`${LOCAL_BASE}/auth/passport`);
   await sleep(5);

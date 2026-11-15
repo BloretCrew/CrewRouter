@@ -1,5 +1,8 @@
 # CrewRouter Desktop
 
+> 当前 27.0 Beta 候选版本：`27.0.0-beta.1`。建议首先使用 Remote 模式；Beta 不承诺开箱 Local Passport 登录。
+
+
 Electron 壳，复用 CrewRouter Web UI。Local 模式在本机启动真正的 CrewRouter Server（含内置 PostgreSQL），Remote 模式通过官方站选择实例或直接输入服务器地址，页面本身由目标 CrewRouter 提供。
 
 ## 结构
@@ -55,6 +58,8 @@ npm start
 集成代码也可向 `LocalServerManager` 传入 `config.passport`。配置按整组选择，优先级为显式 `config.passport`（包括空值）、`options.env` 中的 Desktop 专用变量、进程中的 Desktop 专用变量；任一组缺少字段时不会从另一组补齐。普通 `CR_PASSPORT_*` 继续受到父项目配置隔离，不用于 Desktop Local。配置写入权限为 `0600` 的运行时文件，每次启动重新生成；直接修改 `runtime/config.json` 不能作为持久配置入口。专用变量写入配置后不再传给 Server 子进程。
 
 Desktop 用户可读取自己的本地配置，因此该配置不能使原生客户端成为能保密的 OAuth 客户端。对外发行应由身份提供方支持公共客户端和 PKCE，或使用经过审查的可信中转服务；当前代码尚未实现这项协议迁移，不能把另一对共享 Secret 再放入安装包替代。
+
+- **Beta 模式范围**：27.0 Beta 远程连接通过 URL policy 拒绝回环、私网、链路本地和保留目标，并检查域名的全部 DNS 应答；仅显式 Local 流程可连接本机 loopback。DNS 查询发生在实际请求之前，Beta 暂不承诺对恶意 DNS 重绑定提供连接层 IP 固定保证，因此仅用于可信网络环境。由于公开原生客户端不能保密 PassPort 应用 Secret，27.0 Beta 安装包不承诺开箱 Local PassPort 登录，也不得内置共享 Secret；直到公共客户端 PKCE 或经审查的可信中转迁移完成，Local 登录仅限受控开发/内部测试配置。
 
 ## 远程模式
 

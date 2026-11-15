@@ -1,7 +1,9 @@
 {
   "name": "crewrouter",
-  "version": "1.0.0",
+  "version": "27.0.0-beta.1",
   "description": "CrewRouter - AI API 网关平台",
+  "productVersion": "27.0",
+  "releaseChannel": "beta",
   "main": "server/index.js",
   "bin": {
     "cr": "cli/bin/cr.js",

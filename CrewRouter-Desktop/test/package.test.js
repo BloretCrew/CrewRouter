@@ -9,6 +9,12 @@ const root = path.resolve(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 
+test('beta product and kernel versions agree', () => {
+  assert.equal(manifest.version, '27.0.0-beta.1');
+  assert.equal(lock.version, manifest.version);
+  assert.equal(lock.packages[''].version, manifest.version);
+});
+
 test('desktop ships embedded PostgreSQL with optional platform binaries', () => {
   assert.ok(manifest.dependencies['embedded-postgres']);
   assert.deepEqual(lock.packages[''].dependencies, manifest.dependencies);
