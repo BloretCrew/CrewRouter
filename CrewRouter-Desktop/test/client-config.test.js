@@ -9,6 +9,7 @@ const JSON5 = require('json5');
 const jsonc = require('jsonc-parser');
 const TOML = require('@iarna/toml');
 const YAML = require('yaml');
+const vm = require('node:vm');
 const { createClientConfigService, TOOLS } = require('../src/app/client-config');
 
 const request = (tool) => ({ tool, baseUrl: 'https://router.example/v1', apiKey: 'unit-test-key', model: 'test-model' });
@@ -136,6 +137,40 @@ test('Claude Desktop direct gateway write preserves profiles and backs up every 
   assert.equal(profile.customFlag, true);
   check.claude_desktop(profile);
   assert.equal(profile.coworkEgressAllowedHosts, undefined);
+});
+
+test('Claude Desktop shell command writes all four native files and preserves existing configuration', (t) => {
+  const source = fs.readFileSync(path.join(__dirname, '../../public/js/client-config.js'), 'utf8');
+  const sandbox = { window: {}, btoa: (value) => Buffer.from(value, 'binary').toString('base64'), unescape, encodeURIComponent };
+  vm.runInNewContext(source, sandbox);
+  const generator = sandbox.window.CrewRouterClientConfig;
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-shell-config-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const generated = generator.generateShellCommand('claude_desktop', { ...request('claude_desktop') });
+  assert.match(generated.shell, /_meta\.json/);
+  assert.match(generated.shell, /profileId/);
+  assert.doesNotMatch(generated.shell, /coworkEgressAllowedHosts/);
+  const paths = [
+    path.join(home, '.config/Claude/claude_desktop_config.json'),
+    path.join(home, '.config/Claude-3p/claude_desktop_config.json'),
+    path.join(home, '.config/Claude-3p/configLibrary/_meta.json'),
+    path.join(home, '.config/Claude-3p/configLibrary/00000000-0000-4000-8000-435200000001.json'),
+  ];
+  put(paths[0], JSON.stringify({ normal: 'preserved' }));
+  put(paths[1], JSON.stringify({ threep: 'preserved' }));
+  put(paths[2], JSON.stringify({ entries: [{ id: 'other', name: 'Other' }], appliedId: 'other' }));
+  assert.doesNotThrow(() => require('node:child_process').execFileSync('bash', ['-c', generated.shell], { env: { ...process.env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') } }));
+  const normal = JSON.parse(fs.readFileSync(paths[0], 'utf8'));
+  const threep = JSON.parse(fs.readFileSync(paths[1], 'utf8'));
+  const meta = JSON.parse(fs.readFileSync(paths[2], 'utf8'));
+  const profile = JSON.parse(fs.readFileSync(paths[3], 'utf8'));
+  assert.deepEqual(normal, { normal: 'preserved', deploymentMode: '3p' });
+  assert.deepEqual(threep, { threep: 'preserved', deploymentMode: '3p' });
+  assert.deepEqual(meta.entries, [{ id: 'other', name: 'Other' }, { id: '00000000-0000-4000-8000-435200000001', name: 'CrewRouter' }]);
+  assert.equal(meta.appliedId, '00000000-0000-4000-8000-435200000001');
+  check.claude_desktop(profile);
+  const backups = paths.slice(0, 3).map((file) => fs.readdirSync(path.dirname(file)).filter((name) => name.startsWith(path.basename(file) + '.crewrouter-backup-'))).flat();
+  assert.equal(backups.length, 3);
 });
 
 test('Claude Desktop supports native macOS, Windows and Linux profile paths', (t) => {

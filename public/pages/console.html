@@ -2104,6 +2104,7 @@
             </blora-segmented>
           </div>
           <p id="configShellHint" class="config-shell-hint" hidden data-i18n="将覆盖目标配置文件。请在 Bash 终端粘贴执行；命令含密钥，请勿分享。">将覆盖目标配置文件。请在 Bash 终端粘贴执行；命令含密钥，请勿分享。</p>
+          <button id="configShellCopyButton" type="button" class="blora-button" onclick="app.copyConfigOutput('shell')" data-variant="secondary" hidden><span data-i18n="复制终端命令">复制终端命令</span></button>
           <textarea id="configOutputContent" class="blora-textarea config-output-content" rows="18" readonly spellcheck="false"></textarea>
           <textarea id="configShellContent" class="blora-textarea config-output-content" rows="18" readonly spellcheck="false" hidden></textarea>
           <button id="configManualCopy" type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="secondary" hidden><span data-i18n="复制配置">复制配置</span></button>
