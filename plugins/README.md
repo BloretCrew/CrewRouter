@@ -50,16 +50,28 @@
 ### 用法
 
 ```js
-// 注册
-await ctx.registerWebhook({ url: 'https://hooks.example.com/xx', events: ['order.created'], secret: 's3cret' });
+// 注册：allowedHosts 必须在 plugin.json 的域名白名单中
+await ctx.registerWebhook({ url: 'https://hooks.example.com/xx', events: ['order.created'], secret: '从插件配置读取的共享密钥' });
 
-// 触发（在钩子/cron 里）
-await ctx.webhook.emit('order.created', { id: 123 });
+// 触发（在钩子/cron 里）；逐个订阅顺序投递，失败最多重试 3 次
+const result = await ctx.webhook.emit('order.created', { id: 123 });
+// { matched, delivered, failed, results: [{ webhookId, status, attempts, responseStatus, error }] }
+
+// 最近投递记录仅限本插件，limit 取 1–100，status 可选 delivered / failed
+const recentFailures = await ctx.webhook.deliveries({ status: 'failed', limit: 20 });
 ```
 
-- 触发时 POST JSON `{ event, payload, ts }`，`secret` 走 `X-Webhook-Secret` 头。
-- 投递超时 10s，失败记日志不阻断主流程。
-- 存储表 `plugin_webhooks`（懒建，幂等）。
+- 触发时 POST JSON `{ event, payload, ts }`，注册的 `secret` 只经 `X-Webhook-Secret` 请求头发送，不进入投递历史。
+- 每个目标超时 10 秒；网络错误、非 2xx 响应和 SSRF 复验失败最多尝试 3 次（间隔 250ms、1s）。失败记录日志并继续其他目标，不阻断主流程。
+- `matched` 是匹配订阅数；`delivered` 是最终成功数；`failed` 是耗尽重试仍失败数。`responseStatus`/`error` 给出最终结果。
+- 历史存于 `plugin_webhook_deliveries`，保存插件 ID、订阅 ID、事件、状态、尝试数、HTTP 状态、错误及时间，不含 URL、payload 或 secret。查询始终按当前插件 ID 限定。
+- `deliveries({ limit, status })` 返回最新记录；目前不提供自动清理，运维可按部署的数据保留策略清理旧记录。
+
+### 能力权限与安全说明
+
+- 在 `plugin.json` 的 `permissions` 声明 `webhook:register` 后才会挂载 `ctx.registerWebhook` 与 `ctx.webhook`；未声明时二者不可用。
+- `allowedHosts` 白名单按完整主机名精确匹配；每次注册和实际投递前都会执行 SSRF 检查，拒绝非 HTTPS 与内网目标。
+- 后端 `main.js` 在 CrewRouter 主进程运行。Node VM 不是安全边界；后端插件代码默认关闭，只有管理员审查源码后显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 才会运行。权限清单用于 API 收口，不应当作不可信代码沙箱。
 
 ## 示例插件
 

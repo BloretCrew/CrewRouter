@@ -312,54 +312,18 @@ function buildContext(plugin, hooksBus, logPrefix) {
 
   // webhook:register — 出站 Webhook（域白名单 + HTTPS + 复用 SSRF 校验）
   if (perms.has('webhook:register')) {
+    const { createWebhookApi } = require('./webhook');
     const { validateUrl } = require('../utils/url-validator');
-    const allowedHosts = new Set((manifest.allowedHosts || []).map(h => h.toLowerCase()));
-    ctx.registerWebhook = async (hook = {}) => {
-      const url = String(hook.url || '');
-      if (!url.startsWith('https://')) throw new Error(`[plugins:${id}] webhook url 必须 https`);
-      const host = url.replace(/^https:\/\//, '').split(/[/?#]/)[0].toLowerCase();
-      if (allowedHosts.size && !allowedHosts.has(host)) {
-        throw new Error(`[plugins:${id}] webhook 目标域 ${host} 不在 allowedHosts 白名单`);
-      }
-      const check = await validateUrl(url, { allowPrivate: false });
-      if (!check.ok) throw new Error(`[plugins:${id}] webhook 被 SSRF 校验拒绝: ${check.error}`);
-      await pool.query(
-        `CREATE TABLE IF NOT EXISTS plugin_webhooks (
-           id BIGSERIAL PRIMARY KEY, plugin_id TEXT NOT NULL, url TEXT NOT NULL,
-           events JSONB NOT NULL DEFAULT '[]'::jsonb, secret TEXT,
-           created_at TIMESTAMPTZ NOT NULL DEFAULT now())`
-      );
-      await pool.query(
-        `INSERT INTO plugin_webhooks (plugin_id, url, events, secret) VALUES ($1,$2,$3,$4)
-         ON CONFLICT DO NOTHING`,
-        [id, url, JSON.stringify(hook.events || []), hook.secret || null]
-      );
-      return { registered: true, host };
-    };
-    ctx.webhook = {
-      emit: async (eventName, payload = {}) => {
-        const r = await pool.query(
-          `SELECT id, url, secret FROM plugin_webhooks WHERE plugin_id = $1 AND (events @> $2::jsonb OR events = '[]'::jsonb)`,
-          [id, JSON.stringify([eventName])]
-        );
-        for (const w of r.rows) {
-          try {
-            const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: eventName, payload, ts: Date.now() }) };
-            if (w.secret) opts.headers['X-Webhook-Secret'] = w.secret;
-            const check = await validateUrl(w.url, { allowPrivate: false });
-            if (check.ok) {
-              await Promise.race([
-                proxyPool.pinnedFetchValidated(check, { ...opts, redirect: 'manual', signal: AbortSignal.timeout(10000) }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('webhook 超时')), 10000)),
-              ]);
-            }
-          } catch (e) {
-            Logger.warn(`[plugins] ${id} webhook ${w.id} 投递失败: ${e.message}`);
-          }
-        }
-        return { delivered: r.rows.length };
-      },
-    };
+    const webhookApi = createWebhookApi({
+      pluginId: id,
+      pool,
+      validateUrl,
+      fetchValidated: (check, options) => proxyPool.pinnedFetchValidated(check, options),
+      allowedHosts: manifest.allowedHosts || [],
+      logFailure: (webhookId, message) => Logger.warn(`[plugins] ${id} webhook ${webhookId} 投递失败: ${message}`),
+    });
+    ctx.registerWebhook = webhookApi.register;
+    ctx.webhook = { emit: webhookApi.emit, deliveries: webhookApi.deliveries };
   }
 
   // 定时任务：清单 cron 字段 + cron:register 权限时，由 registry 调度（见 registry.schedulePluginCron）
