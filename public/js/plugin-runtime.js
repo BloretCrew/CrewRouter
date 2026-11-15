@@ -563,6 +563,9 @@
           let control;
           if (field.type === 'boolean') {
             control = `<input type="checkbox" ${attrs} ${value === true ? 'checked' : ''}>`;
+          } else if (field.type === 'secret') {
+            const configured = pl.configSecrets?.[key] === true;
+            control = `<input type="password" ${attrs} value="" autocomplete="new-password" placeholder="${esc(configured ? t('已设置，留空保持不变') : t('尚未设置'))}" style="width:100%;">`;
           } else if (Array.isArray(field.options)) {
             control = `<select ${attrs} style="width:100%;">${field.options.map(option => `<option value="${esc(String(option))}" ${String(value) === String(option) ? 'selected' : ''}>${esc(String(option))}</option>`).join('')}</select>`;
           } else {
@@ -740,8 +743,10 @@
           else if (field.tagName === 'SELECT' && field.dataset.configType === 'number') value = Number(field.value);
           else if (field.tagName === 'SELECT' && field.dataset.configType === 'integer') value = Number(field.value);
           else value = field.value;
+          if (value !== undefined && field.dataset.configType === 'secret' && field.value === '') continue;
           if (value !== undefined) config[key] = value;
         }
+        // Secret values omitted from this form remain unchanged on the server.
       } else {
         if (!textarea) return;
         try { config = JSON.parse(textarea.value); } catch (e) { msg(id, `JSON 无效: ${e.message}`, false); return; }

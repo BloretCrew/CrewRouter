@@ -1,6 +1,6 @@
 'use strict';
 
-const SUPPORTED_TYPES = new Set(['string', 'number', 'integer', 'boolean']);
+const SUPPORTED_TYPES = new Set(['string', 'number', 'integer', 'boolean', 'secret']);
 
 function validateConfigSchema(schema) {
   if (schema === undefined) return null;
@@ -19,6 +19,8 @@ function validateConfigSchema(schema) {
       return `configSchema.${key}.options 必须是 1–100 项的数组`;
     }
     if (field.type === 'boolean' && field.options !== undefined) return `configSchema.${key} 布尔字段不能声明 options`;
+    if (field.type === 'secret' && field.options !== undefined) return `configSchema.${key} secret 字段不能声明 options`;
+    if (field.type === 'secret' && field.default !== undefined) return `configSchema.${key} secret 字段不能设置默认值`;
     for (const bound of ['min', 'max']) {
       if (field[bound] !== undefined && (typeof field[bound] !== 'number' || !Number.isFinite(field[bound]))) {
         return `configSchema.${key}.${bound} 必须是有限数字`;
@@ -42,10 +44,11 @@ function validateConfigSchema(schema) {
 
 function validateValue(key, value, field) {
   if (value === undefined || value === null) return field.required ? `${key} 为必填项` : null;
+  if (field.type === 'secret' && typeof value !== 'string') return `${key} 类型必须为 string`;
   if (typeof value !== field.type && !(field.type === 'integer' && Number.isInteger(value))) return `${key} 类型必须为 ${field.type}`;
   if (field.type === 'number' && !Number.isFinite(value)) return `${key} 必须是有限数字`;
   if (field.type === 'integer' && !Number.isSafeInteger(value)) return `${key} 必须是安全整数`;
-  if (field.type === 'string') {
+  if (field.type === 'string' || field.type === 'secret') {
     if (field.min !== undefined && value.length < field.min) return `${key} 长度不能小于 ${field.min}`;
     if (field.max !== undefined && value.length > field.max) return `${key} 长度不能大于 ${field.max}`;
   } else if (field.type !== 'boolean') {
@@ -77,4 +80,25 @@ function applyDefaults(config, schema) {
   return output;
 }
 
-module.exports = { validateConfigSchema, validateConfig, applyDefaults };
+function preserveSecrets(config, existingConfig, schema) {
+  const output = { ...config };
+  for (const [key, field] of Object.entries(schema || {})) {
+    if (field.type === 'secret' && !Object.hasOwn(output, key) && Object.hasOwn(existingConfig || {}, key)) {
+      output[key] = existingConfig[key];
+    }
+  }
+  return output;
+}
+
+function redactConfig(config, schema) {
+  const visible = { ...(config || {}) };
+  const configured = {};
+  for (const [key, field] of Object.entries(schema || {})) {
+    if (field.type !== 'secret') continue;
+    configured[key] = typeof visible[key] === 'string' && visible[key].length > 0;
+    delete visible[key];
+  }
+  return { config: visible, configSecrets: configured };
+}
+
+module.exports = { validateConfigSchema, validateConfig, applyDefaults, preserveSecrets, redactConfig };

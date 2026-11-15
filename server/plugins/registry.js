@@ -91,7 +91,9 @@ async function syncDbRecords() {
 async function loadOne(id, manifest, rowConfig) {
   unloadOne(id);
   const dir = path.join(PLUGINS_DIR, id);
-  const plugin = { id, dir, manifest, config: rowConfig || {} };
+  const schemaTools = require('./config-schema');
+  const config = schemaTools.applyDefaults(rowConfig || {}, manifest.configSchema);
+  const plugin = { id, dir, manifest, config };
 
   const entryPath = path.join(dir, 'main.js');
   if (fs.existsSync(entryPath)) {
@@ -375,6 +377,10 @@ async function setConfig(id, config) {
   const manifest = knownManifests.get(id);
   if (manifest?.configSchema) {
     const schemaTools = require('./config-schema');
+    const existingResult = await pool.query('SELECT config FROM plugins WHERE id = $1', [id]);
+    if (!existingResult.rows.length) throw new Error(`插件不存在: ${id}`);
+    const existingConfig = existingResult.rows[0].config || {};
+    config = schemaTools.preserveSecrets(config, existingConfig, manifest.configSchema);
     const error = schemaTools.validateConfig(config, manifest.configSchema);
     if (error) {
       const validationError = new Error(error);
@@ -400,7 +406,12 @@ async function setConfig(id, config) {
  */
 async function listAll() {
   const rows = (await pool.query('SELECT * FROM plugins ORDER BY id')).rows;
-  return rows.map(row => ({
+  return rows.map(row => {
+    const configSchema = knownManifests.get(row.id)?.configSchema || null;
+    const configTools = require('./config-schema');
+    const configWithDefaults = configTools.applyDefaults(row.config || {}, configSchema);
+    const safeConfig = configTools.redactConfig(configWithDefaults, configSchema);
+    return {
     id: row.id,
     name: row.name,
     version: row.version,
@@ -408,8 +419,9 @@ async function listAll() {
     author: row.author,
     enabled: row.enabled,
     permissions: row.permissions || [],
-    config: row.config || {},
-    configSchema: knownManifests.get(row.id)?.configSchema || null,
+    config: safeConfig.config,
+    configSecrets: safeConfig.configSecrets,
+    configSchema,
     errorCount: row.error_count || 0,
     lastError: row.last_error || null,
     onDisk: knownManifests.has(row.id),
@@ -425,7 +437,8 @@ async function listAll() {
     storeLatestVersion: row.store_latest_version || null,
     storeLatest: row.store_latest || null,
     storeCheckedAt: row.store_checked_at || null,
-  }));
+  };
+  });
 }
 
 /**

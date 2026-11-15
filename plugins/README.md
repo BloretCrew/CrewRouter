@@ -106,7 +106,7 @@ const recentFailures = await ctx.webhook.deliveries({ status: 'failed', limit: 2
 }
 ```
 
-- 支持 `string`、`number`、`integer`、`boolean`；`label`/`description` 为可选展示文本。
+- 支持 `string`、`number`、`integer`、`boolean`、`secret`；`label`/`description` 为可选展示文本。`secret` 在管理 API 响应中只显示是否已设置，表单不回显原值；更新其他字段时省略该字段即可保留旧密钥，输入新值才会替换。secret 不支持默认值或枚举选项。
 - `required`、`default`、`options`、`min`、`max` 可选。字符串的 min/max 表示长度，数字字段表示数值范围；`options` 限定字符串或数字枚举值。
 - 默认值在保存时填充；必填缺失、类型/范围/枚举不符、未知字段都会被拒绝，API 返回 HTTP 400，原有配置不会更新。
 - schema 本身在插件清单加载时校验。没有 schema 的现有插件配置保持原行为；增加 schema 后应迁移旧配置使其符合新字段约束。

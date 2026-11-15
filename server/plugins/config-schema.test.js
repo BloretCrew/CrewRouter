@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { validateConfigSchema, validateConfig, applyDefaults } = require('./config-schema');
+const { validateConfigSchema, validateConfig, applyDefaults, preserveSecrets, redactConfig } = require('./config-schema');
 
 test('validates schema definition, default values and supported field types', () => {
   const schema = {
@@ -30,6 +30,16 @@ test('rejects missing required, wrong type, bounds, enum and unknown properties'
   assert.equal(validateConfig({ count: 4 }, schema), 'count 不能大于 3');
   assert.equal(validateConfig({ count: 2, mode: 'c' }, schema), 'mode 必须是允许选项之一');
   assert.equal(validateConfig({ count: 2, injected: true }, schema), '不支持的配置项: injected');
+});
+
+test('preserves secret values when omitted and redacts them from management responses', () => {
+  const schema = { apiToken: { type: 'secret', label: 'API Token' }, note: { type: 'string' } };
+  assert.equal(validateConfigSchema(schema), null);
+  const preserved = preserveSecrets({ note: 'updated' }, { apiToken: 'private-token', note: 'old' }, schema);
+  assert.deepEqual(preserved, { apiToken: 'private-token', note: 'updated' });
+  assert.deepEqual(redactConfig(preserved, schema), { config: { note: 'updated' }, configSecrets: { apiToken: true } });
+  assert.deepEqual(preserveSecrets({ apiToken: 'new-token' }, { apiToken: 'private-token' }, schema), { apiToken: 'new-token' });
+  assert.equal(validateConfig({ apiToken: 123 }, schema), 'apiToken 类型必须为 string');
 });
 
 test('preserves legacy arbitrary JSON configuration when no schema exists', () => {
