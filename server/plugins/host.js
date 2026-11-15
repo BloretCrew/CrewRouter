@@ -25,6 +25,7 @@ const vm = require('vm');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const proxyPool = require('../proxy-pool');
+const { validateConfigSchema } = require('./config-schema');
 
 // 网关类钩子统一要求 gateway:modify 权限
 const GATEWAY_HOOKS = new Set([
@@ -440,4 +441,5 @@ module.exports = {
   GATEWAY_HOOKS,
   HOOK_PERMISSIONS,
   HOOK_TIMEOUT_MS,
+  validateConfigSchema,
 };

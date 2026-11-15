@@ -107,7 +107,14 @@ const recentFailures = await ctx.webhook.deliveries({ status: 'failed', limit: 2
 ```json
 {
   "configSchema": {
-    "endpoint": { "type": "string", "label": "服务地址", "required": true, "min": 8, "max": 200 },
+    "endpoint": {
+      "type": "string",
+      "label": "服务地址",
+      "description": "插件调用的 HTTPS 服务地址。",
+      "required": true,
+      "min": 8,
+      "max": 200
+    },
     "retryCount": { "type": "integer", "label": "重试次数", "default": 2, "min": 0, "max": 5 },
     "mode": { "type": "string", "label": "运行模式", "options": ["safe", "fast"], "default": "safe" },
     "enabled": { "type": "boolean", "label": "启用功能", "default": true },
@@ -117,7 +124,7 @@ const recentFailures = await ctx.webhook.deliveries({ status: 'failed', limit: 2
 ```
 
 - 支持 `string`、`number`、`integer`、`boolean`、`secret`；`label`/`description` 为可选展示文本。`secret` 在管理 API 响应中只返回是否已设置，表单不回显原值；保存时留空或省略字段都会保留已保存的密钥，输入新值才会替换。secret 不支持默认值或枚举选项。
-- `required`、`default`、`options`、`min`、`max` 可选。字符串/secret 的 min/max 表示长度，数字字段表示数值范围；`options` 限定枚举值。
+- `required`、`default`、`options`、`min`、`max` 可选。字符串/secret 的 min/max 表示长度，数字字段表示数值范围；`options` 按字段类型限定枚举值。
 - 默认值在保存时填充；必填缺失、类型/范围/枚举不符、未知字段都会被拒绝，API 返回 HTTP 400，原有配置不会更新。
 - schema 本身在插件清单加载时校验。没有 schema 的现有插件配置保持旧版 JSON 编辑行为；增加 schema 后应迁移旧配置使其符合字段约束。
 - `ctx.config` 是插件初始化时传入的配置快照；保存会更新数据库和运行中插件对象的 config 引用，但不会自动重新执行插件 `main.js`。需要重新初始化逻辑时，请在管理页保存后显式重载插件。

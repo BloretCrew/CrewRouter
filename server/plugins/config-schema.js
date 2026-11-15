@@ -34,8 +34,8 @@ function validateConfigSchema(schema) {
 
 function validateValue(key, value, field) {
   if (value === undefined || value === null) return field.required ? `${key} 为必填项` : null;
-  if (field.type === 'secret' && typeof value !== 'string') return `${key} 类型必须是 string`;
-  if (typeof value !== field.type && !(field.type === 'integer' && Number.isInteger(value))) return `${key} 类型必须是 ${field.type}`;
+  const expectedType = field.type === 'secret' ? 'string' : field.type;
+  if (typeof value !== expectedType && !(field.type === 'integer' && Number.isInteger(value))) return `${key} 类型必须是 ${expectedType}`;
   if (field.type === 'number' && !Number.isFinite(value)) return `${key} 必须是有限数字`;
   if (field.type === 'integer' && !Number.isSafeInteger(value)) return `${key} 必须是安全整数`;
   if (field.type === 'string' || field.type === 'secret') {
@@ -50,9 +50,11 @@ function validateValue(key, value, field) {
 }
 
 function validateConfig(config, schema) {
-  if (!schema) return config && typeof config === 'object' && !Array.isArray(config) ? null : 'config 必须是对象';
   if (!config || typeof config !== 'object' || Array.isArray(config)) return 'config 必须是对象';
-  for (const key of Object.keys(config)) if (!Object.hasOwn(schema, key)) return `不支持的配置项: ${key}`;
+  if (!schema) return null;
+  for (const key of Object.keys(config)) {
+    if (!Object.hasOwn(schema, key)) return `不支持的配置项: ${key}`;
+  }
   for (const [key, field] of Object.entries(schema)) {
     const error = validateValue(key, config[key], field);
     if (error) return error;
@@ -70,9 +72,12 @@ function applyDefaults(config, schema) {
 
 function preserveSecrets(config, existingConfig, schema) {
   const output = { ...(config || {}) };
+  const existing = existingConfig || {};
   for (const [key, field] of Object.entries(schema || {})) {
-    if (field.type === 'secret' && output[key] === '' && Object.hasOwn(existingConfig || {}, key)) output[key] = existingConfig[key];
-    else if (field.type === 'secret' && !Object.hasOwn(output, key) && Object.hasOwn(existingConfig || {}, key)) output[key] = existingConfig[key];
+    if (field.type !== 'secret') continue;
+    const hasExisting = Object.prototype.hasOwnProperty.call(existing, key);
+    const supplied = Object.prototype.hasOwnProperty.call(output, key) ? output[key] : undefined;
+    if (hasExisting && (supplied === undefined || supplied === null || supplied === '')) output[key] = existing[key];
   }
   return output;
 }

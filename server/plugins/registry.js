@@ -483,19 +483,33 @@ async function setConfig(id, config) {
   }
   if (manifest?.configSchema) {
     const schemaTools = require('./config-schema');
-    const existingResult = await pool.query('SELECT config FROM plugins WHERE id = $1', [id]);
-    if (!existingResult.rows.length) throw new Error(`插件不存在: ${id}`);
-    config = schemaTools.preserveSecrets(config, existingResult.rows[0].config || {}, manifest.configSchema);
-    const error = schemaTools.validateConfig(config, manifest.configSchema);
-    if (error) {
-      const validationError = new Error(error);
-      validationError.statusCode = 400;
-      throw validationError;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const existingResult = await client.query('SELECT config FROM plugins WHERE id = $1 FOR UPDATE', [id]);
+      if (!existingResult.rows.length) throw new Error(`插件不存在: ${id}`);
+      const existingConfig = existingResult.rows[0].config || {};
+      config = schemaTools.preserveSecrets(config, existingConfig, manifest.configSchema);
+      const error = schemaTools.validateConfig(config, manifest.configSchema);
+      if (error) {
+        const validationError = new Error(error);
+        validationError.statusCode = 400;
+        throw validationError;
+      }
+      config = schemaTools.applyDefaults(config, manifest.configSchema);
+      const result = await client.query('UPDATE plugins SET config = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id', [id, JSON.stringify(config)]);
+      if (!result.rows.length) throw new Error(`插件不存在: ${id}`);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
     }
-    config = schemaTools.applyDefaults(config, manifest.configSchema);
+  } else {
+    const result = await pool.query('UPDATE plugins SET config = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id', [id, JSON.stringify(config)]);
+    if (!result.rows.length) throw new Error(`插件不存在: ${id}`);
   }
-  const result = await pool.query('UPDATE plugins SET config = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id', [id, JSON.stringify(config)]);
-  if (!result.rows.length) throw new Error(`插件不存在: ${id}`);
   // 运行中的插件热更新内存里的 config 引用
   const p = loaded.get(id);
   if (p) p.config = config || {};

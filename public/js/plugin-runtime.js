@@ -778,6 +778,7 @@
         }
         // Secret values omitted from this form remain unchanged on the server.
       } else {
+        if (!textarea) return;
         try { config = JSON.parse(textarea.value); } catch (e) { msg(id, `JSON 无效: ${e.message}`, false); return; }
       }
       try {

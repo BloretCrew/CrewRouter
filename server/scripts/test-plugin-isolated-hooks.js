@@ -23,6 +23,7 @@ function loadRegistry(pool, hooksBus, warnings) {
       if (id === './hooks') return hooksBus;
       if (id === './events') return { publish() {}, unsubscribePluginEvents() {} };
       if (id === './task-sandbox') return sandbox;
+      if (id === './config-schema') return require('../plugins/config-schema');
       if (id === './host') return { HOOK_TIMEOUT_MS: 2000, validateManifest: () => null, loadPluginMain() { throw new Error('isolated-hooks must not run main.js'); } };
       if (id === './isolated-hook-contract') return require('../plugins/isolated-hook-contract');
       if (id === '../utils/plugin-task-queue') return { createTaskQueue: () => ({ ensureSchema: async () => {}, cancelPlugin: async () => {}, start() {}, stop() {}, enqueue() {}, get() {}, cancel() {}, getTaskQueueStats() {} }) };

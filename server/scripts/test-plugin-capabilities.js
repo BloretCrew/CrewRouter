@@ -47,6 +47,7 @@ const host = loadFixture('plugins/host.js', {
   '../models/database': { pool },
   '../logger': { info() {}, warn() {}, error() {} },
   '../proxy-pool': {},
+  './config-schema': require('../plugins/config-schema'),
   '../utils/plugin-data-read': dataRead,
   '../utils/audit-log': { logAction() { throw new Error('Unexpected fixture audit write'); }, ACTIONS: {} },
   './registry': {},
@@ -61,6 +62,11 @@ console.log('PASS manifest 未知权限不阻断');
 // 非法 webhook 声明应阻断
 const bad = host.validateManifest({ id: 'bad-webhook', name: 'X', webhooks: [{ url: 'http://insecure' }] });
 assert.ok(bad, '非 https webhook 应被拒绝');
+const badSchema = host.validateManifest({ id: 'bad-schema', name: 'Bad Schema', configSchema: { retry: { type: 'object' } } });
+assert.match(badSchema, /configSchema\.retry\.type/);
+const goodSchema = host.validateManifest({ id: 'good-schema', name: 'Good Schema', configSchema: { retries: { type: 'integer', default: 2, min: 0, max: 4 } } });
+assert.strictEqual(goodSchema, null);
+console.log('PASS manifest configSchema 校验');
 console.log('PASS webhook 非 https 被拒绝');
 
 // ---- 2. 权限门控：buildContext 按权限挂 ctx ----

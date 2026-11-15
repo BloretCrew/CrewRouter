@@ -5,6 +5,27 @@
   "description": "示例插件：展示 usage:read 能力（用量/成本聚合，不含正文）",
   "author": "bloret-crew",
   "permissions": ["usage:read", "models:read", "meta:read", "pages:register"],
+  "configSchema": {
+    "days": {
+      "type": "integer",
+      "label": "统计天数",
+      "description": "用量和成本统计的回看范围。",
+      "default": 7,
+      "min": 1,
+      "max": 90
+    },
+    "groupBy": {
+      "type": "string",
+      "label": "默认分组",
+      "options": ["model_id", "day"],
+      "default": "model_id"
+    },
+    "showCost": {
+      "type": "boolean",
+      "label": "显示成本",
+      "default": true
+    }
+  },
   "pages": [
     { "path": "/usage-stats", "title": "用量统计", "area": "settings", "entry": "page.html" }
   ]

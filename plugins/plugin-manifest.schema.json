@@ -15,6 +15,31 @@
     "taskHandlers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$" } },
     "permissions": { "type": "array", "uniqueItems": true, "items": { "type": "string", "maxLength": 100 } },
     "allowedHosts": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" } },
+    "configSchema": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,63}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "enum": ["string", "number", "integer", "boolean", "secret"] },
+          "label": { "type": "string", "maxLength": 500 },
+          "description": { "type": "string", "maxLength": 500 },
+          "required": { "type": "boolean" },
+          "default": {},
+          "options": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "type": ["string", "number"] } },
+          "min": { "type": "number" },
+          "max": { "type": "number" }
+        },
+        "allOf": [
+          { "if": { "properties": { "type": { "const": "secret" } } }, "then": { "not": { "required": ["default", "options"] } } },
+          { "if": { "properties": { "type": { "const": "boolean" } } }, "then": { "not": { "required": ["options"] } } },
+          { "if": { "properties": { "type": { "const": "integer" } } }, "then": { "properties": { "options": { "items": { "type": "integer" } } } } },
+          { "if": { "properties": { "type": { "const": "number" } } }, "then": { "properties": { "options": { "items": { "type": "number" } } } } },
+          { "if": { "properties": { "type": { "enum": ["string", "secret"] } } }, "then": { "properties": { "min": { "minimum": 0 }, "max": { "minimum": 0 } } } }
+        ]
+      }
+    },
     "pages": { "type": "array", "items": { "type": "object", "required": ["path", "title", "entry"], "properties": { "path": { "type": "string" }, "title": { "type": "string" }, "entry": { "type": "string" }, "area": { "type": "string" } } } },
     "slots": { "type": "array", "items": { "type": "object", "required": ["page", "position", "render"], "properties": { "page": { "type": "string" }, "position": { "type": "string" }, "render": { "type": "string" } } } },
     "routes": { "type": "array", "items": { "type": "object", "required": ["method", "path"], "properties": { "method": { "enum": ["get", "post", "put", "patch", "delete"] }, "path": { "type": "string" }, "auth": { "enum": ["user", "admin", "none"] } } } },
