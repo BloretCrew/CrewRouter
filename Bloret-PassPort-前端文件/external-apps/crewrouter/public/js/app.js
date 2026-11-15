@@ -4973,12 +4973,12 @@ class ConsoleApp {
 
   _usageRequestSourceMeta(source) {
     const s = String(source || 'unknown').toLowerCase();
-    // 图标与 showcase / 客户端配置弹窗保持一致（img.bloret.net）
+    // 图标优先使用对应项目或品牌的官方资源。
     const map = {
       grok: {
         label: 'Grok',
         color: '#a855f7',
-        icon: 'https://img.bloret.net/img/1783646659585/b5f2e4758d401fa16e43dd9d58278c5c'
+        icon: 'https://media.x.ai/v1/website/spacexai-symbol-black-transparent-6435cf42.png'
       },
       codex: {
         label: 'Codex',
@@ -5003,7 +5003,7 @@ class ConsoleApp {
       hermes: {
         label: 'Hermes',
         color: 'var(--pink)',
-        icon: 'https://img.bloret.net/img/1783300640677/085bcecf994f63347ce29dcdadffdb9f'
+        icon: 'https://raw.githubusercontent.com/NousResearch/hermes-agent/main/assets/icon-master.svg'
       },
       openclaw: {
         label: 'OpenClaw',
