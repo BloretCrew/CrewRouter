@@ -8714,6 +8714,7 @@ class ConsoleApp {
             : t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
       document.getElementById('configOutputContent').value = generated.content || '';
       document.getElementById('configShellContent').value = generated.shell || '';
+      document.getElementById('configShellCopyButton').hidden = !hasShell;
       document.getElementById('desktopConfigWrite').hidden = !desktop;
       document.getElementById('desktopConfigWriteIntro').textContent = tool === 'claude_desktop'
         ? t('将直接写入 Claude Desktop 第三方模型配置，不经过 CC Switch。')
@@ -8724,6 +8725,9 @@ class ConsoleApp {
           ? t('将创建 Claude-3p 配置并应用 CrewRouter profile；现有其他 profile 保留。')
           : t('将更新 CrewRouter 连接和默认模型；不会修改工具权限。写入前将在系统对话框中确认。')
         : '';
+      document.getElementById('configShellHint').textContent = tool === 'claude_desktop'
+        ? t('Claude Desktop 命令含当前 API Key，请仅在自己的电脑运行且不要分享。')
+        : t('将覆盖目标配置文件。请在 Bash 终端粘贴执行；命令含密钥，请勿分享。');
       document.getElementById('desktopConfigProjectOption').hidden = !desktop || tool !== 'opencode';
       document.getElementById('desktopConfigProject').checked = false;
       document.getElementById('configManualDetails').open = !desktop;
@@ -8785,7 +8789,7 @@ class ConsoleApp {
     if (shell) shell.hidden = next !== 'shell';
     if (hint) hint.hidden = next !== 'shell';
     const label = next === 'shell' ? t('复制终端命令') : t('复制配置');
-    for (const id of ['configCopyButton', 'configManualCopy']) {
+    for (const id of ['configCopyButton', 'configManualCopy', 'configShellCopyButton']) {
       const btn = document.getElementById(id);
       if (!btn) continue;
       const span = btn.querySelector('span') || btn;
@@ -8869,8 +8873,8 @@ class ConsoleApp {
     });
   }
 
-  copyConfigOutput() {
-    const mode = this._configOutputMode === 'shell' && this._configOutput?.hasShell ? 'shell' : 'content';
+  copyConfigOutput(modeOverride) {
+    const mode = modeOverride === 'shell' || (this._configOutputMode === 'shell' && this._configOutput?.hasShell) ? 'shell' : 'content';
     const text = mode === 'shell'
       ? (this._configOutput?.shell || document.getElementById('configShellContent')?.value || '')
       : (this._configOutput?.content || document.getElementById('configOutputContent')?.value || '');

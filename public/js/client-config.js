@@ -430,8 +430,102 @@
       + ' agy --gemini_dir="' + agyDir + '"';
   }
 
+  function generateClaudeDesktopShellCommand(baseUrl, apiKey, model) {
+    const config = {
+      disableDeploymentModeChooser: true,
+      inferenceGatewayApiKey: apiKey,
+      inferenceGatewayAuthScheme: 'bearer',
+      inferenceGatewayBaseUrl: baseUrl.replace(/\/+$/, '').replace(/\/v1$/i, ''),
+      inferenceModels: [{ name: model }],
+      inferenceProvider: 'gateway'
+    };
+    const payload = BufferlessBase64(JSON.stringify(config));
+    const script = `const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const crypto = require('node:crypto');
+const profileId = '00000000-0000-4000-8000-435200000001';
+const profileName = 'CrewRouter';
+const profile = JSON.parse(Buffer.from('${payload}', 'base64').toString('utf8'));
+const home = os.homedir();
+const root = process.platform === 'darwin' ? path.join(home, 'Library', 'Application Support') : process.platform === 'win32' ? (process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local')) : (process.env.XDG_CONFIG_HOME || path.join(home, '.config'));
+const library = path.join(root, 'Claude-3p', 'configLibrary');
+const files = [
+  [path.join(root, 'Claude', 'claude_desktop_config.json'), 'deployment'],
+  [path.join(root, 'Claude-3p', 'claude_desktop_config.json'), 'deployment'],
+  [path.join(library, '_meta.json'), 'meta'],
+  [path.join(library, profileId + '.json'), 'profile']
+];
+const originals = new Map();
+const updates = [];
+for (const [file, kind] of files) {
+  let text = '';
+  try { text = fs.readFileSync(file, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const value = text ? JSON.parse(text) : {};
+  originals.set(file, text);
+  if (kind === 'deployment') value.deploymentMode = '3p';
+  else if (kind === 'meta') {
+    if (value.entries !== undefined && !Array.isArray(value.entries)) throw new Error('Claude Desktop profile manifest entries must be an array');
+    value.entries = Array.isArray(value.entries) ? value.entries : [];
+    const entry = value.entries.find(item => item && item.id === profileId);
+    if (entry) entry.name = profileName; else value.entries.push({ id: profileId, name: profileName });
+    value.appliedId = profileId;
+  } else Object.assign(value, profile);
+  updates.push([file, JSON.stringify(value, null, 2) + '\\n']);
+}
+const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '') + '-' + crypto.randomBytes(4).toString('hex');
+const staged = [];
+const backups = [];
+try {
+  for (const [file, content] of updates) {
+    fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+    const original = originals.get(file);
+    if (original) {
+      const backup = file + '.crewrouter-backup-' + stamp;
+      fs.writeFileSync(backup, original, { flag: 'wx', mode: 0o600 });
+      backups.push(backup);
+    }
+    const temp = file + '.crewrouter-' + stamp + '.tmp';
+    fs.writeFileSync(temp, content, { flag: 'wx', mode: 0o600 });
+    staged.push([file, temp, original]);
+  }
+  for (const [file, , original] of staged) {
+    let current = '';
+    try { current = fs.readFileSync(file, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (current !== original) throw new Error('Claude Desktop configuration changed while preparing writes: ' + file);
+  }
+  const committed = [];
+  try {
+    for (const [file, temp, original] of staged) { fs.renameSync(temp, file); committed.push([file, original]); }
+  } catch (error) {
+    for (const [file, original] of committed.reverse()) {
+      try { if (original) fs.writeFileSync(file, original, { mode: 0o600 }); else fs.unlinkSync(file); } catch {}
+    }
+    throw error;
+  }
+  process.stdout.write('Claude Desktop CrewRouter profile configured. Fully quit and reopen Claude Desktop.\\n');
+  for (const backup of backups) process.stdout.write('Backup: ' + backup + '\\n');
+} finally {
+  for (const [, temp] of staged) { try { fs.unlinkSync(temp); } catch {} }
+}`;
+    return [
+      '#!/bin/sh',
+      'set -eu',
+      'node <<\'CREWROUTER_CLAUDE_DESKTOP\'',
+      script,
+      'CREWROUTER_CLAUDE_DESKTOP'
+    ].join('\n');
+  }
+
+  function BufferlessBase64(value) {
+    return btoa(unescape(encodeURIComponent(value)));
+  }
+
   function generateShellCommand(tool, options) {
     const generated = generate(tool, options);
+    if (tool === 'claude_desktop' && generated.supported) {
+      return Object.assign({}, generated, { shell: generateClaudeDesktopShellCommand(options?.baseUrl ?? options?.claudeConfig?.env?.ANTHROPIC_BASE_URL, options?.apiKey ?? options?.claudeConfig?.env?.ANTHROPIC_AUTH_TOKEN, options?.model ?? DEFAULT_MODEL) });
+    }
     if (!generated.supported || !generated.path || !generated.content) {
       return Object.assign({}, generated, { shell: '' });
     }
