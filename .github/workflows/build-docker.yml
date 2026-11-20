@@ -20,6 +20,7 @@ jobs:
   # Job 1: 构建直接运行交付包 (tar.gz)
   # ============================================
   build-dist:
+    if: ${{ github.event_name != 'push' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,6 +45,7 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
           PKG_DIR="crewrouter-direct"
           mkdir -p "$PKG_DIR"
+          if [[ "$VERSION" == */* ]]; then VERSION="branch-${GITHUB_SHA::12}"; fi
 
           cp -r dist/ "$PKG_DIR/dist"
           cp start.sh "$PKG_DIR/"
