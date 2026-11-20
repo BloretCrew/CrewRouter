@@ -1,7 +1,5 @@
 # CrewRouter CLI 27.0 Beta 候选
 
-> 未发布：该候选版本仅供本地打包验收，尚无 npm `beta` 可安装 tag。
-
 > 未发布：该候选版本只用于本地打包验收，目前不应执行下面的 npm beta 安装命令。
 
 ```bash

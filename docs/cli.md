@@ -9,6 +9,10 @@ cr --help
 
 本仓库源码可通过根目录 `npm link` 激活 `cr`。Standalone npm CLI 只包含客户端程序；本机 `start` / `serve` 需要另行安装兼容的 CrewRouter Server。
 
+## 源码开发
+
+在仓库根目录执行 `npm link`，可在源码开发时同时创建 `cr` 和 `crewrouter` 两个入口。Standalone npm CLI 只包含 CLI 客户端，不嵌入 CrewRouter Server；其本机 `start` / `serve` 需另行安装 compatible 的 CrewRouter Server。
+
 ## 首次使用
 
 ### 连接远程实例
