@@ -11,6 +11,11 @@ on:
         type: boolean
         required: true
         default: true
+      publish:
+        description: 'After a successful dry-run, publish SDK/CLI packages and one GitHub pre-release; approve current credential scopes and external publication.'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -264,7 +269,7 @@ jobs:
           node cli/npm/scripts/stage-package.js "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           cd "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
-      - name: Upload approved npm candidate tarballs
+      - name: Upload candidate npm tarballs from a tagged build
         if: ${{ github.event_name == 'push' }}
         uses: actions/upload-artifact@v4
         with:
@@ -272,25 +277,64 @@ jobs:
           path: ${{ runner.temp }}/*.tgz
           if-no-files-found: error
           retention-days: 30
-      - name: Validate package ownership and publish candidate versions
-        if: ${{ github.event_name == 'push' }}
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  npm-beta-publish:
+    name: Manually publish candidate npm artifacts
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && inputs.dry_run }}
+    needs: [gate, server, desktop, npm-beta-candidate]
+    runs-on: ubuntu-latest
+    environment: npm-beta
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: crewrouter-27-beta-npm-candidates-${{ github.sha }}
+          path: candidates
+      - name: Confirm npm package ownership and publish candidate packages
         run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo 'Missing NPM_TOKEN in the protected beta environment; refusing to publish npm packages.'
-            exit 1
-          fi
-          printf '//registry.npmjs.org/:_authToken=%s\\n' "$NPM_TOKEN" > "$RUNNER_TEMP/.npmrc"
-          chmod 600 "$RUNNER_TEMP/.npmrc"
-          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/.npmrc"
-          for package in crewrouter-sdk crewrouter-cli; do
-            response=$(npm view "$package" name --json 2>/dev/null || true)
-            if [ -n "$response" ]; then echo "npm package $package already exists; refusing to publish into a namespace not owned by the current account."; exit 1; fi
+          for name in crewrouter-sdk crewrouter-cli; do
+            code=$(curl --silent --show-error --output /tmp/npm-$name.json --write-out '%{http_code}' https://registry.npmjs.org/$name)
+            test "$code" = "404" || { echo "npm package $name is already registered; refusing publication to another owner."; exit 1; }
           done
-          version="${PRODUCT_VERSION}"
-          test -f "$RUNNER_TEMP/crewrouter-sdk-$version.tgz"
-          test -f "$RUNNER_TEMP/crewrouter-cli-$version.tgz"
-          npm publish "$RUNNER_TEMP/crewrouter-sdk-$version.tgz" --access public --tag beta
-          npm publish "$RUNNER_TEMP/crewrouter-cli-$version.tgz" --access public --tag beta
-        shell: bash
+          npm publish candidates/crewrouter-sdk-${PRODUCT_VERSION}.tgz --access public --tag beta
+          npm publish candidates/crewrouter-cli-${PRODUCT_VERSION}.tgz --access public --tag beta
+
+  github-release-manual:
+    name: Manually publish GitHub pre-release after candidate dry-run
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && inputs.dry_run }}
+    needs: [gate, server, desktop, npm-beta-candidate, npm-beta-publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: beta-server-*
+          path: gathered/server
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: beta-crewrouter-desktop-*
+          path: gathered/desktop
+          merge-multiple: true
+      - name: Assemble assets and publish one protected GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-assets
+          find gathered -type f -print0 | while IFS= read -r -d '' file; do cp "$file" release-assets/; done
+          find release-assets -type f ! -name 'SHA256SUMS-*' -print0 | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
+          test -f "release-assets/crewrouter-direct-${PRODUCT_VERSION}.tar.gz"
+          gh release create "$RELEASE_TAG" release-assets/* --repo "$GITHUB_REPOSITORY" --title 'CrewRouter 27.0 Beta' --prerelease --verify-tag --notes-file docs/release-27.0-beta.md
