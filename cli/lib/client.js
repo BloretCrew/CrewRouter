@@ -3,7 +3,7 @@
 const { request, errorMessage, errorCode } = require('./http');
 const { cookieHeader, updateJar } = require('./cookies');
 const { normalizeBaseUrl } = require('./config');
-const { version } = require('../../package.json');
+const { version } = require('./version');
 
 const USER_AGENT = `crewrouter-cli/${version}`;
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);

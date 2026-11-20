@@ -104,19 +104,24 @@ resp = client.chat.completions.create(
 )
 ```
 
-## SDK
+**CrewRouter 27.0 Beta（测试版）**：主服务与 Desktop 计划同一主仓库 GitHub Pre-release 发布；TypeScript SDK 与独立 CLI 测试版计划只发 npm `beta` dist-tag，不单独创建 GitHub Release。当前发布准备状态、Desktop 安全限制及门禁见[27.0 Beta 发布说明](docs/release-27.0-beta.md)。未提交 Beta 版本 tag，也未发布 Pre-release 或 npm 包；下方安装命令在候选构建和 npm publish 完成前不可用。
+
 
 除了直接改 `base_url`，也可以使用 CrewRouter SDK 获得流式解析、统一错误、重试与管理接口封装。
 
 | 形态 | 包 | 状态 |
 |------|-----|------|
-| Node/TypeScript 客户端 | npm `crewrouter-sdk` | 0.1.0 可用 |
-| Python 客户端 | PyPI `crewrouter-sdk` | 0.1.0 可用 |
-| Go 客户端 | `github.com/BloretCrew/CrewRouter/sdk/go` | 0.1.0 可用 |
+| Node/TypeScript SDK | npm 包（尚未发布） | 27.0 Beta；候选 workflow push 后再验收 |
+| Python 客户端 | PyPI | 27.0 Beta 版本待决定与发布 |
+| Go 客户端 | Go module | 27.0 Beta 版本待发布 |
 | 可嵌入服务端 SDK | `crewrouter/embedded` | 预览可用（Node） |
 
+Beta SDK 在构建、验收和 npm 发布完成前，不应假定 registry 已存在对应版本。
+
+### TypeScript SDK 安装（npm beta 发布完成后）
+
 ```bash
-npm install crewrouter-sdk
+npm install crewrouter-sdk@beta
 ```
 
 ```ts
@@ -132,7 +137,11 @@ const response = await client.gateway.chat.completions.create({
 });
 ```
 
-所有 SDK 均与主项目一样使用 **GPL-3.0**。完整文档见 [docs/sdk/README.md](docs/sdk/README.md)。
+| Windows/macOS/Linux Desktop | 主仓库 GitHub Pre-release `CrewRouter 27.0 Beta` | 全平台构建和发布 gate 尚未执行；macOS/Windows 安装包签名/公证状态需确认 |
+| SDK（TypeScript） | npm 包（尚未发布） | 27.0 Beta 候选版本；候选构建 gate 尚未部署/运行 |
+| CLI | 独立 npm 包（尚未发布） | 27.0 Beta 候选版本；候选构建 gate 尚未部署/运行 |
+| Python/Go SDK | PyPI / Go module | 27.0 Beta 候选；单独版本发布计划待确认 |
+
 
 ## 命令行与 TUI（`cr`）
 

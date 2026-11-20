@@ -11,21 +11,44 @@ const { ConnectionManager, parseInstanceResponse } = require('../src/connection-
 
 const tempStore = () => new ProfileStore(path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cr-desktop-')), 'profiles.json'));
 
-test('URL policy allows private targets and redacts secrets', async () => {
-  assert.equal((await validateRemoteUrl('http://127.0.0.1:1234')).ok, true);
-  assert.equal((await validateRemoteUrl('http://localhost:1234')).ok, true);
-  assert.equal((await validateRemoteUrl('http://10.0.0.8')).ok, true);
-  assert.equal((await validateRemoteUrl('http://[::1]:8080')).ok, true);
+test('remote URL policy rejects local and reserved targets while explicit local loopback remains available', async () => {
+  assert.equal((await validateRemoteUrl('http://127.0.0.1:1234')).ok, false);
+  assert.equal((await validateRemoteUrl('http://localhost:1234')).ok, false);
+  assert.equal((await validateRemoteUrl('http://10.0.0.8')).ok, false);
+  assert.equal((await validateRemoteUrl('http://[::1]:8080')).ok, false);
+  assert.equal((await validateRemoteUrl('http://[fc00::1]')).ok, false);
+  assert.equal((await validateRemoteUrl('http://[fe80::1]')).ok, false);
+  assert.equal((await validateRemoteUrl('http://[::ffff:10.0.0.8]')).ok, false);
+  assert.equal((await validateRemoteUrl('http://[64:ff9b::a00:8]')).ok, false);
+  assert.equal((await validateRemoteUrl('http://192.88.99.1')).ok, false);
+  assert.equal((await validateRemoteUrl('http://198.51.100.4')).ok, false);
+  assert.equal((await validateRemoteUrl('http://127.0.0.1:1234', { allowLocalhost: true })).ok, true);
+  assert.equal((await validateRemoteUrl('http://localhost:1234', { allowLocalhost: true })).ok, true);
+  assert.equal((await validateRemoteUrl('http://10.0.0.8', { allowLocalhost: true })).ok, false, 'local mode must not permit arbitrary private addresses');
+  assert.equal((await validateRemoteUrl('http://example.invalid', { allowLocalhost: true })).ok, false);
   assert.equal((await validateRemoteUrl('https://example.com/#access_token=secret')).ok, false);
   assert.equal(redactUrl('https://example.com/#access_token=secret'), 'https://example.com/#[REDACTED]');
-  assert.equal((await validateRemoteUrl('http://127.0.0.1:1234', { allowLocalhost: true })).ok, true);
-  assert.equal((await validateRemoteUrl('http://example.invalid', { allowLocalhost: true })).ok, false);
   assert.equal((await validateRemoteUrl('http://user:pass@example.com')).ok, false);
   assert.equal((await validateRemoteUrl('https://example.com/?access_token=secret')).ok, false);
   assert.equal((await validateRemoteUrl('file:///tmp/x')).ok, false);
-  assert.equal((await validateRemoteUrl('http://203.0.113.10:8080')).ok, true, '公网 IP 字面量不需要 DNS');
   assert.match(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /access_token=%5BREDACTED%5D/);
   assert.doesNotMatch(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /abc|xyz/);
+});
+
+test('remote URL policy checks every DNS result and allows only verified public addresses', async () => {
+  const lookup = async () => [{ address: '8.8.8.8', family: 4 }, { address: '2606:4700:4700::1111', family: 6 }];
+  assert.equal((await validateRemoteUrl('https://public.example', { lookup })).ok, true);
+  assert.equal((await validateRemoteUrl('http://203.0.113.10:8080', { lookup })).ok, false, 'documentation-only public ranges are reserved');
+  assert.equal((await validateRemoteUrl('https://public.example', { lookup: async () => [{ address: '10.0.0.8', family: 4 }] })).ok, false);
+  assert.equal((await validateRemoteUrl('https://public.example', { lookup: async () => [
+    { address: '8.8.8.8', family: 4 }, { address: 'fd00::1', family: 6 },
+  ] })).ok, false, 'mixed public/private answers must be rejected');
+  assert.equal((await validateRemoteUrl('https://public.example', { lookup: async () => [
+    { address: '8.8.8.8', family: 4 }, { address: '198.51.100.1', family: 4 },
+  ] })).ok, false, 'reserved answers must be rejected');
+  assert.equal((await validateRemoteUrl('https://public.example', { lookup: async () => [] })).ok, false);
+  assert.equal((await validateRemoteUrl('https://broken.example', { lookup: async () => { throw new Error('offline'); } })).ok, false);
+  assert.equal((await validateRemoteUrl('http://127.0.0.1:1234', { allowLocalhost: true, lookup: async () => [{ address: '127.0.0.1', family: 4 }] })).ok, true);
 });
 
 test('local display name validation trims, rejects unsafe values and preserves HTML as text', () => {

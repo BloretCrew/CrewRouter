@@ -1,0 +1,32 @@
+{
+  "name": "crewrouter-cli",
+  "version": "27.0.0-beta.1",
+  "private": false,
+  "description": "CrewRouter CLI test-build packaging",
+  "license": "GPL-3.0",
+  "type": "commonjs",
+  "main": "index.js",
+  "bin": {
+    "cr": "bin/cr.js",
+    "crewrouter": "bin/cr.js"
+  },
+  "files": [
+    "bin/**",
+    "index.js",
+    "lib/**",
+    "tui/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "pack:check": "node scripts/check-pack.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  }
+}

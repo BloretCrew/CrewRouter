@@ -50,11 +50,12 @@ function resolveLanguage(settings, electron) {
   return locale.toLowerCase().startsWith('zh') ? 'zh' : 'en';
 }
 
-function createApp({ electron, env = process.env, fetchImpl = requestFetch, logger = console, userData: userDataOverride, isPackaged, localManagerFactory } = {}) {
+function createApp({ electron, env = process.env, fetchImpl = requestFetch, logger = console, userData: userDataOverride, isPackaged, localManagerFactory, dnsLookup } = {}) {
   if (!electron) throw new Error('createApp 需要 electron 实例');
   const state = new AppState();
   const demoUrl = env.CREWROUTER_DEMO_URL || DEFAULT_DEMO_URL;
-  const ctx = { electron, env, logger, state, rendererEntry, preloadPath, demoUrl, mainWindow: null, window: null, connection: null, local: null, officialLogin: null, quitting: false, userData: null };
+  const publicValidateRemoteUrl = (url, options = {}) => validateRemoteUrl(url, { ...(dnsLookup ? { lookup: dnsLookup } : {}), ...options });
+  const ctx = { electron, env, logger, state, rendererEntry, preloadPath, demoUrl, mainWindow: null, window: null, connection: null, local: null, officialLogin: null, quitting: false, userData: null, dnsLookup };
   let actionSeq = 0;
 
   const userData = () => ctx.userData || (ctx.userData = userDataOverride || electron.app.getPath('userData'));
@@ -71,7 +72,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   state.on('change', sendStatus);
 
   async function openSafeExternal(raw) {
-    const result = await validateRemoteUrl(raw);
+    const result = await validateRemoteUrl(raw, dnsLookup ? { lookup: dnsLookup } : {});
     if (!result.ok) throw new Error(result.error);
     return electron.shell.openExternal(result.url.toString());
   }
@@ -100,7 +101,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   async function connect(url, { local = false, name, id, displayName, localIdentityId, officialTarget = false, cancelled = () => false } = {}) {
     const total = local ? 4 : 2;
     state.step(local ? 4 : 1, total, local ? '正在读取本地服务信息' : '正在检查服务器');
-    const profile = await ctx.connection.connect({ id, url, mode: local ? 'local' : 'remote', allowLocalhost: local, resolveDns: officialTarget ? false : undefined, name: name || (local ? '本地 CrewRouter' : new URL(url).hostname), displayName, localIdentityId });
+    const profile = await ctx.connection.connect({ id, url, mode: local ? 'local' : 'remote', allowLocalhost: local, name: name || (local ? '本地 CrewRouter' : new URL(url).hostname), displayName, localIdentityId });
     if (cancelled()) return state.snapshot('launcher');
     const target = new URL(profile.url).origin;
     const summary = { id: profile.id, name: profile.name, mode: profile.mode, lastConnectedAt: profile.lastConnectedAt };
@@ -165,6 +166,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
       demo: false,
       localIdentityId,
       displayName,
+      env: ctx.env,
       logger,
     });
     manager.on('progress', ({ step, total, label }) => { if (state.isBusy()) state.step(step, total, label); });
@@ -183,6 +185,10 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   async function startLocal({ displayName, profile: selected } = {}) {
+    const localPassportEnv = ctx.env || process.env;
+    if (!localPassportEnv.CREWROUTER_DESKTOP_PASSPORT_APP_ID || !localPassportEnv.CREWROUTER_DESKTOP_PASSPORT_APP_SECRET) {
+      throw new Error('27.0 Beta 暂不支持开箱使用 Desktop Local；请连接远程 CrewRouter。');
+    }
     const store = ctx.connection.store;
     const active = store.getActive();
     const profile = selected?.mode === 'local' ? selected : (state.localProfile?.mode === 'local' ? state.localProfile : (active?.mode === 'local' ? active : null));
@@ -223,7 +229,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   async function connectCustom(rawUrl) {
-    const target = await validateRemoteUrl(rawUrl);
+    const target = await validateRemoteUrl(rawUrl, dnsLookup ? { lookup: dnsLookup } : {});
     if (!target.ok) throw new Error(target.error);
     const url = target.url.toString();
     return runAction('custom', { action: 'custom', payload: { url } }, (cancelled) => connect(url, { name: target.url.hostname, cancelled }));
@@ -344,7 +350,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   function diagnostics(audience = 'launcher') {
-    const base = { app: 'CrewRouter Desktop', version: electron.app.getVersion(), platform: process.platform, arch: process.arch, mode: state.mode, target: state.target, runtime: state.instance?.runtime || null, edition: state.instance?.edition || null };
+    const base = { app: 'CrewRouter Desktop', version: `${electron.app.getVersion()} · 27.0 Beta`, platform: process.platform, arch: process.arch, mode: state.mode, target: state.target, runtime: state.instance?.runtime || null, edition: state.instance?.edition || null };
     if (audience === 'remoteConsole') return base;
     const local = ctx.local?.getStatus() || null;
     return { ...base, profileId: state.profile?.id || null, localServer: local ? { ready: local.ready, port: local.port, version: local.version, database: local.database } : null, electron: process.versions.electron || null, node: process.versions.node };
@@ -390,9 +396,9 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   async function init() {
     delete process.env.CREWROUTER_SERVER_ROOT;
     delete process.env.CREWROUTER_PACKAGED_SERVER_ROOT;
-    ctx.connection = new ConnectionManager({ store: new ProfileStore(path.join(userData(), 'profiles.json')), fetchImpl });
+    ctx.connection = new ConnectionManager({ store: new ProfileStore(path.join(userData(), 'profiles.json')), fetchImpl, lookup: ctx.dnsLookup });
     ctx.localPassport = createLocalPassport({ electron, fetchImpl, logger, getToken: () => ctx.local?.getStatus().ready ? ctx.local.localToken : null, getWindow: () => ctx.window, getTarget: () => ctx.local?.getStatus().ready && localSource(ctx.local.getStatus().baseUrl) ? state.target : null });
-    ctx.officialLogin = createOfficialLogin({ electron, demoUrl, fetchImpl, state, connect: officialConnect, validateRemoteUrl, logger });
+    ctx.officialLogin = createOfficialLogin({ electron, demoUrl, fetchImpl, state, connect: officialConnect, validateRemoteUrl: publicValidateRemoteUrl, logger });
     applyPreferences(ctx.connection.store.getSettings());
     const activeProfile = ctx.connection.activeProfile();
     if (activeProfile?.mode === 'local' && activeProfile.displayName) state.set({ localProfile: activeProfile });

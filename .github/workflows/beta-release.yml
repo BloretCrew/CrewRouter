@@ -1,0 +1,340 @@
+name: CrewRouter 27.0 Beta
+
+on:
+  push:
+    tags:
+      - 'v27.*-beta.*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build all beta assets and candidates without publishing'
+        type: boolean
+        required: true
+        default: true
+      publish:
+        description: 'After a successful dry-run, publish SDK/CLI packages and one GitHub pre-release; approve current credential scopes and external publication.'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crewrouter-beta-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PRODUCT_VERSION: 27.0.0-beta.1
+  RELEASE_TAG: v27.0.0-beta.1
+
+jobs:
+  gate:
+    name: SDK, CLI, Server, protocol and Desktop release gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate beta tag and all npm manifests
+        env:
+          TAG_VERSION: ${{ github.ref_name }}
+          DISPATCH_VERSION: 27.0.0-beta.1
+          RELEASE_TAG: ${{ github.ref_name }}
+          PRODUCT_VERSION: 27.0.0-beta.1
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            case "$TAG_VERSION" in v27.*-beta.*) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
+            TAG_VERSION="${TAG_VERSION#v}"
+          else
+            TAG_VERSION="$DISPATCH_VERSION"
+            RELEASE_TAG="$PRODUCT_VERSION"
+          fi
+          export TAG_VERSION RELEASE_TAG
+          node -e "const expected=process.env.TAG_VERSION; for (const file of ['package.json','CrewRouter-Desktop/package.json','CrewRouter-Desktop/package-lock.json','sdk/typescript/package.json','sdk/typescript/package-lock.json','cli/npm/package.json']) { const p=require('./'+file); const actual=p.packages?.['']?.version || p.version; if(actual!==expected) throw Error(file+' version '+actual+' != '+expected) }"
+          python -c "import tomllib, os; assert tomllib.load(open('sdk/python/pyproject.toml','rb'))['project']['version']==os.environ['TAG_VERSION'].replace('-beta.', 'b').replace('-', '')"
+      - run: npm ci
+      - run: npm run sdk:check
+      - run: npm run docs:check
+      - name: Verify npm beta names are unclaimed
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          for package in crewrouter-sdk crewrouter-cli; do
+            code=$(curl --silent --show-error --output "$RUNNER_TEMP/npm-$package.json" --write-out '%{http_code}' "https://registry.npmjs.org/$package")
+            if [ "$code" = "200" ]; then
+              echo "npm package $package already exists; refusing to publish under another owner's namespace."
+              exit 1
+            fi
+            if [ "$code" != "404" ]; then
+              echo "npm registry lookup for $package returned HTTP $code"
+              exit 1
+            fi
+          done
+      - run: npm ci --prefix CrewRouter-Desktop
+      - name: npm SDK and CLI pack preconditions
+        run: |
+          npm ci --prefix sdk/typescript
+          npm --prefix sdk/typescript test
+          npm --prefix sdk/typescript pack --dry-run --ignore-scripts
+          node cli/npm/scripts/test-install.js
+          npm run test:cli
+      - name: Verify release workflow controls
+        run: node scripts/check-release-workflows.mjs
+      - name: Protocol, release bundle and signing regressions
+        run: |
+          npm run test:protocol
+          node --test server/scripts/test-route-loader-package.js
+          npm run test:signatures
+      - name: Python SDK regression
+        run: |
+          python -m pip install -e 'sdk/python[test]'
+          python -m pytest -p no:cacheprovider sdk/python
+      - name: Go SDK regression
+        working-directory: sdk/go
+        run: |
+          go test ./...
+          go vet ./...
+      - name: Desktop behavior and syntax
+        working-directory: CrewRouter-Desktop
+        run: |
+          npm ci
+          npm test
+          npm run syntax
+          xvfb-run -a npm exec electron -- scripts/test-launcher-interactions.js
+
+  server:
+    name: Build same-commit server beta asset
+    runs-on: ubuntu-latest
+    needs: [gate]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build and assemble release archive
+        run: |
+          node deploy/build/build-release.js release
+          mkdir -p out crewrouter-direct/dist crewrouter-direct/docs
+          cp -R dist/. crewrouter-direct/dist/
+          cp start.sh LICENSE crewrouter-direct/
+          cp docs/deployment.md crewrouter-direct/docs/
+          tar -czf out/crewrouter-direct-${PRODUCT_VERSION}.tar.gz crewrouter-direct
+          cd out && sha256sum "crewrouter-direct-${PRODUCT_VERSION}.tar.gz" > SHA256SUMS-server.txt
+      - name: Smoke-test packaged routes outside demo mode
+        run: node server/scripts/test-route-loader-package.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beta-server-${{ github.sha }}
+          path: out/*
+          if-no-files-found: error
+          retention-days: 30
+
+  desktop:
+    name: Build Desktop ${{ matrix.platform }} package
+    needs: [gate]
+    if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            command: npm exec -- electron-builder --linux AppImage --publish never
+            artifact: crewrouter-desktop-linux
+            path: dist/*.AppImage
+          - os: windows-latest
+            platform: windows
+            command: npm exec -- electron-builder --win nsis --publish never
+            artifact: crewrouter-desktop-windows
+            path: dist/*.exe
+          - os: macos-15
+            platform: macos-arm64
+            command: npm exec -- electron-builder --mac dmg --arm64 --publish never
+            artifact: crewrouter-desktop-macos-arm64
+            path: dist/*.dmg
+          - os: macos-15-intel
+            platform: macos-x64
+            command: npm exec -- electron-builder --mac dmg --x64 --publish never
+            artifact: crewrouter-desktop-macos-x64
+            path: dist/*.dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: CrewRouter-Desktop/package-lock.json
+      - run: npm ci --prefix CrewRouter-Desktop
+      - name: Build this commit's CrewRouter kernel
+        run: |
+          npm ci
+          npm run build
+      - name: Stage and validate embedded server
+        working-directory: CrewRouter-Desktop
+        env:
+          CREWROUTER_RELEASE_ROOT: ${{ github.workspace }}/dist
+          CREWROUTER_STAGE_ROOT: ${{ github.workspace }}/CrewRouter-Desktop/staging/server
+        run: |
+          npm run stage:server
+          npm run validate:server-bundle
+      - name: Build Desktop installer
+        working-directory: CrewRouter-Desktop
+        run: ${{ matrix.command }}
+      - name: Prepare installer and checksum
+        working-directory: CrewRouter-Desktop
+        shell: bash
+        run: |
+          mkdir -p out
+          cp ${{ matrix.path }} out/
+          cd out
+          sha256sum * > SHA256SUMS-${{ matrix.platform }}.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beta-${{ matrix.artifact }}-${{ github.sha }}
+          path: CrewRouter-Desktop/out/*
+          if-no-files-found: error
+          retention-days: 30
+
+  github-prerelease:
+    name: Publish one main-repository pre-release
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.') && contains(github.ref, '-beta.') }}
+    needs: [gate, server, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: beta-server-*
+          path: gathered/server
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: beta-crewrouter-desktop-*
+          path: gathered/desktop
+          merge-multiple: true
+      - name: Assemble service and Desktop assets
+        run: |
+          mkdir -p release-assets
+          find gathered -type f -print0 | while IFS= read -r -d '' file; do cp "$file" release-assets/; done
+          test -f "release-assets/crewrouter-direct-${PRODUCT_VERSION}.tar.gz"
+          find release-assets -type f ! -name 'SHA256SUMS-*' -print0 | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
+      - name: Create GitHub pre-release only after npm candidates have uploaded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title 'CrewRouter 27.0 Beta' \
+            --prerelease \
+            --verify-tag \
+            --notes-file docs/release-27.0-beta.md
+
+  npm-beta-candidate:
+    name: Prepare npm beta packages; do not publish automatically
+    if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.') && contains(github.ref, '-beta.')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+    needs: [gate, server, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build and pack SDK candidate
+        run: |
+          npm ci --prefix sdk/typescript
+          npm --prefix sdk/typescript test
+          npm pack --prefix sdk/typescript --ignore-scripts --pack-destination "$RUNNER_TEMP"
+      - name: Build and pack CLI candidate
+        run: |
+          mkdir -p "$RUNNER_TEMP/crewrouter-cli-beta-stage"
+          node cli/npm/scripts/stage-package.js "$RUNNER_TEMP/crewrouter-cli-beta-stage"
+          cd "$RUNNER_TEMP/crewrouter-cli-beta-stage"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
+      - name: Upload candidate npm tarballs from a tagged build
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: crewrouter-27-beta-npm-candidates-${{ github.sha }}
+          path: ${{ runner.temp }}/*.tgz
+          if-no-files-found: error
+          retention-days: 30
+
+  npm-beta-publish:
+    name: Manually publish candidate npm artifacts
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && inputs.dry_run }}
+    needs: [gate, server, desktop, npm-beta-candidate]
+    runs-on: ubuntu-latest
+    environment: npm-beta
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: crewrouter-27-beta-npm-candidates-${{ github.sha }}
+          path: candidates
+      - name: Confirm npm package ownership and publish candidate packages
+        run: |
+          for name in crewrouter-sdk crewrouter-cli; do
+            code=$(curl --silent --show-error --output /tmp/npm-$name.json --write-out '%{http_code}' https://registry.npmjs.org/$name)
+            test "$code" = "404" || { echo "npm package $name is already registered; refusing publication to another owner."; exit 1; }
+          done
+          npm publish candidates/crewrouter-sdk-${PRODUCT_VERSION}.tgz --access public --tag beta
+          npm publish candidates/crewrouter-cli-${PRODUCT_VERSION}.tgz --access public --tag beta
+
+  github-release-manual:
+    name: Manually publish GitHub pre-release after candidate dry-run
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && inputs.dry_run }}
+    needs: [gate, server, desktop, npm-beta-candidate, npm-beta-publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: beta-server-*
+          path: gathered/server
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: beta-crewrouter-desktop-*
+          path: gathered/desktop
+          merge-multiple: true
+      - name: Assemble assets and publish one protected GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-assets
+          find gathered -type f -print0 | while IFS= read -r -d '' file; do cp "$file" release-assets/; done
+          find release-assets -type f ! -name 'SHA256SUMS-*' -print0 | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
+          test -f "release-assets/crewrouter-direct-${PRODUCT_VERSION}.tar.gz"
+          gh release create "$RELEASE_TAG" release-assets/* --repo "$GITHUB_REPOSITORY" --title 'CrewRouter 27.0 Beta' --prerelease --verify-tag --notes-file docs/release-27.0-beta.md

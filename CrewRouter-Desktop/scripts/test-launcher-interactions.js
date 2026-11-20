@@ -64,6 +64,7 @@ if (process.type === 'renderer') {
       await win.loadFile(path.join(__dirname, '..', 'src', 'renderer', 'index.html'));
       await pause();
       assert.equal(await view(), 'welcome');
+      console.log('Electron test renderer:', await execute('JSON.stringify({url: location.href, ipc: typeof window.crewrouterDesktop, view: document.getElementById("launcher")?.dataset.view})'));
       assert.equal(await execute("document.querySelector('.launcher__footer, #app-version, [data-i18n=\"footer.note\"]') === null"), true);
       for (const width of [960, 375]) {
         win.setSize(width, 700); await pause();
@@ -154,6 +155,7 @@ if (process.type === 'renderer') {
       assert.deepEqual(errors, []);
       console.log('PASS: launcher interaction, IPC delay/error recovery, keyboard navigation, settings, language/theme, desktop/mobile layout');
       app.exit(0);
+      setTimeout(() => process.exit(0), 300);
     } catch (error) { console.error(error); app.exit(1); }
   });
 }

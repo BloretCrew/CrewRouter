@@ -19,7 +19,8 @@ const {
 const { request } = require('./http');
 
 const ENTRY_PATH = path.join(__dirname, 'local-server-entry.js');
-const SERVER_ROOT = path.resolve(__dirname, '..', '..');
+const SERVER_ROOT = path.resolve(process.env.CREWROUTER_CLI_SERVER_ROOT || path.join(__dirname, '..', '..'));
+const DEFAULT_SERVER_ENTRY = process.env.CREWROUTER_CLI_SERVER_ENTRY || path.join(SERVER_ROOT, 'server/index.js');
 
 function sleep(ms, timers = {}) {
   return new Promise(resolve => (timers.setTimeout || setTimeout)(resolve, ms));
@@ -169,6 +170,7 @@ async function startLocalService(options = {}) {
   try { fs.fchmodSync(logFd, 0o600); } catch (_) {}
   const nonce = require('node:crypto').randomBytes(16).toString('hex');
   const env = buildServiceEnv({ host, port, configPath, demo, nonce, env: options.env || process.env });
+  env.CREWROUTER_CLI_SERVER_ENTRY = options.serverEntry || process.env.CREWROUTER_CLI_SERVER_ENTRY || DEFAULT_SERVER_ENTRY;
   let child;
   try {
     child = spawnImpl(process.execPath, [ENTRY_PATH], {

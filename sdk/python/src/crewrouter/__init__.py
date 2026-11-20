@@ -23,7 +23,7 @@ from .errors import (
 )
 from .generated.operations import CONTRACT_VERSION, OPERATIONS, OPERATION_LIST
 
-__version__ = "0.1.0"
+__version__ = "27.0.0b1"
 
 __all__ = [
     "CrewRouter",

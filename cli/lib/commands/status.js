@@ -11,7 +11,7 @@ const { printJson, success, describeError } = require('../output');
 const {
   bold, dim, green, yellow, red, formatBigNumber, formatCost, relativePath, table,
 } = require('../format');
-const { version: packageVersion } = require('../../../package.json');
+const { version: packageVersion } = require('../version');
 
 const HELP_TEXT = `CrewRouter CLI (cr) — 连接远程实例或从本机启动 CrewRouter
 
