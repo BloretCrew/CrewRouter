@@ -29,11 +29,10 @@ if (process.type === 'renderer') {
   const { app, BrowserWindow } = require('electron');
   app.whenReady().then(async () => {
     const win = new BrowserWindow({ width: 960, height: 700, show: true, webPreferences: { preload: __filename, contextIsolation: false, nodeIntegration: false, backgroundThrottling: false } });
-      const errors = [];
-      const consoleOutput = [];
-      win.webContents.on('console-message', (_, level, message) => { if (level === 3) errors.push(message); consoleOutput.push({ level, message }); });
-      const execute = (source) => win.webContents.executeJavaScript(source, true);
-      const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
+    const errors = [];
+    win.webContents.on('console-message', (_, level, message) => { if (level === 3) errors.push(message); });
+    const execute = (source) => win.webContents.executeJavaScript(source, true);
+    const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
     const midFade = (id) => execute(`new Promise((resolve) => {
       const start = performance.now();
       const sample = () => {
