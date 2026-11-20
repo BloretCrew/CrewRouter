@@ -7,7 +7,9 @@ const path = require('node:path');
 
 const source = path.resolve(process.env.CREWROUTER_RELEASE_ROOT || process.argv[2] || path.resolve(__dirname, '../../dist'));
 const destination = path.resolve(process.env.CREWROUTER_STAGE_ROOT || path.join(__dirname, '..', 'staging', 'server'));
-const files = ['server.js', 'model-trace-worker.js', 'package.json'];
+const files = ['server.js', 'model-trace-worker.js'];
+const runtimeRoot = path.join(__dirname, '..', 'server-staging');
+const runtimeFiles = ['package.json', 'package-lock.json'];
 const directories = ['public', 'lang'];
 const forbidden = /(^|\/)(?:\.env(?:\..*)?|.*\.(?:db|sqlite|sqlite3)|credentials?|secrets?)(?:$|\/)/i;
 
@@ -35,6 +37,26 @@ function copyDirectory(relative) {
   });
 }
 
+function copyRuntimeFile(relative) {
+  const from = path.join(runtimeRoot, relative);
+  if (!fs.existsSync(from)) throw new Error(`Required Desktop server runtime file not found: ${from}`);
+  fs.copyFileSync(from, path.join(destination, relative));
+}
+
+function assertRuntimeManifestMatchesRelease() {
+  const release = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
+  const runtime = JSON.parse(fs.readFileSync(path.join(runtimeRoot, 'package.json'), 'utf8'));
+  const releaseNames = Object.keys(release.dependencies || {}).sort();
+  const runtimeNames = Object.keys(runtime.dependencies || {}).sort();
+  if (JSON.stringify(releaseNames) !== JSON.stringify(runtimeNames)) {
+    throw new Error('Desktop server runtime dependencies do not match the release dependency names');
+  }
+  const lock = JSON.parse(fs.readFileSync(path.join(runtimeRoot, 'package-lock.json'), 'utf8'));
+  if (lock.name !== runtime.name || lock.version !== runtime.version || lock.packages?.['']?.name !== runtime.name || lock.packages?.['']?.version !== runtime.version || JSON.stringify(lock.packages?.['']?.dependencies) !== JSON.stringify(runtime.dependencies)) {
+    throw new Error('Desktop server runtime package-lock.json does not match its package.json');
+  }
+}
+
 function assertSafeBundle() {
   const unsafe = [];
   function walk(dir) {
@@ -55,10 +77,11 @@ if (!fs.existsSync(source)) {
   try {
     fs.rmSync(destination, { recursive: true, force: true });
     fs.mkdirSync(destination, { recursive: true });
+    assertRuntimeManifestMatchesRelease();
     files.forEach(copyFile);
+    runtimeFiles.forEach(copyRuntimeFile);
     directories.forEach(copyDirectory);
-    // Server 端 public/js/app.js 已自行归一化 /api/instance 的 data 包装，不再需要文本补丁。
-    const npmArgs = ['install', '--omit=dev', '--ignore-scripts', '--no-package-lock', '--no-audit', '--no-fund'];
+    const npmArgs = ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'];
     const npmCommand = process.platform === 'win32'
       ? (process.env.npm_node_execpath || process.execPath)
       : (process.env.npm_execpath || 'npm');
@@ -69,7 +92,7 @@ if (!fs.existsSync(source)) {
     });
     assertSafeBundle();
     console.log(`Staged CrewRouter Server at ${destination}`);
-    console.log('Included: server.js, production package manifest/dependencies, public/, lang/');
+    console.log('Included: server.js, pinned production package manifest/lock/dependencies, public/, lang/');
   } catch (error) {
     console.error(`Unable to stage CrewRouter Server: ${error.message}`);
     process.exitCode = 1;

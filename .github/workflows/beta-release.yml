@@ -184,7 +184,9 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: CrewRouter-Desktop/package-lock.json
+          cache-dependency-path: |
+            CrewRouter-Desktop/package-lock.json
+            CrewRouter-Desktop/server-staging/package-lock.json
       - run: npm ci --prefix CrewRouter-Desktop
       - name: Build this commit's CrewRouter kernel
         run: |
