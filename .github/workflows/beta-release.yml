@@ -95,7 +95,7 @@ jobs:
           npm ci
           npm test
           npm run syntax
-          npm exec electron -- scripts/test-launcher-interactions.js
+          xvfb-run -a npm exec electron -- scripts/test-launcher-interactions.js
 
   server:
     name: Build same-commit server beta asset
@@ -210,9 +210,14 @@ jobs:
           ref: ${{ github.sha }}
       - uses: actions/download-artifact@v4
         with:
-          pattern: beta-*
-          path: gathered
-          merge-multiple: false
+          pattern: beta-server-*
+          path: gathered/server
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: beta-crewrouter-desktop-*
+          path: gathered/desktop
+          merge-multiple: true
       - name: Assemble service and Desktop assets
         run: |
           mkdir -p release-assets
