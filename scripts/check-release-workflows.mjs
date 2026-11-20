@@ -29,6 +29,8 @@ for (const event of ['push', 'pull_request']) {
   const paths = sdkWorkflow.on[event].paths || [];
   for (const required of ['cli/**', 'CrewRouter-Desktop/package.json']) if (!paths.includes(required)) throw new Error(`SDK CI ${event} path filter omits ${required}`);
 }
+const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install isolated PostgreSQL test runtime');
+if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');
 if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-'))) throw new Error('npm beta candidate tarballs must be uploaded as an artifact');
 if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop') throw new Error('GitHub release must wait for every public build gate');
 const npmPublish = beta.jobs['npm-beta-publish'];
