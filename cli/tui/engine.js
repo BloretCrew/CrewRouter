@@ -1123,7 +1123,7 @@ async function runPagedTui({
       const interval = (timers.setInterval || setInterval)(() => {
         if (closed) { (timers.clearInterval || clearInterval)(interval); resolve(); }
       }, 50);
-      if (interval && typeof interval.unref === 'function') interval.unref();
+      if (interval && typeof interval.unref === 'function') interval.ref();
     });
   } finally {
     closed = true;
