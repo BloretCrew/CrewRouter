@@ -31,10 +31,11 @@ for (const event of ['push', 'pull_request']) {
 }
 const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install isolated PostgreSQL test runtime');
 if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');
-if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-'))) throw new Error('npm beta candidate tarballs must be uploaded as an artifact');
+if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-') && step.if?.includes("inputs.dry_run"))) throw new Error('npm beta candidate tarballs must be uploaded for dry-runs and tagged builds');
 if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop') throw new Error('GitHub release must wait for every public build gate');
 const npmPublish = beta.jobs['npm-beta-publish'];
 if (!npmPublish || !npmPublish.needs.includes('npm-beta-candidate') || !npmPublish.permissions?.['id-token']) throw new Error('manual npm publish must use the separately approved candidate artifact and OIDC permissions');
+if (beta.jobs['npm-beta-publish'].steps.find(step => step.uses === 'actions/download-artifact@v4')?.with?.name !== 'crewrouter-27-beta-npm-candidates-${{ github.sha }}') throw new Error('npm publish must download candidate tarballs from this workflow run');
 if (beta.jobs['github-release-manual'].needs.includes('npm-beta-publish') !== true) throw new Error('manual GitHub release must await npm publish if publish was explicitly selected');
 const electronGate = beta.jobs.gate.steps.find(step => step.name === 'Desktop behavior, sandboxed launcher and syntax');
 if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-sandbox') || !electronGate.run.includes('chmod 4755 node_modules/electron/dist/chrome-sandbox') || electronGate.run.includes('--no-sandbox')) throw new Error('Electron launcher gate must retain sandbox and configure the isolated SUID helper');

@@ -281,8 +281,8 @@ jobs:
           node cli/npm/scripts/stage-package.js "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           cd "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
-      - name: Upload candidate npm tarballs from a tagged build
-        if: ${{ github.event_name == 'push' }}
+      - name: Upload npm candidate tarballs for this workflow run
+        if: ${{ (github.event_name == 'push' && contains(github.ref, '-beta.')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         uses: actions/upload-artifact@v4
         with:
           name: crewrouter-27-beta-npm-candidates-${{ github.sha }}
