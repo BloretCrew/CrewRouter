@@ -18,6 +18,9 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/sdk-ci.yml'
+      - 'cli/**'
+      - 'CrewRouter-Desktop/package.json'
+      - 'CrewRouter-Desktop/package-lock.json'
   pull_request:
     paths:
       - 'sdk/**'
@@ -35,6 +38,9 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/sdk-ci.yml'
+      - 'cli/**'
+      - 'CrewRouter-Desktop/package.json'
+      - 'CrewRouter-Desktop/package-lock.json'
 
 jobs:
   contract:

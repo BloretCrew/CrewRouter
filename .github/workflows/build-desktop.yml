@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'CrewRouter-Desktop/**'
+      - 'cli/**'
+      - 'deploy/**'
       - 'package.json'
       - 'package-lock.json'
       - 'server/**'
@@ -16,6 +18,8 @@ on:
     branches: [main]
     paths:
       - 'CrewRouter-Desktop/**'
+      - 'cli/**'
+      - 'deploy/**'
       - 'package.json'
       - 'package-lock.json'
       - 'server/**'
