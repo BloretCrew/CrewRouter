@@ -102,6 +102,7 @@ test('stopLocalService refuses a foreign PID unless forced and stops an owned pr
   const config = require('../lib/config');
   const { stopLocalService, processAlive } = require('../lib/service');
   const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000);', 'local-server-entry.js'], { stdio: 'ignore' });
+  await new Promise((resolve, reject) => { child.once('spawn', resolve); child.once('error', reject); });
   try {
     config.saveServiceState({
       pid: child.pid,
