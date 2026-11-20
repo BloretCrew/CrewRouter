@@ -19,6 +19,16 @@ if (!manualDryRun || beta.jobs['npm-beta-candidate'].needs.join(',') !== 'gate,s
 const prereleaseDownloadNames = beta.jobs['github-prerelease'].steps.filter(step => step.uses === 'actions/download-artifact@v4').map(step => step.with?.pattern);
 if (JSON.stringify(prereleaseDownloadNames) !== JSON.stringify(['beta-server-*', 'beta-crewrouter-desktop-*'])) throw new Error('GitHub release must download only server and Desktop assets');
 if (!beta.jobs['gate'].steps.some(step => step.name === 'Verify npm beta names are unclaimed' && step.if?.includes("github.event_name == 'push'"))) throw new Error('npm package ownership must be checked only on tag publish');
+const desktopWorkflow = parse(await readFile(files[1], 'utf8'));
+for (const event of ['push', 'pull_request']) {
+  const paths = desktopWorkflow.on[event].paths || [];
+  for (const required of ['cli/**', 'deploy/**']) if (!paths.includes(required)) throw new Error(`Desktop CI ${event} path filter omits ${required}`);
+}
+const sdkWorkflow = parse(await readFile('.github/workflows/sdk-ci.yml', 'utf8'));
+for (const event of ['push', 'pull_request']) {
+  const paths = sdkWorkflow.on[event].paths || [];
+  for (const required of ['cli/**', 'CrewRouter-Desktop/package.json']) if (!paths.includes(required)) throw new Error(`SDK CI ${event} path filter omits ${required}`);
+}
 if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-'))) throw new Error('npm beta candidate tarballs must be uploaded as an artifact');
 if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop') throw new Error('GitHub release must wait for every public build gate');
 const npmPublish = beta.jobs['npm-beta-publish'];
