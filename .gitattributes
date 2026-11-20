@@ -1,0 +1,5 @@
+public/vendor/modeltrace/*.mjs text eol=lf
+public/vendor/modeltrace/*.json text eol=lf
+public/vendor/modeltrace/LICENSE text eol=lf
+public/vendor/modeltrace/**/*.json text eol=lf
+public/vendor/modeltrace/**/*.bin -text
