@@ -221,7 +221,7 @@ jobs:
   github-prerelease:
     name: Publish one main-repository pre-release
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.') && contains(github.ref, '-beta.') }}
-    needs: [gate, server, desktop]
+    needs: [gate, server, desktop, npm-beta-candidate]
     runs-on: ubuntu-latest
     permissions:
       contents: write
