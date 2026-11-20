@@ -106,12 +106,14 @@ jobs:
         run: |
           go test ./...
           go vet ./...
-      - name: Desktop behavior and syntax
+      - name: Desktop behavior, sandboxed launcher and syntax
         working-directory: CrewRouter-Desktop
         run: |
           npm ci
           npm test
           npm run syntax
+          sudo chown root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
           xvfb-run -a npm exec electron -- scripts/test-launcher-interactions.js
 
   server:
