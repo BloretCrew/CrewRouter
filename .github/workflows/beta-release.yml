@@ -55,16 +55,20 @@ jobs:
       - run: npm ci
       - run: npm run sdk:check
       - run: npm run docs:check
-      - name: Verify registry package names and release version availability
+      - name: Verify npm beta names are unclaimed
         if: ${{ github.event_name == 'push' }}
-        env:
-          RELEASE_VERSION: ${{ github.ref_name }}
         run: |
-          npm view crewrouter-sdk name --json
-          npm view crewrouter-cli name --json
-          version="${RELEASE_VERSION#v}"
-          if npm view "crewrouter-sdk@$version" version --json >/dev/null 2>&1; then echo 'SDK release version already exists'; exit 1; fi
-          if npm view "crewrouter-cli@$version" version --json >/dev/null 2>&1; then echo 'CLI release version already exists'; exit 1; fi
+          for package in crewrouter-sdk crewrouter-cli; do
+            code=$(curl --silent --show-error --output "$RUNNER_TEMP/npm-$package.json" --write-out '%{http_code}' "https://registry.npmjs.org/$package")
+            if [ "$code" = "200" ]; then
+              echo "npm package $package already exists; refusing to publish under another owner's namespace."
+              exit 1
+            fi
+            if [ "$code" != "404" ]; then
+              echo "npm registry lookup for $package returned HTTP $code"
+              exit 1
+            fi
+          done
       - run: npm ci --prefix CrewRouter-Desktop
       - name: npm SDK and CLI pack preconditions
         run: |
@@ -200,7 +204,7 @@ jobs:
   github-prerelease:
     name: Publish one main-repository pre-release
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.') && contains(github.ref, '-beta.') }}
-    needs: [gate, server, desktop, npm-beta-candidate]
+    needs: [gate, server, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -260,13 +264,33 @@ jobs:
           node cli/npm/scripts/stage-package.js "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           cd "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
-      - uses: actions/upload-artifact@v4
+      - name: Upload approved npm candidate tarballs
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/upload-artifact@v4
         with:
           name: crewrouter-27-beta-npm-candidates-${{ github.sha }}
           path: ${{ runner.temp }}/*.tgz
           if-no-files-found: error
           retention-days: 30
-      - name: Check this commit's npm versions are not already published
+      - name: Validate package ownership and publish candidate versions
+        if: ${{ github.event_name == 'push' }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm view "crewrouter-sdk@${PRODUCT_VERSION}" version --json >/dev/null 2>&1 && { echo "SDK version ${PRODUCT_VERSION} is already published; prerelease requires a fresh SemVer."; exit 1; } || true
-          npm view "crewrouter-cli@${PRODUCT_VERSION}" version --json >/dev/null 2>&1 && { echo "CLI version ${PRODUCT_VERSION} is already published; prerelease requires a fresh SemVer."; exit 1; } || true
+          if [ -z "$NPM_TOKEN" ]; then
+            echo 'Missing NPM_TOKEN in the protected beta environment; refusing to publish npm packages.'
+            exit 1
+          fi
+          printf '//registry.npmjs.org/:_authToken=%s\\n' "$NPM_TOKEN" > "$RUNNER_TEMP/.npmrc"
+          chmod 600 "$RUNNER_TEMP/.npmrc"
+          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/.npmrc"
+          for package in crewrouter-sdk crewrouter-cli; do
+            response=$(npm view "$package" name --json 2>/dev/null || true)
+            if [ -n "$response" ]; then echo "npm package $package already exists; refusing to publish into a namespace not owned by the current account."; exit 1; fi
+          done
+          version="${PRODUCT_VERSION}"
+          test -f "$RUNNER_TEMP/crewrouter-sdk-$version.tgz"
+          test -f "$RUNNER_TEMP/crewrouter-cli-$version.tgz"
+          npm publish "$RUNNER_TEMP/crewrouter-sdk-$version.tgz" --access public --tag beta
+          npm publish "$RUNNER_TEMP/crewrouter-cli-$version.tgz" --access public --tag beta
+        shell: bash

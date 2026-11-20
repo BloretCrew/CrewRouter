@@ -1,11 +1,11 @@
-# CrewRouter CLI 27.0 Beta
+# CrewRouter CLI 27.0 Beta 候选
 
-独立的 GPL-3.0 CLI 客户端发布包，带 `cr` 和 `crewrouter` 命令入口。
+> 未发布：该候选版本仅供本地打包验收，尚无 npm `beta` 可安装 tag。
 
-> 测试版会发生破坏性变化。该包只通过 npm `beta` dist-tag 分发。
+> 未发布：该候选版本只用于本地打包验收，目前不应执行下面的 npm beta 安装命令。
 
 ```bash
-# 将来的 npm 测试版安装方式（候选包尚未发布）
+# npm 发布完成前，该 beta 命令尚不可用
 npm install -g crewrouter-cli@beta
 cr --help
 ```
