@@ -84,6 +84,14 @@ jobs:
           npm run test:cli
       - name: Verify release workflow controls
         run: node scripts/check-release-workflows.mjs
+      - name: Install isolated PostgreSQL test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          pg_bindir="$(pg_config --bindir)"
+          echo "$pg_bindir" >> "$GITHUB_PATH"
+          test -x "$pg_bindir/initdb"
+          test -x "$pg_bindir/pg_ctl"
       - name: Protocol, release bundle and signing regressions
         run: |
           npm run test:protocol
