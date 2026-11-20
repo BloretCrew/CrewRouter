@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_TAG: ${{ github.ref_name }}
-  PRODUCT_VERSION: ${{ github.ref_name }}
+  PRODUCT_VERSION: 27.0.0-beta.1
+  RELEASE_TAG: v27.0.0-beta.1
 
 jobs:
   gate:
@@ -39,14 +39,17 @@ jobs:
         env:
           TAG_VERSION: ${{ github.ref_name }}
           DISPATCH_VERSION: 27.0.0-beta.1
+          RELEASE_TAG: ${{ github.ref_name }}
+          PRODUCT_VERSION: 27.0.0-beta.1
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
             case "$TAG_VERSION" in v27.*-beta.*) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
             TAG_VERSION="${TAG_VERSION#v}"
           else
             TAG_VERSION="$DISPATCH_VERSION"
+            RELEASE_TAG="$PRODUCT_VERSION"
           fi
-          export TAG_VERSION
+          export TAG_VERSION RELEASE_TAG
           node -e "const expected=process.env.TAG_VERSION; for (const file of ['package.json','CrewRouter-Desktop/package.json','CrewRouter-Desktop/package-lock.json','sdk/typescript/package.json','sdk/typescript/package-lock.json','cli/npm/package.json']) { const p=require('./'+file); const actual=p.packages?.['']?.version || p.version; if(actual!==expected) throw Error(file+' version '+actual+' != '+expected) }"
           python -c "import tomllib, os; assert tomllib.load(open('sdk/python/pyproject.toml','rb'))['project']['version']==os.environ['TAG_VERSION'].replace('-beta.', 'b').replace('-', '')"
       - run: npm ci
@@ -229,7 +232,7 @@ jobs:
 
   npm-beta-candidate:
     name: Prepare npm beta packages; do not publish automatically
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.') && contains(github.ref, '-beta.') }}
+    if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.') && contains(github.ref, '-beta.')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
     needs: [gate, server, desktop]
     runs-on: ubuntu-latest
     permissions:
