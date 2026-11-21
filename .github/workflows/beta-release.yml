@@ -3,7 +3,7 @@ name: CrewRouter 27.0 Beta
 on:
   push:
     tags:
-      - 'v27.*-beta.*'
+      - 'v27.0.0-beta.1'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -44,15 +44,20 @@ jobs:
         env:
           TAG_VERSION: ${{ github.ref_name }}
           DISPATCH_VERSION: 27.0.0-beta.1
+          PUBLISH: ${{ inputs.publish }}
           RELEASE_TAG: ${{ github.ref_name }}
           PRODUCT_VERSION: 27.0.0-beta.1
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            case "$TAG_VERSION" in v27.*-beta.*) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
+            case "$TAG_VERSION" in v27.0.0-beta.1) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
             TAG_VERSION="${TAG_VERSION#v}"
           else
             TAG_VERSION="$DISPATCH_VERSION"
             RELEASE_TAG="$PRODUCT_VERSION"
+            if [ "$PUBLISH" = "true" ]; then
+              test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG" || { echo "Publishing requires dispatch from $RELEASE_TAG"; exit 1; }
+              test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$GITHUB_SHA" || { echo "Workflow commit does not match $RELEASE_TAG"; exit 1; }
+            fi
           fi
           export TAG_VERSION RELEASE_TAG
           node -e "const expected=process.env.TAG_VERSION; for (const file of ['package.json','CrewRouter-Desktop/package.json','CrewRouter-Desktop/package-lock.json','sdk/typescript/package.json','sdk/typescript/package-lock.json','cli/npm/package.json']) { const p=require('./'+file); const actual=p.packages?.['']?.version || p.version; if(actual!==expected) throw Error(file+' version '+actual+' != '+expected) }"

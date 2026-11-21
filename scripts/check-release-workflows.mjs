@@ -14,10 +14,12 @@ for (const file of files) {
   if (!doc || typeof doc !== 'object' || !doc.jobs) throw new Error(`${file} did not parse into jobs`);
 }
 const beta = parse(await readFile(files[2], 'utf8'));
+if (JSON.stringify(beta.on.push.tags) !== JSON.stringify(['v27.0.0-beta.1'])) throw new Error('beta workflow must only publish the explicitly versioned candidate tag');
 const manualDryRun = beta.jobs.desktop.if?.includes('inputs.dry_run') && beta.jobs['npm-beta-candidate'].if?.includes('inputs.dry_run');
 if (!manualDryRun || beta.jobs['npm-beta-candidate'].needs.join(',') !== 'gate,server,desktop') throw new Error('manual dry-run must build server, desktop and npm candidate assets from one SHA');
 const prereleaseDownloadNames = beta.jobs['github-prerelease'].steps.filter(step => step.uses === 'actions/download-artifact@v4').map(step => step.with?.pattern);
 if (JSON.stringify(prereleaseDownloadNames) !== JSON.stringify(['beta-server-*', 'beta-crewrouter-desktop-*'])) throw new Error('GitHub release must download only server and Desktop assets');
+if (!beta.jobs['gate'].steps.some(step => step.name === 'Validate beta tag and all npm manifests' && step.run?.includes('Publishing requires dispatch from') && step.run?.includes('git rev-parse'))) throw new Error('manual publish must require the checked-out commit to match the release tag');
 if (!beta.jobs['gate'].steps.some(step => step.name === 'Verify npm beta names are unclaimed' && step.if?.includes("github.event_name == 'push'"))) throw new Error('npm package ownership must be checked only on tag publish');
 const desktopWorkflow = parse(await readFile(files[1], 'utf8'));
 for (const event of ['push', 'pull_request']) {
