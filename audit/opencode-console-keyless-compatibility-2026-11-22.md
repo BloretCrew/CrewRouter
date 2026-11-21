@@ -27,13 +27,21 @@ CrewRouter 当前将供应商 API key 存在 `providers` 配置中，由服务�
 
 若未来取得正式协议，合理接入应是 OpenCode Console 专用的服务端认证实现：从明确支持的工作负载身份源获取短时 assertion，按官方约定交换访问凭据、在内存中短期缓存并按期刷新，再复用受支持的 Console inference API；静态 API key 兼容模式保持不变。需加并发刷新、超时/错误处理、token 脱敏与 mock 集成测试，并限制 issuer/audience/origin，避免任意 URL/SSRF。
 
+## GitHub Actions OIDC：可确认的客户端侧行为
+
+GitHub 的标准 OIDC token 请求由 Actions runner 提供环境变量 `ACTIONS_ID_TOKEN_REQUEST_URL` 与 `ACTIONS_ID_TOKEN_REQUEST_TOKEN`。客户端通过该 runner endpoint 请求 JWT，并可附上 audience；工作流需要在具体 Job 授权 `permissions: id-token: write`。token 的 `iss`、`sub`、`aud`、仓库/ref/workflow 等 claims 由 GitHub签发，但 audience 字符串必须由目标受信服务规定。GitHub 的 OIDC 文档说明的是 runner 获取机制和依赖方 federation 配置，不会替 OpenCode Console 定义其 audience、token exchange 或 inference 鉴权头。
+
+因此 CrewRouter 可设计一层 GitHub Actions token source（只读取 runner 环境并请求指定 audience 的短时 JWT），但 audience 目前未知，不能写死或设置成猜测值。不能拿 `ACTIONS_ID_TOKEN_REQUEST_TOKEN`（它是对 runner OIDC request endpoint 的 bearer secret）直接作为模型凭证，也不能未经 Console 契约确认把返回的 JWT 放到 inference Authorization 头。
+
+参考：[GitHub Actions OIDC 概念文档](https://docs.github.com/en/actions/concepts/security/openid-connect)、[OIDC reference](https://docs.github.com/en/actions/reference/security/oidc)。
+
 ## 解锁实现所需信息
 
-1. 官方 OIDC token 来源与支持的运行环境（GitHub Actions、GitLab、Kubernetes 等），是否支持长驻服务进程，而不只是 CI job。
-2. issuer、audience、信任策略/Service Account 绑定及 token 获取方法。
-3. 兑换端点、HTTP 方法与请求 schema、响应 schema、有效期、刷新/撤销和错误语义。
-4. 兑换后的凭据适用于哪些 inference URL/API family、模型访问权限如何绑定及是否要求额外 session header。
-5. 官方 SDK/CLI 中可依赖的稳定实现/API，及其版本/兼容保证。
+1. OpenCode Console 对 GitHub Actions 支持的 issuer 与 audience 精确值，以及它是否仅支持 GitHub Actions。
+2. Console 是否接受 Job 的原始 OIDC JWT 直接做 inference 认证，还是需要交换；若需交换，给出官方 endpoint、HTTP method、content type/request schema、response schema、expires/refresh/revoke、redirect 和错误语义。
+3. token 是否绑定 service account/workspace、模型 request 权限与预算；trust policy 的 `sub`/repository/ref/workflow/environment claims 匹配语义，以及 fork/PR 的拒绝规则。
+4. 认证后的 inference 请求 base URL、API family 路径、Authorization 头格式、session/header 要求；是否覆盖 paid、Go、connected BYOK models。
+5. 官方可依赖的 SDK/CLI 实现或测试示例及其稳定性/版本策略。
 
 ## CrewRouter 实现前需要厘清的部署模式
 
@@ -45,12 +53,14 @@ CrewRouter 当前将供应商 API key 存在 `providers` 配置中，由服务�
 
 ## 推荐实施方案（协议确认之后）
 
-1. **先核实协议，不先猜 endpoint。** 在 OpenCode Console 官方文档/CLI/源码中找 Keyless 服务账户创建说明、GitHub OIDC token 获取 audience、兑换 URL、request/response、expires 字段、模型 API 使用方式；如果官方实现仍未公开，需由用户给出能访问的官方设置页面/文档或可安全观察的配置步骤，再继续。
-2. **GitHub Actions job 级接入，不给整个 workflow 广泛授权。** 最小化 `permissions: id-token: write` 的作用范围；建议只授予专用调用模型的 job；限制 trust policy 至精确 repository、protected branch/ref、workflow/environment，明确 fork PR 不得获得该身份；定期确认拒绝日志和审计归属。
-3. **建模为专用 runtime credential provider，而不是数据库长期密钥。** 供应商记录只持久化认证模式和非秘密参数；OIDC assertion 与短时 Console credential 只驻留进程内、按官方 expires 提前刷新/重取，绝不写 providers.api_key 或日志。刷新失败 fail-closed，不静默退回 Keyless 模式下的旧静态密钥。
-4. **OIDC 取 token 与 inference 请求分层。** 只允许受支持的 GitHub Actions OIDC 环境 source；将 assertion 发送到固定/官方 exchange origin，超时与响应大小受限，不接受任意用户配置 URL；exchange 成功后只把官方规定的 credential 放入 inference auth header。跳转不得把 assertion/token 带到其他 origin。
-5. **OpenCode Console 专用 inference 配置。** 按官方支持的 inference root/API family/model IDs 配置 base URL；若 Console 要求 session affinity，再从 CrewRouter 请求上下文生成并传稳定 session header。对其他 provider 不改变行为。
-6. **可测性与测试。** 注入 OIDC source 与 HTTP transport；mock GitHub OIDC token endpoint、Console exchange 及 inference。覆盖不在 Actions/权限缺失、trust rejection、无效响应、timeout、expires/刷新、并发 refresh、credential 脱敏、错误不能 fallback、chat/responses/anthropic/streaming，以及既有 static key regressions。无真实 GitHub token/Console账户的测试。
+1. **协议关卡（先于代码）。** 获得 OpenCode 官方 audience、Console endpoint/schema、claims/trust 语义、结果凭证使用方式；至少有一份官方 CLI 源码/文档/可重复的官方 GitHub Actions workflow 对得上。没有这些证据不实现 Console federation URL/请求。
+2. **只在目标 Job 放权。** 使用专用 Job（不是 workflow 顶层宽授权），Job 显式写 `permissions: contents: read, id-token: write`；外部 fork PR job 默认不给 `id-token: write`；只允许保护分支/环境触发 Keyless job，给维护者 review workflow changes，减少第三方 action 和不可信 PR 代码在获权 Job 中执行。Trust policy 精确限制 repo/ref/workflow/environment；CI 里的提示词、分支内容、模型输出仍视为不可信数据，不能让不可信分支借获权 Job 使用上游额度。
+3. **新增 OpenCode 专用 provider auth 模块。** 不复用 providers.api_key 中的 encrypted long-term key 字段来存 runtime token。数据库只保存 `auth_mode`、可选官方 profile/workspace IDs 等非秘密配置；具体字段等 Console schema 确认后设计。provider 编辑页加 GitHub Actions OIDC 选项、健康状态/诊断但不显示 token。静态 key 保持单独路径。
+4. **GitHub token source 适配器。** 仅在受支持 Actions runner 中读取 `ACTIONS_ID_TOKEN_REQUEST_URL` / `ACTIONS_ID_TOKEN_REQUEST_TOKEN`，使用官方 audience 请求短期身份 JWT；禁止把 runner request token 或 OIDC JWT保存到 DB、日志、报错详情、配额记录、API 响应。其它 CI 平台后续单独 adapter，不猜测通用 token file/env。
+5. **协议化的 Console broker。** 视官方流程支持两种路径之一：A. JWT 直接用于 inference；B. JWT 发给官方固定 exchange endpoint，缓存 exchange 短时凭证。只按官方指定 URL/内容传输，HTTPS、无跨 origin redirect、超时和响应上限、结构及过期字段校验。内存缓存以 provider + GitHub repo/workflow/ref identity 隔离；在过期前重新取 OIDC assertion / 重新 exchange；并发合并刷新。任何错误 fail closed，不使用失效缓存或暗中回退 API Key。
+6. **接入统一认证边界及转发。** 在 API proxy 获取 provider 的统一层给该 provider 解析请求级 auth header，避免逐路由散改；现有静态 key/provider OAuth refresh 不变。依官方指定的 OpenCode inference root/API family/model list/session headers 构造请求，覆盖流式与非流式。确认 Console 是否要求模型查找认证和 session affinity，准确分类 401/403，不重试不安全的 mutation。
+7. **安全/审计范围。** 对签发拒绝/身份主体和使用量只记录非敏感的 run/repo/workflow/ref 标识（若合规且有官方 claim）；不记录 assertion/access token。严格来源允许名单、防止 arbitrary issuer/audience/endpoint config 与 SSRF；trust policy 是 Console 的根策略，CrewRouter 提示最小权限但不替代其 claim 校验。
+8. **测试矩阵。** 注入 token source 和 HTTP transport，在本地模拟 runner OIDC metadata/token endpoint、（如果官方定义）exchange 与 inference。测试缺 Actions env、权限拒绝、aud 参数、OIDC/exchange 失败、假响应字段、过期和并发、refresh 时断网、redirect origin、日志/API 泄露、user-level provider 静态兼容、非 OpenCode provider 没有回归、chat/responses/anthropic + streaming/session header。加部署文档：工作流 YAML、repo/environment trust policy 最小示例、fork PR 限制、权限/审计和 CI 外实例不支持说明。
 
 ## 待确认/阻塞信息
 
