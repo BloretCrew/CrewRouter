@@ -3,7 +3,7 @@ name: CrewRouter 27.0 Beta
 on:
   push:
     tags:
-      - 'v27.*-beta.*'
+      - 'v27.0.0-beta.1'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -44,15 +44,20 @@ jobs:
         env:
           TAG_VERSION: ${{ github.ref_name }}
           DISPATCH_VERSION: 27.0.0-beta.1
+          PUBLISH: ${{ inputs.publish }}
           RELEASE_TAG: ${{ github.ref_name }}
           PRODUCT_VERSION: 27.0.0-beta.1
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            case "$TAG_VERSION" in v27.*-beta.*) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
+            case "$TAG_VERSION" in v27.0.0-beta.1) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
             TAG_VERSION="${TAG_VERSION#v}"
           else
             TAG_VERSION="$DISPATCH_VERSION"
             RELEASE_TAG="$PRODUCT_VERSION"
+            if [ "$PUBLISH" = "true" ]; then
+              test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG" || { echo "Publishing requires dispatch from $RELEASE_TAG"; exit 1; }
+              test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$GITHUB_SHA" || { echo "Workflow commit does not match $RELEASE_TAG"; exit 1; }
+            fi
           fi
           export TAG_VERSION RELEASE_TAG
           node -e "const expected=process.env.TAG_VERSION; for (const file of ['package.json','CrewRouter-Desktop/package.json','CrewRouter-Desktop/package-lock.json','sdk/typescript/package.json','sdk/typescript/package-lock.json','cli/npm/package.json']) { const p=require('./'+file); const actual=p.packages?.['']?.version || p.version; if(actual!==expected) throw Error(file+' version '+actual+' != '+expected) }"
@@ -106,12 +111,14 @@ jobs:
         run: |
           go test ./...
           go vet ./...
-      - name: Desktop behavior and syntax
+      - name: Desktop behavior, sandboxed launcher and syntax
         working-directory: CrewRouter-Desktop
         run: |
           npm ci
           npm test
           npm run syntax
+          sudo chown root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
           xvfb-run -a npm exec electron -- scripts/test-launcher-interactions.js
 
   server:
@@ -182,7 +189,9 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: CrewRouter-Desktop/package-lock.json
+          cache-dependency-path: |
+            CrewRouter-Desktop/package-lock.json
+            CrewRouter-Desktop/server-staging/package-lock.json
       - run: npm ci --prefix CrewRouter-Desktop
       - name: Build this commit's CrewRouter kernel
         run: |
@@ -217,7 +226,7 @@ jobs:
   github-prerelease:
     name: Publish one main-repository pre-release
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v27.') && contains(github.ref, '-beta.') }}
-    needs: [gate, server, desktop]
+    needs: [gate, server, desktop, npm-beta-candidate]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -277,8 +286,8 @@ jobs:
           node cli/npm/scripts/stage-package.js "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           cd "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
-      - name: Upload candidate npm tarballs from a tagged build
-        if: ${{ github.event_name == 'push' }}
+      - name: Upload npm candidate tarballs for this workflow run
+        if: ${{ (github.event_name == 'push' && contains(github.ref, '-beta.')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         uses: actions/upload-artifact@v4
         with:
           name: crewrouter-27-beta-npm-candidates-${{ github.sha }}

@@ -11,6 +11,13 @@ if (!fs.existsSync(root)) throw new Error(`Server staging directory not found: $
 for (const item of required) if (!fs.existsSync(path.join(root, item))) throw new Error(`Server bundle is missing ${item}`);
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (packageJson.main !== 'server.js') throw new Error('Server bundle package.json must use server.js as main');
+const packageLock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+if (packageLock.lockfileVersion !== 3 || packageLock.name !== packageJson.name || packageLock.version !== packageJson.version || packageLock.packages?.['']?.name !== packageJson.name || packageLock.packages?.['']?.version !== packageJson.version || JSON.stringify(packageLock.packages?.['']?.dependencies) !== JSON.stringify(packageJson.dependencies)) {
+  throw new Error('Server bundle package-lock.json does not match package.json');
+}
+for (const [name, version] of Object.entries(packageJson.dependencies || {})) {
+  if (packageLock.packages?.[`node_modules/${name}`]?.version !== version) throw new Error(`Server bundle dependency is not pinned in package-lock.json: ${name}`);
+}
 const unsafe = [];
 function walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -34,4 +41,4 @@ if (process.env.CREWROUTER_SKIP_EMBEDDED_POSTGRES_CHECK !== '1') {
   try { fs.accessSync(postgresBinary, fs.constants.X_OK); } catch { throw new Error(`Embedded PostgreSQL binary is not executable: ${postgresBinary}`); }
   embedded = { package: platformPackage, present: true, executable: true };
 }
-console.log(JSON.stringify({ root, required, dependencies: Object.keys(packageJson.dependencies || {}).length, safe: true, embedded }));
+console.log(JSON.stringify({ root, required, dependencies: Object.keys(packageJson.dependencies || {}).length, lockfileVersion: packageLock.lockfileVersion, safe: true, embedded }));
