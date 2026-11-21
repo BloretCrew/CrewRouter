@@ -4,16 +4,17 @@
 
 ## 结论
 
-**OpenCode Console 已有官方 DSH 集成方式，但不能把它等同为 CrewRouter 的 OIDC 上游认证。** 对于“在 DeepSeek Harness 使用 OpenCode Console 工作区模型”这一具体目标，直接运行 `npx @opencode/console setup deepseek-harness` 是官方支持路径，安装官方插件后由 DSH 直接向 Console 发请求；这不经过 CrewRouter。
+**更可能的目标是 CI/CD 工作负载通过 OIDC 使用 OpenCode Console，而不是让开发者在本地配置 DSH。** 公告特别强调 CI 和 OIDC-compatible environments；CrewRouter 应优先研究作为 CI 工作负载使用方/代理服务时，如何在如 GitHub Actions 这样的受信 Job 上完成身份联邦。
 
-若目标是让 CrewRouter 本身代理到 OpenCode Console，并由 CrewRouter 用 OIDC 获取无长期 API token 的凭证，目前仍缺可核实的公开服务端协议。公告支持 CI/OIDC 的说法与公开推理文档及 CLI 源码仍要求 Bearer Console credential 的现状之间，尚无公开说明连接两者的 OIDC token exchange 机制。**绝不能把 GitHub/Kubernetes 的 OIDC JWT 直接放进模型请求的 `Authorization: Bearer` 头**。
+需严格区分 GitHub Actions 的 OIDC ID token 与 Console 推理 API 的 Bearer 凭证：OIDC token 通常只用于向受信服务证明 Job 身份，不能未经交换就当成模型 API token。公告及现可查 API/CLI 文档仍没有公布 Console 的联邦兑换端点、audience、请求/响应 schema 或服务账户信任策略；因此我们可以确认“目标场景是 CI”，但不能安全地猜造 exchange 请求。OpenCode Console CLI 的 DSH device-code OAuth 是另一个交互式方案，不是本次 Keyless 目标。
 
 ## 官方信息核查
 
-- [OpenCode 官方 X 公告](https://x.com/opencode/status/2124037654639468759)：声明 Console 支持 keyless auth，可从 CI 或任意支持 OIDC 的环境调用模型，不再需要长期 API token。公告未附兑换 API 或客户端实现细节。
+- [OpenCode 官方 X 公告](https://x.com/opencode/status/2124037654639468759)：声明 Console 支持 keyless auth，可从 CI 或任意支持 OIDC 的环境调用模型，不再需要长期 API token。结合 CI 的表述，最符合的目标是 GitHub Actions 等短期工作负载身份，而不是本地桌面/CLI 登录。公告没有给出 OIDC token 兑换 API 或具体配置步骤。
+- 本地 checkout 的 `opencode-console-cli` README 与 OpenCode Console 官方 DeepSeek Harness 集成页描述的是浏览器交互授权；发布 CLI 源码使用 device-code OAuth 和 `OPENCODE_API_KEY`。这说明它不是公告里 CI Keyless 的实现，不能再以该 CLI 未实现为依据断言 Keyless 未有实现。
 - [Console Inference API 文档](https://opencode.ai/docs/console/api/inference/)：示例及认证章节要求请求以 `Authorization: Bearer <token>` 发送 personal/service-account API key。
 - [Console API 总览](https://opencode.ai/docs/console/api/)：列出的凭证类型仍为 personal API key 与 service account key。
-- [Console Harnesses 文档](https://opencode.ai/docs/console/harnesses/)：其他 Harness 按文档使用 Console API key；Console CLI 可执行 `setup deepseek-harness` 进行浏览器授权接入，但这描述的是用户交互式 Console 连接，不是可直接推导为无人的服务器端 OIDC token exchange。
+- [Console Harnesses 文档](https://opencode.ai/docs/console/harnesses/)：通用的其他 Harness 指南要求 Console API key；这和新公告的 CI Keyless 能力可能是不同配置/产品路径。
 - [Console Providers API 文档](https://opencode.ai/docs/console/api/providers/)：自定义供应商网关同样要求 Bearer Console token。
 - 官方发布的 [@opencode/console CLI 仓库 README](https://github.com/anomalyco/opencode-console-cli) 明确支持 `npx @opencode/console setup deepseek-harness`。它为 DSH 安装官方插件并连接工作区模型；插件从 CLI 凭据库读取 token，模型流量走 OpenCode Console，而非 CrewRouter。官方 CLI 源码 [`console-client.ts`](https://github.com/anomalyco/opencode-console-cli/blob/dev/src/console-client.ts) 与 [`credentials.ts`](https://github.com/anomalyco/opencode-console-cli/blob/dev/src/credentials.ts) 显示，当前已公开的凭证路径是浏览器批准的 device-code OAuth（access/refresh token）或 `OPENCODE_API_KEY`，并未发现 OIDC workload token exchange。该集成是可用的官方 DSH-to-Console 方案，但不能等同于 CrewRouter 上游 Keyless 供应商支持。
 
@@ -33,6 +34,10 @@ CrewRouter 当前将供应商 API key 存在 `providers` 配置中，由服务�
 4. 兑换后的凭据适用于哪些 inference URL/API family、模型访问权限如何绑定及是否要求额外 session header。
 5. 官方 SDK/CLI 中可依赖的稳定实现/API，及其版本/兼容保证。
 
-## 决策
+## 决策与后续
 
-待上述官方契约公开或由用户提供可验证的官方实现后，再立项编码。若 Keyless 只适用于 GitHub Actions 等 job 上下文，可先用于 CrewRouter 自身在该 CI job 内运行的场景；不能据此承诺常驻 CrewRouter 部署支持 OIDC 联邦。现有静态 API key 接入方式不变。
+用户指出应聚焦 GitHub CI 等环境；这一判断与公告的措辞一致。本次更正将该方向列为主要目标，先前强调本地 DSH 配置/普通 API Key 的分析不能作为否定 Keyless 的依据。
+
+实现仍需取得 Console 实际的 OIDC audience/identity-token endpoint 约定、交换 API（如有）和 token 响应契约。OIDC 受众可能只是 OpenCode Console inference 本身；也可能要向身份交换服务换取 Console bearer token。两者请求头、生命周期和安全边界截然不同，当前公开资料不足以判断，不能直接将 GitHub ID token 当 Bearer，也不能虚构 token exchange。
+
+下一步应按 GitHub Actions Job 场景获取并验证官方 Keyless 用法与真实 Console 流程，之后再把已确认的身份来源/协议封装进 CrewRouter 专用 provider auth；保持限制：只在 GitHub Actions 等可安全获取 OIDC identity 的 job 运行态生效，缺身份时 fail-closed，不把任何 job 的 ID token 持久化入库。静态 API key 路径保持兼容。常驻 CrewRouter 实例需另获官方支持证明。
