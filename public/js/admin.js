@@ -4580,16 +4580,18 @@ class AdminApp {
       this._updateProviderEditorDirty(false);
       this._providerEditorSource = null;
     });
-    dialog.addEventListener('input', event => {
-      if (!event.target?.closest?.('#addProviderModal')) return;
+    const markFormChange = event => {
+      const target = event.target;
+      if (!target?.closest?.('#addProviderModal')) return;
+      // 自定义组件（blora-select / blora-switch 等）也会向上冒泡 input/change，
+      // 但只处理真正的表单控件，避免查询/导航等按钮动作误标记为未保存。
+      if (!target.matches?.('input, textarea, select, blora-select, blora-switch, blora-checkbox')) return;
       this._markProviderEditorDirty();
-      this._clearProviderFieldError(event.target);
+      this._clearProviderFieldError(target);
       this._updateProviderEditorSummary();
-    });
-    dialog.addEventListener('change', () => {
-      this._markProviderEditorDirty();
-      this._updateProviderEditorSummary();
-    });
+    };
+    dialog.addEventListener('input', markFormChange);
+    dialog.addEventListener('change', markFormChange);
     dialog.querySelector('.provider-editor-header .modal-close')?.addEventListener('click', () => this.requestCloseProviderEditor());
     document.getElementById('providerEditorCancel')?.addEventListener('click', () => this.requestCloseProviderEditor());
   }
