@@ -3689,5 +3689,10 @@
   "登录事件": "Login events",
   "最近登录": "Recent logins",
   "暂无登录事件": "No login events",
-  "条件摘要": "Condition summary"
+  "条件摘要": "Condition summary",
+  "搜索密钥": "Search keys",
+  "搜索密钥、模型、标签或成员...": "Search keys, models, tags, or members...",
+  "没有匹配的密钥": "No matching keys",
+  "试试其他关键词，或清除搜索与标签筛选": "Try another keyword, or clear search and tag filters",
+  "显示 {shown} / {total} 个 Key": "Showing {shown} / {total} keys"
 }

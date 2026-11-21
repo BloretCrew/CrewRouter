@@ -38,13 +38,20 @@
 #apiKeysPage #apiKeysStickyBar .page-sticky-tag-chips { flex: 1; flex-wrap: nowrap; min-inline-size: 0; overflow-x: auto; scrollbar-width: none; }
 #apiKeysPage #apiKeysStickyBar .page-sticky-tag-chips::-webkit-scrollbar { display: none; }
 #apiKeysPage #apiKeysStickyBar .model-library-sticky-inner > .blora-button { --blora-button-height: 34px; flex: none; min-height: 34px; margin-inline-start: auto; padding-inline: 14px; }
+#apiKeysPage #apiKeysStickyBar .ak-sticky-search { display: block; flex: 0 1 16rem; min-inline-size: 9rem; }
 #apiKeysPage .model-library-sticky-sentinel { block-size: 1px; pointer-events: none; visibility: hidden; }
 @media (max-width: 834px) {
   #apiKeysPage #apiKeysStickyBar { inset-inline: calc(4.375rem + 1.5rem) 1.5rem; }
+  #apiKeysPage #apiKeysStickyBar .ak-sticky-search { flex: 1 1 12rem; }
 }
 @media (max-width: 640px) {
   #apiKeysPage #apiKeysStickyBar { top: calc(56px + 8px); inset-inline: 12px; border-radius: 22px; }
   #apiKeysPage #apiKeysStickyBar .page-sticky-title { display: none; }
+  /* 窄屏只保留搜索 + 创建密钥一行；标签拖拽在触屏上不可用，隐藏以免悬浮栏过高遮挡内容 */
+  #apiKeysPage #apiKeysStickyBar .model-library-sticky-inner { flex-wrap: nowrap; }
+  #apiKeysPage #apiKeysStickyBar .page-sticky-tag-chips { display: none; }
+  #apiKeysPage #apiKeysStickyBar .ak-sticky-search { flex: 1 1 auto; min-inline-size: 0; }
+  #apiKeysPage #apiKeysStickyBar .model-library-sticky-inner > .blora-button { margin-inline-start: 0; }
 }
 
 /* ---------- 页头与用量概览：三块统计瓷片 ---------- */
@@ -54,6 +61,62 @@
 #apiKeysPage .ak-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-block-end: 18px; }
 #apiKeysPage .ak-overview[hidden] { display: none; }
 #apiKeysPage .ak-overview > blora-statistic { padding: 14px 16px 16px; border-radius: 18px; background: var(--lg-group-bg); }
+
+/* ---------- 搜索栏：与标签栏同款玻璃胶囊，右侧显示过滤结果统计 ---------- */
+#apiKeysPage .ak-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 12px;
+  padding: 6px;
+  border-radius: 22px;
+  background: var(--lg-group-bg);
+}
+#apiKeysPage .ak-search-bar[hidden] { display: none; }
+#apiKeysPage .ak-search { display: block; flex: 0 1 22rem; min-inline-size: 12rem; }
+#apiKeysPage .ak-search-summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
+  padding-inline-end: 4px;
+  color: var(--lg-fg-secondary);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#apiKeysPage .ak-search-summary[hidden] { display: none; }
+#apiKeysPage .ak-search-summary .ak-search-clear {
+  --blora-button-height: 28px;
+  min-height: 28px;
+  padding-inline: 10px;
+  font-size: 12.5px;
+}
+
+/* 过滤后无结果：说明原因并提供一键清除 */
+#apiKeysPage .ak-filter-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 20px;
+  border-radius: 22px;
+  background: var(--lg-group-bg);
+  text-align: center;
+}
+#apiKeysPage .ak-filter-empty[hidden] { display: none; }
+#apiKeysPage .ak-filter-empty strong { color: var(--lg-fg); font-size: 15px; font-weight: 650; }
+#apiKeysPage .ak-filter-empty p { margin: 0; color: var(--lg-fg-secondary); font-size: 13px; }
+#apiKeysPage .ak-filter-empty .blora-button { margin-block-start: 6px; }
+#apiKeysPage .api-keys-list.is-filtering .api-key-groups { gap: 18px; }
+
+@media (max-width: 834px) {
+  #apiKeysPage .ak-search { flex: 1 1 100%; }
+}
+@media (max-width: 640px) {
+  #apiKeysPage .ak-search-bar { flex-wrap: wrap; }
+  #apiKeysPage .ak-search-summary { margin-inline-start: 0; padding-inline: 6px 4px; }
+}
 
 /* ---------- 标签栏：Finder 式标签（中性胶囊 + 彩色圆点），筛选中为强调色着色 ---------- */
 #apiKeysPage .key-tag-bar {

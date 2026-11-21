@@ -105,6 +105,10 @@ class ConsoleApp {
     this._libraryStickyEventsBound = false;
     this._libraryStickyKeyMenuCloser = null;
     this._apiKeysStickyObserver = null;
+    this._apiKeysSearch = '';
+    this._apiKeysStickySearchActive = false;
+    this._apiKeysStickyEventsBound = false;
+    this._apiKeysSearchBound = false;
     this._myUpstreamTab = 'providers';
     this._pendingUpstreamTab = null;
     this._ccsStyle = 'compact';
@@ -237,7 +241,22 @@ class ConsoleApp {
       document.querySelectorAll('[data-page="myUpstream"] [data-i18n="我的上游"]').forEach(el => { el.dataset.i18n = '供应商管理'; el.textContent = t('供应商管理'); });
     }
     this.bindEvents();
-    document.addEventListener('i18n:ready', () => this.rerenderApiKeyPermissionPickers());
+    document.addEventListener('i18n:ready', () => {
+      this.rerenderApiKeyPermissionPickers();
+      // 语言切换后结果统计、空态文案需要用新语言重绘（不重新请求列表）
+      if (this.currentPage === 'apiKeys') {
+        const empty = document.getElementById('apiKeysFilterEmpty');
+        if (empty) {
+          const strong = empty.querySelector('strong');
+          const hint = empty.querySelector('p');
+          const button = empty.querySelector('button');
+          if (strong) strong.textContent = t('没有匹配的密钥');
+          if (hint) hint.textContent = t('试试其他关键词，或清除搜索与标签筛选');
+          if (button) button.textContent = t('清除筛选');
+        }
+        this._applyKeyTagFilter();
+      }
+    });
     this._bindHashRouting();
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseConsoleHash(location.hash);
@@ -589,6 +608,8 @@ class ConsoleApp {
         await this.loadMyUpstreamPage();
         break;
       case 'apiKeys':
+        this._apiKeysStickySearchActive = false;
+        this._bindApiKeysSearch();
         await this.loadApiKeys();
         this.loadAuthorizations();
         this._initApiKeysStickyBar();
@@ -740,10 +761,12 @@ class ConsoleApp {
       }
 
       if (apiKeys.length === 0) {
+        this._setApiKeysSearchVisible(false);
         setBloraState('apiKeysList', 'empty');
         setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无 API 密钥，点击上方按钮一键创建') + '</p>');
         return;
       }
+      this._setApiKeysSearchVisible(true);
 
       const normalKeys = apiKeys.filter(key => key.key_type === 'normal');
       const coKeys = apiKeys.filter(key => key.key_type === 'co_key');
@@ -762,6 +785,11 @@ class ConsoleApp {
       setHTML(container, `<div class="api-key-groups">
         ${renderGroup(t('普通 API Key'), t('仅自己管理的密钥'), normalKeys, 'api-key-group-normal')}
         ${renderGroup('Co-Key', t('已共享给成员，或由其他用户共享给您'), coKeys, 'api-key-group-cokey')}
+      </div>
+      <div id="apiKeysFilterEmpty" class="ak-filter-empty" hidden>
+        <strong>${escapeHtml(t('没有匹配的密钥'))}</strong>
+        <p>${escapeHtml(t('试试其他关键词，或清除搜索与标签筛选'))}</p>
+        <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.clearApiKeyFilters()">${escapeHtml(t('清除筛选'))}</button>
       </div>`);
       this._applyKeyTagFilter();
       // 等布局完成后再计算标签溢出
@@ -872,6 +900,44 @@ class ConsoleApp {
     return `<span class="blora-tag api-key-chip" data-variant="${variant}">${escapeHtml(text)}</span>`;
   }
 
+  /** 没有密钥时隐藏搜索与筛选栏，避免对空列表做无意义搜索 */
+  _setApiKeysSearchVisible(visible) {
+    const searchBar = document.querySelector('#apiKeysPage .ak-search-bar');
+    if (searchBar) searchBar.hidden = !visible;
+    const filterEmpty = document.getElementById('apiKeysFilterEmpty');
+    if (!visible && filterEmpty) filterEmpty.hidden = true;
+    const summary = document.getElementById('apiKeysSearchSummary');
+    if (!visible && summary) summary.hidden = true;
+  }
+
+  /**
+   * 汇总一张密钥卡片可被搜索的文本：名称、密钥、路由模型、标签、成员、发起者、
+   * 类型与启停状态。返回小写字符串写入 data-search，供输入时即时过滤。
+   */
+  _buildApiKeySearchIndex(key) {
+    const queue = Array.isArray(key?.model_queue) ? key.model_queue : [];
+    const members = Array.isArray(key?.members) ? key.members : [];
+    const tags = Array.isArray(key?.tags) ? key.tags : [];
+    const permissions = Array.isArray(key?.permissions) ? key.permissions : [];
+    const parts = [
+      key?.name,
+      key?.key_value,
+      key?.key_prefix,
+      key?.custom_model_name,
+      key?.current_model_name,
+      key?.current_model_provider_name,
+      key?.owner?.username,
+      ...queue.flatMap(item => [item?.name, item?.model_id, item?.id]),
+      ...members.map(member => member?.username || member?.name),
+      ...tags.map(tag => tag?.name),
+      ...permissions,
+      key?.key_type === 'co_key' ? 'co-key' : '',
+      key?.enabled === false ? t('已禁用') : '',
+      this.getKeyStatus(key).text,
+    ];
+    return parts.filter(Boolean).join(' ').toLowerCase();
+  }
+
   _renderApiKeyCard(key) {
     const status = this.getKeyStatus(key);
     const reqs = parseInt(key.total_requests) || 0;
@@ -914,6 +980,7 @@ class ConsoleApp {
     ].filter(Boolean).join('');
 
     const displayName = key.name || 'API Key';
+    const searchIndex = this._buildApiKeySearchIndex(key);
     const ownerName = key.owner?.username || '';
     const memberCount = Array.isArray(key.members) ? key.members.length : 0;
     const coKeyMeta = key.is_co_key
@@ -943,6 +1010,7 @@ class ConsoleApp {
 
     return `
       <div class="blora-card api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
+           data-search="${escapeHtml(searchIndex)}"
            ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})">
         <div class="api-key-header">
           <div class="api-key-title">
@@ -1181,22 +1249,111 @@ class ConsoleApp {
     this._applyKeyTagFilter();
   }
 
+  // ===== API 密钥搜索 =====
+
+  /**
+   * 写入 blora-search 的值。直接设 host.value 只会写属性，组件在内部输入框仍聚焦时
+   * 不会回写，所以这里同时更新内部 input，保证边输入边清空时视觉同步。
+   */
+  _setApiKeySearchFieldValue(el, value) {
+    if (!el) return;
+    el.setAttribute('value', value);
+    const input = el.querySelector('input');
+    if (input && input.value !== value) input.value = value;
+    const clear = el.querySelector('.blora-search__clear');
+    if (clear) clear.hidden = !value;
+  }
+
+  /** 绑定主搜索框与浮层搜索框，两者共享同一个关键词（只绑定一次） */
+  _bindApiKeysSearch() {
+    if (this._apiKeysSearchBound) return;
+    this._apiKeysSearchBound = true;
+    const bind = (el, source) => {
+      if (!el) return;
+      el.addEventListener('input', () => this._onApiKeySearchInput(el.value, source));
+      el.addEventListener('change', () => this._onApiKeySearchInput(el.value, source));
+      // blora-search 的清除按钮只清空输入框、不发 input 事件，所以另外监听它的点击
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.blora-search__clear')) setTimeout(() => this._onApiKeySearchInput(el.value, source), 0);
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && el.value) {
+          e.stopPropagation();
+          this._setApiKeySearchFieldValue(el, '');
+          this._onApiKeySearchInput('', source);
+        }
+      });
+    };
+    bind(document.getElementById('apiKeysSearch'), 'main');
+    bind(document.getElementById('apiKeysStickySearch'), 'sticky');
+  }
+
+  _onApiKeySearchInput(value, source) {
+    this._apiKeysSearch = String(value || '');
+    // 悬浮栏里搜索时，结果变少页面变短也要让悬浮栏留着，才能在里面清空
+    this._apiKeysStickySearchActive = source === 'sticky' && !!this._apiKeysSearch;
+    if (source !== 'main') this._setApiKeySearchFieldValue(document.getElementById('apiKeysSearch'), this._apiKeysSearch);
+    if (source !== 'sticky') this._setApiKeySearchFieldValue(document.getElementById('apiKeysStickySearch'), this._apiKeysSearch);
+    this._applyKeyTagFilter();
+    // 过滤后页面高度变化，需要重新确认悬浮栏显隐（悬浮栏内搜索时保持可见）
+    if (this.currentPage === 'apiKeys') this._resyncApiKeysStickyByScroll();
+  }
+
+  /** 清除搜索词与标签筛选，恢复完整列表 */
+  clearApiKeyFilters() {
+    this._keyTagFilter = null;
+    this._apiKeysSearch = '';
+    this._apiKeysStickySearchActive = false;
+    this._setApiKeySearchFieldValue(document.getElementById('apiKeysSearch'), '');
+    this._setApiKeySearchFieldValue(document.getElementById('apiKeysStickySearch'), '');
+    this.renderKeyTagBar();
+    this._applyKeyTagFilter();
+  }
+
   _applyKeyTagFilter() {
     const list = document.getElementById('apiKeysList');
     if (!list) return;
     const tagId = this._keyTagFilter;
+    const keyword = String(this._apiKeysSearch || '').trim().toLowerCase();
+    const terms = keyword.split(/\s+/).filter(Boolean);
+    let totalVisible = 0;
+    let totalCards = 0;
     list.querySelectorAll('.api-key-group').forEach(group => {
       let visible = 0;
       group.querySelectorAll('.api-key-card[data-key-id]').forEach(card => {
+        totalCards++;
         const ids = [...card.querySelectorAll('.key-tag-chip-sm[data-tag-id]')].map(el => Number(el.dataset.tagId));
-        const show = tagId == null || ids.includes(tagId);
+        const tagOk = tagId == null || ids.includes(tagId);
+        // 多个关键词按 AND 匹配，任一命中卡片搜索索引即可继续
+        const haystack = card.dataset.search || '';
+        const searchOk = !terms.length || terms.every(term => haystack.includes(term));
+        const show = tagOk && searchOk;
         card.style.display = show ? '' : 'none';
-        if (show) visible++;
+        if (show) { visible++; totalVisible++; }
       });
       group.style.display = visible === 0 ? 'none' : '';
       const count = group.querySelector('.api-key-group-count');
       if (count) count.textContent = String(visible);
     });
+
+    const filtering = !!terms.length || tagId != null;
+    const empty = document.getElementById('apiKeysFilterEmpty');
+    if (empty) empty.hidden = !(filtering && totalCards > 0 && totalVisible === 0);
+    if (filtering && totalCards > 0) list.classList.add('is-filtering');
+    else list.classList.remove('is-filtering');
+
+    const summary = document.getElementById('apiKeysSearchSummary');
+    const summaryText = document.getElementById('apiKeysSearchSummaryText');
+    if (summary && summaryText) {
+      if (filtering) {
+        summary.hidden = false;
+        summaryText.textContent = t('显示 {shown} / {total} 个 Key', { shown: totalVisible, total: totalCards });
+      } else {
+        summary.hidden = true;
+        summaryText.textContent = '';
+      }
+    }
+    return totalVisible;
   }
 
   handleKeyTagDragStart(event, tagId) {
@@ -1228,6 +1385,26 @@ class ConsoleApp {
       this._apiKeysStickyObserver = null;
     }
 
+    // 页面重新进入时把上一次的关键词回填到悬浮栏搜索框
+    this._setApiKeySearchFieldValue(document.getElementById('apiKeysStickySearch'), this._apiKeysSearch || '');
+
+    this._bindApiKeysSearch();
+    if (!this._apiKeysStickyEventsBound) {
+      this._apiKeysStickyEventsBound = true;
+      // 焦点离开悬浮栏且搜索为空时，回到按滚动位置判断显隐
+      document.getElementById('apiKeysStickyBar')?.addEventListener('focusout', () => {
+        setTimeout(() => this._resyncApiKeysStickyByScroll(), 0);
+      });
+      // 滚动后哨兵进出视口时重新判断（悬浮栏内操作或仍有搜索词时保持）
+      window.addEventListener('scroll', () => {
+        if (this.currentPage !== 'apiKeys') return;
+        const bar = document.getElementById('apiKeysStickyBar');
+        if (bar && bar.contains(document.activeElement)) return;
+        if (this._apiKeysStickySearchActive && this._apiKeysSearch) return;
+        this._resyncApiKeysStickyByScroll();
+      }, { passive: true });
+    }
+
     this._apiKeysStickyObserver = new IntersectionObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
@@ -1248,10 +1425,24 @@ class ConsoleApp {
     return !!(rect && rect.bottom < 0);
   }
 
+  /** 搜索词或焦点变化后，按哨兵当前位置重新判断悬浮栏显隐 */
+  _resyncApiKeysStickyByScroll() {
+    const bar = document.getElementById('apiKeysStickyBar');
+    const sentinel = document.getElementById('apiKeysStickySentinel');
+    if (!bar || !sentinel) return;
+    if (!this._apiKeysSearch) this._apiKeysStickySearchActive = false;
+    this._syncApiKeysStickyVisibility(
+      this._isStickySentinelPastTop(sentinel) && this.currentPage === 'apiKeys'
+    );
+  }
+
   _syncApiKeysStickyVisibility(visible) {
     const bar = document.getElementById('apiKeysStickyBar');
     if (!bar) return;
-    const shouldShow = !!visible && this.currentPage === 'apiKeys';
+    const onPage = this.currentPage === 'apiKeys';
+    // 悬浮栏内搜索时保持可见，否则清空搜索后页面变短，悬浮栏会跟着消失
+    const keep = bar.contains(document.activeElement) || this._apiKeysStickySearchActive;
+    const shouldShow = onPage && (!!visible || keep);
     const wasVisible = bar.classList.contains('is-visible');
     if (shouldShow === wasVisible) return;
     bar.classList.toggle('is-visible', shouldShow);

@@ -38,7 +38,7 @@
   <script src="/js/liquid-glass.js?v=lg-23" defer></script>
   <link rel="stylesheet" href="/css/popup-notices.css?v=lg-7">
   <link rel="stylesheet" href="/css/model-library-console.css?v=lg-2">
-  <link rel="stylesheet" href="/css/api-keys.css?v=permission-picker-v2-20261109">
+  <link rel="stylesheet" href="/css/api-keys.css?v=api-key-search-20261121">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=shell-cmd-20260326">
   <link rel="stylesheet" href="/css/stats-blora.css?v=lg-10">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
@@ -450,6 +450,7 @@
           <div class="model-library-sticky-inner">
             <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>
             <div id="apiKeysStickyTags" class="key-tag-chips page-sticky-tag-chips" title="拖拽标签到下方密钥卡片" aria-label="拖拽标签到下方密钥卡片" data-i18n-title="拖拽标签到下方密钥卡片"></div>
+            <blora-search id="apiKeysStickySearch" class="ak-sticky-search" label="搜索密钥" placeholder="搜索密钥" data-i18n-placeholder="搜索密钥" title="搜索密钥" data-i18n-title="搜索密钥"></blora-search>
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.openCreateApiKeyModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>
           </div>
         </div>
@@ -470,6 +471,15 @@
           <!-- 标签筛选栏 -->
           <div id="keyTagBar" class="key-tag-bar" style="display:none;margin-bottom:12px;">
             <div class="key-tag-chips" id="keyTagChips"></div>
+          </div>
+
+          <!-- 搜索栏：按名称、密钥、路由模型、标签或成员过滤密钥卡片；无密钥时由 JS 隐藏 -->
+          <div class="ak-search-bar" hidden>
+            <blora-search id="apiKeysSearch" class="ak-search" label="搜索密钥" placeholder="搜索密钥、模型、标签或成员..." data-i18n-placeholder="搜索密钥、模型、标签或成员..." title="搜索密钥、模型、标签或成员..." data-i18n-title="搜索密钥、模型、标签或成员..."></blora-search>
+            <div id="apiKeysSearchSummary" class="ak-search-summary" hidden>
+              <span id="apiKeysSearchSummaryText" role="status" aria-live="polite"></span>
+              <button type="button" class="blora-button ak-search-clear" data-variant="ghost" data-size="sm" onclick="app.clearApiKeyFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
+            </div>
           </div>
           <!-- 悬浮顶栏显隐哨兵：滚出视口后显示 sticky bar -->
           <div id="apiKeysStickySentinel" class="model-library-sticky-sentinel" aria-hidden="true"></div>
@@ -2339,7 +2349,7 @@
   <script type="module" src="/js/model-trace.js?v=lg-21"></script>
   <script src="/js/time-format.js?v=policy-20261113"></script>
   <script src="/js/suspension-banner.js?v=policy-20261113"></script>
-  <script src="/js/app.js?v=policy-20261113"></script>
+  <script src="/js/app.js?v=api-key-search-20261121"></script>
   <script src="/js/blora-agent.js?v=agent-materials-20261111"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

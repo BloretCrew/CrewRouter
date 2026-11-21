@@ -93,6 +93,7 @@
     "test:popup-notices": "node --test server/scripts/test-popup-notices.js server/scripts/test-popup-notice-routes.js",
     "test:library-closed-keys": "node scripts/test-library-closed-keys.js",
     "test:library-closed-keys:browser": "node scripts/test-library-closed-keys-browser.js",
+    "test:api-key-search:browser": "node scripts/test-api-key-search-browser.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js",
     "sdk:generate": "node sdk/codegen/generate.mjs",
     "sdk:check": "node sdk/codegen/generate.mjs --check",
