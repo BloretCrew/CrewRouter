@@ -1,7 +1,7 @@
 # CrewRouter CLI 27.0 Beta
 
 ```bash
-npm install -g @bloretcrew/crewrouter@beta
+npm install -g @bloret-crew/crewrouter@beta
 cr --help
 ```
 

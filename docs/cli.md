@@ -3,7 +3,7 @@
 CrewRouter CLI 是 GPL-3.0 终端客户端，包含非交互式命令和全屏 TUI。独立 npm Beta 包目前尚未发布；以下安装命令仅供发布后的说明：
 
 ```bash
-npm install -g @bloretcrew/crewrouter@beta
+npm install -g @bloret-crew/crewrouter@beta
 cr --help
 ```
 
@@ -113,4 +113,4 @@ CR_THEME / CR_PALETTE / CR_COLOR_SCHEME
 
 ## 版本
 
-CLI 预发布候选使用年号版本 **27.0 Beta**。独立 npm 包 `@bloretcrew/crewrouter@27.0.0-beta.1` 尚未发布；npm beta 测试包实际发布后，才可执行 `npm install -g @bloretcrew/crewrouter@beta`。不要使用源码候选包 README 中的命令判断包已经存在。
+CLI 预发布候选使用年号版本 **27.0 Beta**。独立 npm 包 `@bloret-crew/crewrouter@27.0.0-beta.1` 尚未发布；npm beta 测试包实际发布后，才可执行 `npm install -g @bloret-crew/crewrouter@beta`。不要使用源码候选包 README 中的命令判断包已经存在。

@@ -138,7 +138,7 @@ and similar shapes. Every response includes `X-CrewRouter-Request-Id`.
 
 | Language | Package | Documentation |
 | --- | --- | --- |
-| Node/TypeScript | `@bloretcrew/crewrouter-sdk` | [docs/sdk/README.md](./sdk/README.md) |
+| Node/TypeScript | `@bloret-crew/crewrouter-sdk` | [docs/sdk/README.md](./sdk/README.md) |
 | Python | `crewrouter-sdk` | [docs/sdk/quickstart-python.md](./sdk/quickstart-python.md) |
 | Go | `sdk/go` module | [docs/sdk/quickstart-go.md](./sdk/quickstart-go.md) |
 

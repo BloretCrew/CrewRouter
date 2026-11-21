@@ -4,7 +4,7 @@
 
 | Package | Current | Tag scheme |
 | --- | --- | --- |
-| `@bloretcrew/crewrouter-sdk` (npm) | 0.1.0 | `sdk/typescript/vX.Y.Z` |
+| `@bloret-crew/crewrouter-sdk` (npm) | 0.1.0 | `sdk/typescript/vX.Y.Z` |
 | `crewrouter-sdk` (PyPI) | 0.1.0 | `sdk/python/vX.Y.Z` |
 | Go module | 0.1.0 | `sdk/go/vX.Y.Z` |
 | `crewrouter/embedded` | preview | root `vX.Y.Z` |

@@ -121,11 +121,11 @@ Beta SDK 在构建、验收和 npm 发布完成前，不应假定 registry 已�
 ### TypeScript SDK 安装（npm beta 发布完成后）
 
 ```bash
-npm install @bloretcrew/crewrouter-sdk@beta
+npm install @bloret-crew/crewrouter-sdk@beta
 ```
 
 ```ts
-import { CrewRouter } from '@bloretcrew/crewrouter-sdk';
+import { CrewRouter } from '@bloret-crew/crewrouter-sdk';
 
 const client = new CrewRouter({
   baseUrl: process.env.CREWROUTER_BASE_URL,

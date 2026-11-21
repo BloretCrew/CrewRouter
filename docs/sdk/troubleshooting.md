@@ -103,7 +103,7 @@ location /crewrouter/ {
 
 Include the following when reporting an issue:
 
-- SDK version (`@bloretcrew/crewrouter-sdk` version and `CONTRACT_VERSION`)
+- SDK version (`@bloret-crew/crewrouter-sdk` version and `CONTRACT_VERSION`)
 - HTTP status, `error.code`, `error.type`
 - `error.requestId`
 - The operation id and whether you used a typed wrapper or `call`

@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npm install @bloretcrew/crewrouter-sdk
+npm install @bloret-crew/crewrouter-sdk
 ```
 
 Requires Node.js >= 20. The package uses native `fetch` and has no runtime
@@ -12,7 +12,7 @@ dependencies.
 ## Configure
 
 ```ts
-import { CrewRouter } from '@bloretcrew/crewrouter-sdk';
+import { CrewRouter } from '@bloret-crew/crewrouter-sdk';
 
 const client = new CrewRouter({
   baseUrl: 'https://your-host',       // your CrewRouter instance URL
@@ -132,7 +132,7 @@ import {
   CrewRouterPermissionError,
   CrewRouterRateLimitError,
   CrewRouterTimeoutError,
-} from '@bloretcrew/crewrouter-sdk';
+} from '@bloret-crew/crewrouter-sdk';
 
 try {
   await client.keys.list();

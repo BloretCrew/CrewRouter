@@ -85,13 +85,13 @@ Use this when you want streaming helpers, typed errors, retries, and management
 API access in one client.
 
 ```bash
-npm install @bloretcrew/crewrouter-sdk          # Node/TypeScript
+npm install @bloret-crew/crewrouter-sdk          # Node/TypeScript
 pip install crewrouter-sdk          # Python
 go get github.com/BloretCrew/CrewRouter/sdk/go
 ```
 
 ```ts
-import { CrewRouter } from '@bloretcrew/crewrouter-sdk';
+import { CrewRouter } from '@bloret-crew/crewrouter-sdk';
 
 const client = new CrewRouter({
   baseUrl: process.env.CREWROUTER_BASE_URL,
