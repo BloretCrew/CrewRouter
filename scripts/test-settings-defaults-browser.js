@@ -94,8 +94,10 @@ function startServer() {
           }
           const inherited = { enabled: state.user.api_signature_enabled === true, template: (state.user.api_signature_template || '').trim() };
           if (!key) return res.json({ ...(req.method === 'PUT' ? { success: true } : {}), ...inherited, defaults: { template: DEFAULT_TEMPLATE, variables: SIGNATURE_VARIABLES } });
-          const effective = { enabled: key.signature_enabled == null ? inherited.enabled : key.signature_enabled, template: (key.signature_template || '').trim() || inherited.template, source: key.signature_enabled == null ? 'user' : 'key' };
-          return res.json(req.method === 'PUT' ? { success: true, effective } : { enabled: key.signature_enabled, template: key.signature_template, inherited, effective });
+          const effective = { enabled: inherited.enabled && key.signature_enabled !== false, template: (key.signature_template || '').trim() || inherited.template, source: !inherited.enabled || key.signature_enabled == null ? 'user' : 'key' };
+          return res.json(req.method === 'PUT'
+            ? { success: true, effective }
+            : { enabled: key.signature_enabled, template: key.signature_template, user_signature_enabled: inherited.enabled, user_signature_template: inherited.template, inherited, effective });
         }
         if (pathname === '/auth/me') return res.json(state.user);
         if (pathname === '/api/user/settings' && req.method === 'PUT') {
@@ -336,27 +338,33 @@ async function main() {
       await cdp.evaluate("app.showSettingsCategory('notifications')");
       await browserCheck("document.querySelector('#notificationsList').getClientRects().length>0&&document.querySelector('#changePasswordForm').getClientRects().length===0", 'notification list belongs to notifications');
       await cdp.evaluate("app.showSettingsCategory('signature')");
-      await browserCheck("document.querySelector('#apiSignatureToggle') instanceof customElements.get('blora-switch')&&!document.querySelector('#apiSignatureToggle').checked&&getComputedStyle(document.querySelector('#signatureTemplateGroup')).display==='none'&&document.querySelector('#signaturePreview').textContent.includes('关闭')", 'missing signature field defaults off, disabled preview visible');
+      await browserCheck("document.querySelector('#apiSignatureToggle') instanceof customElements.get('blora-switch')&&!document.querySelector('#apiSignatureToggle').checked&&document.querySelector('#signaturePreview').textContent.includes('关闭')", 'missing signature field defaults off, disabled preview visible');
       await cdp.click('[onclick="app.resetSignatureTemplate()"]');
       await browserCheck("!document.querySelector('#apiSignatureToggle').checked&&document.querySelector('#apiSignatureTemplate').value===app._signatureDefaults.template", 'fill default never enables signature');
+      await cdp.wait("document.querySelector('#signatureSaveStatus').textContent==='自动保存成功'");
       await cdp.click('#apiSignatureToggle');
+      await cdp.wait("document.querySelector('#signatureSaveStatus').textContent==='自动保存成功'");
       await browserCheck("document.querySelector('#signaturePreview').textContent.includes('78%')&&!document.querySelector('#signaturePreview').textContent.includes('%%')", 'default percentage is not duplicated');
       const template = `Browser ${width} {model}`;
       await cdp.input('#apiSignatureTemplate', template);
       await browserCheck(`document.querySelector('#signaturePreview').textContent.includes('Browser ${width} gpt-4o')`, 'template preview responds to real input');
       await cdp.click(save);
-      await cdp.wait("document.querySelector('#signatureSaveStatus').textContent==='保存成功'");
+      await cdp.wait("document.querySelector('#signatureSaveStatus').textContent==='自动保存成功'");
       check((await request('/__settings/state')).user.api_signature_enabled === true, 'signature persisted enabled');
       await reload('settings'); await cdp.wait('app._signatureFormReady');
       await browserCheck(`document.querySelector('#apiSignatureToggle').checked&&document.querySelector('#apiSignatureTemplate').value===${JSON.stringify(template)}`, 'enabled signature and template survive refresh');
       await cdp.input('#apiSignatureTemplate', '   ');
       await browserCheck("document.querySelector('#signaturePreview').textContent.includes('空模板')", 'enabled user empty template injects nothing');
-      await cdp.click(save); await cdp.wait("app.signatureConfig.template===''");
+      await cdp.click(save); await cdp.wait("app.signatureConfig.template===''" );
       await reload('settings'); await cdp.wait('app._signatureFormReady');
       await browserCheck("document.querySelector('#apiSignatureTemplate').value===''&&document.querySelector('#signaturePreview').textContent.includes('空模板')", 'user empty template persists without default fallback');
       await cdp.click('#apiSignatureToggle');
-      await browserCheck(`!document.querySelector('#apiSignatureToggle').checked&&document.querySelector(${JSON.stringify(save)}).getClientRects().length>0&&getComputedStyle(document.querySelector('#signatureTemplateGroup')).display==='none'`, 'save stays visible when signature disabled');
-      await cdp.click(save); await cdp.wait("app.signatureConfig.enabled===false");
+      await browserCheck(`!document.querySelector('#apiSignatureToggle').checked&&document.querySelector('#signaturePreview').textContent.includes('关闭')`, 'disabled state remains visible in preview');
+      await request('/__settings/fail', { kind: 'http' });
+      await cdp.click(save);
+      await cdp.wait("!app._signatureSaving&&document.querySelector('#signatureSaveStatus').style.color==='var(--destructive)'");
+      await request('/__settings/fail', { kind: null });
+      await cdp.click(save); await cdp.wait('app.signatureConfig.enabled===false');
       for (const kind of ['http', 'logical', 'malformed', 'network']) {
         await cdp.click('#apiSignatureToggle');
         await cdp.input('#apiSignatureTemplate', `Retry ${kind} ${width}`);
@@ -376,10 +384,11 @@ async function main() {
       await cdp.evaluate("app._signatureFormReady=false;document.querySelector('#apiSignatureTemplate').value='unsaved draft'");
       await request('/__settings/fail', { kind: 'http' });
       await cdp.evaluate('app.loadSignatureSettings()');
-      await browserCheck("!app._signatureFormReady&&!document.querySelector('#signatureLoadRetry').hidden&&document.querySelector('#apiSignatureTemplate').value==='unsaved draft'&&document.querySelector('[onclick=\"app.saveSignatureSettings()\"]').disabled", 'load failure exposes retry and blocks saving fake defaults');
+      await browserCheck("!app._signatureFormReady&&!document.querySelector('#signatureLoadRetry').hidden&&document.querySelector('#apiSignatureTemplate').value==='unsaved draft'", 'load failure exposes retry and preserves the unsaved draft');
       await cdp.click('#signatureLoadRetry'); await cdp.wait('app._signatureFormReady');
       await cdp.click('#apiSignatureToggle');
       await cdp.input('#apiSignatureTemplate', 'draft survives navigation');
+      await cdp.wait("!app._signatureSaving");
       await navigate('apiKeys'); await navigate('settings');
       await browserCheck("document.querySelector('#apiSignatureTemplate').value==='draft survives navigation'", 'navigation does not replace existing user draft');
       await cdp.input('#apiSignatureTemplate', 'x'.repeat(2001));
@@ -392,19 +401,21 @@ async function main() {
       await cdp.input('#apiSignatureTemplate', `User ${width} {cache_hit}% {group_name}`);
       await cdp.click(save); await cdp.wait('!app._signatureSaving');
       await request('/__settings/fail', { kind: 'delayed' });
-      await cdp.evaluate("window.__signatureSave=app.saveSignatureSettings();document.querySelector('#apiSignatureTemplate').value='edited while saving'");
+      await cdp.evaluate("window.__signatureSave=app.saveSignatureSettings();document.querySelector('#apiSignatureTemplate').value='edited while saving';document.querySelector('#apiSignatureTemplate').dispatchEvent(new Event('input',{bubbles:true}))");
       await cdp.evaluate('window.__signatureSave');
       await browserCheck("document.querySelector('#apiSignatureTemplate').value==='edited while saving'", 'save response does not overwrite newer draft');
       await cdp.input('#apiSignatureTemplate', `User ${width} {cache_hit}% {group_name}`);
+      await cdp.wait(`!app._signatureSaving&&app.signatureConfig.template.startsWith('User ${width}')`);
       await screenshot(`user-${width}`);
       await theme('dark');
       await screenshot(`user-dark-${width}`);
       await theme('light');
+      await request('/__settings/config', { user: { api_signature_enabled: true, api_signature_template: `User ${width} {cache_hit}% {group_name}` } });
       await navigate('apiKeys'); await cdp.wait("document.querySelectorAll('.api-key-card').length===2");
       await openSignature();
-      await browserCheck("document.querySelector('#keySignatureMode').value==='inherit'&&document.querySelector('#keySignatureTemplate').getClientRects().length>0&&document.querySelector('#keySignaturePreview').textContent.includes('User')", 'Key inherit uses user state but leaves template editable');
+      await browserCheck("document.querySelector('#keySignatureMode').value==='inherit'&&document.querySelector('#keySignatureTemplate').getClientRects().length>0&&document.querySelector('#keySignaturePreview').textContent.includes('User')", 'Key inherits current user signature state and leaves template editable');
       await cdp.input('#keySignatureTemplate', `Key ${width} {cache_hit}% {group_name}`);
-      await browserCheck(`document.querySelector('#keySignaturePreview').textContent.includes('Key ${width} 78% 我的团队')`, 'inherit switch plus custom Key template previews override and legacy alias');
+      await browserCheck(`document.querySelector('#keySignaturePreview').textContent.includes('Key ${width} 78% 我的团队')`, 'inherit mode with enabled user permits a Key template override');
       await cdp.click(keySave); await cdp.wait("!document.querySelector('#keySignatureModal').hasAttribute('open')");
       check((await request('/__settings/state')).keys[0].signature_enabled === null && (await request('/__settings/state')).keys[0].signature_template.startsWith('Key'), 'Key PUT persists enabled null plus nonempty template');
       await openSignature();
@@ -422,9 +433,13 @@ async function main() {
         await openSignature();
         for (const mode of ['inherit', 'enable', 'disable']) {
           await selectMode(mode);
-          const expectedEnabled = mode === 'inherit' ? userEnabled : mode === 'enable';
+          const expectedEnabled = userEnabled && mode !== 'disable';
           const expectedTemplate = keyTemplate || userTemplate;
-          const expected = !expectedEnabled ? '关闭' : !expectedTemplate ? '空模板' : expectedTemplate.replace('{model}', 'gpt-4o');
+          const expected = mode === 'enable' && !userEnabled
+            ? 'Key 强制开启，但用户总开关关闭'
+            : mode === 'inherit' && !userEnabled
+              ? '用户默认签名已关闭'
+              : !expectedEnabled ? '关闭' : !expectedTemplate ? '空模板' : expectedTemplate.replace('{model}', 'gpt-4o');
           await browserCheck(`document.querySelector('#keySignaturePreview').textContent.includes(${JSON.stringify(expected)})&&document.querySelector('#keySignatureTemplate').getClientRects().length>0`, `Key semantics user=${userEnabled}/${userTemplate || 'empty'} key=${keyTemplate === null ? 'null' : keyTemplate || 'empty'} mode=${mode}`);
         }
       }

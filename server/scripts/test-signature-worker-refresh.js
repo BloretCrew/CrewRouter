@@ -60,9 +60,9 @@ test('independent warm workers refresh inherited and explicit signature policy a
   await pool.query("UPDATE api_keys SET signature_enabled=FALSE,signature_template='key-template' WHERE id=11");
   await expect(false, 'key-template', false);
   await pool.query('UPDATE api_keys SET signature_enabled=TRUE WHERE id=11; UPDATE users SET api_signature_enabled=FALSE WHERE id=7');
-  await expect(true, 'key-template', true);
+  await expect(false, 'key-template', true);
   await pool.query('UPDATE api_keys SET signature_enabled=NULL,signature_template=NULL WHERE id=11');
-  await expect(false, 'updated');
+  await expect(false, 'updated', null);
   const inFlight = { ...await workers[0].request() };
   await pool.query("UPDATE users SET api_signature_enabled=TRUE,api_signature_template='next-request' WHERE id=7");
   assert.equal(inFlight.signature.enabled, false, 'already authorized requests retain their snapshot');

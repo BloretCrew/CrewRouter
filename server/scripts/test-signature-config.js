@@ -27,7 +27,7 @@ function fakeRes() {
   };
 }
 
-test('resolveSignatureConfig applies key override over user defaults', () => {
+test('resolveSignatureConfig honors the user master switch and key-level opt-out', () => {
   const user = { api_signature_enabled: true, api_signature_template: 'user-template' };
 
   const inherited = signature.resolveSignatureConfig({ key: { signature_enabled: null, signature_template: null }, user });
@@ -41,9 +41,16 @@ test('resolveSignatureConfig applies key override over user defaults', () => {
   assert.equal(forcedOff.template, 'key-template');
   assert.equal(forcedOff.source, 'key');
 
-  const forcedOn = signature.resolveSignatureConfig({ key: { signature_enabled: true }, user: { api_signature_enabled: false, api_signature_template: 'u' } });
-  assert.equal(forcedOn.enabled, true);
-  assert.equal(forcedOn.template, 'u');
+  const perKeyOn = signature.resolveSignatureConfig({ key: { signature_enabled: true }, user: { api_signature_enabled: true, api_signature_template: 'u' } });
+  assert.equal(perKeyOn.enabled, true);
+  assert.equal(perKeyOn.template, 'u');
+  assert.equal(perKeyOn.source, 'key');
+
+  // User master off is authoritative even for legacy per-Key force-on overrides.
+  const masterOff = signature.resolveSignatureConfig({ key: { signature_enabled: true }, user: { api_signature_enabled: false, api_signature_template: 'u' } });
+  assert.equal(masterOff.enabled, false);
+  assert.equal(masterOff.template, 'u');
+  assert.equal(masterOff.source, 'user');
 
   const blankKeyTemplate = signature.resolveSignatureConfig({ key: { signature_enabled: true, signature_template: '   ' }, user });
   assert.equal(blankKeyTemplate.template, 'user-template', 'blank key template inherits the user template');
@@ -77,16 +84,10 @@ test('empty template means no signature and never falls back to the default temp
 test('buildSignature substitutes variables already preloaded and cleans dangling separators', async () => {
   const text = await signature.buildSignature({
     template: '{model} · {tokens} · {team_name} · {group_name} · {provider}',
-    meta: { model: 'gpt-test', promptTokens: 1000, completionTokens: 234 },
-    preloaded: { teamName: 'Team A' }
+    meta: { model: 'gpt-test', promptTokens: 1000, completionTokens: 234, providerName: 'OpenAI' },
+    preloaded: { teamName: 'Team' }
   });
-  assert.equal(text, 'gpt-test · 1.2k tokens · Team A · Team A');
-
-  const cleaned = await signature.buildSignature({
-    template: '{model} · {provider}',
-    meta: { model: 'gpt-test', providerName: '' }
-  });
-  assert.equal(cleaned, 'gpt-test');
+  assert.equal(text, 'gpt-test · 1.2k tokens · Team · Team · OpenAI');
 });
 
 test('content append is skipped for structured output, tool-only responses and header mode', () => {

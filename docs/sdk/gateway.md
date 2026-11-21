@@ -82,7 +82,7 @@ Tool-only, empty, `json_object` / `json_schema`, and Gemini structured-JSON
 responses skip content appending. Chinese and other non-ASCII signatures use
 the Base64 header rather than a raw HTTP header value.
 
-User defaults are off. Per-Key switches can inherit (`null`), enable (`true`)
+User defaults are off and act as a master gate: a Key cannot enable signatures while the user switch is off. Per-Key switches can inherit (`null`), enable (`true`)
 or disable (`false`); a non-empty Key template independently overrides the user
 template. An empty effective template disables the footer, without a default
 fallback. See [signature settings](../API.md#reply-signatures) for the complete

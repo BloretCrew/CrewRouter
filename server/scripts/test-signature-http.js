@@ -231,7 +231,7 @@ async function main() {
       await run(`default disabled stream=${stream}`, { stream, enabled: false });
       await run(`user empty stream=${stream}`, { stream, template: '' });
       await run(`Key force off stream=${stream}`, { stream, keyEnabled: false });
-      await run(`Key force on stream=${stream}`, { stream, enabled: false, keyEnabled: true });
+      await run(`Key force on stream=${stream}`, { stream, enabled: false, keyEnabled: true }); // Legacy per-Key force-on is suppressed by the user master switch.
       await run(`Key inherit switch custom template stream=${stream}`, { stream, keyTemplate: 'SIGNATURE_SENTINEL Key {tokens}' });
       await run(`Chinese base64 stream=${stream}`, { stream, template: '中文签名 {tokens}' });
       await run(`JSON structured skip stream=${stream}`, { stream, shape: 'json', structured: true });

@@ -85,10 +85,12 @@ function resolveSignatureConfig({ key = {}, user = {} } = {}) {
   const userEnabled = user.api_signature_enabled === true;
   const keyTemplate = normalizeSignatureTemplate(key.signature_template);
   const userTemplate = normalizeSignatureTemplate(user.api_signature_template);
+  // 用户开关是总开关：关闭后所有 Key 都不追加签名；Key 级只能进一步关闭，不能绕过总开关。
+  const enabled = userEnabled && keyEnabled !== false;
   return {
-    enabled: keyEnabled === null ? userEnabled : keyEnabled,
+    enabled,
     template: keyTemplate || userTemplate,
-    source: keyEnabled === null ? 'user' : 'key',
+    source: !userEnabled || keyEnabled === null ? 'user' : 'key',
     keyEnabled,
     keyTemplate: keyTemplate || null,
     userEnabled,

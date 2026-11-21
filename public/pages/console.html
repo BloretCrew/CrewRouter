@@ -1680,7 +1680,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
               <div>
                 <h3 style="margin:0;font-size:16px;"><span data-i18n="AI 回复签名">AI 回复签名</span></h3>
-                <p style="margin:4px 0 0;font-size:13px;color:var(--muted-foreground);"><span data-i18n="开启后，API 回复底部自动添加模型、Token、缓存、限额等信息">开启后，API 回复底部自动添加模型、Token、缓存、限额等信息</span></p>
+                <p style="margin:4px 0 0;font-size:13px;color:var(--muted-foreground);"><span data-i18n="总开关关闭时，所有 API Key 都不会注入签名；修改开关立即保存，编辑模板后自动保存。">总开关关闭时，所有 API Key 都不会注入签名；修改开关立即保存，编辑模板后自动保存。</span></p>
               </div>
               <blora-switch id="apiSignatureToggle" aria-label="启用 AI 回复签名" data-i18n-aria-label="启用 AI 回复签名"></blora-switch>
             </div>
@@ -1694,7 +1694,7 @@
             </div>
             <div id="signaturePreview" aria-live="polite" style="margin-top:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);font-family:monospace;white-space:pre-wrap;overflow-wrap:anywhere;min-height:36px;"></div>
             <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;">
-              <button type="button" class="blora-button" onclick="app.saveSignatureSettings()" data-variant="primary"><span data-i18n="保存签名设置">保存签名设置</span></button>
+              <button type="button" class="blora-button" onclick="app.saveSignatureSettings()" data-variant="primary"><span data-i18n="立即保存">立即保存</span></button>
               <button type="button" class="blora-button" onclick="app.resetSignatureTemplate()" data-variant="secondary"><span data-i18n="填入默认模板">填入默认模板</span></button>
               <button id="signatureLoadRetry" type="button" class="blora-button" hidden style="display:none;" onclick="app.loadSignatureSettings()" data-variant="secondary"><span data-i18n="重试">重试</span></button>
               <span id="signatureSaveStatus" role="status" style="font-size:13px;"></span>
@@ -1839,6 +1839,7 @@
   <blora-dialog id="keySignatureModal" class="lg-scope">
     <span slot="title" id="keySignatureTitle" data-i18n="API Key 签名设置">API Key 签名设置</span>
     <div class="ak-dialog-stack">
+      <p class="ak-dialog-note" id="keySignaturePolicyNote">加载用户默认签名策略…</p>
       <p class="ak-dialog-note" data-i18n="开关与模板独立继承：继承开关时仍可自定义模板；模板留空则使用用户模板。">开关与模板独立继承：继承开关时仍可自定义模板；模板留空则使用用户模板。</p>
       <div class="blora-field"><label class="blora-field__label" for="keySignatureMode" data-i18n="签名模式">签名模式</label>
         <blora-select id="keySignatureMode" onchange="app.toggleKeySignatureMode()">

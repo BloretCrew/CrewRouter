@@ -255,7 +255,7 @@ Template-based **response footer** injection (optional product feature).
 
 **Configuration model:**
 - User defaults: `users.api_signature_enabled` (default `false`) + `api_signature_template` (default empty).
-- Key overrides: `api_keys.signature_enabled` is tri-state (`NULL` inherits the user, `true`/`false` forces), `api_keys.signature_template` overrides when non-empty.
+- Key overrides: `api_keys.signature_enabled` is tri-state (`NULL` inherits the user, `true`/`false` forces), `api_keys.signature_template` overrides when non-empty. The user's switch is a master gate: a Key cannot force signatures on while the user switch is off.
 - `resolveSignatureConfig()` is the only inheritance implementation; the resolved config is stored on `req.apiUser.signature` on every request.
 - **Empty template means no signature.** There is no fallback to the default template; the default template exists only for the settings UI.
 

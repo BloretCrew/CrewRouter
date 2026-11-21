@@ -77,7 +77,7 @@ modes.
 
 ### Reply signatures
 
-Signatures are optional display footers, not cryptographic signatures or access policies.
+Signatures are optional display footers, not cryptographic signatures or access policies. The user-level switch is a master switch: when off, no API Key appends a signature. Key overrides may disable an inherited signature, but cannot turn it on while the user master switch is off.
 User defaults are off. A Key can inherit the owner's switch (`null`), explicitly enable it
 (`true`), or disable it (`false`). The Key template independently overrides the user's
 when non-empty; `null` or blank inherits the user template. An empty effective template

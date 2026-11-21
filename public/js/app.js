@@ -960,9 +960,11 @@ class ConsoleApp {
     const scheduleText = this._formatKeyScheduleSummary(key);
 
     const sigExplicit = key.signature_enabled !== null && key.signature_enabled !== undefined;
-    const sigOn = sigExplicit && key.signature_enabled === true;
-    const sigLabel = sigExplicit ? (sigOn ? t('签名开') : t('签名关')) : t('签名继承');
-    const sigKind = sigExplicit ? (sigOn ? 'ok' : 'off') : 'muted';
+    const sigOn = sigExplicit ? key.signature_enabled === true : key.api_signature_enabled === true;
+    const sigLabel = sigExplicit
+      ? (sigOn ? t('签名开') : t('签名关'))
+      : `${t('签名继承')} · ${sigOn ? t('签名开') : t('签名关')}`;
+    const sigKind = sigOn ? 'ok' : 'off';
     const swallowOn = key.swallow_images === true;
     const quotaWarningOn = key.quota_warning_enabled === true;
     const crewrouterOn = key.crewrouter_commands === true;
@@ -3427,6 +3429,12 @@ class ConsoleApp {
       mode.value = data.enabled == null ? 'inherit' : data.enabled === true ? 'enable' : 'disable';
       template.value = data.template || '';
       this._keySignatureInherited = data.inherited;
+      this._keySignatureEffective = data.effective;
+      this._keySignatureUserEnabled = data.user_signature_enabled === true;
+      const note = document.getElementById('keySignaturePolicyNote');
+      if (note) note.textContent = this._keySignatureUserEnabled
+        ? t('用户默认签名已开启；此 Key 可继承或单独关闭。')
+        : t('用户默认签名已关闭；所有 Key 均不会追加签名。打开用户默认签名后，此 Key 才能继承启用。');
       document.getElementById('keySignatureSaveStatus').textContent = '';
       this._renderSignatureVariables();
       this.toggleKeySignatureMode();
@@ -3449,6 +3457,12 @@ class ConsoleApp {
     const inherited = this._keySignatureInherited || { enabled: false, template: '' };
     const enabled = mode === 'inherit' ? inherited.enabled === true : mode === 'enable';
     const template = document.getElementById('keySignatureTemplate').value.trim() || inherited.template;
+    if (!this._keySignatureUserEnabled && mode !== 'disable') {
+      preview.textContent = mode === 'enable'
+        ? t('预览：Key 强制开启，但用户总开关关闭，因此不会注入签名。')
+        : t('预览：用户默认签名已关闭，不会注入签名；需要先在用户设置中开启。');
+      return;
+    }
     preview.textContent = this._signaturePreviewText(enabled, template);
   }
 
@@ -3470,7 +3484,7 @@ class ConsoleApp {
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/signature`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this._csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ enabled, template: template || null })
       });
       const data = await res.json();
@@ -7645,7 +7659,7 @@ class ConsoleApp {
     if (!toggle || !template || this._signatureFormReady || this._signatureLoading) return;
     const status = document.getElementById('signatureSaveStatus');
     const retry = document.getElementById('signatureLoadRetry');
-    const controls = [toggle, template, ...document.querySelectorAll('[onclick="app.saveSignatureSettings()"], [onclick="app.resetSignatureTemplate()"]')];
+    const controls = [toggle, template, ...document.querySelectorAll('[onclick="app.resetSignatureTemplate()"]')];
     this._signatureLoading = true;
     controls.forEach(control => { control.disabled = true; });
     retry.hidden = true;
@@ -7661,12 +7675,21 @@ class ConsoleApp {
       this._signatureDefaults = config.defaults;
       toggle.checked = config.enabled;
       template.value = config.template;
-      const update = () => {
-        document.getElementById('signatureTemplateGroup').style.display = toggle.checked ? '' : 'none';
-        this._updateSignaturePreview();
+      const update = () => this._updateSignaturePreview();
+      this._signatureLastSaved = { enabled: config.enabled, template: config.template };
+      template.oninput = () => {
+        this._signatureEditRevision = (this._signatureEditRevision || 0) + 1;
+        update();
+        clearTimeout(this._signatureSaveTimer);
+        status.textContent = t('编辑中，停止输入后自动保存');
+        status.style.color = 'var(--muted-foreground)';
+        this._signatureSaveTimer = setTimeout(() => this.saveSignatureSettings(), 600);
       };
-      toggle.onchange = update;
-      template.oninput = () => this._updateSignaturePreview();
+      toggle.onchange = () => {
+        this._signatureEditRevision = (this._signatureEditRevision || 0) + 1;
+        update();
+        this.saveSignatureSettings();
+      };
       this._signatureFormReady = true;
       this._renderSignatureVariables();
       update();
@@ -7744,36 +7767,45 @@ class ConsoleApp {
     const status = document.getElementById('signatureSaveStatus');
     const enabled = toggle.checked === true;
     const signatureTemplate = template.value.trim();
+    const saveRevision = this._signatureEditRevision || 0;
+    if (this._signatureSaveTimer) clearTimeout(this._signatureSaveTimer);
     status.style.color = 'var(--destructive)';
     if (signatureTemplate.length > 2000) {
       status.textContent = t('签名模板不能超过 2000 个字符');
       return;
     }
     this._signatureSaving = true;
-    const button = document.querySelector('[onclick="app.saveSignatureSettings()"]');
-    button.disabled = true;
-    setHTML(status, inlineLoadingHtml(t('保存中...'), 'sm'));
+    status.textContent = t('保存中...');
     status.style.color = 'var(--muted-foreground)';
     try {
       const res = await fetch('/api/user/signature', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this._csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ enabled, template: signatureTemplate })
       });
       const data = await res.json();
       if (!res.ok || data.success === false || data.error || typeof data.enabled !== 'boolean' || typeof data.template !== 'string') {
         throw new Error(data.error || t('保存失败'));
       }
-      this.signatureConfig = { enabled: data.enabled, template: data.template, defaults: this._signatureDefaults };
-      // 请求期间继续编辑的草稿不被响应覆盖。
-      status.textContent = t('保存成功');
-      status.style.color = 'var(--success)';
+      if (saveRevision === this._signatureEditRevision) {
+        toggle.checked = data.enabled;
+        template.value = data.template;
+        this.signatureConfig = { enabled: data.enabled, template: data.template, defaults: this._signatureDefaults };
+        this._signatureLastSaved = { enabled: data.enabled, template: data.template };
+        status.textContent = t('自动保存成功');
+        status.style.color = 'var(--success)';
+      }
     } catch (error) {
-      status.textContent = error.message || t('保存失败，请稍后重试');
-      status.style.color = 'var(--destructive)';
+      if (saveRevision === this._signatureEditRevision) {
+        status.textContent = error.message || t('保存失败，请稍后重试');
+        status.style.color = 'var(--destructive)';
+      }
     } finally {
       this._signatureSaving = false;
-      button.disabled = false;
+      if (this._signatureEditRevision !== saveRevision) {
+        clearTimeout(this._signatureSaveTimer);
+        this._signatureSaveTimer = setTimeout(() => this.saveSignatureSettings(), 300);
+      }
     }
   }
 
@@ -7781,7 +7813,10 @@ class ConsoleApp {
     if (!this._signatureFormReady) return;
     const template = document.getElementById('apiSignatureTemplate');
     if (template) template.value = this._signatureDefaults?.template || '';
+    this._signatureEditRevision = (this._signatureEditRevision || 0) + 1;
     this._updateSignaturePreview();
+    clearTimeout(this._signatureSaveTimer);
+    this._signatureSaveTimer = setTimeout(() => this.saveSignatureSettings(), 0);
   }
 
   async uploadAvatar(e) {

@@ -226,6 +226,8 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         ak.expires_at,
         ak.signature_enabled,
         ak.signature_template,
+        owner.api_signature_enabled AS api_signature_enabled,
+        owner.api_signature_template AS api_signature_template,
         ak.quota_warning_enabled,
         ak.swallow_images,
         ak.crewrouter_commands,
