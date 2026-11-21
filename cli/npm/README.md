@@ -1,10 +1,7 @@
-# CrewRouter CLI 27.0 Beta 候选
-
-> 未发布：该候选版本只用于本地打包验收，目前不应执行下面的 npm beta 安装命令。
+# CrewRouter CLI 27.0 Beta
 
 ```bash
-# npm 发布完成前，该 beta 命令尚不可用
-npm install -g crewrouter-cli@beta
+npm install -g crewrouter@beta
 cr --help
 ```
 

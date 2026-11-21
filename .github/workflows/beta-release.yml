@@ -67,17 +67,20 @@ jobs:
       - run: npm run docs:check
       - name: Verify npm beta names are unclaimed
         if: ${{ github.event_name == 'push' }}
+        env:
+          BETA_VERSION: ${{ github.ref_name }}
         run: |
-          for package in crewrouter-sdk crewrouter-cli; do
-            code=$(curl --silent --show-error --output "$RUNNER_TEMP/npm-$package.json" --write-out '%{http_code}' "https://registry.npmjs.org/$package")
-            if [ "$code" = "200" ]; then
-              echo "npm package $package already exists; refusing to publish under another owner's namespace."
-              exit 1
-            fi
-            if [ "$code" != "404" ]; then
+          version="${BETA_VERSION#v}"
+          export BETA_VERSION="$version"
+          for package in crewrouter-sdk crewrouter; do
+            file="$RUNNER_TEMP/npm-$package.json"
+            code=$(curl --silent --show-error --output "$file" --write-out '%{http_code}' "https://registry.npmjs.org/$package")
+            if [ "$code" = "404" ]; then continue; fi
+            if [ "$code" != "200" ]; then
               echo "npm registry lookup for $package returned HTTP $code"
               exit 1
             fi
+            node -e 'const doc = require(process.argv[1]); if (doc.versions && doc.versions[process.env.BETA_VERSION]) { console.error(`npm package ${doc.name} already has ${process.env.BETA_VERSION}`); process.exit(1); }' "$file"
           done
       - run: npm ci --prefix CrewRouter-Desktop
       - name: npm SDK and CLI pack preconditions
@@ -279,13 +282,16 @@ jobs:
         run: |
           npm ci --prefix sdk/typescript
           npm --prefix sdk/typescript test
-          npm pack --prefix sdk/typescript --ignore-scripts --pack-destination "$RUNNER_TEMP"
+          cd sdk/typescript
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
+          test -f "$RUNNER_TEMP/crewrouter-sdk-${PRODUCT_VERSION}.tgz"
       - name: Build and pack CLI candidate
         run: |
           mkdir -p "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           node cli/npm/scripts/stage-package.js "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           cd "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
+          test -f "$RUNNER_TEMP/crewrouter-${PRODUCT_VERSION}.tgz"
       - name: Upload npm candidate tarballs for this workflow run
         if: ${{ (github.event_name == 'push' && contains(github.ref, '-beta.')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         uses: actions/upload-artifact@v4
@@ -318,12 +324,15 @@ jobs:
           path: candidates
       - name: Confirm npm package ownership and publish candidate packages
         run: |
-          for name in crewrouter-sdk crewrouter-cli; do
-            code=$(curl --silent --show-error --output /tmp/npm-$name.json --write-out '%{http_code}' https://registry.npmjs.org/$name)
-            test "$code" = "404" || { echo "npm package $name is already registered; refusing publication to another owner."; exit 1; }
+          for name in crewrouter-sdk crewrouter; do
+            file="/tmp/npm-$name.json"
+            code=$(curl --silent --show-error --output "$file" --write-out '%{http_code}' https://registry.npmjs.org/$name)
+            if [ "$code" = "404" ]; then continue; fi
+            test "$code" = "200" || { echo "npm registry lookup for $name returned HTTP $code"; exit 1; }
+            node -e 'const doc = require(process.argv[1]); if (doc.versions && doc.versions[process.env.PRODUCT_VERSION]) { console.error(`npm package ${doc.name} already has ${process.env.PRODUCT_VERSION}`); process.exit(1); }' "$file"
           done
           npm publish candidates/crewrouter-sdk-${PRODUCT_VERSION}.tgz --access public --tag beta
-          npm publish candidates/crewrouter-cli-${PRODUCT_VERSION}.tgz --access public --tag beta
+          npm publish candidates/crewrouter-${PRODUCT_VERSION}.tgz --access public --tag beta
 
   github-release-manual:
     name: Manually publish GitHub pre-release after candidate dry-run
