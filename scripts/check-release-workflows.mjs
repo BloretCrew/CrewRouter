@@ -34,6 +34,10 @@ for (const event of ['push', 'pull_request']) {
 const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install isolated PostgreSQL test runtime');
 if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');
 if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-') && step.if?.includes("inputs.dry_run"))) throw new Error('npm beta candidate tarballs must be uploaded for dry-runs and tagged builds');
+const sdkPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name === 'Build and pack SDK candidate');
+if (!sdkPack?.run?.includes('cd sdk/typescript') || !sdkPack.run.includes('test -f "$RUNNER_TEMP/crewrouter-sdk-${PRODUCT_VERSION}.tgz"')) throw new Error('SDK candidate must pack from sdk/typescript and verify its tarball name');
+const cliPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name === 'Build and pack CLI candidate');
+if (!cliPack?.run?.includes('test -f "$RUNNER_TEMP/crewrouter-cli-${PRODUCT_VERSION}.tgz"')) throw new Error('CLI candidate must verify its tarball name');
 if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop,npm-beta-candidate') throw new Error('GitHub release must wait for all release and candidate build gates');
 const npmPublish = beta.jobs['npm-beta-publish'];
 if (!npmPublish || !npmPublish.needs.includes('npm-beta-candidate') || !npmPublish.permissions?.['id-token']) throw new Error('manual npm publish must use the separately approved candidate artifact and OIDC permissions');
