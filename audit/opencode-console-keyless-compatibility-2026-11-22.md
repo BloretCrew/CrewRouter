@@ -4,7 +4,7 @@
 
 ## 结论
 
-**最可能的目标是 CI/CD 工作负载通过 OIDC 使用 OpenCode Console 模型，而非本地 DSH 登录。** 你提供的 HTML 对这一场景提供了具体待核实假设：在 Console 建立 `NoKeys` Service Account / Trust Policy；GitHub Job 声明 `id-token: write`；获取包含 repo/ref/workflow 等 claims 的 OIDC JWT；把 JWT 交给 Console federated endpoint，Console 校验 issuer/JWKS/audience/claims 后返回短期模型凭证。但这份 HTML 未给出 endpoint、audience 字符串或实际请求/响应样例，而且上述要素尚未从官方源码/文档交叉验证，须作为待证假设，而非实现契约。
+**最可能的目标是 CI/CD 工作负载通过 OIDC 使用 OpenCode Console 模型，而非本地 DSH 登录。** 你提供的 HTML 对这一场景提供了具体待核实假设：在 Console 建立 `NoKeys` Service Account / Trust Policy；GitHub Job 声明 `id-token: write`；CrewRouter 进程获取包含 repo/ref/workflow 等 claims 的 OIDC JWT；把 JWT 交给 Console federated endpoint，Console 校验 issuer/JWKS/audience/claims 后返回短期模型凭证。但这份 HTML 未给出 endpoint、audience 字符串或实际请求/响应样例，而且上述要素尚未从官方源码/文档交叉验证，须作为待证假设，而非实现契约。
 
 需严格区分 OIDC assertion 与 inference credential：按附件假设，它们是两个阶段；但只有官方 flow/可运行样例才能确认最终 inference header 是 `Bearer <短期 credential>`、直接使用原 OIDC token，还是其他形式。公开的 [Inference API 文档](https://opencode.ai/docs/console/api/inference/) 当前只说明静态 API Key 通用路径，可能未覆盖新公告。
 
@@ -39,8 +39,9 @@ CrewRouter 当前将供应商 API key 存在 `providers` 配置中，由服务�
 
 存在两个不同的 Keyless 用法，不能混为一谈：
 
-- **CI 中运行 CrewRouter 客户端/CLI**：GitHub Job 本身领取 OIDC 身份，直接访问 Console inference。CrewRouter 的“客户端配置生成器”最多生成 Job 端配置模板，CrewRouter 服务端既不获取也不转发凭证。这最贴合公告的 CI 用例，身份边界也最简单。
-- **CI 中的 Job 访问 CrewRouter 服务，再由 CrewRouter 转发 Console**：OIDC token 在 CI job 中产生，但服务端通常不在该 job 运行环境里，拿不到 token。若让用户把 job token 传给 CrewRouter，必须处理代理存储、转发、请求重放与 token 生命周期，显著扩大信任面。安全上优先考虑 CI job 直连，除非用户明确需要经代理且 Console 官方 trust policy 支持服务端兑换。
+用户已确认目标是 **CrewRouter 使用 GitHub CI 等运行环境的 OIDC 身份调用 OpenCode Console，再由 CrewRouter 承接模型代理**，不是 DSH 官方 CLI 登录，也不是 CI 客户端绕过 CrewRouter 直连 Console。因此实现应假设 CrewRouter 进程运行在该 CI Job 的身份上下文里，自己从 GitHub OIDC runtime 获取 assertion 并向 Console 认证。
+
+若 CrewRouter 实际部署在 CI Job 以外的常驻服务，Job 的 OIDC token 不会自动出现在该进程中；不能把它当作当前方案，除非另行设计并确认受信的 token delegation。此部署限制需要在功能配置/文档中明确。
 
 ## 推荐实施方案（协议确认之后）
 
@@ -55,8 +56,8 @@ CrewRouter 当前将供应商 API key 存在 `providers` 配置中，由服务�
 
 - 官方 exchange endpoint 与 aud/claim 契约（这是编码前的必要条件）。
 - 首版是否只支持 GitHub Actions，或需要 GitLab 等 OIDC 平台；附件虽列出 Custom OIDC，但具体支持需证实。
-- 首先确定目标是否是“CI Job 内客户端直连 Console”，还是“CI OIDC 身份经过 CrewRouter 服务端代理”；首选前者，不把短期 job token 交给长驻服务器。若目标仅为 CI 直连，CrewRouter 可能只需提供明确向导/配置示例，不必给后端加运行时 Keyless provider。
-- 若必须服务端代理，需要证明 CrewRouter 实例本身有受信 workload identity；CI Job token 不会自动存在于 CI 之外的常驻进程。
+- 目标路径已确定为 CI Job 中 CrewRouter 进程自己取得 OIDC token 并认证 OpenCode；需确认它是否只运行在 GitHub Actions，或也要 GitLab 等 OIDC 平台。
+- 若将来要支持 CI 外的常驻 CrewRouter 服务，需单独确认官方支持的 workload identity 来源或安全 token delegation；不在当前 GitHub Job OIDC 范围内。
 - Keyless 是否适用于 OpenCode 自有模型和 BYOK/provider-connections，及 Service Account 权限/预算范围。
 
 ## 结论
