@@ -70,6 +70,17 @@ GitHub 的标准 OIDC token 请求由 Actions runner 提供环境变量 `ACTIONS
 - 若将来要支持 CI 外的常驻 CrewRouter 服务，需单独确认官方支持的 workload identity 来源或安全 token delegation；不在当前 GitHub Job OIDC 范围内。
 - Keyless 是否适用于 OpenCode 自有模型和 BYOK/provider-connections，及 Service Account 权限/预算范围。
 
+## 本次授权后的实施状态
+
+用户已明确同意按本方案实现 CrewRouter CI OIDC 接入。但执行方案自身的第 1 步是协议关卡：本轮再次核对公开的 Console API 总览及 inference 文档，认证仍只写 API key/service-account key；官方 Console CLI 仍是 device-code OAuth / `OPENCODE_API_KEY`；OpenCode 仓库搜索到的 `id-token: write` 用例属于 AWS/GitHub App 等别的信任方，而非 Console inference Keyless。因此当前缺少被批准方案要求的 audience、Console exchange/直接 inference 认证契约。本轮**没有提交运行时代码**，以免把未经证实的身份 assertion 发送给真实模型服务或错误落入 Bearer 认证。
+
+收到 OpenCode 官方 endpoint/audience 和协议（或能安全访问的官方配置/最小调用例）后，无需再讨论集成目标，可按此直接实施。建议代码落点：
+
+- `server/utils/opencode-console-auth.js`：Actions token source + Console 官方 credential 解析/短期缓存；只接受既定 Console origin/audience，含并发刷新和秘密脱敏。
+- `server/routes/api.js` 的 provider 请求入口（当前 `getProvider` / `getProviderForRequest` 与统一代理前）：按 `auth_mode` 解析请求级 credential，不把短期 token 填入 API key 数据字段。
+- `server/scripts/init-db.js`：幂等 provider auth-mode 字段迁移；`server/routes/admin.js` 与 `public/js/admin.js`：只暴露非秘密配置和连接状态，静态 Key 兼容。
+- `server/scripts/test-opencode-console-oidc.js`：替身 runner OIDC source / exchange / inference 的隔离测试，并跑现有 provider auth / upstream generation 回归。
+
 ## 结论
 
-应继续将 GitHub Actions 等 CI Job 作为主要方向。现在已充分提取附件中的可执行安全要求，但关键协议仍无可信证据，暂不写运行时代码。静态 API Key 路径保持兼容；常驻 CrewRouter 部署需官方额外支持 workload identity 的方法。
+用户同意执行实现计划；当前是实现的协议前置条件未满足，而不是集成目标未确定。收到上述官方协议后继续完成代码、测试、文档与提交。静态 API Key 路径保持兼容；常驻 CrewRouter 部署需官方额外支持 workload identity 的方法。
