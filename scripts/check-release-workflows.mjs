@@ -35,11 +35,12 @@ const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install i
 if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');
 if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-') && step.if?.includes("inputs.dry_run"))) throw new Error('npm beta candidate tarballs must be uploaded for dry-runs and tagged builds');
 const sdkPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name === 'Build and pack SDK candidate');
-if (!sdkPack?.run?.includes('cd sdk/typescript') || !sdkPack.run.includes('test -f "$RUNNER_TEMP/crewrouter-sdk-${PRODUCT_VERSION}.tgz"')) throw new Error('SDK candidate must pack from sdk/typescript and verify its tarball name');
+if (!sdkPack?.run?.includes('cd sdk/typescript') || !sdkPack.run.includes('test -f "$RUNNER_TEMP/bloretcrew-crewrouter-sdk-${PRODUCT_VERSION}.tgz"')) throw new Error('SDK candidate must pack from sdk/typescript and verify its tarball name');
 const cliPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name === 'Build and pack CLI candidate');
-if (!cliPack?.run?.includes('test -f "$RUNNER_TEMP/crewrouter-${PRODUCT_VERSION}.tgz"')) throw new Error('CLI candidate must verify its tarball name');
+if (!cliPack?.run?.includes('test -f "$RUNNER_TEMP/bloretcrew-crewrouter-${PRODUCT_VERSION}.tgz"')) throw new Error('CLI candidate must verify its tarball name');
 const npmPublishStep = beta.jobs['npm-beta-publish'].steps.find(step => step.name === 'Confirm npm package ownership and publish candidate packages');
-if (!npmPublishStep?.run?.includes('npm publish candidates/crewrouter-${PRODUCT_VERSION}.tgz')) throw new Error('npm publish must publish the crewrouter CLI candidate');
+if (!npmPublishStep?.run?.includes('npm publish candidates/bloretcrew-crewrouter-sdk-${PRODUCT_VERSION}.tgz') || !npmPublishStep.run.includes('npm publish candidates/bloretcrew-crewrouter-${PRODUCT_VERSION}.tgz')) throw new Error('npm publish must publish both scoped candidates');
+if (!npmPublishStep.run.includes('@bloretcrew/crewrouter-sdk @bloretcrew/crewrouter')) throw new Error('npm publish must target the scoped package names');
 if (!npmPublishStep.run.includes('doc.versions')) throw new Error('npm publish must check the target version is still unpublished');
 const npmNameGate = beta.jobs.gate.steps.find(step => step.name === 'Verify npm beta names are unclaimed');
 if (!npmNameGate?.run?.includes('doc.versions')) throw new Error('npm name gate must allow already-owned packages when the target version is new');

@@ -72,9 +72,10 @@ jobs:
         run: |
           version="${BETA_VERSION#v}"
           export BETA_VERSION="$version"
-          for package in crewrouter-sdk crewrouter; do
-            file="$RUNNER_TEMP/npm-$package.json"
-            code=$(curl --silent --show-error --output "$file" --write-out '%{http_code}' "https://registry.npmjs.org/$package")
+          for package in @bloretcrew/crewrouter-sdk @bloretcrew/crewrouter; do
+            encoded="${package/\//%2f}"
+            file="$RUNNER_TEMP/npm-${package//\//-}.json"
+            code=$(curl --silent --show-error --output "$file" --write-out '%{http_code}' "https://registry.npmjs.org/$encoded")
             if [ "$code" = "404" ]; then continue; fi
             if [ "$code" != "200" ]; then
               echo "npm registry lookup for $package returned HTTP $code"
@@ -284,14 +285,14 @@ jobs:
           npm --prefix sdk/typescript test
           cd sdk/typescript
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
-          test -f "$RUNNER_TEMP/crewrouter-sdk-${PRODUCT_VERSION}.tgz"
+          test -f "$RUNNER_TEMP/bloretcrew-crewrouter-sdk-${PRODUCT_VERSION}.tgz"
       - name: Build and pack CLI candidate
         run: |
           mkdir -p "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           node cli/npm/scripts/stage-package.js "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           cd "$RUNNER_TEMP/crewrouter-cli-beta-stage"
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
-          test -f "$RUNNER_TEMP/crewrouter-${PRODUCT_VERSION}.tgz"
+          test -f "$RUNNER_TEMP/bloretcrew-crewrouter-${PRODUCT_VERSION}.tgz"
       - name: Upload npm candidate tarballs for this workflow run
         if: ${{ (github.event_name == 'push' && contains(github.ref, '-beta.')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         uses: actions/upload-artifact@v4
@@ -324,15 +325,16 @@ jobs:
           path: candidates
       - name: Confirm npm package ownership and publish candidate packages
         run: |
-          for name in crewrouter-sdk crewrouter; do
-            file="/tmp/npm-$name.json"
-            code=$(curl --silent --show-error --output "$file" --write-out '%{http_code}' https://registry.npmjs.org/$name)
+          for name in @bloretcrew/crewrouter-sdk @bloretcrew/crewrouter; do
+            encoded="${name/\//%2f}"
+            file="/tmp/npm-${name//\//-}.json"
+            code=$(curl --silent --show-error --output "$file" --write-out '%{http_code}' https://registry.npmjs.org/$encoded)
             if [ "$code" = "404" ]; then continue; fi
             test "$code" = "200" || { echo "npm registry lookup for $name returned HTTP $code"; exit 1; }
             node -e 'const doc = require(process.argv[1]); if (doc.versions && doc.versions[process.env.PRODUCT_VERSION]) { console.error(`npm package ${doc.name} already has ${process.env.PRODUCT_VERSION}`); process.exit(1); }' "$file"
           done
-          npm publish candidates/crewrouter-sdk-${PRODUCT_VERSION}.tgz --access public --tag beta
-          npm publish candidates/crewrouter-${PRODUCT_VERSION}.tgz --access public --tag beta
+          npm publish candidates/bloretcrew-crewrouter-sdk-${PRODUCT_VERSION}.tgz --access public --tag beta
+          npm publish candidates/bloretcrew-crewrouter-${PRODUCT_VERSION}.tgz --access public --tag beta
 
   github-release-manual:
     name: Manually publish GitHub pre-release after candidate dry-run

@@ -11,7 +11,7 @@ const dest = fs.mkdtempSync(path.join(temp, `crewrouter-cli-install-${process.pi
 const tarballs = fs.mkdtempSync(path.join(temp, `crewrouter-cli-tarballs-${process.pid}-`));
 const packed = spawnSync(process.execPath, [runner], { encoding: 'utf8', timeout: 30000, env: { ...process.env, CREWROUTER_CLI_PACK_DEST: tarballs } });
 if (packed.status !== 0) throw new Error(packed.stderr || 'CLI pack verification failed');
-const output = path.join(tarballs, `crewrouter-${version}.tgz`);
+const output = path.join(tarballs, `bloretcrew-crewrouter-${version}.tgz`);
 const install = spawnSync('npm', ['install', '--global', output, '--prefix', dest, '--ignore-scripts', '--no-audit', '--no-fund'], { encoding: 'utf8', timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'] });
 try {
   if (install.status !== 0) throw new Error(install.stderr);

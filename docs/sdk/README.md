@@ -19,7 +19,7 @@ full gateway from Python/Go requires a sidecar process.
 
 | Language | Package | Notes |
 | --- | --- | --- |
-| Node/TypeScript | npm `crewrouter-sdk` | Zero runtime dependencies, Node >= 20, ESM + CJS + types |
+| Node/TypeScript | npm `@bloretcrew/crewrouter-sdk` | Zero runtime dependencies, Node >= 20, ESM + CJS + types |
 | Python | PyPI `crewrouter-sdk` (import `crewrouter`) | Sync + async, `httpx`, Python >= 3.9 |
 | Go | `github.com/BloretCrew/CrewRouter/sdk/go` | Standard library only, Go 1.22+ |
 | Node embedded | `crewrouter/embedded` | Preview: feature presets, external pool, session modes |
@@ -30,11 +30,11 @@ All packages are GPL-3.0, matching the main project. See
 ## Quick start (Node)
 
 ```bash
-npm install crewrouter-sdk
+npm install @bloretcrew/crewrouter-sdk
 ```
 
 ```ts
-import { CrewRouter } from 'crewrouter-sdk';
+import { CrewRouter } from '@bloretcrew/crewrouter-sdk';
 
 const client = new CrewRouter({
   baseUrl: process.env.CREWROUTER_BASE_URL,

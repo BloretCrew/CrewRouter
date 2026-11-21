@@ -1,5 +1,5 @@
 {
-  "name": "crewrouter-sdk",
+  "name": "@bloretcrew/crewrouter-sdk",
   "version": "27.0.0-beta.1",
   "description": "CrewRouter SDK for OpenAI/Anthropic-compatible gateway and management APIs",
   "license": "GPL-3.0",

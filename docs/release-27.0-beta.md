@@ -2,7 +2,7 @@
 
 > 27.0 Beta 是预发布测试版，正式版之前的包、镜像和应用均可能变更。面向用户显示 `27.0 Beta`；机器可读的候选版本为 `27.0.0-beta.1`。
 
-本轮通过 tag 发布自动化验收后：主仓库只创建一条 GitHub Pre-release，包含 CrewRouter 主服务安装包及 Desktop 平台安装包。SDK 与 CLI 只准备独立 npm beta tarball 和 npm 候选 artifact，不创建各自的 GitHub Release；本地源代码仍在审查阶段。CLI 的 npm 名称需在 publish 前查询 registry 与确认组织权限。
+本轮通过 tag 发布自动化验收后：主仓库只创建一条 GitHub Pre-release，包含 CrewRouter 主服务安装包及 Desktop 平台安装包。SDK 与 CLI 只准备独立 npm beta tarball 和 npm 候选 artifact，不创建各自的 GitHub Release；本地源代码仍在审查阶段。npm 包使用 `@bloretcrew` 组织作用域。
 
 ## 计划发布项
 
@@ -10,8 +10,8 @@
 |---|---:|---|
 | CrewRouter 主服务 | 27.0.0-beta.1 | 本页服务端安装包；OCI 镜像暂不在此次发布流程中构建或推送 |
 | CrewRouter Desktop | 27.0.0-beta.1 | 本页 Linux AppImage、Windows NSIS 安装程序、macOS Apple Silicon/Intel DMG |
-| CrewRouter SDK（TypeScript） | 27.0.0-beta.1 | 经审查的 npm beta 候选 tarball/artifact；npm publish 尚未执行 |
-| CrewRouter CLI | 27.0.0-beta.1 | 独立 npm 候选包；候选名 `crewrouter-cli` 尚待 registry/权限核实，publish 尚未执行 |
+| CrewRouter SDK（TypeScript） | 27.0.0-beta.1 | npm `@bloretcrew/crewrouter-sdk`（beta 标签）；publish 尚未执行 |
+| CrewRouter CLI | 27.0.0-beta.1 | npm `@bloretcrew/crewrouter`（beta 标签）；publish 尚未执行 |
 
 ## 发布门禁
 

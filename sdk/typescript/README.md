@@ -12,13 +12,13 @@ Official Node.js SDK for the CrewRouter AI model gateway.
 ## Install
 
 ```bash
-npm install crewrouter-sdk
+npm install @bloretcrew/crewrouter-sdk
 ```
 
 ## Quick start
 
 ```ts
-import { CrewRouter } from 'crewrouter-sdk';
+import { CrewRouter } from '@bloretcrew/crewrouter-sdk';
 
 const client = new CrewRouter({
   baseUrl: 'https://your-host',
@@ -108,7 +108,7 @@ listed in the catalog but cannot be called with an API Key.
 import {
   CrewRouterPermissionError,
   CrewRouterRateLimitError,
-} from 'crewrouter-sdk';
+} from '@bloretcrew/crewrouter-sdk';
 
 try {
   await client.keys.list();
