@@ -37,7 +37,12 @@ if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/u
 const sdkPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name === 'Build and pack SDK candidate');
 if (!sdkPack?.run?.includes('cd sdk/typescript') || !sdkPack.run.includes('test -f "$RUNNER_TEMP/crewrouter-sdk-${PRODUCT_VERSION}.tgz"')) throw new Error('SDK candidate must pack from sdk/typescript and verify its tarball name');
 const cliPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name === 'Build and pack CLI candidate');
-if (!cliPack?.run?.includes('test -f "$RUNNER_TEMP/crewrouter-cli-${PRODUCT_VERSION}.tgz"')) throw new Error('CLI candidate must verify its tarball name');
+if (!cliPack?.run?.includes('test -f "$RUNNER_TEMP/crewrouter-${PRODUCT_VERSION}.tgz"')) throw new Error('CLI candidate must verify its tarball name');
+const npmPublishStep = beta.jobs['npm-beta-publish'].steps.find(step => step.name === 'Confirm npm package ownership and publish candidate packages');
+if (!npmPublishStep?.run?.includes('npm publish candidates/crewrouter-${PRODUCT_VERSION}.tgz')) throw new Error('npm publish must publish the crewrouter CLI candidate');
+if (!npmPublishStep.run.includes('doc.versions')) throw new Error('npm publish must check the target version is still unpublished');
+const npmNameGate = beta.jobs.gate.steps.find(step => step.name === 'Verify npm beta names are unclaimed');
+if (!npmNameGate?.run?.includes('doc.versions')) throw new Error('npm name gate must allow already-owned packages when the target version is new');
 if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop,npm-beta-candidate') throw new Error('GitHub release must wait for all release and candidate build gates');
 const npmPublish = beta.jobs['npm-beta-publish'];
 if (!npmPublish || !npmPublish.needs.includes('npm-beta-candidate') || !npmPublish.permissions?.['id-token']) throw new Error('manual npm publish must use the separately approved candidate artifact and OIDC permissions');
