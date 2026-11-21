@@ -258,19 +258,21 @@
       case 'zcode':
         return result('ZCode 配置', '~/.zcode/v2/provider_config.json', json(zcodeProviderConfig(v1, apiKey, model)));
       case 'deepseek':
-        return result('DeepSeek Harness 配置', '~/.dsh/settings.yaml', [
-          '# ~/.dsh/settings.yaml',
-          '# DeepSeek Harness (dsh) → CrewRouter',
-          '# 配置路径、schema 与端点拼接行为未核实；以下仅保留手动配置参考',
-          'llm-deepseek:',
-          '  apiKeyEnv: DEEPSEEK_API_KEY',
-          '  baseURL: ' + quote(v1),
+        return result('DeepSeek Harness 官方 Console 集成', '无需 CrewRouter 配置', [
+          '# OpenCode Console 官方集成（OIDC/无长期 API Key 的托管模型接入）',
+          '# 需要 OpenCode Console 工作区成员身份，并使用浏览器完成一次授权。',
+          '# 该官方路径由 DSH 插件直接连接 Console，不经过 CrewRouter。',
+          'npx @opencode/console setup deepseek-harness',
           '',
-          '# 同时导出密钥（或在 dsh 模型设置页写入同一凭证；以下使用 Bash）：',
-          '# export DEEPSEEK_API_KEY=' + shellQuote(apiKey),
-          '# export DEEPSEEK_BASE_URL=' + shellQuote(v1),
-          ''
-        ].join('\n'), false, 'DeepSeek Harness 的配置路径与 schema 未核实，仅提供手动配置。');
+          '# 查看登录与工作区状态：',
+          'npx @opencode/console status',
+          '',
+          '# 如需撤销该集成配置（保留登录）：',
+          '# npx @opencode/console setup deepseek-harness --remove',
+          '',
+          '# 要将 DSH 指向 CrewRouter，请使用 CrewRouter 网页管理端的客户端配置说明。',
+          '# 不要把 OIDC 身份 JWT 当作 CrewRouter 或 Console 的模型 API Key。'
+        ].join('\n'), false, 'OpenCode Console 官方集成由 DSH 插件直接连接 Console，不通过 CrewRouter；如需经 CrewRouter 路由，请使用 CrewRouter API Key 配置。');
       default:
         return result('未知工具', '', '', false, '未知客户端工具');
     }

@@ -65,12 +65,14 @@ function checkConfigs(options) {
     const model = options.model ?? (tool === 'gemini_cli' ? 'gemini-2.5-pro' : 'claude-fable-5');
     const output = generate(tool, options);
     assert.deepEqual(Object.keys(output).sort(), ['content', 'path', 'reason', 'supported', 'title']);
-    assert.ok(output.title && output.path && output.content);
+    assert.ok(output.title && output.content);
+    if (tool !== 'deepseek') assert.ok(output.path);
     assert.equal(output.supported, !['deepseek', 'claude_desktop', 'cursor'].includes(tool));
     assert.equal(output.reason.length > 0, ['deepseek', 'agy', 'claude_desktop', 'cursor'].includes(tool));
+    if (tool === 'deepseek') assert.equal(output.path, '无需 CrewRouter 配置');
     checkShellCommand(tool, options, output);
     const shellOutput = generateShellCommand(tool, options);
-    const config = tool === 'cursor' ? null : ['gemini_cli'].includes(tool) ? parseEnv(output.content) : parse(tool, output.content);
+    const config = ['cursor', 'deepseek'].includes(tool) ? null : ['gemini_cli'].includes(tool) ? parseEnv(output.content) : parse(tool, output.content);
     switch (tool) {
       case 'claude':
         assert.deepEqual(config, {
@@ -125,10 +127,13 @@ function checkConfigs(options) {
         });
         break;
       case 'deepseek':
-        assert.deepEqual(config, { 'llm-deepseek': { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: v1 } });
-        assert.match(output.reason, /未核实/);
-        assert.match(output.content, /# 配置路径、schema 与端点拼接行为未核实/);
-        assert.doesNotMatch(output.content, /适配器请求|必.*拼接/);
+        assert.equal(output.supported, false);
+        assert.equal(output.path, '无需 CrewRouter 配置');
+        assert.equal(output.reason, 'OpenCode Console 官方集成由 DSH 插件直接连接 Console，不通过 CrewRouter；如需经 CrewRouter 路由，请使用 CrewRouter API Key 配置。');
+        assert.match(output.content, /npx @opencode\/console setup deepseek-harness/);
+        assert.match(output.content, /npx @opencode\/console status/);
+        assert.match(output.content, /--remove/);
+        assert.match(output.content, /不要把 OIDC 身份 JWT 当作/);
         break;
       case 'gemini_cli':
         assert.equal(output.path, '~/.gemini/.env');

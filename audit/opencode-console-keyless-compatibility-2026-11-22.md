@@ -4,9 +4,9 @@
 
 ## 结论
 
-**目前不能安全地把公告中的 OIDC Keyless Auth 接入 CrewRouter 的模型供应商请求链路；本轮不修改运行时代码。** 公告证实 OpenCode Console 宣布支持在 CI 或其他支持 OIDC 的环境中无长期 API token 调用模型，但可查的官方接口文档仍要求推理请求携带 Console API key。缺少 OIDC token 换取推理访问凭据的公开协议，不能凭二手分析自行猜测 endpoint、audience、token 格式或凭证期限。
+**OpenCode Console 已有官方 DSH 集成方式，但不能把它等同为 CrewRouter 的 OIDC 上游认证。** 对于“在 DeepSeek Harness 使用 OpenCode Console 工作区模型”这一具体目标，直接运行 `npx @opencode/console setup deepseek-harness` 是官方支持路径，安装官方插件后由 DSH 直接向 Console 发请求；这不经过 CrewRouter。
 
-需要 OpenCode 官方提供服务端集成协议，或发布包含该能力的官方客户端/SDK，才能按契约实现和测试。当前可以确认的 CrewRouter 工作负载身份不代表 OpenCode 已接受对应 token；**绝不能把 GitHub/Kubernetes 的 OIDC JWT 直接放进模型请求的 `Authorization: Bearer` 头**。
+若目标是让 CrewRouter 本身代理到 OpenCode Console，并由 CrewRouter 用 OIDC 获取无长期 API token 的凭证，目前仍缺可核实的公开服务端协议。公告支持 CI/OIDC 的说法与公开推理文档及 CLI 源码仍要求 Bearer Console credential 的现状之间，尚无公开说明连接两者的 OIDC token exchange 机制。**绝不能把 GitHub/Kubernetes 的 OIDC JWT 直接放进模型请求的 `Authorization: Bearer` 头**。
 
 ## 官方信息核查
 
@@ -15,7 +15,7 @@
 - [Console API 总览](https://opencode.ai/docs/console/api/)：列出的凭证类型仍为 personal API key 与 service account key。
 - [Console Harnesses 文档](https://opencode.ai/docs/console/harnesses/)：其他 Harness 按文档使用 Console API key；Console CLI 可执行 `setup deepseek-harness` 进行浏览器授权接入，但这描述的是用户交互式 Console 连接，不是可直接推导为无人的服务器端 OIDC token exchange。
 - [Console Providers API 文档](https://opencode.ai/docs/console/api/providers/)：自定义供应商网关同样要求 Bearer Console token。
-- 工作区内 OpenCode 源码与官方文档快照中未发现 Console 推理 OIDC token exchange 的实现或协议。其 OpenCode Console provider 支持 OAuth/device-code 用户授权和 API key 两种连接方式，但这也不证明该交互式 OAuth 流程就是公告所指的 Keyless 服务端机制。
+- 官方发布的 [@opencode/console CLI 仓库 README](https://github.com/anomalyco/opencode-console-cli) 明确支持 `npx @opencode/console setup deepseek-harness`。它为 DSH 安装官方插件并连接工作区模型；插件从 CLI 凭据库读取 token，模型流量走 OpenCode Console，而非 CrewRouter。官方 CLI 源码 [`console-client.ts`](https://github.com/anomalyco/opencode-console-cli/blob/dev/src/console-client.ts) 与 [`credentials.ts`](https://github.com/anomalyco/opencode-console-cli/blob/dev/src/credentials.ts) 显示，当前已公开的凭证路径是浏览器批准的 device-code OAuth（access/refresh token）或 `OPENCODE_API_KEY`，并未发现 OIDC workload token exchange。该集成是可用的官方 DSH-to-Console 方案，但不能等同于 CrewRouter 上游 Keyless 供应商支持。
 
 用户所附 `OPENCODE_NOKEY_ANA.html` 对信任策略、claims、凭证寿命和步骤作了详细描述；这些细节没有在上述可见官方契约中确认，应视为待验证线索，不宜直接当作接口规范。
 
