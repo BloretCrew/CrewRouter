@@ -3075,6 +3075,9 @@ async function runPendingMigrations() {
     ensureApiKeyHarnessModelsTable,
     ensureApiKeyMembersTable,
     ensureOperationLogsTable,
+    async function ensureApiKeyGroupsColumn() {
+      await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_group VARCHAR(100) NOT NULL DEFAULT ''`);
+    },
     ensureKeyTagsTables,
     ensureReservedResources,
     ensureProviderQuotaScript,

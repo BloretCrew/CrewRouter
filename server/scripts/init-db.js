@@ -503,7 +503,8 @@ async function initDatabase() {
         signature_template TEXT DEFAULT NULL,
         swallow_images BOOLEAN DEFAULT FALSE,
         crewrouter_commands BOOLEAN DEFAULT FALSE,
-        permissions JSONB NOT NULL DEFAULT '[]'::jsonb
+        permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+        key_group VARCHAR(100) DEFAULT ''
       )
     `);
 
@@ -532,7 +533,8 @@ async function initDatabase() {
       { name: 'crewrouter_commands', type: 'BOOLEAN DEFAULT FALSE' },
       // 不在这里给历史表加 NOT NULL DEFAULT，避免旧 Key 被静默清空；
       // 服务启动迁移会先回填 NULL，再设置默认值。
-      { name: 'permissions', type: 'JSONB' }
+      { name: 'permissions', type: 'JSONB' },
+      { name: 'key_group', type: "VARCHAR(100) DEFAULT ''" }
     ];
     for (const col of apiKeyColumns) {
       const colCheck = await client.query(`

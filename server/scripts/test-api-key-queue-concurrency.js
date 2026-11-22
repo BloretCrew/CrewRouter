@@ -17,6 +17,9 @@ function deferred() {
 }
 function routes(pool, { baseline = false, invalidate = noop } = {}) {
   let code = source.slice(source.indexOf('async function getApiKeyAccess'), source.indexOf('// 生成 Claude Code 配置'));
+  code += source.slice(source.indexOf("router.put('/api-keys/:id', requireAuth"), source.indexOf('const MAX_MODEL_QUEUE_SIZE'));
+  code += source.slice(source.indexOf('function validateSignatureSettings'), source.indexOf("router.put('/api-keys/:id/signature'"));
+  code += source.slice(source.indexOf("router.put('/api-keys/:id/models'"), source.indexOf('require(\'../utils/quota-cycle-analysis\')'));
   code += source.slice(source.indexOf("router.put('/api-keys/:id/tags'"), source.indexOf('// ========== 操作日志查询'));
   if (baseline) code = code.replace("    await client.query('SELECT id FROM api_keys WHERE id = $1 FOR UPDATE', [req.params.id]);", '');
   const handlers = new Map();
@@ -48,7 +51,7 @@ async function main() {
   const pool = new Pool({ ...cluster.connection, max: 8, options: '-c statement_timeout=6000 -c idle_in_transaction_session_timeout=8000' });
   try {
     await cluster.assertIsolation(pool);
-    await pool.query(`CREATE TABLE api_keys (id integer PRIMARY KEY, user_id integer, current_model_id varchar(100), name text DEFAULT 'fixture', key_prefix text, custom_model_name text, permissions jsonb DEFAULT '[]'::jsonb,
+    await pool.query(`CREATE TABLE api_keys (id integer PRIMARY KEY, user_id integer, current_model_id varchar(100), name text DEFAULT 'fixture', key_prefix text, custom_model_name text, key_group varchar(100) DEFAULT '', permissions jsonb DEFAULT '[]'::jsonb,
       fusion_panel_models jsonb, fusion_judge_model_id text, fusion_outer_model_id text, fusion_enabled boolean, fusion_synthesis_prompt_enabled boolean,
       quota_warning_enabled boolean, signature_enabled boolean, signature_template text, enabled boolean, swallow_images boolean, crewrouter_commands boolean,
       schedule_enabled boolean, schedule_on_time text, schedule_off_time text, schedule_days integer[], schedule_timezone text);
@@ -113,7 +116,6 @@ async function main() {
       ['/api-keys/:id/harness-models', { harness: 'codex', modelId: 'b' }],
       ['/api-keys/:id/fusion-config', { panel_models: ['b'] }],
       ['/api-keys/:id/quota-warning', { quota_warning_enabled: true }],
-      ['/api-keys/:id/signature', { signature_enabled: true, signature_template: 'fixture' }],
       ['/api-keys/:id/enabled', { enabled: true }],
       ['/api-keys/:id/swallow-images', { swallow_images: true }],
       ['/api-keys/:id/crewrouter-commands', { crewrouter_commands: true }],
@@ -142,12 +144,17 @@ async function main() {
     // Owner-only boundaries and self-leave preserve their distinct permissions.
     await pool.query('INSERT INTO api_key_members(api_key_id,user_id) VALUES(1,2)');
     const removeRoute = '/api-keys/:id/members/:userId(\\d+)';
-    for (const [method, route, body] of [['post','/api-keys/:id/members',{identity:'member'}],['delete',removeRoute,{}],['put','/api-keys/:id/tags',{tagIds:[1]}],['delete','/api-keys/:id',{}]]) {
-      assert.equal((await run(method,route,body,2)).statusCode, route === '/api-keys/:id' ? 404 : 403);
+    for (const [method, route, body] of [['post','/api-keys/:id/members',{identity:'member'}],['delete',removeRoute,{}],['put','/api-keys/:id/tags',{tagIds:[1]}],['put','/api-keys/:id',{key_group:'Production'}],['delete','/api-keys/:id',{}]]) {
+      const expectedStatus = method === 'delete' && route === '/api-keys/:id' ? 404 : 403;
+      assert.equal((await run(method,route,body,2)).statusCode, expectedStatus);
     }
     assert.equal((await run('delete','/api-keys/:id/members/me',{},1)).statusCode,403);
     assert.equal((await run('put','/api-keys/:id/tags',{tagIds:[2]},1)).statusCode,400);
     assert.equal((await run('put','/api-keys/:id/tags',{tagIds:[1]},1)).statusCode,200);
+    assert.equal((await run('put','/api-keys/:id',{key_group:'Production'},1)).statusCode,200);
+    assert.equal((await pool.query('SELECT key_group FROM api_keys WHERE id=1')).rows[0].key_group,'Production');
+    assert.equal((await run('put','/api-keys/:id',{key_group:'x'.repeat(101)},1)).statusCode,400);
+    assert.equal((await run('put','/api-keys/:id',{key_group:'other'},2)).statusCode,403);
 
     for (const [route,user] of [[removeRoute,1],['/api-keys/:id/members/me',2]]) {
       await pool.query('INSERT INTO api_key_members(api_key_id,user_id) VALUES(1,2) ON CONFLICT DO NOTHING');
