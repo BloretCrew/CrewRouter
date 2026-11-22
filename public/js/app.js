@@ -13249,6 +13249,7 @@ ${extractorBody}
   async _loadLibraryKeys() {
     const prevSelected = this._librarySelectedKeyId;
     this._libraryKeys = [];
+    this._libraryKeysExpanded = false;
     this._libraryAllKeysClosed = false;
     try {
       const res = await fetch('/api/user/api-keys');
@@ -13349,9 +13350,8 @@ ${extractorBody}
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>`;
     // page2-step2b A+C：切换 Key 紧跟 Key 按钮，不再单独占列
-    const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}</span>`;
+    const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}<span id="libraryKeyChips" class="ml-key-switch"></span></span>`;
     // page2-step2b：切换 Key 放到状态时间线下方
-    const keySwitchRow = `<div class="ml-binding-key-switch-row"><span id="libraryKeyChips" class="ml-key-switch"></span></div>`;
     const bindTarget = this._libraryBindTarget || 'default';
     const isHarnessMode = bindTarget !== 'default';
     const harnessMeta = isHarnessMode ? this._usageRequestSourceMeta(bindTarget) : null;
@@ -13412,7 +13412,6 @@ ${extractorBody}
             <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
             ${item(t('模型'), '')}
           </div>
-          ${keySwitchRow}
           ${harnessChips}
           <div class="binding-hint">在下方列表中点击一个模型即可绑定 · 再次点击 Key 可打开工具菜单</div>
         </div>`);
@@ -13440,7 +13439,6 @@ ${extractorBody}
           ${item(t('模型'), `<span class="ml-binding-model-line"><span class="binding-model-name">${escapeHtml(modelName)}</span>${speedMeta}</span>`)}
         </div>
         ${uptimeHtml}
-        ${keySwitchRow}
         ${harnessChips}
       </div>`);
 
@@ -13462,6 +13460,7 @@ ${extractorBody}
 
     if (this._libraryKeys.length === 0) {
       // Key 被全部关闭等场景下要清掉旧芯片，避免残留已不可用的 Key
+      this._libraryKeysExpanded = false;
       setHTML(chipsContainer, '');
       this._renderLibraryStickyKeyBtn();
       return;
@@ -13469,16 +13468,12 @@ ${extractorBody}
 
     const keys = this._libraryKeys;
     const selectedId = String(this._librarySelectedKeyId ?? keys[0]?.id ?? '');
-    // 横向显示前 5 个 Key，剩余项收进「更多」选择框；若选中项位于折叠区，自动将其加入可见项。
-    const visibleKeys = keys.slice(0, 5);
-    if (!visibleKeys.some(key => String(key.id) === selectedId) && keys.some(key => String(key.id) === selectedId)) {
-      visibleKeys[visibleKeys.length - 1] = keys.find(key => String(key.id) === selectedId);
-    }
-    const visibleIds = new Set(visibleKeys.map(key => String(key.id)));
-    const collapsedKeys = keys.filter(key => !visibleIds.has(String(key.id)));
+    // 每次重新加载 Key 后恢复为收起状态，用户可通过展开按钮查看完整列表。
+    const visibleKeys = this._libraryKeysExpanded ? keys : keys.slice(0, 5);
+    const remainingCount = keys.length - visibleKeys.length;
     const html = `<div class="ml-key-choices" role="group" aria-label="${escapeHtml(t('切换 Key'))}">
       ${visibleKeys.map(key => `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${escapeHtml(key.name || 'API Key')}</button>`).join('')}
-      ${collapsedKeys.length ? `<blora-select class="blora-select ml-key-select" value="${escapeHtml(selectedId)}" aria-label="${escapeHtml(t('更多 Key'))}" onchange="app.selectLibraryKey(this.value, event)"><blora-option value="" disabled>${escapeHtml(t('更多 Key'))}</blora-option>${collapsedKeys.map(key => `<blora-option value="${escapeHtml(String(key.id))}"${String(key.id) === selectedId ? ' selected' : ''}>${escapeHtml(key.name || 'API Key')}</blora-option>`).join('')}</blora-select>` : ''}
+      ${remainingCount > 0 ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="false" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('展开余下的 {count} 个 Key', { count: remainingCount }))}</button>` : this._libraryKeysExpanded && keys.length > 5 ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="true" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('收起'))}</button>` : ''}
     </div>`;
     setHTML(chipsContainer, html);
     this._renderLibraryStickyKeyBtn();

@@ -137,7 +137,6 @@
 #adminModelLibraryPage .ml-binding-key-switch-row { display: flex; align-items: center; margin-block-start: 4px; }
 #adminModelLibraryPage .ml-binding-key-switch-row:has(.ml-key-switch:empty) { display: none; }
 #adminModelLibraryPage .ml-key-switch { display: inline-flex; align-items: center; min-block-size: var(--lg-control-h); }
-#adminModelLibraryPage .ml-key-select { min-inline-size: 180px; }
 #adminModelLibraryPage .binding-hint { color: var(--lg-fg-secondary); font-size: 12.5px; }
 #adminModelLibraryPage .binding-harness-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 #adminModelLibraryPage .binding-harness-chip {
