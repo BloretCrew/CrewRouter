@@ -1,7 +1,27 @@
-#quotaCycleDialog::part(panel) { width: min(1060px, calc(100vw - 24px)); max-width: min(1060px, calc(100vw - 24px)); }
-#quotaCycleDialog .modal-content { width: 100%; min-width: 0; max-width: 1060px; }
-#quotaCycleDialog .modal-body { max-height: 80vh; overflow-y: auto; }
+#quotaCycleDialog::part(panel) { width: min(1120px, calc(100vw - 32px)); max-width: min(1120px, calc(100vw - 32px)); max-height: 92vh; }
+#quotaCycleDialog .modal-content { width: 100%; min-width: 0; max-width: 1120px; }
+#quotaCycleDialog .modal-header { position: sticky; top: 0; z-index: 2; background: var(--card, var(--background)); }
+#quotaCycleDialog .modal-header h3 { font-size: 20px; }
+#quotaCycleDialog .modal-body { max-height: calc(92vh - 72px); overflow-y: auto; padding: 18px 24px 24px; }
 .quota-cycle { min-width: 0; color: var(--foreground); }
+.cycle-list-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 16px 0 10px; }
+.cycle-list-heading h4 { margin: 0; font-size: 15px; }
+.cycle-list-heading p { margin: 4px 0 0; color: var(--muted-foreground); font-size: 12px; }
+.cycle-list-heading > span { color: var(--muted-foreground); font-size: 12px; }
+.cycle-list-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.cycle-list-card { min-width: 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card,var(--background)); }
+.cycle-list-card-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.cycle-list-card-heading > div { display: grid; gap: 3px; min-width: 0; }
+.cycle-list-card-heading strong { overflow-wrap: anywhere; }
+.cycle-list-card-heading > div span { color: var(--muted-foreground); font-size: 12px; overflow-wrap: anywhere; }
+.cycle-list-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; padding: 14px 0; }
+.cycle-list-facts > div { display: grid; align-content: start; gap: 6px; min-width: 0; }
+.cycle-list-facts span { color: var(--muted-foreground); font-size: 11px; }
+.cycle-list-facts strong { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cycle-list-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.cycle-list-card-footer > span { color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums; }
+.cycle-list-card-footer i { padding: 0 3px; font-style: normal; }
+.cycle-list-empty { padding: 36px 16px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted-foreground); text-align: center; }
 .cycle-filters, .cycle-pagination, .cycle-report-heading { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .cycle-filters { align-items: end; }
 .cycle-filters label { display: grid; gap: 6px; min-width: 160px; font-size: 12px; }
@@ -17,7 +37,8 @@
 .cycle-badge[data-state="partial"], .cycle-badge[data-state="pending_reconciliation"] { color: var(--warning, #a76b0a); }
 .cycle-disclaimer { padding: 10px 12px; border-left: 3px solid var(--border); color: var(--muted-foreground); font-size: 12px; line-height: 1.7; }
 .cycle-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.cycle-quota-visual { display: grid; grid-template-columns: minmax(190px, .8fr) minmax(0, 1.6fr); gap: 18px; margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--card, #fff) 92%, var(--brand-blue, #6366f1)); }
+.cycle-quota-visual { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.6fr); gap: 22px; margin: 16px 0; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--card, #fff); }
+.cycle-quota-visual.is-sparse { grid-template-columns: minmax(220px, .8fr) minmax(0, 1.6fr); }
 .cycle-quota-current { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
 .cycle-quota-current > div:first-child { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 4px 12px; }
 .cycle-quota-current span, .cycle-quota-current small, .cycle-chart-heading span, .cycle-chart-axis, .cycle-chart-dates { color: var(--muted-foreground); font-size: 12px; }
@@ -34,7 +55,9 @@
 .cycle-quota-trend svg circle { fill: var(--brand-blue, #6366f1); stroke: var(--card, #fff); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .cycle-chart-axis { display: flex; justify-content: space-between; margin-top: -108px; height: 92px; flex-direction: column; pointer-events: none; }
 .cycle-chart-dates { margin: 10px 0 0 36px; font-size: 11px; }
-.cycle-chart-empty { display: grid; place-items: center; min-height: 116px; margin: 0; color: var(--muted-foreground); font-size: 12px; }
+.cycle-chart-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-height: 116px; margin: 0; padding: 0 16px; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted-foreground); font-size: 12px; }
+.cycle-chart-empty strong { color: var(--foreground); font-size: 22px; font-variant-numeric: tabular-nums; }
+.cycle-chart-empty time { flex-basis: 100%; font-size: 11px; }
 .cycle-metrics dt { font-size: 12px; color: var(--muted-foreground); }
 .cycle-metrics dd { margin: 4px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .cycle-table-wrap { overflow: auto; min-width: 0; }
@@ -49,7 +72,15 @@
 .cycle-pagination { margin: 12px 0; justify-content: end; font-size: 12px; }
 .cycle-samples summary { cursor: pointer; font-size: 13px; padding: 8px 0; }
 .quota-cycle button:focus-visible, .cycle-samples summary:focus-visible { outline: 2px solid var(--brand-blue, #6366f1); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .cycle-list-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
+  #quotaCycleDialog::part(panel) { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: 94vh; }
+  #quotaCycleDialog .modal-body { max-height: calc(94vh - 64px); padding: 12px; }
+  .cycle-list-facts { grid-template-columns: 1fr; gap: 8px; }
+  .cycle-list-facts > div { grid-template-columns: 92px minmax(0,1fr); align-items: baseline; }
+  .cycle-list-card-footer { align-items: start; flex-direction: column; }
   .cycle-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cycle-filters label { min-width: 0; }
   .cycle-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

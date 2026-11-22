@@ -67,7 +67,13 @@
       const data = await request(state, '', q);
       return () => {
         state.page = Number(data.page) || state.page;
-        state.root.querySelector('.cycle-list').innerHTML = table(['供应商 / 账户', '窗口', '周期范围', '周期状态', '详情'], rows(data.rows).map(c => [esc(c.provider_name || state.accounts.find(r => String(r.account_id) === String(c.account_id))?.provider_name || tr('供应商名称未提供')) + `<small>${esc(c.account_label || c.label || state.accounts.find(r => String(r.account_id) === String(c.account_id))?.label || c.account_id)}</small>`, esc(windowLabel(c.window_key || c.unit)), `${esc(date(c.started_at))}<small>${esc(date(c.ended_at))}</small>`, badge(c), button('report', '查看周期报告', `data-id="${esc(c.id)}"`)])) + pager('list', data);
+        const items = rows(data.rows);
+        state.root.querySelector('.cycle-list').innerHTML = items.length ? `<div class="cycle-list-heading"><div><h4>${esc(tr('周期记录'))}</h4><p>${esc(tr('按周期查看额度状态与起止时间'))}</p></div><span>${esc(tr('共 {total} 个周期', { total: Number(data.total) || 0 }))}</span></div><div class="cycle-list-grid">${items.map(c => {
+          const provider = c.provider_name || state.accounts.find(r => String(r.account_id) === String(c.account_id))?.provider_name || tr('供应商名称未提供');
+          const account = c.account_label || c.label || state.accounts.find(r => String(r.account_id) === String(c.account_id))?.label || c.account_id;
+          const startAt = date(c.started_at), endAt = date(c.ended_at);
+          return `<article class="cycle-list-card"><div class="cycle-list-card-heading"><div><strong>${esc(provider)}</strong><span>${esc(account)}</span></div>${badge(c)}</div><div class="cycle-list-facts"><div><span>${esc(tr('额度窗口'))}</span><strong>${esc(windowLabel(c.window_key || c.unit))}</strong></div><div><span>${esc(tr('周期开始'))}</span><strong>${esc(startAt)}</strong></div><div><span>${esc(tr('周期结束'))}</span><strong>${esc(endAt)}</strong></div></div><div class="cycle-list-card-footer"><span>${esc(startAt)} <i>→</i> ${esc(endAt)}</span>${button('report', '查看周期报告', `data-id="${esc(c.id)}"`)}</div></article>`;
+        }).join('')}</div>${pager('list', data)}` : `<div class="cycle-list-empty">${esc(tr('当前条件下暂无周期数据'))}</div>`;
       };
     });
   }
@@ -89,9 +95,13 @@
       return { x, y, value: sample.value };
     });
     const line = points.map(point => `${point.x},${point.y}`).join(' ');
-    return `<section class="cycle-quota-visual" aria-label="${esc(tr('周期额度可视化'))}">
-      <div class="cycle-quota-current"><div><span>${esc(tr('期末使用率'))}</span><strong>${current == null ? '—' : `${esc(num(current))}%`}</strong><small>${esc(tr('期初'))} ${start == null ? '—' : `${esc(num(start))}%`}</small></div><div class="cycle-quota-track" role="img" aria-label="${esc(current == null ? tr('暂无使用率数据') : tr('额度使用率 {value}%', { value: num(current) }))}"><span style="width:${progress}%"></span></div></div>
-      <div class="cycle-quota-trend"><div class="cycle-chart-heading"><strong>${esc(tr('周期使用率趋势'))}</strong><span>${esc(tr('{count} 个有效观测', { count: valid.length }))}</span></div>${points.length > 1 ? `<svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="${esc(tr('使用率随时间变化'))}"><line x1="12" y1="18" x2="88" y2="18"/><line x1="12" y1="54" x2="88" y2="54"/><line x1="12" y1="90" x2="88" y2="90"/><polyline points="${line}"/>${points.map(point => `<circle cx="${point.x}" cy="${point.y}" r="1.7"><title>${esc(num(point.value))}%</title></circle>`).join('')}</svg><div class="cycle-chart-axis"><span>100%</span><span>50%</span><span>0%</span></div><div class="cycle-chart-dates"><span>${esc(date(valid[0].at))}</span><span>${esc(date(valid.at(-1).at))}</span></div>` : `<p class="cycle-chart-empty">${esc(tr(valid.length ? '有效观测不足，暂无法绘制趋势' : '暂无有效使用率观测'))}</p>`}</div>
+    const hasTrend = points.length > 1;
+    const trendContent = hasTrend
+      ? `<svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="${esc(tr('使用率随时间变化'))}"><line x1="12" y1="18" x2="88" y2="18"/><line x1="12" y1="54" x2="88" y2="54"/><line x1="12" y1="90" x2="88" y2="90"/><polyline points="${line}"/>${points.map(point => `<circle cx="${point.x}" cy="${point.y}" r="1.7"><title>${esc(num(point.value))}%</title></circle>`).join('')}</svg><div class="cycle-chart-axis"><span>100%</span><span>50%</span><span>0%</span></div><div class="cycle-chart-dates"><span>${esc(date(valid[0].at))}</span><span>${esc(date(valid.at(-1).at))}</span></div>`
+      : `<p class="cycle-chart-empty">${esc(tr(valid.length ? '目前只有 1 个有效观测，暂不能形成趋势线' : '暂无有效使用率观测'))}${valid.length ? `<strong>${esc(num(valid[0].value))}%</strong><time>${esc(date(valid[0].at))}</time>` : ''}</p>`;
+    return `<section class="cycle-quota-visual${hasTrend ? '' : ' is-sparse'}" aria-label="${esc(tr('周期额度可视化'))}">
+      <div class="cycle-quota-current"><div><span>${esc(tr('当前使用率'))}</span><strong>${current == null ? '—' : `${esc(num(current))}%`}</strong><small>${esc(tr('周期起始'))} ${start == null ? '—' : `${esc(num(start))}%`} · ${esc(tr('有效观测'))} ${valid.length}</small></div><div class="cycle-quota-track" role="img" aria-label="${esc(current == null ? tr('暂无使用率数据') : tr('额度使用率 {value}%', { value: num(current) }))}"><span style="width:${progress}%"></span></div></div>
+      <div class="cycle-quota-trend"><div class="cycle-chart-heading"><strong>${esc(tr('使用率变化'))}</strong><span>${esc(tr('{count} 个有效观测', { count: valid.length }))}</span></div>${trendContent}</div>
     </section>`;
   }
   function renderReport(state, data, intervals) {
