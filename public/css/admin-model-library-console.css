@@ -436,6 +436,8 @@
 #adminModelLibraryPage .model-library-item.model-disabled { cursor: default; }
 #adminModelLibraryPage .model-library-item.model-hidden { opacity: 0.66; }
 #adminModelLibraryPage .model-library-item-info { display: flex; flex: 1; flex-direction: column; gap: 8px; min-width: 0; }
+#adminModelLibraryPage .aml-card .model-library-item-info,
+#adminModelLibraryPage .aml-card .model-library-item-actions { width: 100%; }
 #adminModelLibraryPage .model-library-item-name {
   display: flex;
   flex-wrap: nowrap;
@@ -606,6 +608,9 @@
 #adminModelLibraryPage .ml-model-quota-card.error .ml-model-quota-header > span:not(.ml-model-quota-name) { color: var(--lg-red-ink); font-size: 12.5px; font-weight: 500; }
 #adminModelLibraryPage .ml-model-quota-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
 #adminModelLibraryPage .ml-model-quota-name { color: var(--lg-fg); font-size: 14px; font-weight: 600; }
+#adminModelLibraryPage button.quota-history-title { padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+#adminModelLibraryPage button.quota-history-title:hover, #adminModelLibraryPage button.quota-history-title:focus-visible { color: var(--lg-fg); text-decoration: underline; }
+#adminModelLibraryPage button.quota-history-title:focus-visible { outline: 2px solid var(--lg-fg); outline-offset: 3px; }
 #adminModelLibraryPage .ml-model-quota-plan { padding: 2px 8px; border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); color: var(--lg-fg-secondary); font-size: 11.5px; }
 #adminModelLibraryPage .ml-model-quota-numbers { display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
 #adminModelLibraryPage .ml-model-quota-remaining { color: var(--lg-fg); font-family: var(--lg-font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }

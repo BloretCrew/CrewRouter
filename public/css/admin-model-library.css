@@ -176,13 +176,33 @@
   background: transparent;
   box-shadow: none;
 }
-.admin-model-library .ml-model-quota-section .quota-heading { margin-bottom: 12px; }
-.admin-model-library .ml-model-quota-section .quota-summary { gap: 12px; }
+.admin-model-library .ml-model-quota-section .quota-heading { justify-content: flex-end; margin: 0 0 10px; }
+.admin-model-library .ml-model-quota-section .quota-heading h4,
+.admin-model-library .ml-model-quota-section .quota-status { display: none; }
+.admin-model-library .ml-model-quota-section .quota-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
+}
+.admin-model-library .ml-model-quota-section .quota-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background: var(--lg-card-bg);
+}
+.admin-model-library .ml-model-quota-section .quota-summary strong { font-size: 20px; }
+.admin-model-library .ml-model-quota-section .quota-cycle-summary { margin: 0 0 14px; }
 .admin-model-library .ml-model-quota-section .quota-provider-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  align-items: start;
   gap: 12px;
 }
 .admin-model-library .ml-model-quota-section .quota-provider-card {
+  align-self: start;
   border-color: var(--lg-glass-border);
   border-radius: var(--lg-radius-card);
   background-color: var(--lg-card-bg);
@@ -201,6 +221,10 @@
   color: var(--lg-fg);
 }
 .admin-model-library .ml-model-quota-section .quota-analysis button[data-variant="secondary"]:hover { background: var(--lg-chip-hover); }
+@media (max-width: 720px) {
+  .admin-model-library .ml-model-quota-section .quota-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 .admin-model-library .aml-check {
   display: inline-flex;
   flex: none;

@@ -37,12 +37,8 @@
     async loadQuotaOverview() {
       const host = this.container?.querySelector('.aml-quota-host');
       if (!host) return;
-      const widget = window.CrewRouterProviderQuotaStats;
       try {
-        if (widget?.mount && widget?.load) {
-          widget.mount(host, 'admin');
-          await widget.load(host);
-        } else if (window.CrewRouterQuotaStats?.refresh) {
+        if (window.CrewRouterQuotaStats?.refresh) {
           await window.CrewRouterQuotaStats.refresh('admin');
         } else host.textContent = tr('进入管理查看');
       } catch (error) {
