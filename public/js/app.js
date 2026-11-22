@@ -13641,9 +13641,14 @@ ${extractorBody}
       if (!groups.has(groupName)) groups.set(groupName, []);
       groups.get(groupName).push(key);
     }
+    const expandButton = remainingCount > 0
+      ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="false" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('展开余下的 {count} 个 Key', { count: remainingCount }))}</button>`
+      : this._libraryKeysExpanded && keys.length > 5
+        ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="true" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('收起'))}</button>`
+        : '';
+    const groupEntries = [...groups.entries()];
     const html = `<div class="ml-key-choices" role="group" aria-label="${escapeHtml(t('切换 Key'))}">
-      ${[...groups.entries()].map(([groupName, groupKeys]) => `<div class="ml-key-choice-group"><span class="ml-key-choice-group-title">${escapeHtml(groupName)}</span>${groupKeys.map(key => `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${escapeHtml(key.name || 'API Key')}</button>`).join('')}</div>`).join('')}
-      ${remainingCount > 0 ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="false" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('展开余下的 {count} 个 Key', { count: remainingCount }))}</button>` : this._libraryKeysExpanded && keys.length > 5 ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="true" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('收起'))}</button>` : ''}
+      ${groupEntries.map(([groupName, groupKeys], index) => `<div class="ml-key-choice-group"><span class="ml-key-choice-group-title">${escapeHtml(groupName)}</span>${groupKeys.map(key => `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${escapeHtml(key.name || 'API Key')}</button>`).join('')}${index === groupEntries.length - 1 ? expandButton : ''}</div>`).join('')}
     </div>`;
     setHTML(chipsContainer, html);
     this._renderLibraryStickyKeyBtn();
