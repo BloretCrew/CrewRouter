@@ -13349,9 +13349,9 @@ ${extractorBody}
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>`;
-    // page2-step2b A+C：切换 Key 紧跟 Key 按钮，不再单独占列
-    const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}<span id="libraryKeyChips" class="ml-key-switch"></span></span>`;
-    // page2-step2b：切换 Key 放到状态时间线下方
+    // 当前 Key 按钮与下方完整的 Key 切换列表分开，列表放在状态时间线后。
+    const keyValueHtml = `<span class="ml-binding-key-value">${keyBtn}</span>`;
+    const keySwitchRow = `<div class="ml-binding-key-switch-row"><span id="libraryKeyChips" class="ml-key-switch"></span></div>`;
     const bindTarget = this._libraryBindTarget || 'default';
     const isHarnessMode = bindTarget !== 'default';
     const harnessMeta = isHarnessMode ? this._usageRequestSourceMeta(bindTarget) : null;
@@ -13412,6 +13412,7 @@ ${extractorBody}
             <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
             ${item(t('模型'), '')}
           </div>
+          ${keySwitchRow}
           ${harnessChips}
           <div class="binding-hint">在下方列表中点击一个模型即可绑定 · 再次点击 Key 可打开工具菜单</div>
         </div>`);
@@ -13439,6 +13440,7 @@ ${extractorBody}
           ${item(t('模型'), `<span class="ml-binding-model-line"><span class="binding-model-name">${escapeHtml(modelName)}</span>${speedMeta}</span>`)}
         </div>
         ${uptimeHtml}
+        ${keySwitchRow}
         ${harnessChips}
       </div>`);
 

@@ -131,6 +131,7 @@
 #modelLibraryPage .binding-active > .binding-uptime > .ml-model-uptime { flex: 1 1 auto; inline-size: 100%; margin: 0; padding: 0; border: 0; }
 #modelLibraryPage .binding-active > .binding-uptime .ml-uptime-track { gap: 2px; block-size: 22px; }
 #modelLibraryPage .binding-active > .binding-uptime .ml-uptime-seg { border-radius: 3px; }
+#modelLibraryPage .ml-binding-key-switch-row { display: flex; align-items: center; margin-block-start: 8px; }
 #modelLibraryPage .ml-key-switch { display: inline-flex; align-items: center; min-block-size: var(--lg-control-h); min-inline-size: 0; }
 #modelLibraryPage .ml-key-choices { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-inline-size: 0; max-inline-size: 100%; }
 #modelLibraryPage .ml-key-choice { min-block-size: 32px; max-inline-size: 220px; overflow: hidden; padding: 5px 12px; border: 1px solid var(--lg-divider); border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); color: var(--lg-fg-secondary); font: 500 13px/1.2 var(--lg-font); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
