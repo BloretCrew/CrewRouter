@@ -161,14 +161,46 @@
 .admin-model-library .aml-selection.ml-library-reorder-toolbar { display: flex; }
 .admin-model-library .aml-selection[hidden] { display: none !important; }
 
-/* 勾选：只用于批量 */
+/* 额度面板按用户控制台的完整信息流展示；不再在卡片网格里二次滚动裁切 */
 .admin-model-library .ml-model-quota-section .aml-quota-host {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-  max-height: 30rem;
-  overflow: auto;
+  display: block;
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
 }
+.admin-model-library .ml-model-quota-section .quota-analysis {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.admin-model-library .ml-model-quota-section .quota-heading { margin-bottom: 12px; }
+.admin-model-library .ml-model-quota-section .quota-summary { gap: 12px; }
+.admin-model-library .ml-model-quota-section .quota-provider-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.admin-model-library .ml-model-quota-section .quota-provider-card {
+  border-color: var(--lg-glass-border);
+  border-radius: var(--lg-radius-card);
+  background-color: var(--lg-card-bg);
+  background-image: var(--lg-sheen);
+  box-shadow: var(--lg-rim), var(--lg-shadow-card);
+}
+.admin-model-library .ml-model-quota-section .quota-analysis :is(h4, h5, strong) { color: var(--lg-fg); }
+.admin-model-library .ml-model-quota-section .quota-analysis :is(.quota-note, .quota-status, .quota-state),
+.admin-model-library .ml-model-quota-section .quota-analysis label { color: var(--lg-fg-secondary); }
+.admin-model-library .ml-model-quota-section .quota-analysis .quota-account-item + .quota-account-item { border-top-color: var(--lg-divider); }
+.admin-model-library .ml-model-quota-section .quota-analysis :is(.quota-summary, .quota-contribution) { border-color: var(--lg-divider); }
+.admin-model-library .ml-model-quota-section .quota-analysis button[data-variant="secondary"] {
+  border-color: var(--lg-glass-border);
+  border-radius: var(--lg-radius-pill);
+  background: var(--lg-chip-bg);
+  color: var(--lg-fg);
+}
+.admin-model-library .ml-model-quota-section .quota-analysis button[data-variant="secondary"]:hover { background: var(--lg-chip-hover); }
 .admin-model-library .aml-check {
   display: inline-flex;
   flex: none;
