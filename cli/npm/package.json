@@ -12,6 +12,7 @@
   },
   "files": [
     "bin/**",
+    "dsh-plugin/**",
     "index.js",
     "lib/**",
     "tui/**",

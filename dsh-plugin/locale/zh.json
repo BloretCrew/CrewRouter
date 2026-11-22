@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "CrewRouter",
+    "description": "在 DSH 中只读查询 CrewRouter 账户用量、可用模型和会话摘要。"
+  }
+}

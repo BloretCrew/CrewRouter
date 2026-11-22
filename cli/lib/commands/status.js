@@ -42,6 +42,11 @@ const HELP_TEXT = `CrewRouter CLI (cr) — 连接远程实例或从本机启动 
   cr sessions [--days N] [--page N] [--json]
   cr sessions messages <KEY> [--page N] [--json]
 
+DSH 插件：
+  cr dsh-plugin status
+  cr dsh-plugin install --profile <名称>
+  cr dsh-plugin uninstall --profile <名称> [--yes]
+
 其他：
   cr doctor [--json]
   cr version

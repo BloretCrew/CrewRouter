@@ -13,6 +13,7 @@ const source = path.join(__dirname, '..');
 const pkg = { ...require('../package.json'), private: false };
 fs.mkdirSync(destination, { recursive: true });
 for (const entry of ['bin', 'lib', 'tui']) fs.cpSync(path.join(cli, entry), path.join(destination, entry), { recursive: true });
+fs.cpSync(path.join(root, 'dsh-plugin'), path.join(destination, 'dsh-plugin'), { recursive: true });
 fs.copyFileSync(path.join(cli, 'index.js'), path.join(destination, 'index.js'));
 fs.copyFileSync(path.join(root, 'LICENSE'), path.join(destination, 'LICENSE'));
 fs.copyFileSync(path.join(source, 'README.md'), path.join(destination, 'README.md'));

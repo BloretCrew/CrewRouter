@@ -5,7 +5,7 @@ const { printJson, errorPayload, printError, exitCodeFor, describeError } = requ
 const { permissionHint } = require('./lib/auth');
 
 const BOOLEAN_FLAGS = new Set([
-  'json', 'help', 'yes', 'force', 'follow', 'demo', 'login', 'no-color',
+  'json', 'help', 'yes', 'force', 'follow', 'demo', 'login', 'no-color', 'skip-dsh-plugin',
   'enabled', 'disabled', 'password-stdin', 'api-key-stdin', 'version',
 ]);
 
@@ -70,6 +70,10 @@ async function dispatch(argv = process.argv.slice(2)) {
   if (args.noColor || (!process.stdout.isTTY && !process.env.FORCE_COLOR)) { process.env.NO_COLOR = '1'; delete process.env.FORCE_COLOR; }
   const command = args._[0] || (args.help ? 'help' : args.version ? 'version' : 'tui');
   const json = args.json === true;
+  if (command !== 'dsh-plugin' && command !== 'help' && command !== 'version' && command !== 'status' && args['skip-dsh-plugin'] !== true) {
+    try { await require('./lib/dsh-plugin').offerFirstRun(); }
+    catch (error) { process.stderr.write(`cr: DSH 插件自动安装未完成：${error.message}\n手动重试：cr dsh-plugin install --profile <名称>\n`); }
+  }
 
   try {
     switch (command) {
@@ -88,6 +92,9 @@ async function dispatch(argv = process.argv.slice(2)) {
       case 'status': {
         const status = require('./lib/commands/status');
         return await status.statusCommand(args, { json });
+      }
+      case 'dsh-plugin': {
+        return await require('./lib/dsh-plugin').command(args, { json });
       }
       case 'version': {
         const status = require('./lib/commands/status');

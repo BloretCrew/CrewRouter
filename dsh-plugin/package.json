@@ -1,0 +1,29 @@
+{
+  "name": "@bloret-crew/dsh-crewrouter",
+  "version": "0.1.0",
+  "private": false,
+  "description": "在 DeepSeek Harness 中安全使用 CrewRouter 用量、模型和会话能力。",
+  "license": "GPL-3.0",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "peerDependencies": {
+    "@deepseek-ai/dsh": ">=0.2.2-alpha.3",
+    "@deepseek-ai/dsh-tools": "0.2.2-alpha.3",
+    "@deepseek-ai/dsh-credentials": "0.2.2-alpha.3",
+    "@deepseek-ai/schemastery": "^3.18.6"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh": { "optional": true },
+    "@deepseek-ai/dsh-tools": { "optional": true },
+    "@deepseek-ai/dsh-credentials": { "optional": true },
+    "@deepseek-ai/schemastery": { "optional": true }
+  },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

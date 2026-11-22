@@ -72,6 +72,9 @@ cr sessions [--days N] [--page N] [--json]
 cr sessions messages <KEY> [--page N] [--json]
 
 cr doctor [--json]
+cr dsh-plugin status
+cr dsh-plugin install --profile <名称>
+cr dsh-plugin uninstall --profile <名称> [--yes]
 cr version
 cr help
 ```
@@ -110,6 +113,18 @@ CR_THEME / CR_PALETTE / CR_COLOR_SCHEME
 ```
 
 仅日志命令可使用 `-f` 跟随；删除/变更命令默认需要 `--yes`。全屏 TUI 支持键盘、方向键、鼠标、`q` 退出；非 TTY 默认退化为 JSON 状态查询。
+
+### DSH 插件自动安装
+
+CLI 在首次交互运行命令（状态、帮助、版本命令除外）时若检测到 PATH 中存在 DSH，会询问是否为某个 DSH profile 安装 CrewRouter 插件；只有回答确认并指定 profile 后才执行，非交互模式不自动改动。CLI 包安装阶段不会运行安装脚本或修改 DSH profile。也可手动执行：
+
+```bash
+cr dsh-plugin status
+cr dsh-plugin install --profile standard
+cr dsh-plugin uninstall --profile standard
+```
+
+安装使用 DSH 官方 `dsh plugin --profile <profile> add`，插件包随 CLI 一同分发。升级 DSH 或 CLI 不会覆盖/自动升级插件。插件配置需设置 CrewRouter 根 URL，并在 DSH credentials 中设置 CrewRouter API Key；只读用量/模型/会话能力与 Key 权限说明见随包 `dsh-plugin/README.md`。`CR_DSH_PLUGIN_SKIP=1` 可跳过首次提示，或在普通 CLI 命令后加 `--skip-dsh-plugin`。
 
 ## 版本
 
