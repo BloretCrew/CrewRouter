@@ -31,12 +31,11 @@
     root.classList.add('quota-analysis');
     root.dataset.quotaView = context;
     const controls = `<div class="quota-controls">${select('provider_id', '供应商', [['', '全部供应商']])}${select('account_id', '额度账户', [['', '全部账户']])}${select('unit', '单位', [['', '全部单位']])}${select('window_key', '窗口', [['', '全部窗口']])}${select('status', '状态', [['', '全部状态'], ['success', '正常'], ['partial', '部分成功'], ['failed', '查询失败'], ['stale', '已过期']])}${button('apply', '查询')}${button('reset', '重置')}</div>`;
-    const pagination = `<div class="quota-pagination">${button('prev', '上一页', 'disabled')}<span class="quota-page"></span>${button('next', '下一页', 'disabled')}</div>`;
     root.innerHTML = `<div class="quota-heading"><h4>${esc(tr(context === 'multi' ? '相关供应商额度' : context === 'dialog' ? '额度查询记录' : '供应商额度'))}</h4>${context === 'dialog' ? '' : button('history', '额度历史')}</div>
-      ${context === 'dialog' ? controls : context === 'multi' ? `<details class="quota-filter-details"><summary>${esc(tr('额度筛选'))}</summary>${controls}</details>` : `<div hidden>${controls}</div>`}
+      ${context === 'dialog' ? `<div class="quota-history-toolbar"><div><span class="quota-history-eyebrow">${esc(tr('观测记录'))}</span><p class="quota-history-intro">${esc(tr('按供应商、账户和状态快速筛选；图表仅展示成功观测。'))}</p></div></div>${controls}` : context === 'multi' ? `<details class="quota-filter-details"><summary>${esc(tr('额度筛选'))}</summary>${controls}</details>` : `<div hidden>${controls}</div>`}
       <p class="quota-status" role="status" aria-live="polite"></p>
       ${context === 'overview' ? '<div class="quota-summary"></div><details class="quota-cycle-summary"><summary></summary><div></div></details>' : ''}
-      ${context !== 'dialog' ? '<div class="quota-accounts quota-provider-grid"></div><div class="quota-more"></div>' : `<div class="quota-history"><p class="quota-note">${esc(tr('仅按额度筛选，不受请求维度影响。时间为上海时区。'))}</p><div class="quota-history-visual"></div><details class="quota-history-table-details"><summary>${esc(tr('查看原始观测记录'))}</summary><div class="quota-table-wrap quota-history-rows"></div>${pagination}</details></div>`}
+      ${context !== 'dialog' ? '<div class="quota-accounts quota-provider-grid"></div><div class="quota-more"></div>' : `<div class="quota-history"><div class="quota-history-meta"><span>${esc(tr('仅按额度筛选，不受请求维度影响'))}</span><span>${esc(tr('时间为上海时区'))}</span></div><div class="quota-history-visual"></div><section class="quota-history-records"><div class="quota-history-records-heading"><div><h4>${esc(tr('观测明细'))}</h4><p>${esc(tr('查询失败不会补值，历史观测不是实时余额。'))}</p></div><span class="quota-history-total"></span></div><div class="quota-table-wrap quota-history-rows"></div><div class="quota-pagination">${button('prev', '上一页', 'disabled')}<span class="quota-page"></span>${button('next', '下一页', 'disabled')}</div></section></div>`}
       ${context === 'overview' ? `<details class="quota-trend-details"><summary>${esc(tr('查看额度趋势'))}</summary><p class="quota-note quota-coverage"></p><div class="quota-trend-controls">${select('trend_metric', '趋势指标', [['remaining', '剩余额度'], ['used_percent', '窗口已用率'], ['observed_consumption', '观测消耗'], ['percent_change', '已用率变化（百分点）']])}</div><div class="quota-trend"></div><div class="quota-events quota-note"></div></details>` : ''}`;
     const click = event => {
       const el = event.target.closest('[data-quota-action]');
@@ -336,12 +335,11 @@
       const rows = array(data.rows);
       renderHistoryVisual(root, rows, Number(data.total) || 0);
       target.innerHTML = rows.length ? historyTable(rows) : `<p class="quota-note">${esc(tr('暂无额度历史，实际查询后开始记录'))}</p>`;
-      const tableDetails = root.querySelector('.quota-history-table-details');
-      if (tableDetails) tableDetails.open = rows.length > 0;
       const page = Number(data.page) || state.page;
       const limit = Number(data.limit) || 20;
       const total = Number(data.total) || 0;
       state.page = page;
+      root.querySelector('.quota-history-total').textContent = tr('共 {total} 条观测', { total });
       root.querySelector('.quota-page').textContent = tr('第 {page} 页，共 {total} 条', { page, total });
       root.querySelector('[data-quota-action="prev"]').disabled = page <= 1;
       root.querySelector('[data-quota-action="next"]').disabled = page * limit >= total;
