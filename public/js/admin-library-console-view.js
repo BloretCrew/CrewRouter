@@ -105,8 +105,9 @@
     const output = model.output_price_per_1k_tokens ?? model.output_price;
     const hasPrice = input != null || output != null;
     const unavailableLabel = !providerEnabled ? '供应商已关闭' : !systemEnabled ? '系统已关闭' : library.teamId && !teamEnabled ? 'TEAM 未授权' : '不可用';
-    const locked = !!library.teamId && !systemEnabled && !teamEnabled;
-    const switchDisabled = library.busy || locked;
+    // TEAM 开关只表达授权状态；模型即使被系统关闭，也允许管理员预先授权。
+    const locked = false;
+    const switchDisabled = library.busy;
     const name = model.alias || model.name || model.upstream_model_id || id;
     const testBadge = passed
       ? `<span class="blora-tag ml-model-test-badge pass" data-variant="neutral">${esc(latency != null ? `${latency}ms` : text(testLabel))}${speed != null ? ` · ${esc(speed)} t/s` : ''}</span>`
@@ -129,7 +130,7 @@
       </div>
       <div class="model-library-item-actions aml-card-actions">
         <blora-switch role="switch" class="aml-model-switch" aria-checked="${enabled}" ${enabled ? 'checked' : ''} aria-label="${html(library.teamId ? 'TEAM 授权 {name}' : '系统启用 {name}', { name })}" data-action="toggle-model" data-id="${esc(id)}" data-enabled="${!enabled}" ${switchDisabled ? 'disabled' : ''} data-system-locked="${locked}"></blora-switch>
-        ${library.teamId && !systemEnabled ? button('system-enable', '前往系统启用', id) : button('edit-model', '编辑', id)}${menu([['test-model', '测试', id], ['trace-model', '模型归因', id], ['uptime-model', '在线状态', id], ...(library.teamId && !systemEnabled ? [['edit-model', '编辑', id]] : []), ['model-manager', '高级管理', id]])}
+        ${button('edit-model', '编辑', id)}${menu([['test-model', '测试', id], ['trace-model', '模型归因', id], ['uptime-model', '在线状态', id], ...(library.teamId && !systemEnabled ? [['edit-model', '编辑', id]] : []), ['model-manager', '高级管理', id]])}
       </div>
     </article>`;
   }

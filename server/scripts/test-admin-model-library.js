@@ -246,7 +246,8 @@ test('Team 禁用允许系统已禁用模型，私有模型不可授权，缓存
   await handler({ body: { enabled: false }, params: { id: 1, modelId: 'm' } }, res);
   assert.equal(res.statusCode, 200);
   assert.match(queries[1].sql, /p.created_by IS NULL/);
-  assert.equal(queries[1].params[1], false);
+  assert.equal(queries[1].params[0], 'm');
+  assert.equal(queries[1].params.length, 1);
   const source = read('utils/team-model-access.js');
   assert.match(source, /api_key_harness_models ahm/);
   assert.match(source, /JOIN models m ON m.id = tm.model_id AND m.enabled = TRUE/);

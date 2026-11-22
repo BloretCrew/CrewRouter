@@ -428,11 +428,11 @@ router.put('/teams/:id/models/:modelId', requireAuth, requireAdmin, auditMiddlew
       }
       const modelCheck = await client.query(
         `SELECT m.id FROM models m JOIN providers p ON p.id = m.provider
-         WHERE m.id = $1 AND p.created_by IS NULL AND ($2::boolean = FALSE OR m.enabled = TRUE)`,
-        [modelId, nextEnabled]
+         WHERE m.id = $1 AND p.created_by IS NULL`,
+        [modelId]
       );
       if (modelCheck.rows.length === 0) {
-        throw Object.assign(new Error('模型不存在或未在模型管理中启用'), { status: 404 });
+        throw Object.assign(new Error('模型不存在或不允许授权'), { status: 404 });
       }
 
       const result = await client.query(
@@ -499,7 +499,6 @@ router.post('/teams/:id/models/batch', requireAuth, requireAdmin, auditMiddlewar
 
       const params = [];
       const where = ['p.created_by IS NULL'];
-      if (enabled) where.push('m.enabled = TRUE');
       if (hasModelIds) {
         params.push(modelIds.map(String));
         where.push(`m.id = ANY($${params.length}::text[])`);
