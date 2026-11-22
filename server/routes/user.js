@@ -215,6 +215,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
       SELECT
         ak.id,
         ak.name,
+        COALESCE(ak.key_group, '') AS key_group,
         ak.key_prefix,
         ak.key_value,
         ak.permissions,
@@ -436,10 +437,10 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
 
     const result = await pool.query(
       `INSERT INTO api_keys
-         (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled, crewrouter_commands, permissions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, FALSE, $8::jsonb)
-       RETURNING id, name, key_prefix, key_value, custom_model_name, created_at, expires_at, permissions`,
-      [req.authUser.id, keyHash, rawKey, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5', JSON.stringify(grant.value)]
+         (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled, crewrouter_commands, permissions, key_group)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, FALSE, $8::jsonb, $9)
+       RETURNING id, name, key_prefix, key_value, custom_model_name, created_at, expires_at, permissions, key_group`,
+      [req.authUser.id, keyHash, rawKey, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5', JSON.stringify(grant.value), typeof req.body?.key_group === 'string' ? req.body.key_group.trim().slice(0, 100) : '']
     );
 
     // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
@@ -629,6 +630,14 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
       const params = [];
       let idx = 1;
 
+      if (req.body?.key_group !== undefined) {
+        if (!access?.is_owner) return res.status(403).json({ error: '仅发起者可管理密钥分组', code: 'owner_required' });
+        if (typeof req.body.key_group !== 'string' || req.body.key_group.length > 100) {
+          return res.status(400).json({ error: '分组名称必须为 100 个字符以内的文本' });
+        }
+        sets.push(`key_group = $${idx++}`);
+        params.push(req.body.key_group.trim());
+      }
       if (name !== undefined) {
         const trimmed = String(name ?? '').trim();
         if (!trimmed) {
@@ -669,7 +678,7 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
       const result = await db.query(
         `UPDATE api_keys SET ${sets.join(', ')}
          WHERE id = $${idx}
-         RETURNING id, name, key_prefix, custom_model_name, permissions`,
+         RETURNING id, name, key_prefix, custom_model_name, permissions, key_group`,
         params
       );
       // 名称可能进入签名等缓存字段
@@ -3811,8 +3820,11 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
   descriptionFrom: (req) => `创建供应商「${req.body?.name || '-'}」`,
 }), async (req, res) => {
   const { name, base_url, api_key, format, models_url, notes } = req.body;
+  if (format != null && !['openai', 'anthropic', 'responses', 'gemini'].includes(format)) return res.status(400).json({ error: 'API 格式无效' });
+  if (api_key != null && typeof api_key !== 'string') return res.status(400).json({ error: 'API Key 格式无效' });
+  if (notes != null && typeof notes !== 'string') return res.status(400).json({ error: '备注格式无效' });
 
-  if (!name || !base_url) {
+  if (typeof name !== 'string' || !name.trim() || typeof base_url !== 'string' || !base_url.trim()) {
     return res.status(400).json({ error: '请填写供应商名称和 Base URL' });
   }
 
@@ -3942,14 +3954,17 @@ router.get('/my-providers', requireAuth, async (req, res) => {
     let result;
     if (req.personalProviderManager) {
       result = await pool.query(
-        `SELECT id, name, base_url, format, endpoints, enabled, created_at FROM providers ORDER BY created_at DESC`
+        `SELECT p.id, p.name, p.base_url, p.format, p.endpoints, p.enabled, p.notes, p.created_at,
+                (SELECT COUNT(*)::int FROM models m WHERE m.provider = p.id) AS model_count
+           FROM providers p ORDER BY p.created_at DESC`
       );
     } else if (hasCreatedBy) {
       result = await pool.query(
-        `SELECT id, name, base_url, format, endpoints, enabled, created_at
-         FROM providers
-         WHERE created_by = $1
-         ORDER BY created_at DESC`,
+        `SELECT p.id, p.name, p.base_url, p.format, p.endpoints, p.enabled, p.notes, p.created_at,
+                (SELECT COUNT(*)::int FROM models m WHERE m.provider = p.id) AS model_count
+           FROM providers p
+          WHERE p.created_by = $1
+          ORDER BY p.created_at DESC`,
         [req.authUser.id]
       );
     } else {
@@ -4050,7 +4065,12 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
   descriptionFrom: (req) => `更新供应商 #${req.params.id}`,
 }), async (req, res) => {
   const providerId = req.params.id;
-  const { name, base_url, api_key, format } = req.body;
+  const { name, base_url, api_key, format, notes, enabled } = req.body;
+  if (name != null && (typeof name !== 'string' || !name.trim())) return res.status(400).json({ error: '供应商名称不能为空' });
+  if (base_url != null && (typeof base_url !== 'string' || !base_url.trim())) return res.status(400).json({ error: 'Base URL 不能为空' });
+  if (format != null && !['openai', 'anthropic', 'responses', 'gemini'].includes(format)) return res.status(400).json({ error: 'API 格式无效' });
+  if (enabled != null && typeof enabled !== 'boolean') return res.status(400).json({ error: '启用状态无效' });
+  if (notes != null && typeof notes !== 'string') return res.status(400).json({ error: '备注格式无效' });
 
   try {
     // 检查是否是用户自己的供应商
@@ -4078,34 +4098,50 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
     const values = [];
     let paramIndex = 1;
 
-    if (name) {
+    if (name != null) {
       updates.push(`name = $${paramIndex++}`);
-      values.push(name);
+      values.push(name.trim());
     }
-    if (base_url) {
+    if (base_url != null) {
       updates.push(`base_url = $${paramIndex++}`);
-      values.push(base_url.replace(/\/+$/, ''));
+      values.push(base_url.trim().replace(/\/+$/, ''));
+    }
+    if (notes != null) {
+      updates.push(`notes = $${paramIndex++}`);
+      values.push(notes.trim());
+    }
+    if (enabled != null) {
+      updates.push(`enabled = $${paramIndex++}`);
+      values.push(enabled);
     }
     if (api_key) {
       const encryptedApiKey = encryptSecret(api_key);
       updates.push(`api_key = $${paramIndex++}`);
       values.push(encryptedApiKey);
-      updates.push(`api_keys = $${paramIndex++}::jsonb`);
-      values.push(JSON.stringify([{ key: encryptedApiKey, weight: 1, enabled: true }]));
+      const apiKeysCol = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'providers' AND column_name = 'api_keys'");
+      if (apiKeysCol.rows.length > 0) {
+        updates.push(`api_keys = $${paramIndex++}::jsonb`);
+        values.push(JSON.stringify([{ key: encryptedApiKey, weight: 1, enabled: true }]));
+      }
     }
     if (format) {
       updates.push(`format = $${paramIndex++}`);
       values.push(format);
     }
     if (Object.prototype.hasOwnProperty.call(req.body, 'endpoints')) {
+      const currentProvider = await pool.query('SELECT base_url, format FROM providers WHERE id = $1', [providerId]);
+      const effectiveBaseUrl = base_url ?? currentProvider.rows[0]?.base_url;
+      const effectiveFormat = format ?? currentProvider.rows[0]?.format;
       const colCheck = await pool.query(
         "SELECT column_name FROM information_schema.columns WHERE table_name = 'providers' AND column_name = 'endpoints'"
       );
       if (colCheck.rows.length > 0) {
-        const normalized = normalizeEndpointsInput(req.body.endpoints, { baseUrl: base_url, format });
+        const normalized = normalizeEndpointsInput(req.body.endpoints, { baseUrl: effectiveBaseUrl, format: effectiveFormat });
         if (!normalized.ok) return res.status(400).json({ error: '端点配置无效', errors: normalized.errors });
         updates.push(`endpoints = $${paramIndex++}::jsonb`);
         values.push(JSON.stringify(normalized.endpoints));
+      } else {
+        return res.status(400).json({ error: '当前版本不支持附加端点，请升级数据库结构' });
       }
     }
 
@@ -4366,7 +4402,8 @@ router.get('/providers/:id/models', requireAuth, async (req, res) => {
     // 获取该供应商下的模型
     const result = await pool.query(
       `SELECT id, name, upstream_model_id, alias, series, description, enabled,
-              input_price_per_1k_tokens, output_price_per_1k_tokens
+              input_price_per_1k_tokens, output_price_per_1k_tokens,
+              cached_output_price_per_1k_tokens, model_multiplier
        FROM models
        WHERE provider = $1
        ORDER BY name`,
@@ -4420,8 +4457,8 @@ router.post('/providers/:providerId/models/batch-delete', requireAuth, async (re
   const { providerId } = req.params;
   const { modelIds } = req.body;
 
-  if (!modelIds || !Array.isArray(modelIds) || modelIds.length === 0) {
-    return res.status(400).json({ error: '请选择要删除的模型' });
+  if (!modelIds || !Array.isArray(modelIds) || modelIds.length === 0 || modelIds.length > 500 || modelIds.some(id => typeof id !== 'string' || id.length > 200)) {
+    return res.status(400).json({ error: '请选择有效模型（最多 500 个）' });
   }
 
   try {
@@ -4464,11 +4501,11 @@ router.post('/providers/:providerId/models/batch-update', requireAuth, async (re
   const { providerId } = req.params;
   const { modelIds, updates } = req.body;
 
-  if (!modelIds || !Array.isArray(modelIds) || modelIds.length === 0) {
-    return res.status(400).json({ error: '请选择要更新的模型' });
+  if (!modelIds || !Array.isArray(modelIds) || modelIds.length === 0 || modelIds.length > 500 || modelIds.some(id => typeof id !== 'string' || id.length > 200)) {
+    return res.status(400).json({ error: '请选择有效模型（最多 500 个）' });
   }
 
-  if (!updates || typeof updates !== 'object') {
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
     return res.status(400).json({ error: '请提供更新内容' });
   }
 
@@ -4499,12 +4536,17 @@ router.post('/providers/:providerId/models/batch-update', requireAuth, async (re
     const values = [providerId];
     let paramIndex = 2;
 
+    const unknownFields = Object.keys(updates).filter(key => !allowedFields.includes(key));
+    if (unknownFields.length) return res.status(400).json({ error: '包含不支持的更新字段' });
     for (const [key, value] of Object.entries(updates)) {
-      if (allowedFields.includes(key)) {
-        updateClauses.push(`${key} = $${paramIndex}`);
-        values.push(value);
-        paramIndex++;
+      if (key.endsWith('_price_per_1k_tokens') && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+        return res.status(400).json({ error: '模型价格必须为非负数字' });
       }
+      if (key === 'enabled' && typeof value !== 'boolean') return res.status(400).json({ error: '启用状态无效' });
+      if (['series', 'description', 'alias'].includes(key) && typeof value !== 'string') return res.status(400).json({ error: '模型文本字段格式无效' });
+      updateClauses.push(`${key} = $${paramIndex}`);
+      values.push(value);
+      paramIndex++;
     }
 
     if (updateClauses.length === 0) {
@@ -5410,6 +5452,7 @@ router.put('/key-tags/reorder', requireAuth, async (req, res) => {
 });
 
 // 设置指定 API Key 的标签
+// 为 API Key 指定独立的用户自定义分组
 router.put('/api-keys/:id/tags', requireAuth, auditMiddleware(ACTIONS.API_KEY_TAGS, {
   resourceType: 'api_key',
   resourceIdFrom: (req) => req.params.id,
@@ -5417,7 +5460,7 @@ router.put('/api-keys/:id/tags', requireAuth, auditMiddleware(ACTIONS.API_KEY_TA
   detailsFrom: (req) => ({ tag_ids: req.body?.tagIds }),
 }), async (req, res) => {
   const { id } = req.params;
-  const { tagIds } = req.body;
+  const tagIds = req.body?.tagIds;
   if (!Array.isArray(tagIds)) return res.status(400).json({ error: 'tagIds 必须为数组' });
 
   try {

@@ -782,8 +782,14 @@ class ConsoleApp {
           <div class="api-keys-list">${keys.map(key => this._renderApiKeyCard(key)).join('')}</div>
         </section>`;
       setBloraState('apiKeysList', 'success');
+      const groupedNormalKeys = new Map();
+      for (const key of normalKeys) {
+        const groupName = typeof key.key_group === 'string' ? key.key_group.trim() : '';
+        if (!groupedNormalKeys.has(groupName)) groupedNormalKeys.set(groupName, []);
+        groupedNormalKeys.get(groupName).push(key);
+      }
       setHTML(container, `<div class="api-key-groups">
-        ${renderGroup(t('普通 API Key'), t('仅自己管理的密钥'), normalKeys, 'api-key-group-normal')}
+        ${[...groupedNormalKeys.entries()].map(([name, keys]) => renderGroup(name ? escapeHtml(name) : t('未分组'), name ? t('API Key 分组') : t('仅自己管理的密钥'), keys, 'api-key-group-normal')).join('')}
         ${renderGroup('Co-Key', t('已共享给成员，或由其他用户共享给您'), coKeys, 'api-key-group-cokey')}
       </div>
       <div id="apiKeysFilterEmpty" class="ak-filter-empty" hidden>
@@ -992,6 +998,7 @@ class ConsoleApp {
       ...(isOwner ? [
         { label: t('客户端配置'), onClick: `app.generateClaudeConfig(${key.id})` },
         { label: t('额度脚本'), onClick: `app.generateUsageScript(${key.id})` },
+        { label: t('设置分组'), onClick: `app.editApiKeyGroup(${key.id})` },
       ] : []),
       { label: t('Fusion 配置'), onClick: `app.showKeyFusionConfig(${key.id})` },
       { label: t('选项'), onClick: `app.showKeyOptions(${key.id})` },
@@ -1191,6 +1198,28 @@ class ConsoleApp {
 
   closeApiKeyMoreMenus() {
     document.querySelectorAll('#apiKeysList blora-dropdown.api-key-more').forEach(el => el.close?.());
+  }
+
+  async editApiKeyGroup(keyId) {
+    const key = (this._lastApiKeys || []).find(item => Number(item.id) === Number(keyId));
+    if (!key || key.is_owner === false) return;
+    const proposedGroup = window.prompt(t('输入 API Key 分组名称；留空表示未分组'), key.key_group || '');
+    if (proposedGroup === null) return;
+    const group = proposedGroup.trim();
+    if (group.length > 100) return this.showToast(t('分组名称最多 100 个字符'), 'error');
+    try {
+      const response = await fetch(`/api/user/api-keys/${keyId}/group`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) return this.showToast(result.error || t('保存分组失败'), 'error');
+      this.showToast(t('API Key 分组已保存'), 'success');
+      await this.loadApiKeys();
+    } catch (_) {
+      this.showToast(t('保存分组失败'), 'error');
+    }
   }
 
   // ===== API Key 标签系统 =====
@@ -9628,14 +9657,20 @@ ${extractorBody}
     setBloraState('myProvidersTable', 'loading');
     try {
       const res = await fetch('/api/user/my-providers');
-      if (!res.ok) { setBloraState('myProvidersTable', 'error'); return; }
+      if (!res.ok) {
+        setBloraState('myProvidersTable', 'error');
+        const container = document.getElementById('myProvidersTable');
+        setHTML(container, `<div class="blora-table-empty blora-empty" role="status"><div class="blora-empty__title">${t('供应商列表加载失败')}</div><div class="blora-empty__desc">${t('请检查网络后重试')}</div><button type="button" class="blora-button" data-variant="secondary" onclick="app.loadMyProvidersPage()">${t('重试')}</button></div>`);
+        return;
+      }
       const providers = await res.json();
-
       const container = document.getElementById('myProvidersTable');
       if (!Array.isArray(providers)) {
         setBloraState('myProvidersTable', 'error');
         return;
       }
+      this._myProviders = providers;
+      this.renderMyProviderStats(providers);
       if (!providers.length) {
         setBloraState('myProvidersTable', 'empty');
         setHTML(container, this._upTableEmpty(t('暂无供应商'), t('点击上方「添加供应商」开始')));
@@ -9653,6 +9688,7 @@ ${extractorBody}
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
+              <th>状态</th>
               <th>延迟</th>
               <th>模型数</th>
               <th data-blora-fixed="right">操作</th>
@@ -9660,7 +9696,7 @@ ${extractorBody}
           </thead>
           <tbody>
             ${providers.map(p => `
-              <tr data-provider-id="${escapeHtml(p.id)}">
+              <tr data-provider-id="${escapeHtml(p.id)}" data-provider-enabled="${p.enabled === false ? 'false' : 'true'}">
                 <td class="blora-table-select-col"><label class="blora-table-check"><input type="checkbox" class="provider-checkbox" value="${escapeHtml(p.id)}" aria-label="${escapeHtml(p.name)}" onchange="app.updateBatchButtons()"></label></td>
                 <td>
                   <div class="up-cell-title">${escapeHtml(p.name)}</div>
@@ -9668,13 +9704,15 @@ ${extractorBody}
                 </td>
                 <td><div class="up-cell-url" title="${escapeHtml(p.base_url)}">${escapeHtml(p.base_url)}</div></td>
                 <td>${escapeHtml(formatDisplayName(p.format))}</td>
+                <td>${p.enabled === false ? `<span class="blora-tag" data-variant="neutral">${t('禁用')}</span>` : `<span class="blora-tag" data-variant="success">${t('启用')}</span>`}</td>
                 <td><div id="user-ping-page-${escapeHtml(String(p.id))}" class="up-cell-sub">—</div></td>
                 <td>
-                  <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')"><span data-icon="list" aria-hidden="true"></span>模型</button>
+                  <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')"><span data-icon="list" aria-hidden="true"></span>${Number(p.model_count || 0)} ${t('个模型')}</button>
                 </td>
                 <td data-blora-fixed="right">
                   <div class="up-row-actions">
                     ${this._upIconAction('heart-pulse', t('检测连通性'), `app.pingUserProvider('${this._jsString(p.id)}')`)}
+                    ${this._upIconAction('refresh-cw', t('同步模型'), `app.refreshProviderModels('${this._jsString(p.id)}')`)}
                     ${this._upIconAction('square-pen', t('编辑'), `app.editMyProvider('${this._jsString(p.id)}')`)}
                     ${this._upIconAction('trash-2', t('删除'), `app.deleteMyProvider('${this._jsString(p.id)}')`)}
                   </div>
@@ -9683,6 +9721,7 @@ ${extractorBody}
             `).join('')}
           </tbody>
         </table>
+        <div id="myProvidersNoMatch" class="blora-table-empty blora-empty" role="status" hidden><div class="blora-empty__title">${t('没有符合条件的供应商')}</div></div>
         </div>
       `);
       if (window.bloraHydrateIcons) window.bloraHydrateIcons(container);
@@ -9691,6 +9730,7 @@ ${extractorBody}
     } catch (error) {
       setBloraState('myProvidersTable', 'error');
       console.error(t('加载供应商页面失败:'), error);
+      setHTML(document.getElementById('myProvidersTable'), `<div class="blora-table-empty blora-empty" role="status"><div class="blora-empty__title">${t('供应商列表加载失败')}</div><div class="blora-empty__desc">${t('请检查网络后重试')}</div><button type="button" class="blora-button" data-variant="secondary" onclick="app.loadMyProvidersPage()">${t('重试')}</button></div>`);
     }
   }
 
@@ -9725,9 +9765,49 @@ ${extractorBody}
 
   filterMyProviders(keyword) {
     const kw = String(keyword || '').trim().toLowerCase();
-    document.querySelectorAll('#myProvidersTable tbody tr').forEach(row => {
-      row.hidden = kw !== '' && !row.textContent.toLowerCase().includes(kw);
+    const status = document.getElementById('myProviderStatusFilter')?.value || '';
+    const rows = document.querySelectorAll('#myProvidersTable tbody tr');
+    rows.forEach(row => {
+      const disabled = row.dataset.providerEnabled === 'false';
+      row.hidden = (kw !== '' && !row.textContent.toLowerCase().includes(kw)) ||
+        (status === 'enabled' && disabled) || (status === 'disabled' && !disabled);
     });
+    const visibleCount = [...rows].filter(row => !row.hidden).length;
+    const empty = document.getElementById('myProvidersNoMatch');
+    if (empty) empty.hidden = visibleCount > 0 || rows.length === 0;
+  }
+
+  renderMyProviderStats(providers = this._myProviders || []) {
+    const stats = document.getElementById('myProviderStats');
+    if (!stats) return;
+    const total = Array.isArray(providers) ? providers.length : 0;
+    const enabled = (providers || []).filter(provider => provider.enabled !== false).length;
+    const models = (providers || []).reduce((sum, provider) => sum + Number(provider.model_count || 0), 0);
+    const tested = (providers || []).filter(provider => provider.last_ping?.ok).length;
+    stats.innerHTML = `<div class="up-provider-stat"><strong>${total}</strong><span>${t('我的供应商')}</span></div><div class="up-provider-stat"><strong>${enabled}</strong><span>${t('已启用')}</span></div><div class="up-provider-stat"><strong>${models}</strong><span>${t('已配置模型')}</span></div><div class="up-provider-stat"><strong>${tested}/${total}</strong><span>${t('连通性已测')}</span></div>`;
+  }
+
+  async pingAllUserProviders() {
+    const providers = (this._myProviders || []).filter(provider => provider.enabled !== false);
+    if (!providers.length) return this.showToast(t('暂无可检测的已启用供应商'), 'info');
+    this.showToast(`${t('正在检测')}${providers.length}${t('个供应商…')}`, 'info');
+    await Promise.allSettled(providers.map(provider => this.pingUserProvider(provider.id)));
+    const reachable = providers.filter(provider => provider.last_ping?.ok).length;
+    this.showToast(`${t('检测完成：')}${reachable}/${providers.length}${t('个供应商可连接')}`, reachable === providers.length ? 'success' : 'error');
+  }
+
+  async batchRefreshProviders() {
+    const ids = [...document.querySelectorAll('.provider-checkbox:checked')].map(cb => cb.value);
+    if (!ids.length || !await confirm(`${t('确定同步选中的')}${ids.length}${t('个供应商的模型吗？')}`)) return;
+    let succeeded = 0;
+    for (const id of ids) {
+      try {
+        const response = await fetch(`/api/user/providers/${encodeURIComponent(id)}/refresh-models`, { method: 'POST' });
+        if (response.ok) succeeded++;
+      } catch (_) { /* 汇总展示部分失败 */ }
+    }
+    this.showToast(`${t('已同步')}${succeeded}/${ids.length}${t('个供应商')}`, succeeded === ids.length ? 'success' : 'error');
+    await Promise.all([this.loadMyProvidersPage(), this.loadMyTeamModels(), this.loadModelLibrary()]);
   }
 
   _bindMyUpstreamControls() {
@@ -9751,6 +9831,7 @@ ${extractorBody}
       });
     };
     bindSearch(providerSearch, (v) => this.filterMyProviders(v));
+    document.getElementById('myProviderStatusFilter')?.addEventListener('change', () => this.filterMyProviders(providerSearch?.value || ''));
     bindSearch(modelSearch, (v) => this.filterMyTeamModels(v));
     if (window.bloraHydrateIcons) window.bloraHydrateIcons(document.getElementById('myUpstreamPage'));
   }
@@ -9849,8 +9930,10 @@ ${extractorBody}
 
       // 填充编辑表单
       document.getElementById('editProviderId').value = provider.id;
-      document.getElementById('editProviderName').textContent = provider.name;
+      document.getElementById('editProviderName').value = provider.name || '';
       document.getElementById('editProviderBaseUrl').value = provider.base_url || '';
+      document.getElementById('editProviderNotes').value = provider.notes || '';
+      document.getElementById('editProviderEnabled').checked = provider.enabled !== false;
       document.getElementById('editProviderApiKey').value = '';
       document.getElementById('editProviderFormat').value = provider.format || 'openai';
       this._editProviderEndpoints = (Array.isArray(provider.endpoints) ? provider.endpoints : [])
@@ -9875,10 +9958,18 @@ ${extractorBody}
     errorEl.style.display = 'none';
 
     const providerId = document.getElementById('editProviderId').value;
+    const name = document.getElementById('editProviderName').value.trim();
     const baseUrl = document.getElementById('editProviderBaseUrl').value.trim();
     const apiKey = document.getElementById('editProviderApiKey').value.trim();
     const format = document.getElementById('editProviderFormat').value;
+    const notes = document.getElementById('editProviderNotes').value.trim();
+    const enabled = document.getElementById('editProviderEnabled').checked;
 
+    if (!name) {
+      errorEl.textContent = t('请输入供应商名称');
+      errorEl.style.display = 'block';
+      return;
+    }
     if (!baseUrl) {
       errorEl.textContent = t('请输入 Base URL');
       errorEl.style.display = 'block';
@@ -9886,7 +9977,7 @@ ${extractorBody}
     }
 
     try {
-      const body = { base_url: baseUrl, format };
+      const body = { name, base_url: baseUrl, format, notes, enabled };
       if (apiKey) body.api_key = apiKey;
       if (Array.isArray(this._editProviderEndpoints)) {
         body.endpoints = this._collectEditProviderEndpoints();
@@ -9907,7 +9998,7 @@ ${extractorBody}
 
       this.closeModals();
       this.showToast(t('供应商已更新'), 'success');
-      await this.loadModelLibrary();
+      await Promise.all([this.loadMyProvidersPage(), this.loadMyTeamModels(), this.loadModelLibrary()]);
     } catch (error) {
       errorEl.textContent = t('网络错误，请重试');
       errorEl.style.display = 'block';
@@ -9999,6 +10090,11 @@ ${extractorBody}
       const resultHtml = data.ok
         ? `<span style="color:${data.latency_ms <= 300 ? 'var(--success)' : data.latency_ms <= 1000 ? 'var(--warning)' : 'var(--destructive)'};font-weight:500;">${data.latency_ms}ms</span>`
         : `<span style="color:var(--destructive);" title="${escapeHtml(data.error || '')}">${t('失败')}</span>`;
+      const provider = (this._myProviders || []).find(item => String(item.id) === String(providerId));
+      if (provider) {
+        provider.last_ping = data.ok ? { ok: true, latency_ms: data.latency_ms } : { ok: false };
+        this.renderMyProviderStats(this._myProviders);
+      }
       if (display) setHTML(display, resultHtml);
       if (pageDisplay) setHTML(pageDisplay, resultHtml);
       libDisplays.forEach(el => setHTML(el, resultHtml));
@@ -10046,7 +10142,7 @@ ${extractorBody}
         return;
       }
       this.showToast(t('供应商已删除'), 'success');
-      await this.loadModelLibrary();
+      await Promise.all([this.loadMyProvidersPage(), this.loadMyTeamModels(), this.loadModelLibrary()]);
     } catch (error) {
       alert(t('网络错误，请重试'));
     }
@@ -10062,7 +10158,7 @@ ${extractorBody}
         return;
       }
       this.showToast(`${t('已添加')}${data.added}${t('个新模型（共')}${data.total}${t('个）')}`, 'success');
-      await this.loadModelLibrary();
+      await Promise.all([this.loadMyProvidersPage(), this.loadMyTeamModels(), this.loadModelLibrary()]);
     } catch (error) {
       alert(t('网络错误，请重试'));
     }
@@ -10088,9 +10184,9 @@ ${extractorBody}
       if (!res.ok) throw new Error(t('获取模型列表失败'));
       const models = await res.json();
       if (!Array.isArray(models)) throw new Error(t('获取模型列表失败'));
+      this._currentManageModels = models;
       setBloraState('manageModelsContent', models.length ? 'success' : 'empty');
 
-      this._currentManageModels = models;
       this.renderManageModels(models);
     } catch (error) {
       setBloraState('manageModelsContent', 'error');
@@ -10117,9 +10213,13 @@ ${extractorBody}
     const container = document.getElementById('manageModelsList');
     setBloraState('manageModelsContent', models.length ? 'success' : 'empty');
     const countEl = document.getElementById('manageModelsCount');
-    document.getElementById('selectAllManageModels').checked = false;
+    const selectAll = document.getElementById('selectAllManageModels');
+    if (selectAll) selectAll.checked = false;
 
-    countEl.textContent = `${t('共')}${models.length}${t('个模型')}`;
+    const total = this._currentManageModels.length;
+    countEl.textContent = models.length === total
+      ? `${t('共')}${total}${t('个模型')}`
+      : `${t('匹配')}${models.length}${t('个 · 共')}${total}${t('个')}`;
 
     if (models.length === 0) {
       setHTML(container, `
@@ -10151,7 +10251,8 @@ ${extractorBody}
     const filtered = this._currentManageModels.filter(m =>
       (m.name || '').toLowerCase().includes(kw) ||
       (m.id || '').toLowerCase().includes(kw) ||
-      (m.series || '').toLowerCase().includes(kw)
+      (m.series || '').toLowerCase().includes(kw) ||
+      (m.provider_name || '').toLowerCase().includes(kw)
     );
     this._renderManageModelsList(filtered);
   }
@@ -10176,7 +10277,7 @@ ${extractorBody}
         return;
       }
       this.showToast(`${t('已添加')}${data.added}${t('个新模型')}`, 'success');
-      // 重新加载模型列表
+      await Promise.all([this.loadMyProvidersPage(), this.loadMyTeamModels(), this.loadModelLibrary()]);
       await this.showManageModelsModal(providerId);
     } catch (error) {
       alert(t('网络错误，请重试'));
@@ -10210,7 +10311,7 @@ ${extractorBody}
 
       this.showToast(`${t('已删除')}${data.deleted}${t('个模型')}`, 'success');
       this.closeModals();
-      await this.loadMyProvidersPage();
+      await Promise.all([this.loadMyProvidersPage(), this.loadMyTeamModels(), this.loadModelLibrary()]);
     } catch (error) {
       alert(t('网络错误，请重试'));
     }
@@ -10255,6 +10356,7 @@ ${extractorBody}
       }
 
       this.showToast(`${t('已')}${action} ${data.updated}${t('个模型')}`, 'success');
+      await Promise.all([this.loadMyTeamModels(), this.loadModelLibrary()]);
       await this.showManageModelsModal(providerId);
     } catch (error) {
       alert(t('网络错误，请重试'));
@@ -10283,6 +10385,7 @@ ${extractorBody}
       }
 
       this.showToast(`${t('已删除')}${data.deleted}${t('个模型')}`, 'success');
+      await Promise.all([this.loadMyProvidersPage(), this.loadMyTeamModels(), this.loadModelLibrary()]);
       await this.showManageModelsModal(providerId);
     } catch (error) {
       alert(t('网络错误，请重试'));
@@ -10332,6 +10435,7 @@ ${extractorBody}
 
       this.showToast(`${t('已更新')}${data.updated}${t('个模型的价格')}`, 'success');
       this.closeModals();
+      await Promise.all([this.loadMyTeamModels(), this.loadModelLibrary()]);
       await this.showManageModelsModal(providerId);
     } catch (error) {
       alert(t('网络错误，请重试'));
@@ -13473,8 +13577,14 @@ ${extractorBody}
     // 每次重新加载 Key 后恢复为收起状态，用户可通过展开按钮查看完整列表。
     const visibleKeys = this._libraryKeysExpanded ? keys : keys.slice(0, 5);
     const remainingCount = keys.length - visibleKeys.length;
+    const groups = new Map();
+    for (const key of visibleKeys) {
+      const groupName = key.is_co_key ? t('Co-Key') : (String(key.key_group || '').trim() || t('未分组'));
+      if (!groups.has(groupName)) groups.set(groupName, []);
+      groups.get(groupName).push(key);
+    }
     const html = `<div class="ml-key-choices" role="group" aria-label="${escapeHtml(t('切换 Key'))}">
-      ${visibleKeys.map(key => `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${escapeHtml(key.name || 'API Key')}</button>`).join('')}
+      ${[...groups.entries()].map(([groupName, groupKeys]) => `<div class="ml-key-choice-group"><span class="ml-key-choice-group-title">${escapeHtml(groupName)}</span>${groupKeys.map(key => `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${escapeHtml(key.name || 'API Key')}</button>`).join('')}</div>`).join('')}
       ${remainingCount > 0 ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="false" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('展开余下的 {count} 个 Key', { count: remainingCount }))}</button>` : this._libraryKeysExpanded && keys.length > 5 ? `<button type="button" class="ml-key-choice ml-key-expand" aria-expanded="true" onclick="app.toggleLibraryKeysExpand()">${escapeHtml(t('收起'))}</button>` : ''}
     </div>`;
     setHTML(chipsContainer, html);

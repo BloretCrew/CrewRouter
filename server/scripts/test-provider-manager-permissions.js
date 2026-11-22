@@ -127,8 +127,9 @@ async function testUserReadsAndMutations() {
           assert(sql.includes('$2::boolean OR created_by IS NULL OR created_by = $1'));
           return { rows: personal ? rows : rows.slice(0, 2) };
         }
-        assert.strictEqual(sql.includes('WHERE created_by = $1'), !personal);
-        return { rows: personal ? rows : [rows[1]] };
+        assert.strictEqual(sql.includes('WHERE p.created_by = $1'), !personal);
+        assert(sql.includes('AS model_count'));
+        return { rows: (personal ? rows : [rows[1]]).map(row => ({ ...row, model_count: 1 })) };
       } };
       const res = response();
       await handler('routes/user.js', 'get', route, pool)({ session: { user: { id: 7 } }, authUser: { id: 7 }, personalProviderManager: personal }, res);

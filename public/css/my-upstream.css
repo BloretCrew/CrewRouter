@@ -48,6 +48,10 @@
   & .up-toolbar .blora-button [data-icon] { display: inline-flex; inline-size: 16px; block-size: 16px; }
   & .up-search { display: block; flex: 0 1 340px; inline-size: auto; min-width: 0; }
   & .up-count { margin-inline-start: auto; color: var(--lg-fg-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
+  & .up-provider-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0 0 16px; }
+  & .up-provider-stat { display: flex; align-items: baseline; gap: 9px; padding: 14px 16px; border: 1px solid var(--lg-divider); border-radius: var(--lg-radius-card); background: var(--lg-group-bg); }
+  & .up-provider-stat strong { color: var(--lg-fg); font-size: 20px; font-variant-numeric: tabular-nums; }
+  & .up-provider-stat span { color: var(--lg-fg-secondary); font-size: 12.5px; }
   & .up-toolbar-slot .blora-table-bulk { min-block-size: var(--lg-control-h); padding-block: 2px; }
 
   /* 表格单元 */
@@ -74,6 +78,8 @@
     & .up-toolbar-slot { border-radius: 22px; }
     & .up-toolbar { flex-wrap: wrap; }
     & .up-search { flex: 1 1 100%; }
+    & .up-provider-filter { flex: 1 1 100%; }
+    & .up-provider-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     & .up-count { margin-inline-start: 4px; }
     & .up-toolbar .blora-button { margin-inline-start: auto; }
   }

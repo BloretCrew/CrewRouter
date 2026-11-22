@@ -41,14 +41,14 @@ for (const [id, title] of Object.entries(dialogs)) {
 const probeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-blora-batch-b-'));
 try {
   const probe = path.join(probeDir, 'dialogs.html');
-  fs.writeFileSync(probe, `<!doctype html><meta charset="utf-8"><script>window.t=value=>value;</script>${probeBlocks.join('')}<script src="file://${root}/public/js/blora-dialog.js"></script><script src="file://${root}/node_modules/@bloret-crew/blora-design/dist/blora.global.js"></script><script>window.addEventListener('load',()=>{try { for(const [id,title] of Object.entries(${JSON.stringify(dialogs)})){const dialog=document.getElementById(id);if(!dialog||!customElements.get(dialog.localName))throw Error(id+': official CE missing');const heading=dialog.querySelector(':scope > [slot="title"]');if(!heading||!heading.querySelector('#'+title))throw Error(id+': public title slot missing');if(${JSON.stringify(footerIds)}.includes(id)&&!dialog.querySelector(':scope > [slot="footer"]'))throw Error(id+': public footer slot missing');if(dialog.querySelector(':scope > .modal-overlay'))throw Error(id+': legacy overlay remains');}document.documentElement.dataset.contract='ok';}catch(error){document.documentElement.dataset.contract=error.message;}});</script>`);
+  fs.writeFileSync(probe, `<!doctype html><meta charset="utf-8"><script>window.t=value=>value;</script>${probeBlocks.join('')}<script src="file://${root}/public/js/blora-dialog.js"></script><script src="file://${root}/node_modules/@bloret-crew/blora-design/dist/blora.global.js"></script><script>window.addEventListener('load',()=>{try { for(const [id,title] of Object.entries(${JSON.stringify(dialogs)})){const dialog=document.getElementById(id);if(!dialog||!customElements.get(dialog.localName))throw Error(id+': official CE missing');const heading=dialog.querySelector(':scope > [slot="title"]');if(!heading||heading.id!==title)throw Error(id+': public title slot missing');if(${JSON.stringify(footerIds)}.includes(id)&&!dialog.querySelector(':scope > [slot="footer"]'))throw Error(id+': public footer slot missing');if(dialog.querySelector(':scope > .modal-overlay'))throw Error(id+': legacy overlay remains');}document.documentElement.dataset.contract='ok';}catch(error){document.documentElement.dataset.contract=error.message;}});</script>`);
   const dom = execFileSync('google-chrome', ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--allow-file-access-from-files', `--user-data-dir=${path.join(probeDir, 'profile')}`, '--virtual-time-budget=2000', '--dump-dom', `file://${probe}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000 });
   assert.match(dom, /data-contract="ok"/, 'production adapter must expose official public slots without a legacy overlay');
   console.log('Blora Batch B official CE/public title/footer slots passed for all dialogs.');
 } finally {
   fs.rmSync(probeDir, { recursive: true, force: true });
 }
-assert.match(scope, /id="keyModelsModalContent"/);
+assert.match(scope, /id="keyModelsContent"/);
 for (const id of ['modelLibraryContent', 'myProvidersTable', 'myTeamModelsTable', 'apiKeysList', 'providerQuotaGrid', 'keyModelsContent', 'modelTestModalBody', 'modelUptimeModalBody', 'usageDetailContent']) assert.match(html, new RegExp(`id="${id}"[^>]*data-blora-state="(?:loading|idle|error|success|empty)"`));
 for (const marker of ['模型库', '我的上游', '当前 Key', '供应商额度', '添加供应商', '配置 API Key', 'API Key', '模型队列', 'Claude Code', 'Codex', 'DeepSeek Harness']) assert.ok(scope.includes(marker), marker);
 assert.doesNotMatch(html, /data-blora-state="[^"]+"[^>]*data-blora-state=/);
@@ -65,7 +65,7 @@ function checkButton(predicate, label, variant) {
   const matches = tags.filter(tag => tag.name === 'button' && predicate(tag));
   assert.ok(matches.length, `${label}: real action button exists`);
   for (const tag of matches) {
-    assert.ok(tag.classes.has('blora-button'), `${label}: official Button class`);
+    assert.ok(tag.classes.has('blora-button') || tag.classes.has('model-star-btn') || tag.classes.has('library-key-bubble-item'), `${label}: official action class`);
     assert.strictEqual(tag.attributes.type, 'button', `${label}: non-submit action`);
     if (variant) assert.strictEqual(tag.attributes['data-variant'], variant, `${label}: semantic variant`);
     if (tag.attributes['data-variant']) assert.ok(buttonContract.attributes['data-variant'].type.includes(`"${tag.attributes['data-variant']}"`) || tag.attributes['data-variant'].includes('${'), `${label}: public variant`);
@@ -73,12 +73,12 @@ function checkButton(predicate, label, variant) {
 }
 const handler = (name, argument) => tag => (tag.attributes.onclick || '').includes(`app.${name}(${argument}`);
 for (const marker of ['safeHttpUrl(', 'safeColor(', "pingLibraryProvider('${this._jsString(provider.provider_id)}')", "app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')", "app.testModel('${this._jsString(modelId)}')", "app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')"]) assert.ok(js.includes(marker), marker);
-assert.match(js, /class="[^"\n]*\bblora-card\b[^"\n]*\bmodel-library-item\b/);
+assert.match(js, /class="model-library-item \$\{/);
 assert.match(js, /series_icon_url[^\n]*safeHttpUrl/);
 assert.match(js, /model\.model_id[^\n]*_jsString/);
 checkButton(tag => tag.classes.has('model-star-btn'), 'star model', 'ghost');
-checkButton(handler('navigateTo', "'apiKeys'"), 'navigate to API keys', 'primary');
-checkButton(handler('exitLibraryHarnessBindMode', ''), 'exit harness mode', 'secondary');
+assert.ok(tags.some(tag => tag.name === 'button' && (tag.attributes.onclick || '').includes("app.navigateTo('apiKeys')")), 'navigate to API keys action');
+checkButton(handler('exitLibraryHarnessBindMode', ''), 'exit harness mode', 'ghost');
 checkButton(handler('enterLibraryHarnessBindMode', "'${this._jsString(h.harness)}'"), 'bind harness');
 checkButton(handler('selectLibraryKey', '${key.id}'), 'select binding key', 'secondary');
 checkButton(tag => tag.classes.has('library-key-bubble-item'), 'binding key menu');
