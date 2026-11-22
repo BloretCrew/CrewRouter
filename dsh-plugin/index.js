@@ -10,16 +10,46 @@ export const Config = z.object({
 
 const CREDENTIAL = credentialKey('bloret-crew-dsh-crewrouter', 'default');
 const MAX_OUTPUT = 12000;
+const MAX_RESPONSE_BYTES = 256 * 1024;
+const REQUEST_TIMEOUT_MS = 15000;
 
-function safeBaseUrl(value) {
+export function normalizeBaseUrl(value) {
   let url;
   try { url = new URL(String(value || '')); }
   catch { throw new Error('请先配置有效的 CrewRouter 根地址（http/https）。'); }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
-    throw new Error('CrewRouter 地址必须是无凭据、无查询串的 http/https 根地址。');
+    throw new Error('CrewRouter 地址必须是无凭据、无查询串的 http/https 地址。');
   }
   if (url.pathname !== '/' && url.pathname !== '/v1') throw new Error('CrewRouter 管理 API 地址不能带子路径。');
+  const host = url.hostname.toLowerCase();
+  const loopback = host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+  if (url.protocol !== 'https:' && !loopback) throw new Error('远程 CrewRouter 地址必须使用 HTTPS；HTTP 仅允许 loopback 本机服务。');
   return `${url.protocol}//${url.host}`;
+}
+
+async function readBoundedJson(response, maxBytes = MAX_RESPONSE_BYTES) {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxBytes) throw new Error('CrewRouter 响应超过大小上限。');
+  if (!response.body) throw new Error('CrewRouter 返回空响应。');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new Error('CrewRouter 响应超过大小上限。');
+      }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  let data;
+  try { data = JSON.parse(new TextDecoder().decode(Buffer.concat(chunks.map(chunk => Buffer.from(chunk))))); }
+  catch { throw new Error('CrewRouter 返回了无效 JSON。'); }
+  return data;
 }
 
 function bounded(value) {
@@ -32,11 +62,12 @@ function bounded(value) {
 
 async function request(ctx, config, path, query, signal) {
   const key = await ctx.credentials.resolve(CREDENTIAL);
+  signal.throwIfAborted();
   if (!key?.value) throw new Error('尚未配置 CrewRouter API Key。请在 DSH credentials 中为 bloret-crew-dsh-crewrouter/default 保存一个拥有相应只读权限的 API Key。');
-  const url = new URL(path, `${safeBaseUrl(config.baseUrl)}/`);
+  const url = new URL(path, `${normalizeBaseUrl(config.baseUrl)}/`);
   for (const [name, value] of Object.entries(query || {})) url.searchParams.set(name, String(value));
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error('CrewRouter 请求超时')), 15000);
+  const timer = setTimeout(() => controller.abort(new Error('CrewRouter 请求超时')), REQUEST_TIMEOUT_MS);
   const abort = () => controller.abort(signal.reason);
   signal.addEventListener('abort', abort, { once: true });
   try {
@@ -49,12 +80,15 @@ async function request(ctx, config, path, query, signal) {
     if (response.status === 401) throw new Error('CrewRouter API Key 无效、已过期或已停用。');
     if (response.status === 403) throw new Error('CrewRouter 拒绝访问（403）；请确认该 API Key 已授予此只读 API 所需的权限。');
     if (!response.ok) throw new Error(`CrewRouter 请求失败（HTTP ${response.status}）。`);
-    const data = await response.json();
+    const data = await readBoundedJson(response);
+    signal.throwIfAborted();
     return bounded(data);
   } catch (error) {
     if (error?.name === 'AbortError') throw new Error('CrewRouter 请求已取消或超时。');
-    if (error?.message?.startsWith('CrewRouter ')) throw error;
-    throw new Error(`CrewRouter 网络/API 错误：${String(error?.message || error).slice(0, 300)}`);
+    if (error?.message === 'CrewRouter 响应超过大小上限。' || error?.message === 'CrewRouter 返回了无效 JSON。' || error?.message === 'CrewRouter 返回空响应。') throw error;
+    if (error?.message === 'CrewRouter API Key 无效、已过期或已停用。' || error?.message === 'CrewRouter 拒绝访问（403）；请确认该 API Key 已授予此只读 API 所需的权限。') throw error;
+    if (error?.message?.startsWith('CrewRouter 请求失败（HTTP ')) throw error;
+    throw new Error('CrewRouter 网络/API 请求失败；详细响应未转发，以保护凭据和服务端数据。');
   } finally {
     clearTimeout(timer);
     signal.removeEventListener('abort', abort);

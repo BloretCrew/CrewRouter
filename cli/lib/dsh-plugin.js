@@ -5,6 +5,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const readline = require('node:readline/promises');
 const { stdin, stdout } = require('node:process');
+const os = require('node:os');
 const { cliHome, ensurePrivateDir, atomicWriteJson, readJson } = require('./config');
 
 const PACKAGE_NAME = '@bloret-crew/dsh-crewrouter';
@@ -15,6 +16,11 @@ function bundledPluginDir() {
   throw new Error('随附 DSH 插件文件不完整；请重新安装 CrewRouter CLI。');
 }
 const PACKAGE = () => `file:${bundledPluginDir()}`;
+function dshHome() {
+  const configured = String(process.env.DSH_HOME || '').trim();
+  return path.resolve(configured || path.join(os.homedir(), '.dsh'));
+}
+function profileDir(profile) { return path.join(dshHome(), 'profiles', profile); }
 const STATE_PATH = () => path.join(cliHome(), 'dsh-plugin.json');
 
 function candidates() {
@@ -36,7 +42,11 @@ function runDsh(executable, args, options = {}) {
   });
 }
 
-function state() { return readJson(STATE_PATH(), { version: 1, profiles: {} }); }
+function state() {
+  const value = readJson(STATE_PATH(), { version: 1, profiles: {} });
+  if (!value || typeof value !== 'object' || value.version !== 1 || !value.profiles || typeof value.profiles !== 'object' || Array.isArray(value.profiles)) return { version: 1, profiles: {} };
+  return value;
+}
 
 function saveInstallState(profile, installed) {
   const saved = state();
@@ -46,20 +56,29 @@ function saveInstallState(profile, installed) {
   atomicWriteJson(STATE_PATH(), saved, 0o600);
 }
 
-function isInstalled(profile, name = PACKAGE_NAME) {
-  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(profile)) return false;
-  const manifestPath = path.join(process.env.DSH_HOME || path.join(require('node:os').homedir(), '.dsh'), 'profiles', profile, 'package.json');
+function profilePackageManifest(profile) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(profile)) return null;
+  const manifestPath = path.join(profileDir(profile), 'package.json');
   try {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    if (!manifest || typeof manifest !== 'object' || manifest.name !== `dsh-profile-${profile}` || !manifest.dsh || typeof manifest.dsh !== 'object') return null;
+    return manifest;
+  } catch { return null; }
+}
+
+function isInstalled(profile, name = PACKAGE_NAME) {
+  const manifest = profilePackageManifest(profile);
+  try {
+    if (!manifest) return false;
     return Object.entries({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.optionalDependencies }).some(([dependency, value]) => dependency === name || dependency.startsWith(`${name}@`) || (typeof value === 'string' && value.startsWith(`file:${bundledPluginDir()}`)));
   } catch { return false; }
 }
 
-async function confirm(profile) {
+async function confirm(profile, context = '会修改该 profile') {
   if (!stdin.isTTY || !stdout.isTTY) return false;
   const ui = readline.createInterface({ input: stdin, output: stdout });
   try {
-    return (await ui.question(`将为 DSH profile「${profile}」安装 CrewRouter 插件（会修改该 profile），继续？[y/N] `)).trim().toLowerCase() === 'y';
+    return (await ui.question(`将为 DSH profile「${profile}」安装 CrewRouter 插件（${context}），继续？[y/N] `)).trim().toLowerCase() === 'y';
   } finally { ui.close(); }
 }
 
@@ -69,9 +88,19 @@ async function install(profile, { yes = false } = {}) {
   if (!dsh) throw new Error('未在 PATH 中找到 DSH CLI。请安装 DSH 后重试。');
   if (isInstalled(profile)) {
     console.log(`DSH profile「${profile}」已声明 CrewRouter 插件，不重复安装。`);
+    const recorded = state().profiles[profile]?.installed === true;
+    if (!recorded) saveInstallState(profile, true);
     return 0;
   }
   if (!yes && !(await confirm(profile))) throw new Error('已取消；没有修改 DSH profile。');
+  if (!profilePackageManifest(profile)) {
+    const defaultProfile = ['web', 'headless', 'acp', 'sdk', 'sdk-minimal'].includes(profile);
+    if (!yes) {
+      const accepted = await confirm(profile, defaultProfile ? 'profile 未初始化，DSH 将按内置模板创建' : '将创建新 profile');
+      if (!accepted) throw new Error('已取消；没有初始化或修改 DSH profile。');
+    }
+    if (!defaultProfile) throw new Error(`profile「${profile}」尚未初始化；请先通过 DSH 的默认模板创建 profile，再重试插件安装。`);
+  }
   const result = await runDsh(dsh, ['plugin', '--profile', profile, 'add', PACKAGE()]);
   if (result.code !== 0) throw Object.assign(new Error(`DSH 插件安装失败，退出码 ${result.code}。请查看上方 DSH 输出后重试。`), { exitCode: result.code });
   saveInstallState(profile, true);
@@ -105,21 +134,33 @@ async function command(args, { json = false } = {}) {
 }
 
 async function offerFirstRun() {
-  if (!stdin.isTTY || !stdout.isTTY || process.env.CR_DSH_PLUGIN_SKIP === '1' || process.env.CR_CLI_HOME || process.env.CREWROUTER_CLI_SERVER_ROOT) return;
+  if (!stdin.isTTY || !stdout.isTTY || process.env.CR_DSH_PLUGIN_SKIP === '1' || process.env.CR_CLI_HOME || process.env.CREWROUTER_CLI_SERVER_ROOT || process.env.CREWROUTER_DSH_PLUGIN_PROMPTED === '1') return;
+  if (require('./config').loadConfig().dshPluginAutoPrompt === false) return;
   const dsh = candidates();
   if (!dsh) return;
+  let discovered = false;
+  const profileRoot = path.join(dshHome(), 'profiles');
+  try { discovered = fs.readdirSync(profileRoot, { withFileTypes: true }).some(entry => entry.isDirectory() && isInstalled(entry.name)); } catch {}
+  if (discovered) { if (!state().profiles.discovered?.installed) saveInstallState('discovered', true); return; }
   const saved = state();
   if (Object.values(saved.profiles || {}).some(item => item.installed)) return;
-  const profileRoot = path.join(process.env.DSH_HOME || path.join(require('node:os').homedir(), '.dsh'), 'profiles');
-  try { if (fs.readdirSync(profileRoot, { withFileTypes: true }).some(entry => entry.isDirectory() && isInstalled(entry.name))) return; } catch {}
   const ui = readline.createInterface({ input: stdin, output: stdout });
   try {
     const answer = (await ui.question('检测到 DSH。是否现在为指定 profile 安装 CrewRouter 插件？[y/N] ')).trim().toLowerCase();
-    if (answer !== 'y') return;
+    if (answer !== 'y') {
+      const skip = (await ui.question('本次拒绝。是否记住选择、不再自动询问？[y/N] ')).trim().toLowerCase();
+      if (skip === 'y') {
+        const cfg = require('./config');
+        const current = cfg.loadConfig();
+        current.dshPluginAutoPrompt = false;
+        cfg.saveConfig(current);
+      }
+      return;
+    }
     const profile = (await ui.question('DSH profile 名称（例如 standard）：')).trim();
     ui.close();
     await install(profile, { yes: true });
   } finally { if (ui) ui.close(); }
 }
 
-module.exports = { command, offerFirstRun, install, candidates, runDsh, PACKAGE, bundledPluginDir, PACKAGE_NAME, isInstalled };
+module.exports = { command, offerFirstRun, install, candidates, runDsh, PACKAGE, bundledPluginDir, PACKAGE_NAME, isInstalled, dshHome, profilePackageManifest, state, saveInstallState };

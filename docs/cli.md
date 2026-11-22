@@ -124,7 +124,7 @@ cr dsh-plugin install --profile standard
 cr dsh-plugin uninstall --profile standard
 ```
 
-安装使用 DSH 官方 `dsh plugin --profile <profile> add`，插件包随 CLI 一同分发。升级 DSH 或 CLI 不会覆盖/自动升级插件。插件配置需设置 CrewRouter 根 URL，并在 DSH credentials 中设置 CrewRouter API Key；只读用量/模型/会话能力与 Key 权限说明见随包 `dsh-plugin/README.md`。`CR_DSH_PLUGIN_SKIP=1` 可跳过首次提示，或在普通 CLI 命令后加 `--skip-dsh-plugin`。
+安装使用 DSH 官方 `dsh plugin --profile <profile> add`，插件包随 CLI 一同分发。若指定 profile 尚未初始化，只有内置 profile（web/headless/acp/sdk/sdk-minimal）才会由 DSH 按模板初始化；不会自动创造任意 profile，也不会覆盖 profile 数据。升级 DSH 或 CLI 不会覆盖/自动升级插件。插件配置需设置 CrewRouter 根 URL，并在 DSH credentials 中设置 CrewRouter API Key；远端地址要求 HTTPS、本机 loopback 可用 HTTP。只读用量/模型/会话能力与 Key 权限说明见随包 `dsh-plugin/README.md`。拒绝首次安装后可选择永久记住设置，不再自动询问；之后可用 `cr dsh-plugin install --profile <名称>` 手动安装。`CR_DSH_PLUGIN_SKIP=1` 可跳过单次提示，或在普通 CLI 命令后加 `--skip-dsh-plugin`。
 
 ## 版本
 

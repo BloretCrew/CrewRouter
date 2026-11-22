@@ -164,6 +164,7 @@ function normalizeConfig(raw) {
     version: CONFIG_VERSION,
     currentProfile,
     profiles,
+    dshPluginAutoPrompt: source.dshPluginAutoPrompt === false ? false : true,
     tui: {
       refreshMs: Math.min(Math.max(Number(source.tui && source.tui.refreshMs) || 10000, 2000), 60000),
       days: Math.min(Math.max(Number(source.tui && source.tui.days) || 30, 1), 365),
