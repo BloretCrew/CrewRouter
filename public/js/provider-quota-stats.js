@@ -414,6 +414,10 @@
     if (dialog.show) dialog.show(); else dialog.setAttribute('open', '');
     load(root);
   }
+  async function loadMounted(root) {
+    if (!root || !states.has(root)) return;
+    await load(root);
+  }
   async function detail(root, scope, providerId) {
     if (!root) return;
     const seq = Number(root.dataset.quotaSeq || 0) + 1;
@@ -448,5 +452,5 @@
       if (Number(root.dataset.quotaSeq) === seq) root.querySelectorAll('.quota-library-latest').forEach(panel => panel.remove());
     }
   }
-  window.CrewRouterQuotaStats = { refresh, open, detail, library };
+  window.CrewRouterQuotaStats = { refresh, open, detail, library, mount, load: loadMounted };
 })();

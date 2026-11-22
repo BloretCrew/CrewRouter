@@ -161,13 +161,8 @@
 .admin-model-library .aml-selection.ml-library-reorder-toolbar { display: flex; }
 .admin-model-library .aml-selection[hidden] { display: none !important; }
 
-/* 额度面板按用户控制台的完整信息流展示；不再在卡片网格里二次滚动裁切 */
-.admin-model-library .ml-model-quota-section .aml-quota-host {
-  display: block;
-  min-width: 0;
-  max-height: none;
-  overflow: visible;
-}
+/* 额度模块复用 provider-quota-stats 原生结构；宿主不额外制造滚动区。 */
+.admin-model-library .ml-model-quota-section .aml-quota-host { display: block; min-width: 0; max-height: none; overflow: visible; }
 .admin-model-library .ml-model-quota-section .quota-analysis {
   margin: 0;
   padding: 0;
@@ -176,54 +171,8 @@
   background: transparent;
   box-shadow: none;
 }
-.admin-model-library .ml-model-quota-section .quota-heading { justify-content: flex-end; margin: 0 0 10px; }
-.admin-model-library .ml-model-quota-section .quota-heading h4,
-.admin-model-library .ml-model-quota-section .quota-status { display: none; }
-.admin-model-library .ml-model-quota-section .quota-summary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0 0 12px;
-  padding: 0 0 12px;
-}
-.admin-model-library .ml-model-quota-section .quota-summary > div {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid var(--lg-glass-border);
-  border-radius: var(--lg-radius-card);
-  background: var(--lg-card-bg);
-}
-.admin-model-library .ml-model-quota-section .quota-summary strong { font-size: 20px; }
-.admin-model-library .ml-model-quota-section .quota-cycle-summary { margin: 0 0 14px; }
-.admin-model-library .ml-model-quota-section .quota-provider-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  align-items: start;
-  gap: 12px;
-}
-.admin-model-library .ml-model-quota-section .quota-provider-card {
-  align-self: start;
-  border-color: var(--lg-glass-border);
-  border-radius: var(--lg-radius-card);
-  background-color: var(--lg-card-bg);
-  background-image: var(--lg-sheen);
-  box-shadow: var(--lg-rim), var(--lg-shadow-card);
-}
-.admin-model-library .ml-model-quota-section .quota-analysis :is(h4, h5, strong) { color: var(--lg-fg); }
-.admin-model-library .ml-model-quota-section .quota-analysis :is(.quota-note, .quota-status, .quota-state),
-.admin-model-library .ml-model-quota-section .quota-analysis label { color: var(--lg-fg-secondary); }
-.admin-model-library .ml-model-quota-section .quota-analysis .quota-account-item + .quota-account-item { border-top-color: var(--lg-divider); }
-.admin-model-library .ml-model-quota-section .quota-analysis :is(.quota-summary, .quota-contribution) { border-color: var(--lg-divider); }
-.admin-model-library .ml-model-quota-section .quota-analysis button[data-variant="secondary"] {
-  border-color: var(--lg-glass-border);
-  border-radius: var(--lg-radius-pill);
-  background: var(--lg-chip-bg);
-  color: var(--lg-fg);
-}
-.admin-model-library .ml-model-quota-section .quota-analysis button[data-variant="secondary"]:hover { background: var(--lg-chip-hover); }
-@media (max-width: 720px) {
-  .admin-model-library .ml-model-quota-section .quota-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+.admin-model-library .ml-model-quota-section .quota-provider-grid { align-items: start; }
+.admin-model-library .ml-model-quota-section .quota-provider-card { align-self: start; }
 
 .admin-model-library .aml-check {
   display: inline-flex;

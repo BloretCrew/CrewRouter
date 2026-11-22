@@ -38,8 +38,9 @@
       const host = this.container?.querySelector('.aml-quota-host');
       if (!host) return;
       try {
-        if (window.CrewRouterQuotaStats?.refresh) {
-          await window.CrewRouterQuotaStats.refresh('admin');
+        if (window.CrewRouterQuotaStats?.mount && window.CrewRouterQuotaStats?.load) {
+          window.CrewRouterQuotaStats.mount(host, 'admin');
+          await window.CrewRouterQuotaStats.load(host);
         } else host.textContent = tr('进入管理查看');
       } catch (error) {
         if (this.container?.querySelector('.aml-quota-host') === host) host.textContent = error.message;
