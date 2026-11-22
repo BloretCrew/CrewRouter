@@ -763,8 +763,9 @@ class AdminApp {
   }
 
   async loadUsers() {
+    const seq = this._usersLoadSeq = (this._usersLoadSeq || 0) + 1;
     const listEl = document.getElementById('usersList');
-    if (listEl && !(this._usersData || []).length) setHTML(listEl, pageLoadingHtml(t('加载用户...')));
+    if (listEl) setHTML(listEl, pageLoadingHtml(t('加载用户...'), { compact: true }));
     try {
       const q = (document.getElementById('userSearchInput')?.value || '').trim();
       const params = new URLSearchParams({
@@ -779,6 +780,7 @@ class AdminApp {
         throw new Error(err.error || t('加载失败'));
       }
       const raw = await response.json();
+      if (seq !== this._usersLoadSeq) return;
       const { items, total, stats } = this._normalizeListResponse(raw);
 
       this._usersData = items;
@@ -833,6 +835,7 @@ class AdminApp {
 
       this._renderUsersTable();
     } catch (error) {
+      if (seq !== this._usersLoadSeq) return;
       console.error(t('加载用户列表失败:'), error);
       setHTML(document.getElementById('usersList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载用户列表失败'))}</p>`);
     }
@@ -1345,6 +1348,7 @@ class AdminApp {
   }
 
   async loadModels(options = {}) {
+    const seq = this._adminModelsLoadSeq = (this._adminModelsLoadSeq || 0) + 1;
     try {
       const modelsListEl = document.getElementById('adminModelsList');
       if (modelsListEl) setHTML(modelsListEl, pageLoadingHtml(t('加载模型...')));
@@ -1374,6 +1378,7 @@ class AdminApp {
         throw new Error(err.error || t('加载失败'));
       }
       const raw = await response.json();
+      if (seq !== this._adminModelsLoadSeq) return;
       const { total, stats, providers, series } = this._normalizeListResponse(raw);
       const providerList = Array.isArray(raw.providers) ? raw.providers : (providers || []);
 
@@ -1474,6 +1479,7 @@ class AdminApp {
         this.loadAdminProviderModels(key, 1, { force: true }).catch(() => {});
       }
     } catch (error) {
+      if (seq !== this._adminModelsLoadSeq) return;
       console.error(t('加载模型列表失败:'), error);
       setHTML(document.getElementById('adminModelsList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载模型列表失败'))}</p>`);
     }
@@ -2828,6 +2834,7 @@ class AdminApp {
   }
 
   async loadProviders(options = {}) {
+    const seq = this._adminProvidersLoadSeq = (this._adminProvidersLoadSeq || 0) + 1;
     try {
       if (options.resetPage) {
         this.providerPage = 0;
@@ -2845,6 +2852,7 @@ class AdminApp {
         throw new Error(err.error || t('加载失败'));
       }
       const raw = await response.json();
+      if (seq !== this._adminProvidersLoadSeq) return;
       const { items, total, stats, serverPaged } = this._normalizeListResponse(raw);
       this.providersData = items;
       this.providersTotal = total;
@@ -2862,6 +2870,7 @@ class AdminApp {
 
       this.renderProviders();
     } catch (error) {
+      if (seq !== this._adminProvidersLoadSeq) return;
       console.error(t('加载供应商列表失败:'), error);
       setHTML(document.getElementById('adminProvidersList'), `
         <div class="admin-empty-state">
@@ -7227,6 +7236,11 @@ async function(ctx) {
     window.CrewRouterQuotaStats?.refresh('admin');
     // 防止 3s 轮询与手动切换叠加时的乱序覆盖
     const seq = (this._statsLoadSeq = (this._statsLoadSeq || 0) + 1);
+    const details = document.getElementById('detailedStats');
+    if (details) {
+      details.setAttribute('aria-busy', 'true');
+      setHTML(details, pageLoadingHtml(t('加载统计数据...'), { compact: true }));
+    }
     try {
       const days = document.getElementById('adminStatsDays')?.value || '30';
       if (document.getElementById('statsTabMulti')?.style.display === 'block') {
@@ -7240,7 +7254,7 @@ async function(ctx) {
       const data = await response.json();
       if (seq !== this._statsLoadSeq) return; // 过期响应丢弃
       const signature = JSON.stringify(data);
-      if (signature === this._statsDataSignature) return;
+      if (signature === this._statsDataSignature) { details?.removeAttribute('aria-busy'); return; }
       this._statsDataSignature = signature;
       this.stats = data;
 
@@ -7328,6 +7342,8 @@ async function(ctx) {
       console.error(t('加载统计数据失败:'), error);
       const el = document.getElementById('detailedStats');
       if (el) setHTML(el, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载统计数据失败'))}</p>`);
+    } finally {
+      if (seq === this._statsLoadSeq) details?.removeAttribute('aria-busy');
     }
   }
 
@@ -7489,6 +7505,7 @@ async function(ctx) {
 
 
   async loadMessageStats() {
+    const seq = this._messageStatsLoadSeq = (this._messageStatsLoadSeq || 0) + 1;
     const summaryEl = document.getElementById('messageStatsSummary');
     const sourceEl = document.getElementById('messageStatsSourceTable');
     const blockEl = document.getElementById('messageStatsBlockTable');
@@ -7507,6 +7524,7 @@ async function(ctx) {
       const res = await fetch(`/api/admin/message-stats?${params}`);
       if (!res.ok) throw new Error(t('消息统计加载失败'));
       const data = await res.json();
+      if (seq !== this._messageStatsLoadSeq) return;
       const s = data.summary || {};
       if (!data || data.error) throw new Error(data.error || t('消息统计返回数据为空'));
       if (!(data.by_workspace || []).length && !(data.daily || []).length) {
@@ -7526,8 +7544,10 @@ async function(ctx) {
         this._upsertChart('_messageStatsDailyChart', document.getElementById('messageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: 'var(--info)', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: 'var(--purple)', backgroundColor: 'rgba(139,92,246,.08)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
       }
     } catch (error) {
+      if (seq !== this._messageStatsLoadSeq) return;
       console.error(error);
-      setHTML(document.getElementById('messageStatsSummary'), `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
+      const message = `<p style="color:var(--destructive);">${escapeHtml(error.message || t('消息统计加载失败'))}</p>`;
+      [summaryEl, sourceEl, blockEl, workspaceEl].forEach(el => { if (el) setHTML(el, message); });
     }
   }
 
@@ -7595,6 +7615,9 @@ async function(ctx) {
     const notice = document.getElementById('adminLatencyNotice');
     if (!summaryEl) return;
     const seq = (this._latencyLoadSeq = (this._latencyLoadSeq || 0) + 1);
+    const loading = pageLoadingHtml(t('加载延迟统计...'), { compact: true });
+    [summaryEl, modelBody, providerBody, rateLimitBody].forEach(el => { if (el) setHTML(el, loading); });
+    if (notice) notice.textContent = t('正在加载延迟统计...');
     try {
       const days = document.getElementById('adminStatsDays')?.value || '30';
       const response = await fetch(`/api/admin/stats/latency?days=${encodeURIComponent(days)}`);
@@ -7623,6 +7646,7 @@ async function(ctx) {
         notice.textContent = parts.join(' ');
       }
     } catch (error) {
+      if (seq !== this._latencyLoadSeq) return;
       console.error(t('延迟统计加载失败:'), error);
       if (notice) notice.textContent = error.message || t('延迟统计加载失败');
       if (modelBody) setHTML(modelBody, `<tr><td colspan="11" style="text-align:center;padding:18px;color:var(--destructive);">${escapeHtml(error.message || t('加载失败'))}</td></tr>`);
@@ -8660,6 +8684,7 @@ async function(ctx) {
 
   async loadErrorLogs(page = 1) {
     this.errorLogPage = page;
+    const seq = this._errorLogLoadSeq = (this._errorLogLoadSeq || 0) + 1;
     const errListEl = document.getElementById('errorLogsList');
     if (errListEl) setHTML(errListEl, pageLoadingHtml(t('加载错误记录...'), { compact: true }));
     const params = this._buildErrorLogFilterParams();
@@ -8670,6 +8695,7 @@ async function(ctx) {
       const response = await fetch(`/api/admin/error-logs?${params}`);
       if (!response.ok) throw new Error(t('加载失败'));
       const data = await response.json();
+      if (seq !== this._errorLogLoadSeq) return;
 
       this.errorLogTotal = data.total;
       this._errorLogCache = data.logs || [];
@@ -8743,6 +8769,7 @@ async function(ctx) {
         </table>
       `);
     } catch (error) {
+      if (seq !== this._errorLogLoadSeq) return;
       console.error(t('加载错误记录失败:'), error);
       setHTML(document.getElementById('errorLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
@@ -8965,6 +8992,7 @@ async function(ctx) {
 
   async loadUsageLogs(page = 1) {
     this.usageLogPage = Math.max(1, page || 1);
+    const seq = this._usageLogLoadSeq = (this._usageLogLoadSeq || 0) + 1;
     const usageListEl = document.getElementById('usageLogsList');
     if (usageListEl) setHTML(usageListEl, pageLoadingHtml(t('加载调用记录...'), { compact: true }));
 
@@ -8976,6 +9004,7 @@ async function(ctx) {
       const response = await fetch(`/api/admin/usage-logs?${params}`);
       if (!response.ok) throw new Error(t('加载失败'));
       const data = await response.json();
+      if (seq !== this._usageLogLoadSeq) return;
 
       this.usageLogTotal = data.total;
       this._usageLogCache = data.logs || [];
@@ -9081,6 +9110,7 @@ async function(ctx) {
         });
       });
     } catch (error) {
+      if (seq !== this._usageLogLoadSeq) return;
       console.error(t('加载调用记录失败:'), error);
       setHTML(document.getElementById('usageLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
@@ -12861,6 +12891,7 @@ async function(ctx) {
 
   async loadAdminAuditLogs(page = 1) {
     this._adminAuditLogPage = page;
+    const seq = this._adminAuditLogLoadSeq = (this._adminAuditLogLoadSeq || 0) + 1;
     const listEl = document.getElementById('adminAuditLogsList');
     const paginationEl = document.getElementById('adminAuditLogsPagination');
     if (!listEl) return;
@@ -12874,6 +12905,7 @@ async function(ctx) {
       const res = await fetch(`/api/admin/audit-logs?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('加载失败'));
+      if (seq !== this._adminAuditLogLoadSeq) return;
       const { items, total, limit } = data;
       if (!items.length) {
         setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">' + t('暂无操作日志') + '</p>');
@@ -12910,7 +12942,8 @@ async function(ctx) {
         setHTML(paginationEl, '');
       }
     } catch (error) {
-      setHTML(listEl, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
+      if (seq !== this._adminAuditLogLoadSeq) return;
+      setHTML(listEl, `<p style="color:var(--destructive);">${escapeHtml(error.message || t('加载失败'))}</p>`);
       setHTML(paginationEl, '');
     }
   }
@@ -12920,6 +12953,7 @@ async function(ctx) {
   /** 列表：GET /api/admin/custom-instructions */
   async loadAdminCustomPrompts(page = 1) {
     this.promptPage = Math.max(parseInt(page, 10) || 1, 1);
+    const seq = this._adminPromptLoadSeq = (this._adminPromptLoadSeq || 0) + 1;
     const container = document.getElementById('adminPromptsList');
     if (!container) return;
     setHTML(container, pageLoadingHtml(t('加载提示词...'), { compact: true }));
@@ -12936,6 +12970,7 @@ async function(ctx) {
       const res = await fetch(`/api/admin/custom-instructions?${params}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('加载失败'));
+      if (seq !== this._adminPromptLoadSeq) return;
 
       const countEl = document.getElementById('adminPromptCount');
       const pageInfoEl = document.getElementById('adminPromptPageInfo');
@@ -13003,6 +13038,7 @@ async function(ctx) {
         });
       });
     } catch (error) {
+      if (seq !== this._adminPromptLoadSeq) return;
       console.error(t('加载提示词失败:'), error);
       setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }

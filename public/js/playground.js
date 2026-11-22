@@ -143,8 +143,9 @@ class PlaygroundApp {
   // ========== Conversations ==========
 
   async loadConversations() {
+    const seq = this._conversationsLoadSeq = (this._conversationsLoadSeq || 0) + 1;
     const list = document.getElementById('pgHistoryList');
-    if (list && !(this.conversations || []).length) {
+    if (list) {
       if (typeof pageLoadingHtml === 'function') {
         setHTML(list, pageLoadingHtml(t('加载对话...'), { size: 'md', compact: true, minHeight: '120px' }));
       } else {
@@ -155,14 +156,17 @@ class PlaygroundApp {
       const res = await fetch('/api/conversations');
       if (res.ok) {
         const data = await res.json();
+        if (seq !== this._conversationsLoadSeq) return;
         this.conversations = Array.isArray(data) ? data : [];
         this.renderHistoryList();
       } else {
+        if (seq !== this._conversationsLoadSeq) return;
         console.error(t('加载对话历史失败:'), res.status, await res.text());
         this.conversations = [];
         this.renderHistoryList();
       }
     } catch (err) {
+      if (seq !== this._conversationsLoadSeq) return;
       console.error(t('加载对话历史异常:'), err);
       this.conversations = [];
       this.renderHistoryList();
@@ -298,10 +302,14 @@ class PlaygroundApp {
   }
 
   async loadConversation(convId) {
+    const seq = this._conversationLoadSeq = (this._conversationLoadSeq || 0) + 1;
+    const messagesEl = document.getElementById('pgMessages');
+    if (messagesEl) setHTML(messagesEl, typeof pageLoadingHtml === 'function' ? pageLoadingHtml(t('加载对话...'), { compact: true }) : '<div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status"></div></div>');
     try {
       const res = await fetch(`/api/conversations/${convId}`);
       if (res.ok) {
         const data = await res.json();
+        if (seq !== this._conversationLoadSeq) return;
         this.activeConvId = convId;
         this.messages = data.messages || [];
         if (data.model) document.getElementById('pgModel').value = data.model;
@@ -319,8 +327,12 @@ class PlaygroundApp {
         this.hideReplyBar();
         this.renderMessages();
         this.renderHistoryList();
+      } else if (seq === this._conversationLoadSeq && messagesEl) {
+        setHTML(messagesEl, `<div class="pg-history-empty">${this.escapeHtml(t('加载对话失败'))}</div>`);
       }
-    } catch {}
+    } catch (error) {
+      if (seq === this._conversationLoadSeq && messagesEl) setHTML(messagesEl, `<div class="pg-history-empty">${this.escapeHtml(error.message || t('加载对话失败'))}</div>`);
+    }
   }
 
   async deleteConversation(convId) {

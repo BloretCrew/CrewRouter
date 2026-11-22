@@ -11,6 +11,9 @@
 
   var me = { loggedIn: false, user: null, config: { configured: false } };
   var viewBox = document.getElementById('store-view');
+  var listRequestSeq = 0;
+  var detailRequestSeq = 0;
+  var ratingsRequestSeq = 0;
 
   function t(key) { return window.t ? window.t(key) : key; }
   function esc(s) {
@@ -194,19 +197,27 @@
     );
   }
 
-  function runQuery(refresh) {
+  function runQuery(refresh, selectedTag) {
+    var seq = ++listRequestSeq;
     var q = (document.getElementById('storeSearch') || {}).value || '';
     var sort = document.getElementById('storeSort').value;
-    var tag = (document.querySelector('[data-active-tag]') || {}).dataset ? (document.querySelector('[data-active-tag]').dataset.activeTag || '') : '';
+    var tag = selectedTag !== undefined ? selectedTag : ((document.querySelector('[data-active-tag]') || {}).dataset ? (document.querySelector('[data-active-tag]').dataset.activeTag || '') : '');
+    viewBox.setAttribute('aria-busy', 'true');
+    viewBox.innerHTML = '<div class="store-loading" role="status">' + esc(t('正在加载插件...')) + '</div>';
     var params = new URLSearchParams({ public: '1' });
     if (q.trim()) params.set('q', q.trim());
     if (sort) params.set('sort', sort);
     if (tag) params.set('tag', tag);
     api('/plugins?' + params.toString()).then(function (data) {
+      if (seq !== listRequestSeq) return;
+      viewBox.removeAttribute('aria-busy');
       renderListResult(data.plugins, q, tag, sort);
     }).catch(function (e) {
+      if (seq !== listRequestSeq) return;
+      viewBox.removeAttribute('aria-busy');
       setBanner('err', e.message);
-      viewBox.innerHTML = '<div class="store-error">' + esc(e.message || t('加载失败')) + '</div>';
+      viewBox.innerHTML = '<div class="store-error">' + esc(e.message || t('加载失败')) + ' <button type="button" id="storeRetryBtn">' + esc(t('重试')) + '</button></div>';
+      document.getElementById('storeRetryBtn')?.addEventListener('click', function () { runQuery(); });
     });
   }
 
@@ -236,21 +247,16 @@
     viewBox.querySelectorAll('[data-tag]').forEach(function (el) {
       el.addEventListener('click', function () {
         document.getElementById('storeSearch').value = '';
-        renderListResult(plugins, '', el.dataset.tag, sort);
+        runQuery(false, el.dataset.tag);
       });
     });
     viewBox.querySelectorAll('[data-active-tag]').forEach(function (el) {
-      el.addEventListener('click', function () { renderListResult(plugins, '', '', sort); });
+      el.addEventListener('click', function () { runQuery(false, ''); });
     });
   }
 
   function viewList() {
-    api('/plugins?public=1').then(function (data) {
-      renderListResult(data.plugins, '', '', 'updated');
-    }).catch(function (e) {
-      setBanner('err', e.message);
-      viewBox.innerHTML = '<div class="store-error">' + esc(e.message || t('加载失败')) + '</div>';
-    });
+    runQuery();
   }
 
   function ratingListHtml(ratings) {
@@ -269,7 +275,13 @@
   }
 
   function viewDetail(id) {
+    var seq = ++detailRequestSeq;
+    ++ratingsRequestSeq;
+    viewBox.setAttribute('aria-busy', 'true');
+    viewBox.innerHTML = '<div class="store-loading" role="status">' + esc(t('正在加载插件详情...')) + '</div>';
     api('/plugins/' + encodeURIComponent(id) + '?include=related&related=1').then(function (data) {
+      if (seq !== detailRequestSeq || location.hash !== '#/plugin/' + encodeURIComponent(id)) return;
+      viewBox.removeAttribute('aria-busy');
       var p = data.plugin;
       var html = '';
       if (p.myRating) {
@@ -364,17 +376,23 @@
 
       loadRatingsInto(p.id);
     }).catch(function (e) {
+      if (seq !== detailRequestSeq) return;
+      viewBox.removeAttribute('aria-busy');
       setBanner('err', e.message);
       viewBox.innerHTML = '<div class="store-error">' + esc(e.message || t('加载失败')) + '</div>';
     });
   }
 
   function loadRatingsInto(id) {
+    var seq = ++ratingsRequestSeq;
+    var target = Array.from(viewBox.querySelectorAll('.store-detail__section')).find(function (section) { return section.querySelector('h3')?.textContent.startsWith(t('评分')); });
+    if (target) target.innerHTML = '<h3>' + esc(t('评分')) + '</h3><div class="store-loading" role="status">' + esc(t('正在加载评分...')) + '</div>';
     api('/plugins/' + encodeURIComponent(id) + '/ratings?limit=20').then(function (data) {
+      if (seq !== ratingsRequestSeq || !location.hash.startsWith('#/plugin/' + encodeURIComponent(id))) return;
       var el = viewBox.querySelector('.store-detail__section h3');
       // 更新左栏「评分」区块
       var secs = viewBox.querySelectorAll('.store-detail__section');
-      var target = Array.prototype.find.call(secs, function (s) { return s.querySelector('h3') && s.querySelector('h3').textContent === t('评分'); });
+      var target = Array.prototype.find.call(secs, function (s) { return s.querySelector('h3') && s.querySelector('h3').textContent.startsWith(t('评分')); });
       if (target) {
         var body = target.querySelector('h3').nextElementSibling ? null : target;
         target.innerHTML = '<h3>' + esc(t('评分')) + ' · ' + data.count + '</h3>' + ratingListHtml(data.ratings);

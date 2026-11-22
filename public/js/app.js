@@ -505,13 +505,22 @@ class ConsoleApp {
     });
 
     // Stats custom date range toggle
+    ['usageLogRequestTypeFilter', 'usageLogRequestSourceFilter', 'usageLogStartDate', 'usageLogEndDate'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => this.loadUsageLogs(1));
+    });
+    document.getElementById('usageLogModelFilter')?.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); this.loadUsageLogs(1); }
+    });
+
     document.getElementById('statsTimeRange')?.addEventListener('change', (e) => {
       const custom = document.getElementById('statsCustomDateRange');
       if (custom) custom.style.display = e.target.value === 'custom' ? 'flex' : 'none';
+      this.loadStats();
     });
     document.getElementById('projectWorkTimeRange')?.addEventListener('change', (e) => {
       const custom = document.getElementById('projectWorkCustomRange');
       if (custom) custom.style.display = e.target.value === 'custom' ? 'flex' : 'none';
+      if (e.target.value !== 'custom') this.loadProjectWorkStats();
     });
   }
 
@@ -3735,13 +3744,23 @@ class ConsoleApp {
     const summaryEl = document.getElementById('projectWorkSummary');
     const recentEl = document.getElementById('projectWorkRecent');
     const projectsEl = document.getElementById('projectWorkProjects');
-    [summaryEl, recentEl, projectsEl].forEach((el) => { if (el) setHTML(el, '<div class="project-work-loading">' + t('正在读取项目活动...') + '</div>'); });
+    const seq = this._projectWorkLoadSeq = (this._projectWorkLoadSeq || 0) + 1;
+    if (range === 'custom') {
+      const start = document.getElementById('projectWorkStartDate')?.value || document.getElementById('statsStartDate')?.value || '';
+      const end = document.getElementById('projectWorkEndDate')?.value || document.getElementById('statsEndDate')?.value || '';
+      if (!start || !end || start > end) {
+        const message = '<div class="project-work-empty">' + t('请选择有效的开始和结束日期') + '</div>';
+        [summaryEl, recentEl, projectsEl].forEach(el => { if (el) setHTML(el, message); });
+        if (statusEl) statusEl.textContent = t('请选择有效的开始和结束日期');
+        return;
+      }
+    }
+    [summaryEl, recentEl, projectsEl].forEach((el) => { if (el) setHTML(el, '<div class="project-work-loading" role="status">' + t('正在读取项目活动...') + '</div>'); });
     try {
       const params = new URLSearchParams();
       if (range === 'custom') {
         const start = document.getElementById('projectWorkStartDate')?.value || document.getElementById('statsStartDate')?.value || '';
         const end = document.getElementById('projectWorkEndDate')?.value || document.getElementById('statsEndDate')?.value || '';
-        if (!start || !end) return;
         params.set('start', start);
         params.set('end', end);
       } else {
@@ -3751,6 +3770,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/project-stats?${params}`);
       if (!res.ok) throw new Error(t('项目工作统计加载失败'));
       const data = await res.json();
+      if (seq !== this._projectWorkLoadSeq) return;
       const summary = data.summary || {};
       const projects = Array.isArray(data.projects) ? data.projects : [];
       const fmt = (value) => Number(value || 0).toLocaleString();
@@ -3776,6 +3796,7 @@ class ConsoleApp {
       setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)}${t(')" title="' + t('复制工作区路径') + '">')}${escapeHtml(p.workspace_path)}${'</button></div></div><div class="project-work-project-metrics"><div><span>' + t('请求')}</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}${'</strong></div><div><span>' + t('活跃')}</span><strong>${fmt(p.active_days)}${t('天')}</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)}${t('积分')}</span></div></article>`).join(''));
       if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: 'var(--chart-6, #0f766e)', backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
     } catch (error) {
+      if (seq !== this._projectWorkLoadSeq) return;
       console.error(error);
       if (statusEl) statusEl.textContent = t('同步失败');
       const message = `<div class="project-work-empty project-work-error"><strong>${t('项目统计暂时不可用')}</strong><span>${escapeHtml(error.message)}</span></div>`;
@@ -3803,6 +3824,7 @@ class ConsoleApp {
   }
 
   async loadMessageStats() {
+    const seq = this._userMessageStatsSeq = (this._userMessageStatsSeq || 0) + 1;
     const summaryEl = document.getElementById('userMessageStatsSummary');
     const blockEl = document.getElementById('userMessageStatsBlockTable');
     const sourceEl = document.getElementById('userMessageStatsSourceTable');
@@ -3815,6 +3837,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/message-stats?${params}`);
       if (!res.ok) throw new Error(t('消息统计加载失败'));
       const data = await res.json();
+      if (seq !== this._userMessageStatsSeq) return;
       const s = data.summary || {};
       if (!data || data.error) throw new Error(data.error || t('消息统计返回数据为空'));
       if (!(data.by_workspace || []).length && !(data.daily || []).length) {
@@ -3832,8 +3855,10 @@ class ConsoleApp {
       setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td></tr>`; }).join('')));
       if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: 'var(--info)', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: 'var(--purple)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
     } catch (error) {
+      if (seq !== this._userMessageStatsSeq) return;
       console.error(error);
-      setHTML(document.getElementById('userMessageStatsSummary'), `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
+      const message = `<p style="color:var(--destructive);">${escapeHtml(error.message || t('消息统计加载失败'))}</p>`;
+      [summaryEl, blockEl, sourceEl].forEach(el => { if (el) setHTML(el, message); });
     }
   }
 
@@ -3897,7 +3922,7 @@ class ConsoleApp {
     window.CrewRouterQuotaStats?.refresh('user');
     const rangeSelect = document.getElementById('statsTimeRange');
     const customRange = document.getElementById('statsCustomDateRange');
-    const range = rangeSelect.value;
+    const range = rangeSelect?.value || '30';
     if (customRange) customRange.style.display = range === 'custom' ? 'flex' : 'none';
 
     // 加载筛选选项（仅首次）
@@ -4035,10 +4060,8 @@ class ConsoleApp {
     const notice = document.getElementById('latencyStatsNotice');
     if (!summaryEl) return;
     const seq = (this._latencyLoadSeq = (this._latencyLoadSeq || 0) + 1);
-    if (!this._latencyLoading) {
-      this._latencyLoading = true;
-      setHTML(summaryEl, `<div class="stats-overview-card" style="background:var(--muted);color:var(--foreground);"><div class="stats-overview-content"><span class="stats-overview-label">${t('加载中...')}</span><span class="stats-overview-value">-</span></div></div>`);
-    }
+    this._latencyLoading = true;
+    setHTML(summaryEl, pageLoadingHtml(t('加载延迟统计...'), { compact: true }));
     try {
       const response = await fetch(`/api/user/stats/latency?${this._latencyQueryParams().toString()}`);
       if (!response.ok) {
@@ -4064,13 +4087,14 @@ class ConsoleApp {
         notice.textContent = parts.join(' ');
       }
     } catch (error) {
+      if (seq !== this._latencyLoadSeq) return;
       console.error(t('延迟统计加载失败:'), error);
       if (notice) notice.textContent = error.message || t('延迟统计加载失败');
       if (modelBody) setHTML(modelBody, `<tr><td colspan="11" style="text-align:center;padding:18px;color:var(--destructive);">${escapeHtml(error.message || t('加载失败'))}</td></tr>`);
       if (rateLimitBody) setHTML(rateLimitBody, '');
       setHTML(summaryEl, '');
     } finally {
-      this._latencyLoading = false;
+      if (seq === this._latencyLoadSeq) this._latencyLoading = false;
     }
   }
 
@@ -4193,19 +4217,21 @@ class ConsoleApp {
   }
 
   async loadLeaderboard() {
+    const seq = this._leaderboardLoadSeq = (this._leaderboardLoadSeq || 0) + 1;
+    const container = document.getElementById('leaderboardContent');
+    if (container) setHTML(container, pageLoadingHtml(t('正在加载排行榜...'), { compact: true }));
     try {
       const days = document.getElementById('leaderboardTimeRange').value;
       const sort = document.getElementById('leaderboardSort').value;
       const res = await fetch(`/api/user/leaderboard?days=${days}&sort=${sort}`);
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(t('加载排行榜失败'));
       const data = await res.json();
+      if (seq !== this._leaderboardLoadSeq) return;
       this._renderLeaderboard(data);
     } catch (error) {
+      if (seq !== this._leaderboardLoadSeq) return;
       console.error(t('加载排行榜失败:'), error);
-      const container = document.getElementById('leaderboardContent');
-      if (container) {
-        setHTML(container, '<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败，请稍后重试') + '</p></div>');
-      }
+      if (container) setHTML(container, `<div class="empty-state"><p style="color:var(--destructive);">${escapeHtml(error.message || t('加载失败，请稍后重试'))}</p><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.loadLeaderboard()">${t('重试')}</button></div>`);
     }
   }
 
@@ -4820,11 +4846,17 @@ class ConsoleApp {
 
   async _fetchStats(params) {
     const seq = (this._statsLoadSeq = (this._statsLoadSeq || 0) + 1);
+    const details = document.getElementById('detailedStats');
+    if (details) {
+      details.setAttribute('aria-busy', 'true');
+      setHTML(details, pageLoadingHtml(t('正在加载统计数据...'), { compact: true }));
+    }
     try {
       const res = await fetch(`/api/user/stats?${params}`);
       if (!res.ok) throw new Error(t('加载失败'));
+      const data = await res.json();
       if (seq !== this._statsLoadSeq) return; // 丢弃过期响应
-      this._statsData = await res.json();
+      this._statsData = data;
       this._renderStatsOverview();
       this._renderOverviewInsights();
       this._renderDailyCharts();
@@ -4840,6 +4872,9 @@ class ConsoleApp {
     } catch (error) {
       if (seq !== this._statsLoadSeq) return;
       console.error(t('加载统计数据失败:'), error);
+      if (details) setHTML(details, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载统计数据失败'))}</p>`);
+    } finally {
+      if (seq === this._statsLoadSeq) details?.removeAttribute('aria-busy');
     }
   }
 
@@ -5828,6 +5863,7 @@ class ConsoleApp {
   /** 会话列表（服务端已按归因 sessionId / 小时窗分桶聚合，仅当前用户自己的数据） */
   async loadSessions(page = 1) {
     this._sessionsPage = Math.max(parseInt(page, 10) || 1, 1);
+    const seq = this._sessionsLoadSeq = (this._sessionsLoadSeq || 0) + 1;
     const container = document.getElementById('sessionsList');
     if (!container) return;
     // 正常列表加载时退出内容搜索视图（清空搜索框 = 恢复列表）
@@ -5849,6 +5885,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/sessions?${params}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('加载失败'));
+      if (seq !== this._sessionsLoadSeq) return;
 
       const total = Number(data.total || 0);
       const totalPages = Math.ceil(total / (data.pageSize || 20)) || 1;
@@ -5864,6 +5901,7 @@ class ConsoleApp {
       setHTML(container, data.items.map(item => this.renderSessionCard(item)).join(''));
       setBloraState('sessionsList', 'success');
     } catch (error) {
+      if (seq !== this._sessionsLoadSeq) return;
       setBloraState('sessionsList', 'error');
       setHTML(container, `<div class="session-list__notice"><blora-empty title="${escapeHtml(error.message || t('会话加载失败'))}"></blora-empty><button type="button" class="blora-button" onclick="app.loadSessions(${this._sessionsPage || 1})" data-variant="secondary" data-size="sm">${t('重试')}</button></div>`);
     }
@@ -5936,6 +5974,7 @@ class ConsoleApp {
 
   /** 会话内容搜索：调 /search 端点，按会话聚合渲染结果卡片（复用列表卡片样式） */
   async runSessionsSearch() {
+    const seq = this._sessionsSearchSeq = (this._sessionsSearchSeq || 0) + 1;
     const container = document.getElementById('sessionsSearchResults');
     const wrap = document.getElementById('sessionsSearchResultsWrap');
     const listEl = document.getElementById('sessionsList');
@@ -5957,6 +5996,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/sessions/search?${params}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('加载失败'));
+      if (seq !== this._sessionsSearchSeq) return;
       const results = Array.isArray(data.results) ? data.results : [];
       if (infoEl) infoEl.textContent = `${t('共')} ${Number(data.totalSessions || 0)} ${t('个匹配会话')}`;
       if (!results.length) {
@@ -5965,6 +6005,7 @@ class ConsoleApp {
       }
       setHTML(container, results.map(item => this.renderSessionSearchResult(item)).join(''));
     } catch (error) {
+      if (seq !== this._sessionsSearchSeq) return;
       setHTML(container, `<div class="session-list__notice"><blora-empty title="${escapeHtml(error.message || t('搜索失败'))}"></blora-empty></div>`);
     }
   }
@@ -6731,17 +6772,20 @@ class ConsoleApp {
 
   async loadUsageLogs(page = 1) {
     this.usageLogPage = Math.max(1, page || 1);
+    const seq = this._usageLogsLoadSeq = (this._usageLogsLoadSeq || 0) + 1;
     const params = this._buildUsageLogFilterParams();
     params.set('page', String(this.usageLogPage));
     params.set('limit', String(this.usageLogLimit));
 
     const container = document.getElementById('usageLogsList');
     if (!container) return;
+    setHTML(container, pageLoadingHtml(t('加载调用记录...'), { compact: true }));
 
     try {
       const response = await fetch(`/api/user/usage-logs?${params}`);
       if (!response.ok) throw new Error(t('加载失败'));
       const data = await response.json();
+      if (seq !== this._usageLogsLoadSeq) return;
 
       this.usageLogTotal = data.total;
       this._usageLogsCache = data.logs || [];
@@ -6809,8 +6853,9 @@ class ConsoleApp {
         </table>
       `);
     } catch (error) {
+      if (seq !== this._usageLogsLoadSeq) return;
       console.error(t('加载调用记录失败:'), error);
-      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))} <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.loadUsageLogs(${this.usageLogPage})">${t('重试')}</button></p>`);
     }
   }
 
@@ -6977,9 +7022,16 @@ class ConsoleApp {
   }
 
   async loadBalance() {
+    const seq = this._balanceLoadSeq = (this._balanceLoadSeq || 0) + 1;
+    const balance = document.getElementById('balanceDisplay');
+    const container = document.getElementById('personalLimits');
+    if (balance) balance.textContent = t('加载中...');
+    if (container) setHTML(container, pageLoadingHtml(t('正在加载限额...'), { compact: true }));
     try {
       const balanceRes = await fetch('/api/user/balance');
+      if (!balanceRes.ok) throw new Error(t('加载积分信息失败'));
       const data = await balanceRes.json();
+      if (seq !== this._balanceLoadSeq) return;
 
       document.getElementById('balanceDisplay').textContent = Number(data.balance || 0).toFixed(0);
 
@@ -6998,7 +7050,10 @@ class ConsoleApp {
       }).join('') : `<div class="limit-card"><span class="limit-value">${t('不限制')}</span><span class="limit-label">${t('暂无限额规则')}</span></div>`);
       section.style.display = 'block';
     } catch (error) {
+      if (seq !== this._balanceLoadSeq) return;
       console.error(t('加载积分信息失败:'), error);
+      if (balance) balance.textContent = t('加载失败');
+      if (container) setHTML(container, `<p style="color:var(--destructive);">${escapeHtml(error.message || t('加载积分信息失败'))}</p>`);
     }
   }
 
@@ -8392,6 +8447,7 @@ class ConsoleApp {
 
   async loadAuditLogs(page = 1) {
     this._auditLogPage = page;
+    const seq = this._auditLogLoadSeq = (this._auditLogLoadSeq || 0) + 1;
     const listEl = document.getElementById('auditLogsList');
     const paginationEl = document.getElementById('auditLogsPagination');
     if (!listEl) return;
@@ -8403,6 +8459,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/audit-logs?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('加载失败'));
+      if (seq !== this._auditLogLoadSeq) return;
       const { items, total, limit } = data;
       if (!items.length) {
         setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">' + t('暂无操作日志') + '</p>');
@@ -8437,7 +8494,8 @@ class ConsoleApp {
         setHTML(paginationEl, '');
       }
     } catch (error) {
-      setHTML(listEl, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
+      if (seq !== this._auditLogLoadSeq) return;
+      setHTML(listEl, `<p style="color:var(--destructive);">${escapeHtml(error.message || t('加载失败'))}</p>`);
       setHTML(paginationEl, '');
     }
   }

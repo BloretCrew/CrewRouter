@@ -274,6 +274,7 @@ class AdminPoliciesApp {
   async loadPolicies() {
     const pane = this.pane('Policies');
     if (!pane) return;
+    const seq = this._policiesLoadSeq = (this._policiesLoadSeq || 0) + 1;
     this.loading(pane);
     try {
       const [groups, tags] = await Promise.all([
@@ -287,6 +288,7 @@ class AdminPoliciesApp {
       params.set('page', String(this._policyPage));
       params.set('limit', String(this._policyPageSize));
       const data = await this._request(`/api/admin/policies?${params.toString()}`);
+      if (seq !== this._policiesLoadSeq) return;
       const items = data.items || [];
       const total = data.total || 0;
       const totalPages = Math.max(1, Math.ceil(total / this._policyPageSize));
@@ -375,6 +377,7 @@ class AdminPoliciesApp {
         this.loadPolicies();
       });
     } catch (error) {
+      if (seq !== this._policiesLoadSeq) return;
       this.error(pane, error);
     }
   }

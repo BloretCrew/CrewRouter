@@ -362,7 +362,8 @@
   async function cycleSummary(root, seq) {
     const state = states.get(root), target = root.querySelector('.quota-cycle-summary');
     target.querySelector('summary').textContent = tr('周期状态');
-    target.querySelector('div').replaceChildren();
+    target.querySelector('div').textContent = tr('正在加载周期状态...');
+    target.setAttribute('aria-busy', 'true');
     try {
       const query = params(root);
       ['user_id', 'team_id', 'model_id', 'request_source', 'workspace_path', 'api_key_id', 'data_source', 'status'].forEach(key => query.delete(key));
@@ -372,9 +373,11 @@
       const labels = { complete: '完整周期', partial: '部分周期', pending_reconciliation: '待对账', pending: '待对账', open: '进行中', active: '进行中', exhausted_pending_reconciliation: '待对账', reset_before_exhaustion: '重置前未耗尽', adjusted: '额度调整', invalidated: '报告失效' };
       target.querySelector('summary').textContent = tr('周期状态') + ' · ' + number(data.total);
       target.querySelector('div').innerHTML = array(data.rows).map(row => `<p class="quota-note">${esc(row.provider_name || state.accounts.find(r => String(r.account_id) === String(row.account_id))?.provider_name || tr('供应商'))} / ${esc(row.account_label || row.label || state.accounts.find(r => String(r.account_id) === String(row.account_id))?.label || tr('额度账户'))} · ${esc(tr(labels[row.state || row.status] || '状态未提供'))}</p>`).join('') + button('cycles', '查看周期');
+      target.removeAttribute('aria-busy');
     } catch (error) {
       if (seq !== state.seq) return;
       target.querySelector('div').textContent = error.message;
+      target.removeAttribute('aria-busy');
       if (error.message === tr('无权查看额度')) { clear(root); root.querySelector('.quota-status').textContent = error.message; }
     }
   }
