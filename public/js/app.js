@@ -11906,7 +11906,8 @@ ${extractorBody}
 
     section.style.display = 'block';
     setHTML(grid, providers.map(p => {
-      const historyLink = `<button type="button" data-quota-provider="${escapeHtml(String(p.id ?? p.provider_id ?? ''))}">${t('额度历史')}</button>`;
+      const providerId = escapeHtml(String(p.id ?? p.provider_id ?? ''));
+      const historyLink = `<button type="button" class="ml-model-quota-name quota-history-title" data-quota-provider="${providerId}" aria-label="${escapeHtml(t('查看额度历史：{name}', { name: p.name }))}">${escapeHtml(p.name)}</button>`;
       const latest = p.latest_valid_quota || p.last_valid_quota || p.latest_valid?.quota;
       const lastValidAt = p.last_valid_at || p.latest_valid?.observed_at || p.observed_at;
       const quota = latest || p.quota;
@@ -11916,7 +11917,7 @@ ${extractorBody}
         return `
           <article class="ml-model-quota-card error">
             <div class="ml-model-quota-header">
-              <span class="ml-model-quota-name">${escapeHtml(p.name)}</span>
+              ${historyLink}
               <span>${t('查询失败')}</span>
             </div>
             ${historyLink}
@@ -12007,7 +12008,7 @@ ${extractorBody}
       return `
         <article class="ml-model-quota-card">
           <div class="ml-model-quota-header">
-            <span class="ml-model-quota-name">${escapeHtml(p.name)}</span>
+            ${historyLink}
             ${q.planName ? `<span class="ml-model-quota-plan">${escapeHtml(q.planName)}</span>` : ''}
             ${keyEntries.length > 1 ? `<span class="ml-model-quota-plan">${t('共')} ${keyEntries.length} ${t('个 Key')}</span>` : ''}
           </div>
@@ -12020,9 +12021,7 @@ ${extractorBody}
           ${keysHtml}
           ${creditsHtml}
           ${stateHtml}
-          ${p.coverage ? `<div class="quota-note">${t('成功账户覆盖')} ${escapeHtml(String(p.coverage.successful))}/${escapeHtml(String(p.coverage.total))}</div>` : ''}
-          ${p.history?.recorded === false ? `<div class="quota-note">${t('额度历史记录失败，本次查询未保存')}</div>` : ''}
-          ${historyLink}
+
         </article>`;
     }).join(''));
     grid.querySelectorAll('[data-quota-provider]').forEach(button => button.addEventListener('click', () => {
@@ -13469,20 +13468,18 @@ ${extractorBody}
     }
 
     const keys = this._libraryKeys;
-    // Blora 2.1：≤3 个 Key 用 segmented，更多时用 select；选项只写 Key 名（模型名左侧已显示）
     const selectedId = String(this._librarySelectedKeyId ?? keys[0]?.id ?? '');
-    let html = '';
-    if (keys.length <= 3) {
-      html = `<blora-segmented class="ml-key-segmented" value="${escapeHtml(selectedId)}" aria-label="${escapeHtml(t('切换 Key'))}"
-        onclick="const b=event.target.closest('.blora-segmented__item');if(b)app.selectLibraryKey(b.dataset.value, event)">
-        ${keys.map(k => `<blora-segment value="${escapeHtml(String(k.id))}">${escapeHtml(k.name || 'API Key')}</blora-segment>`).join('')}
-      </blora-segmented>`;
-    } else {
-      html = `<blora-select class="blora-select ml-key-select" value="${escapeHtml(selectedId)}" aria-label="${escapeHtml(t('切换 Key'))}"
-        onchange="app.selectLibraryKey(this.value, event)">
-        ${keys.map(k => `<blora-option value="${escapeHtml(String(k.id))}"${String(k.id) === selectedId ? ' selected' : ''}>${escapeHtml(k.name || 'API Key')}</blora-option>`).join('')}
-      </blora-select>`;
+    // 横向显示前 5 个 Key，剩余项收进「更多」选择框；若选中项位于折叠区，自动将其加入可见项。
+    const visibleKeys = keys.slice(0, 5);
+    if (!visibleKeys.some(key => String(key.id) === selectedId) && keys.some(key => String(key.id) === selectedId)) {
+      visibleKeys[visibleKeys.length - 1] = keys.find(key => String(key.id) === selectedId);
     }
+    const visibleIds = new Set(visibleKeys.map(key => String(key.id)));
+    const collapsedKeys = keys.filter(key => !visibleIds.has(String(key.id)));
+    const html = `<div class="ml-key-choices" role="group" aria-label="${escapeHtml(t('切换 Key'))}">
+      ${visibleKeys.map(key => `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${escapeHtml(key.name || 'API Key')}</button>`).join('')}
+      ${collapsedKeys.length ? `<blora-select class="blora-select ml-key-select" value="${escapeHtml(selectedId)}" aria-label="${escapeHtml(t('更多 Key'))}" onchange="app.selectLibraryKey(this.value, event)"><blora-option value="" disabled>${escapeHtml(t('更多 Key'))}</blora-option>${collapsedKeys.map(key => `<blora-option value="${escapeHtml(String(key.id))}"${String(key.id) === selectedId ? ' selected' : ''}>${escapeHtml(key.name || 'API Key')}</blora-option>`).join('')}</blora-select>` : ''}
+    </div>`;
     setHTML(chipsContainer, html);
     this._renderLibraryStickyKeyBtn();
   }

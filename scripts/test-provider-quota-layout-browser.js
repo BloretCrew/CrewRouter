@@ -241,7 +241,7 @@ async function main(){
       }else{
         await cdp.evaluate(`app.navigateTo('modelLibrary');app.renderProviderQuota([{id:'p1',name:'Command Code GOAT',quota:{unit:'percent',used:89.2059,periods:[{key:'monthly',label:'每月',percent:89.2059}]}}])`);await sleep(250);
         assert.ok(await cdp.evaluate(`!document.querySelector('#providerQuotaGrid .quota-library-latest')`),'模型库只保留一份额度展示');
-        assert.ok(await cdp.click('#providerQuotaGrid [data-quota-provider="p1"]'),'模型库历史入口');await sleep(250);assert.ok(await cdp.click('#quotaHistoryDialog .modal-close'));
+        assert.ok(await cdp.click('#providerQuotaGrid .quota-history-title[data-quota-provider="p1"]'),'点击供应商标题打开历史');await sleep(250);assert.ok(await cdp.click('#quotaHistoryDialog .modal-close'));
       }
       await cdp.evaluate(`${app}.navigateTo('${scope==='user'?'stats':'adminStats'}');${app}.switchStatsTab('multi')`);await sleep(250);
       await cdp.evaluate(`layoutMode='denied';CrewRouterQuotaStats.refresh('${scope}');CrewRouterMultiDimension.load('${scope}')`);await sleep(300);

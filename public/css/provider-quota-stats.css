@@ -15,6 +15,9 @@
 .quota-provider-card { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 12px; }
 .quota-provider-card header { margin-bottom: 8px; }
 .quota-provider-card header button { flex-shrink: 0; }
+.quota-provider-title { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: inherit; text-align: left; cursor: pointer; }
+.quota-provider-title:hover, .quota-provider-title:focus-visible, .quota-history-title:hover, .quota-history-title:focus-visible { color: var(--brand-blue, #0f766e); text-decoration: underline; }
+.quota-provider-title:focus-visible, .quota-history-title:focus-visible { outline: 2px solid var(--brand-blue, #6366f1); outline-offset: 3px; }
 .quota-account-item { padding: 8px 0; }
 .quota-account-item + .quota-account-item { border-top: 1px solid var(--border); }
 .quota-account-heading { font-size: 12px; align-items: start; overflow-wrap: anywhere; }
