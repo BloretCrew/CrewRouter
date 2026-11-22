@@ -54,6 +54,7 @@ const REAL_MOUNTS = [
   { id: 'two-factor', mount: '/api/2fa', module: './two-factor', feature: 'console', runtime: 'index' },
   { id: 'passkey', mount: '/api/passkey', module: './passkey', feature: 'console', runtime: 'index' },
   { id: 'oauth', mount: '/', module: './oauth', feature: 'oauth', runtime: 'index' },
+  { id: 'github-actions-oidc', mount: '/', module: './github-actions-oidc', feature: 'oauth', runtime: 'index' },
   { id: 'api-v1', mount: '/v1', module: './api', feature: 'gateway', runtime: 'index', sameInstance: 'api-core' },
   { id: 'gemini-v1beta', mount: '/v1beta', module: './gemini', feature: 'gateway', runtime: 'index' },
   { id: 'gemini-v1', mount: '/v1', module: './gemini', feature: 'gateway', runtime: 'index' },

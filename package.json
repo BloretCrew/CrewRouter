@@ -27,7 +27,8 @@
     "LICENSE",
     "README.md",
     "docs/cli.md",
-    "docs/sdk/**"
+    "docs/sdk/**",
+    "docs/github-actions-oidc.md"
   ],
   "scripts": {
     "test:signatures": "node --test server/scripts/test-signature-*.js server/scripts/test-user-signature-settings.js server/scripts/test-default-disabled.js",
@@ -40,6 +41,7 @@
     "test:key-config": "node server/scripts/test-api-key-lifecycle.js && node server/scripts/test-inject-prompt-cache-lifecycle.js && node --test server/scripts/test-inject-prompt-transactions.js && node server/scripts/test-inject-prompt-seed-postgres.js && node server/scripts/test-api-key-queue-concurrency.js",
     "test:passkey-security": "node --test server/scripts/test-passkey-security.js && node server/scripts/test-passkey-store-postgres.js",
     "test:oauth-bearer-policy": "node --test server/scripts/test-oauth-bearer-policy.js",
+    "test:github-actions-oidc": "node --test server/scripts/test-github-actions-token-source.js server/scripts/test-github-oidc.js server/scripts/test-github-actions-oidc-route.js",
     "test:oauth-clients": "node --test server/scripts/test-oauth-clients.js",
     "test:oauth-clients-postgres": "node server/scripts/test-oauth-clients-postgres.js",
     "test:api-key-permissions": "node --test server/scripts/test-api-key-permissions.js server/scripts/test-console-key-auth.js && node server/scripts/test-console-route-auth-coverage.js",

@@ -13,6 +13,7 @@ const SESSION_ONLY = [
   /^\/api\/setup(?:\/|$)/,
   /^\/api\/admin\/update(?:\/|$)/,
   /^\/oauth\/authorize(?:\/|$)/,
+  /^\/oauth\/github-actions(?:\/|$)/,
   /^\/oauth\/authorizations(?:\/|$)/,
   /^\/api\/user\/model-trace(?:\/|$)/,
 ];

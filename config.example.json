@@ -25,6 +25,16 @@
     "appSecret": "",
     "redirectCallbackHost": ""
   },
+  "githubActionsOidc": {
+    "enabled": false,
+    "userId": null,
+    "eventName": "push",
+    "audience": "https://router.example.com/oauth/github-actions",
+    "repositories": ["acme/private-service"],
+    "refs": ["refs/heads/main"],
+    "workflows": ["acme/private-service/.github/workflows/crewrouter.yml@refs/heads/main"],
+    "subjects": ["repo:acme/private-service:ref:refs/heads/main"]
+  },
   "initialProviders": [
     {
       "id": "test",

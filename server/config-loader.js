@@ -56,6 +56,16 @@ const DEFAULTS = {
     appSecret: '',
     redirectCallbackHost: '',
   },
+  githubActionsOidc: {
+    enabled: false,
+    userId: null,
+    eventName: 'push',
+    audience: '',
+    repositories: [],
+    refs: [],
+    workflows: [],
+    subjects: [],
+  },
   // 统计信息上报（自建实例向官方上报匿名聚合使用统计）
   statsReport: {
     enabled: true,                 // 配置级总开关，显式 false 强制关闭
@@ -121,6 +131,16 @@ const ENV_MAP = {
   CR_PASSPORT_APP_ID:            'passport.appId',
   CR_PASSPORT_APP_SECRET:        'passport.appSecret',
   CR_PASSPORT_REDIRECT_CALLBACK_HOST: 'passport.redirectCallbackHost',
+
+  // GitHub Actions OIDC federation
+  CR_GITHUB_ACTIONS_OIDC_ENABLED: 'githubActionsOidc.enabled',
+  CR_GITHUB_ACTIONS_OIDC_EVENT_NAME: 'githubActionsOidc.eventName',
+  CR_GITHUB_ACTIONS_OIDC_USER_ID: 'githubActionsOidc.userId',
+  CR_GITHUB_ACTIONS_OIDC_AUDIENCE: 'githubActionsOidc.audience',
+  CR_GITHUB_ACTIONS_OIDC_REPOSITORIES: 'githubActionsOidc.repositories',
+  CR_GITHUB_ACTIONS_OIDC_REFS: 'githubActionsOidc.refs',
+  CR_GITHUB_ACTIONS_OIDC_WORKFLOWS: 'githubActionsOidc.workflows',
+  CR_GITHUB_ACTIONS_OIDC_SUBJECTS: 'githubActionsOidc.subjects',
 
   // github oauth
   CR_GITHUB_CLIENT_ID:     'github.clientId',

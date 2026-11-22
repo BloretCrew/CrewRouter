@@ -11,6 +11,7 @@ const esbuild = require('esbuild');
 const { REAL_MOUNTS } = require('../routes/mounts');
 const root = path.resolve(__dirname, '../..');
 const mounts = REAL_MOUNTS.filter(entry => entry.runtime === 'index');
+const routePackageFiles = ['server/routes/github-actions-oidc.js', 'server/utils/github-oidc.js'];
 
 async function mockLoader() {
   const calls = [];
@@ -96,8 +97,7 @@ test('esbuild includes all index routes and isolated non-demo bundle loads', asy
       packages: 'external', external: ['../public/*', '../../public/*'],
       write: false, metafile: true, logLevel: 'silent',
     });
-    for (const entry of mounts) {
-      const file = `server/routes/${entry.module.slice(2)}.js`;
+    for (const file of [...mounts.map(entry => `server/routes/${entry.module.slice(2)}.js`), ...routePackageFiles]) {
       assert.ok(result.metafile.inputs[file], `${file} is included`);
       assert.ok(Object.values(result.metafile.outputs).some(output => output.inputs[file]?.bytesInOutput > 0), `${file} contributes runtime code`);
     }

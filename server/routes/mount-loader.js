@@ -36,6 +36,7 @@ const routeModules = {
   './two-factor': () => require('./two-factor'),
   './passkey': () => require('./passkey'),
   './oauth': () => require('./oauth'),
+  './github-actions-oidc': () => require('./github-actions-oidc'),
   './gemini': () => require('./gemini'),
   './plugins': () => require('./plugins'),
 };

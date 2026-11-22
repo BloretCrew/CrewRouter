@@ -97,6 +97,7 @@ test('session-only paths reject API keys and OAuth tokens', async () => {
     ['/api/passkey/list', { 'x-api-key': 'sk-test' }],
     ['/auth/login', { 'x-api-key': 'sk-test' }],
     ['/oauth/authorize', { authorization: 'Bearer crh_token' }],
+    ['/oauth/github-actions', { authorization: 'Bearer crh_token' }],
     ['/api/user/model-trace/jobs', { authorization: 'Bearer crh_token' }],
   ]) {
     const req = { path: pathname, headers };

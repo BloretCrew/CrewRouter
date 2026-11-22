@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 // These exchanges authenticate with the supplied token/code, never a browser session.
-const TOKEN_ENDPOINTS = new Set(['/oauth/token', '/oauth/revoke']);
+const TOKEN_ENDPOINTS = new Set(['/oauth/token', '/oauth/revoke', '/oauth/github-actions']);
 
 function allowedOrigins(req) {
   const configured = req.app?.locals?.csrfAllowedOrigins || [];
