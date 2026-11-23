@@ -4,7 +4,7 @@
 
 后端 `main.js` 默认不执行。常规 `trusted-in-process` 插件只有在管理员审查代码并显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 后才运行于 CR 主进程；Node VM、权限清单、超时和任务重试都不是恶意代码的 OS 隔离。
 
-Linux bubblewrap 提供两种严格受限模式：`executionMode: "isolated-task"` 仅支持纯计算 `task-entry.js`；`executionMode: "isolated-hooks"` 仅支持 JSON-safe 的 `billing:calculate` 和 `stats:record`，每次调用启动一次短命 worker，payload/meta 经字段白名单投影，不传凭据、request body 或用户/Key ID。该模式额外权限只能是 manifest hooks 所需的 `billing:modify` / `gateway:modify`，handler 返回值再按 hook schema 限制；每次调用有 worker 启动开销，不用于流式热路径。gateway request/response/stream、API-key、provider、routes、cron、storage 和 network 等宿主 API 仍不支持隔离执行，必须留在 trusted-in-process 并经管理员审查。
+Linux bubblewrap 提供两种严格受限模式：`executionMode: "isolated-task"` 仅支持纯计算 `task-entry.js`；`executionMode: "isolated-hooks"` 仅支持 JSON-safe 的 `billing:calculate`、`stats:record` 和 `gateway:finalResponse`，每次调用启动一次短命 worker，payload/meta 经字段白名单投影，不传凭据、request body 或用户/Key ID；finalResponse 只允许写当前插件命名空间的 `X-Plugin-<pluginId>-*` 安全 header，不能改 status、Set-Cookie 或其他安全头。该模式额外权限只能是 manifest hooks 所需的 `billing:modify` / `gateway:modify`，handler 返回值再按 hook schema 限制；每次调用有 worker 启动开销，不用于流式热路径。gateway request/response/stream、API-key、provider、routes、cron、storage 和 network 等宿主 API 仍不支持隔离执行，必须留在 trusted-in-process 并经管理员审查。
 
 管理员需显式设置 `CR_ENABLE_PLUGIN_BWRAP=1`；启动时 live-preflight bubblewrap user/PID/network/IPC/UTS namespace、UID/GID 与 capability 限制。root 服务通过 `setpriv` 降到宿主 nobody (65534)；bubblewrap 和 Node runtime 必须可由该用户遍历/执行，可用 `CR_PLUGIN_NODE_PATH` 指定 world-readable Node binary（例如 root 下默认 `/root/.nvm` 路径会被拒绝）。runtime 缺失或 preflight 失败则拒绝加载，不回退主进程。
 

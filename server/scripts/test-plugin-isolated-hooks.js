@@ -70,6 +70,10 @@ function loadRegistry(pool, hooksBus, warnings) {
     assert.ok(subscription, 'isolated billing hook registered through the host bus');
     const result = await subscription[2]({ cost: 3, ratio: 1, weightedTokens: 100, password: 'must-not-cross-ipc' }, { requestType: 'openai', userId: 42, provider: { api_key: 'secret' } });
     assert.deepEqual(JSON.parse(JSON.stringify(result)), { cost: 3, ratio: 0.9, weightedTokens: 100, password: 'must-not-cross-ipc' });
+    const finalResponse = calls.find(row => row[1] === 'gateway:finalResponse');
+    assert.ok(finalResponse, 'isolated finalResponse hook registered');
+    const headerResult = await finalResponse[2]({ statusCode: 200, headers: { Authorization: 'must-not-cross-ipc' } }, { requestType: 'openai', model: 'secret-model' });
+    assert.deepEqual(JSON.parse(JSON.stringify(headerResult)), { statusCode: 200, headers: { 'X-Plugin-example-isolated-hooks-Trace': 'sandboxed' } });
     await registry.disable('example-isolated-hooks');
     assert.equal(calls.length, 0, 'disable removes isolated hook subscriber');
     console.log('PASS isolated billing hook runs under bwrap; host secrets are projected out and disable unloads it');

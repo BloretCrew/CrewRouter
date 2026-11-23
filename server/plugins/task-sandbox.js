@@ -91,7 +91,7 @@ function probeRuntime({ env = process.env, timeoutMs = 3000 } = {}) {
   return { bwrap, uid: 65534, networkNamespace: true, pidNamespace: true, capabilitiesDropped: true };
 }
 
-const ISOLATED_HOOK_PERMISSIONS = Object.freeze({ 'billing:calculate': 'billing:modify', 'stats:record': 'gateway:modify' });
+const ISOLATED_HOOK_PERMISSIONS = Object.freeze({ 'billing:calculate': 'billing:modify', 'stats:record': 'gateway:modify', 'gateway:finalResponse': 'gateway:modify' });
 
 function assertModeSupported(manifest, env = process.env) {
   const permissions = new Set(manifest.permissions || []);
