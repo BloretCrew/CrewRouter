@@ -117,7 +117,11 @@ function createTaskQueue({ pool, isLoaded, getHandlers, logger = console }) {
           }
         } catch (error) {
           controller.abort(error);
-          await settle(task, task.attempts < task.max_attempts ? 'retry' : 'failed', null, error);
+          if (error?.message === '插件已停用') {
+            await pool.query(`UPDATE plugin_tasks SET status='cancelled', locked_at=NULL, locked_by=NULL, updated_at=now() WHERE id=$1 AND locked_by=$2`, [task.id, task.locked_by]);
+          } else {
+            await settle(task, task.attempts < task.max_attempts ? 'retry' : 'failed', null, error);
+          }
         } finally { clearTimeout(timeout); running.delete(task.id); }
       }
     } catch (error) {
@@ -126,10 +130,10 @@ function createTaskQueue({ pool, isLoaded, getHandlers, logger = console }) {
   }
 
   function cancelPlugin(pluginId) {
-    for (const [taskId, entry] of running) {
+    for (const [, entry] of running) {
       if (entry.pluginId === pluginId) entry.controller.abort(new Error('插件已停用'));
     }
-    return pool.query(`UPDATE plugin_tasks SET status='cancelled', locked_at=NULL, locked_by=NULL, updated_at=now() WHERE plugin_id=$1 AND status='pending'`, [pluginId]);
+    return pool.query(`UPDATE plugin_tasks SET status='cancelled', locked_at=NULL, locked_by=NULL, updated_at=now() WHERE plugin_id=$1 AND status IN ('pending','running')`, [pluginId]);
   }
 
   function start() {
