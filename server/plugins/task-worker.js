@@ -5,7 +5,7 @@ const { Buffer } = require('node:buffer');
 
 const MAX_RESULT_BYTES = 65536;
 const request = JSON.parse(fs.readFileSync('/tmp/request.json', 'utf8'));
-if (!request || request.protocol !== 1 || typeof request.pluginId !== 'string' || typeof request.taskName !== 'string') {
+if (!request || request.protocol !== 1 || typeof request.pluginId !== 'string' || typeof request.taskName !== 'string' || !['task-entry.js', 'hook-entry.js'].includes(request.entryName)) {
   process.stdout.write(JSON.stringify({ protocol: 1, taskId: request?.taskId, error: 'invalid request frame' }) + '\n');
   process.exit(2);
 }
@@ -27,7 +27,8 @@ const execute = new vm.Script(`
     const handler = handlers[${taskNameLiteral}];
     if (typeof handler !== 'function') throw new Error('task handler is not registered');
     const request = JSON.parse(${requestLiteral});
-    const result = await handler(request.payload || {}, Object.freeze({ taskId: request.taskId, attempt: request.attempt }));
+    const safeMeta = request.meta && typeof request.meta === 'object' && !Array.isArray(request.meta) ? request.meta : {};
+    const result = await handler(request.payload || {}, Object.freeze({ ...safeMeta, taskId: request.taskId, attempt: request.attempt }));
     if (result !== null && result !== undefined && (!result || typeof result !== 'object' || Array.isArray(result))) throw new Error('task result must be a JSON object');
     const output = JSON.stringify({ protocol: 1, taskId: request.taskId, result: result == null ? null : result });
     if (output.length > ${MAX_RESULT_BYTES}) throw new Error('task result exceeds 64 KiB');

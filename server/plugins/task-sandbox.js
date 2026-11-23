@@ -11,7 +11,7 @@ const MAX_STDIO_BYTES = 256 * 1024;
 const TASK_TIMEOUT_MS = 30000;
 const MAX_TASK_ENTRY_BYTES = 256 * 1024;
 const FORBIDDEN_ISOLATED_PERMISSIONS = new Set([
-  'storage', 'network', 'gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register',
+  'storage', 'network', 'apikey:modify', 'provider:register',
   'routes:register', 'cron:register', 'events:subscribe', 'usage:read', 'export:usage',
   'models:read', 'preferences:read', 'audit:write', 'meta:read', 'admin:view', 'webhook:register',
 ]);
@@ -91,19 +91,43 @@ function probeRuntime({ env = process.env, timeoutMs = 3000 } = {}) {
   return { bwrap, uid: 65534, networkNamespace: true, pidNamespace: true, capabilitiesDropped: true };
 }
 
+const ISOLATED_HOOK_PERMISSIONS = Object.freeze({ 'billing:calculate': 'billing:modify', 'stats:record': 'gateway:modify' });
+
 function assertModeSupported(manifest, env = process.env) {
   const permissions = new Set(manifest.permissions || []);
   const incompatible = [...permissions].filter(permission => FORBIDDEN_ISOLATED_PERMISSIONS.has(permission));
-  if (incompatible.length) throw new Error(`隔离任务模式不支持这些宿主进程能力: ${incompatible.join(', ')}`);
+  if (incompatible.length) throw new Error(`隔离模式不支持这些宿主进程能力: ${incompatible.join(', ')}`);
   probeRuntime({ env });
-  if (manifest.executionMode !== 'isolated-task') throw new Error('插件未声明 isolated-task 执行模式');
-  if (!permissions.has('tasks:register')) throw new Error('隔离任务模式需要 tasks:register 权限');
-  if (!Array.isArray(manifest.taskHandlers) || !manifest.taskHandlers.length || manifest.taskHandlers.some(name => !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name)))) {
-    throw new Error('isolated-task 需要有效的 taskHandlers 名称数组');
+  if (manifest.executionMode === 'isolated-task') {
+    const extraPermissions = [...permissions].filter(permission => permission !== 'tasks:register');
+    if (extraPermissions.length) throw new Error(`isolated-task 权限只允许 tasks:register: ${extraPermissions.join(', ')}`);
+    if (!permissions.has('tasks:register')) throw new Error('隔离任务模式需要 tasks:register 权限');
+    if (!Array.isArray(manifest.taskHandlers) || !manifest.taskHandlers.length || manifest.taskHandlers.some(name => !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name)))) {
+      throw new Error('isolated-task 需要有效的 taskHandlers 名称数组');
+    }
+    if (manifest.hooks || (manifest.routes || []).length || (manifest.cron || []).length || (manifest.pages || []).length || (manifest.slots || []).length) {
+      throw new Error('isolated-task 目前仅支持纯后台任务，不支持 hooks/routes/cron/pages/slots');
+    }
+    return;
   }
-  if (manifest.hooks || (manifest.routes || []).length || (manifest.cron || []).length || (manifest.pages || []).length || (manifest.slots || []).length) {
-    throw new Error('isolated-task 目前仅支持纯后台任务，不支持 hooks/routes/cron/pages/slots');
+  if (manifest.executionMode === 'isolated-hooks') {
+    const hooks = manifest.hooks;
+    if (!hooks || typeof hooks !== 'object' || Array.isArray(hooks) || !Object.keys(hooks).length) throw new Error('isolated-hooks 需要 manifest.hooks');
+    const allowedPermissions = new Set();
+    for (const [hookName, handlerName] of Object.entries(hooks)) {
+      if (!ISOLATED_HOOK_PERMISSIONS[hookName]) throw new Error(`isolated-hooks 不支持 hook ${hookName}`);
+      allowedPermissions.add(ISOLATED_HOOK_PERMISSIONS[hookName]);
+      if (!permissions.has(ISOLATED_HOOK_PERMISSIONS[hookName])) throw new Error(`hook ${hookName} 缺少权限 ${ISOLATED_HOOK_PERMISSIONS[hookName]}`);
+      if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(handlerName))) throw new Error(`isolated-hooks handler 名无效: ${handlerName}`);
+    }
+    const extraPermissions = [...permissions].filter(permission => !allowedPermissions.has(permission));
+    if (extraPermissions.length) throw new Error(`isolated-hooks 声明了 hook 以外的权限: ${extraPermissions.join(', ')}`);
+    if ((manifest.routes || []).length || (manifest.cron || []).length || (manifest.pages || []).length || (manifest.slots || []).length || manifest.taskHandlers) {
+      throw new Error('isolated-hooks 不支持 routes/cron/pages/slots/tasks');
+    }
+    return;
   }
+  throw new Error('插件未声明受支持的隔离 executionMode');
 }
 
 function getRuntimeFiles(executables) {
@@ -159,20 +183,21 @@ function parseWorkerOutput(output) {
   return result;
 }
 
-function runTaskInBwrap({ pluginId, pluginDir, taskName, payload, taskId, attempt, env = process.env, timeoutMs = TASK_TIMEOUT_MS, signal }) {
+function runPluginEntryInBwrap({ pluginId, pluginDir, entryName = 'task-entry.js', taskName, payload, taskId, attempt = 1, meta = {}, env = process.env, timeoutMs = TASK_TIMEOUT_MS, signal }) {
   const bwrap = selectBwrap(env);
-  if (!bwrap) return Promise.reject(new Error('未找到 bubblewrap；拒绝回退到主进程执行隔离任务'));
+  if (!bwrap) return Promise.reject(new Error('未找到 bubblewrap；拒绝回退到主进程执行隔离代码'));
+  if (!['task-entry.js', 'hook-entry.js'].includes(entryName)) return Promise.reject(new Error('隔离入口文件名不受支持'));
   const nodePath = resolveSandboxNodePath(env);
   const canonicalPluginDir = fs.realpathSync(pluginDir);
-  const pluginEntry = path.join(canonicalPluginDir, 'task-entry.js');
-  if (!fs.existsSync(pluginEntry) || !fs.lstatSync(pluginEntry).isFile() || fs.lstatSync(pluginEntry).isSymbolicLink()) return Promise.reject(new Error('隔离插件缺少普通文件 task-entry.js'));
-  if (fs.statSync(pluginEntry).size > MAX_TASK_ENTRY_BYTES) return Promise.reject(new Error('隔离 task-entry.js 超过 256 KiB'));
+  const pluginEntry = path.join(canonicalPluginDir, entryName);
+  if (!fs.existsSync(pluginEntry) || !fs.lstatSync(pluginEntry).isFile() || fs.lstatSync(pluginEntry).isSymbolicLink()) return Promise.reject(new Error(`隔离插件缺少普通文件 ${entryName}`));
+  if (fs.statSync(pluginEntry).size > MAX_TASK_ENTRY_BYTES) return Promise.reject(new Error('隔离入口文件超过 256 KiB'));
   const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-plugin-sandbox-'));
   const hostIdentity = sandboxHostIdentity();
   if (process.getuid() === 0) fs.chownSync(scratchDir, hostIdentity.uid, hostIdentity.gid);
   const frameFile = path.join(scratchDir, 'request.json');
   const workerPath = path.join(__dirname, 'task-worker.js');
-  const request = JSON.stringify({ protocol: 1, pluginId, taskName, taskId, attempt, payload });
+  const request = JSON.stringify({ protocol: 1, pluginId, entryName, taskName, taskId, attempt, payload, meta });
   if (Buffer.byteLength(request, 'utf8') > MAX_FRAME_BYTES) {
     fs.rmSync(scratchDir, { recursive: true, force: true });
     return Promise.reject(new Error('隔离任务 RPC 请求超过 64 KiB'));
@@ -233,4 +258,4 @@ function runTaskInBwrap({ pluginId, pluginDir, taskName, payload, taskId, attemp
 
 function createSandboxToken() { return randomUUID(); }
 
-module.exports = { MAX_FRAME_BYTES, MAX_STDIO_BYTES, MAX_TASK_ENTRY_BYTES, TASK_TIMEOUT_MS, FORBIDDEN_ISOLATED_PERMISSIONS, selectBwrap, resolveSandboxNodePath, assertRuntimeAvailable, probeRuntime, assertModeSupported, buildBwrapArgs, parseWorkerOutput, runTaskInBwrap, createSandboxToken };
+module.exports = { MAX_FRAME_BYTES, MAX_STDIO_BYTES, MAX_TASK_ENTRY_BYTES, TASK_TIMEOUT_MS, FORBIDDEN_ISOLATED_PERMISSIONS, ISOLATED_HOOK_PERMISSIONS, selectBwrap, resolveSandboxNodePath, assertRuntimeAvailable, probeRuntime, assertModeSupported, buildBwrapArgs, parseWorkerOutput, runPluginEntryInBwrap, runTaskInBwrap: runPluginEntryInBwrap, createSandboxToken };

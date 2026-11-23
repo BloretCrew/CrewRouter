@@ -1,0 +1,10 @@
+{
+  "id": "example-isolated-hooks",
+  "name": "隔离 Hooks 示例",
+  "version": "1.0.0",
+  "description": "仅演示经过 JSON schema 化的计费/统计 hooks。",
+  "author": "CrewRouter",
+  "permissions": ["billing:modify"],
+  "executionMode": "isolated-hooks",
+  "hooks": { "billing:calculate": "adjust" }
+}

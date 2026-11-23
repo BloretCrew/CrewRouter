@@ -2,11 +2,13 @@
 
 ## 当前执行模式
 
-后端 `main.js` 默认不执行。只有在管理员审查插件代码并显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 后，插件才会运行。当前后端插件在 CrewRouter 主进程中执行；Node VM、权限清单、超时和任务重试都不是对恶意代码的 OS 安全隔离。
+后端 `main.js` 默认不执行。常规 `trusted-in-process` 插件只有在管理员审查代码并显式设置 `CR_TRUST_IN_PROCESS_PLUGINS=1` 后才运行于 CR 主进程；Node VM、权限清单、超时和任务重试都不是恶意代码的 OS 隔离。
 
-常规 `main.js` 仍在主进程执行，只有可审查、可信的后端代码才可用 `CR_TRUST_IN_PROCESS_PLUGINS=1` 启用。另有 Linux `executionMode: "isolated-task"` 实验模式，仅支持纯计算的 `task-entry.js`；管理员必须设置 `CR_ENABLE_PLUGIN_BWRAP=1`，root 服务由 `setpriv` 降到宿主 nobody (65534)，再启动 bubblewrap user/PID/network/IPC/UTS namespace，容器内 UID/GID 65534、capabilities drop；启动时进行 live preflight。`CR_PLUGIN_NODE_PATH` 可指定 sandbox host identity 可遍历的 Node binary（root 下常见 `/root/.nvm` 默认路径会被拒绝）。Root 部署会通过 setpriv 先降到 host `nobody`，因此 bubblewrap 和 node runtime 路径必须可被该用户遍历/执行；可用 `CR_PLUGIN_NODE_PATH` 指向 world-readable Node binary。隔离任务无 storage、网络、hooks、routes、cron、provider、billing、API key 或事件宿主 API；输入输出是 ≤64 KiB JSON，worker 通过 bwrap/VM 受限执行，超时杀进程组。runtime 缺失或 preflight 失败时拒绝加载，不回退主进程。
+Linux bubblewrap 提供两种严格受限模式：`executionMode: "isolated-task"` 仅支持纯计算 `task-entry.js`；`executionMode: "isolated-hooks"` 仅支持 JSON-safe 的 `billing:calculate` 和 `stats:record`，每次调用启动一次短命 worker，payload/meta 经字段白名单投影，不传凭据、request body 或用户/Key ID。该模式额外权限只能是 manifest hooks 所需的 `billing:modify` / `gateway:modify`，handler 返回值再按 hook schema 限制；每次调用有 worker 启动开销，不用于流式热路径。gateway request/response/stream、API-key、provider、routes、cron、storage 和 network 等宿主 API 仍不支持隔离执行，必须留在 trusted-in-process 并经管理员审查。
 
-该模式有真实 OS namespace/host UID 边界，但共享宿主内核，不保证抵御内核漏洞、bwrap/Node漏洞或侧信道；不等同于每插件 OCI 容器。当前 task-entry 无宿主 imports/API；rootfs 只挂载 Node ELF 与动态库、只读 task-entry/RPC frame、独立临时目录，网络 namespace 关闭；资源限额为 address-space 4 GiB、CPU 25 秒、wall-clock 30 秒、NOFILE 64、FSIZE 512 KiB，stdout frame ≤256 KiB，任务 JSON/result ≤64 KiB，超时杀 worker process group。**尚未配置 cgroup CPU/内存配额或 seccomp syscall filter**；该模式是有边界的 Linux 纵深防御，不得用于需要内核级抗逃逸保证的恶意/高风险代码。未知或无法审查代码仍建议禁用。需要更强隔离时仍需独立容器/低权限服务、最小挂载、网络策略、seccomp/AppArmor 与逃逸测试。
+管理员需显式设置 `CR_ENABLE_PLUGIN_BWRAP=1`；启动时 live-preflight bubblewrap user/PID/network/IPC/UTS namespace、UID/GID 与 capability 限制。root 服务通过 `setpriv` 降到宿主 nobody (65534)；bubblewrap 和 Node runtime 必须可由该用户遍历/执行，可用 `CR_PLUGIN_NODE_PATH` 指定 world-readable Node binary（例如 root 下默认 `/root/.nvm` 路径会被拒绝）。runtime 缺失或 preflight 失败则拒绝加载，不回退主进程。
+
+该模式有真实 OS namespace/host UID 边界，但共享宿主内核，不保证抵御内核漏洞、bwrap/Node漏洞或侧信道；不等同于每插件 OCI 容器。隔离 task/hook entry 均无宿主 imports/API；rootfs 只挂载 Node ELF 与动态库、只读 entry/RPC frame、独立临时目录，网络 namespace 关闭；资源限额为 address-space 4 GiB、CPU 25 秒、wall-clock ≤30 秒（hooks 实际上限 2 秒）、NOFILE 64、FSIZE 512 KiB，stdout frame ≤256 KiB，JSON payload/result ≤64 KiB，超时杀 worker process group。**尚未配置 cgroup CPU/内存配额或 seccomp syscall filter**；该模式是有边界的 Linux 纵深防御，不得用于需要内核级抗逃逸保证的恶意/高风险代码。未知或无法审查代码仍建议禁用。需要更强隔离时仍需独立容器/低权限服务、最小挂载、网络策略、seccomp/AppArmor 与逃逸测试。
 
 ## 商店包校验
 
