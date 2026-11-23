@@ -103,7 +103,7 @@ function createPluginsRoutes() {
         if (!payloadDir) return res.status(400).json({ error: '插件包目录结构不合法' });
         const hasBackendCode = fs.existsSync(path.join(payloadDir, 'main.js'));
         const executionMode = manifest.executionMode || 'trusted-in-process';
-        if (!['trusted-in-process', 'isolated-task'].includes(executionMode) || executionMode !== confirmedExecutionMode) {
+        if (!['trusted-in-process', 'isolated-task', 'isolated-hooks'].includes(executionMode) || executionMode !== confirmedExecutionMode) {
           return res.status(409).json({ error: '插件执行模式已变化，请重新检查并确认。' });
         }
         const requiresBackendTrust = executionMode === 'trusted-in-process' && (hasBackendCode || actualPermissions.some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission)));
@@ -298,7 +298,7 @@ function createPluginsRoutes() {
       const next = !r.rows[0].enabled;
       if (next) {
         const manifest = registry().getKnownManifest(id);
-        const requiresTrust = manifest?.executionMode !== 'isolated-task' && (fs.existsSync(path.join(registry().PLUGINS_DIR, id, 'main.js')) || (manifest?.permissions || []).some(permission => ['gateway:modify','billing:modify','apikey:modify','provider:register','network','tasks:register'].includes(permission)));
+        const requiresTrust = manifest?.executionMode === 'trusted-in-process' && (fs.existsSync(path.join(registry().PLUGINS_DIR, id, 'main.js')) || (manifest?.permissions || []).some(permission => ['gateway:modify','billing:modify','apikey:modify','provider:register','network','tasks:register'].includes(permission)));
         if (requiresTrust && req.body?.trustInProcess !== true) return res.status(400).json({ error: '启用后端插件需要显式确认进程内信任风险。' });
         await registry().enable(id);
       }

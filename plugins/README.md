@@ -29,6 +29,8 @@
 | **`tasks:register`** | `ctx.tasks` | 注册受限任务处理器；提交 JSON payload（≤64 KiB）、幂等键，查询/取消自己的任务；worker 用租约和指数退避重试。默认 trusted-in-process；`executionMode: isolated-task` 时仅允许运行 Linux/bwrap 纯计算 `task-entry.js`，不提供 storage/network/hooks/routes/cron 等 host API |
 | **`events:subscribe`** | `ctx.events.on` | 订阅版本化模型健康、配额阈值和插件生命周期事件；进程内异步 best-effort，不保证跨重启投递 |
 
+- `executionMode: "isolated-hooks"` 是独立运行模式而非权限；目前只允许运行 JSON-safe `billing:calculate` / `stats:record`，宿主每次调用启动 bwrap worker。Secrets、请求正文、用户 ID、provider ID 不会传给 handler；其它 hook 均在 trusted-in-process 中运行。
+
 ## 安全约束（所有能力）
 
 - **绝不暴露**裸 `fs` / `child_process` / `net` / 裸数据库连接。
@@ -36,7 +38,7 @@
 - `preferences:read` 受用户授权门控：用户未在设置页开启「允许插件读取我的偏好」时，`ctx.preferences.get()` 返回 `{ granted: false, reason: 'not_opted_in' }`。
 - 未知权限在加载时仅 warning，不阻断（向后兼容旧插件），但未知 hook 名会被拒绝。
 - `events:subscribe` 目前提供 best-effort 进程内通知，事件版本名以 `.v1` 结尾；需要跨重启保证的工作请用 `tasks:register`，而非把事件订阅当作消息队列。
-- 后端 `main.js` 默认/在 `trusted-in-process` 模式下于 CR 主进程执行；Node VM 不是恶意代码安全边界。只有 `executionMode: "isolated-task"` 的 `task-entry.js` 在 Linux/bwrap namespace、host/namespace UID/GID 65534、无网、最小只读 runtime、无 capabilities 环境执行；它仅适用于纯计算任务，任务 JSON ≤64 KiB，30 秒 timeout 会杀死进程组。启用该模式需显式 `CR_ENABLE_PLUGIN_BWRAP=1` 且 live preflight 成功，否则插件加载失败，不降级。资源上限为 CPU 25 秒、虚拟地址空间 4 GiB、64 文件描述符；尚无 cgroup 与 seccomp，不能对抗共享内核漏洞。
+- 后端 `main.js` 默认/在 `trusted-in-process` 模式下于 CR 主进程执行；Node VM 不是恶意代码安全边界。Linux/bwrap隔离支持 `isolated-task` 纯计算任务和 `isolated-hooks` 的 JSON-safe billing/stats hooks；隔离 worker 是单次短命进程，不提供 storage/network/routes/provider 等通用 ctx API。隔离模式使用 host/namespace UID/GID 65534、无网、最小只读 runtime、无 capabilities、JSON frame 上限、CPU 25 秒、虚拟地址空间 4 GiB、64 文件描述符；启用需 `CR_ENABLE_PLUGIN_BWRAP=1` 与 live preflight，否则拒绝加载、不降级。当前无 cgroup/seccomp，仍共享宿主内核，不防内核/运行时漏洞。
 - `tasks:register` 示例：`ctx.tasks.register('refresh', async (payload, meta) => ({ done: true })); const task = await ctx.tasks.enqueue('refresh', { scope: 'self' }, { idempotencyKey: 'refresh-v1', maxAttempts: 5 });`。`enqueue` 的幂等键在同一插件内唯一，重复提交返回已有任务；handler 可用 `meta.signal` 配合取消；结果必须为 JSON 对象且最大 64 KiB。用户插件路由默认可访问该插件自己的任务状态，但取消只对尚未领取的任务有效。
 
 ## 事件（events:subscribe）

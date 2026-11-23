@@ -10,10 +10,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const { randomUUID } = require('node:crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const hooksBus = require('./hooks');
 const host = require('./host');
+const { sanitizeIsolatedHookInput, sanitizeIsolatedHookResult } = require('./isolated-hook-contract');
 
 // 插件目录：开发在项目根 plugins/；构建后在 dist/plugins/ 或上级
 const PLUGINS_DIR = (() => {
@@ -101,19 +103,38 @@ async function loadOne(id, manifest, rowConfig) {
   unloadOne(id);
   const dir = path.join(PLUGINS_DIR, id);
   const isolatedTasks = manifest.executionMode === 'isolated-task';
-  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), isolatedTasks };
+  const isolatedHooks = manifest.executionMode === 'isolated-hooks';
+  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), isolatedTasks, isolatedHooks };
   loaded.set(id, plugin);
   taskHandlers.set(id, plugin.taskHandlers);
 
   try {
-    if (plugin.isolatedTasks) {
+    if (plugin.isolatedTasks || plugin.isolatedHooks) {
       const taskSandbox = require('./task-sandbox');
       taskSandbox.assertModeSupported(manifest);
-      taskSandbox.probeRuntime();
-      if (!fs.existsSync(path.join(dir, 'task-entry.js'))) throw new Error('isolated-task 插件必须提供 task-entry.js');
+      const entry = plugin.isolatedTasks ? 'task-entry.js' : 'hook-entry.js';
+      const entryPath = path.join(dir, entry);
+      if (!fs.existsSync(entryPath) || !fs.lstatSync(entryPath).isFile() || fs.lstatSync(entryPath).isSymbolicLink()) throw new Error(`隔离插件必须提供普通文件 ${entry}`);
+    }
+    if (plugin.isolatedTasks) {
       for (const name of manifest.taskHandlers || []) {
         if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name))) throw new Error(`隔离任务名无效: ${name}`);
         plugin.taskHandlers.set(name, { isolated: true });
+      }
+    } else if (manifest.executionMode === 'isolated-hooks') {
+      const hookPermissions = require('./task-sandbox').ISOLATED_HOOK_PERMISSIONS;
+      for (const [hookName, handlerName] of Object.entries(manifest.hooks)) {
+        if (!hookPermissions[hookName]) throw new Error(`isolated-hooks 不支持 hook ${hookName}`);
+        const handler = async (payload, meta) => {
+          const serialized = sanitizeIsolatedHookInput(id, hookName, payload, meta);
+          const result = await require('./task-sandbox').runPluginEntryInBwrap({
+            pluginId: id, pluginDir: dir, entryName: 'hook-entry.js', taskName: handlerName,
+            payload: serialized.payload, meta: serialized.meta, taskId: `hook:${randomUUID()}`, attempt: 1,
+            timeoutMs: host.HOOK_TIMEOUT_MS,
+          });
+          return sanitizeIsolatedHookResult(id, hookName, result, payload);
+        };
+        hooksBus.subscribe(id, hookName, handler);
       }
     } else {
       const entryPath = path.join(dir, 'main.js');
