@@ -16,7 +16,7 @@
 | `pages:register` | manifest.pages | 前端页面 |
 | `slots:register` | manifest.slots | 前端插槽 |
 | `routes:register` | `ctx.expose` | 插件自有 HTTP API |
-| `cron:register` | `ctx.cronHandler`/`ctx.scheduleCron` | 定时任务 |
+| `cron:register` | `ctx.cronHandler`/`ctx.scheduleCron` | 进程内轻量定时任务（非持久化队列） |
 | `themes:register` | manifest.themes | 主题 |
 | **`usage:read`** | `ctx.usage` | 当前已认证用户的用量/成本聚合（不含正文；必须传入已认证请求上下文，插件提供的 userId/apiKeyId 不用于授权） |
 | **`models:read`** | `ctx.models` | 模型目录 + 健康度（只读） |
@@ -26,6 +26,7 @@
 | **`meta:read`** | `ctx.pluginMeta` | 当前插件注册信息（只读，不可查询其他插件） |
 | **`webhook:register`** | `ctx.registerWebhook`/`ctx.webhook` | 出站 Webhook（域白名单） |
 | **`admin:view`** | `ctx.adminView` | 管理面板只读视图 |
+| **`tasks:register`** | `ctx.tasks` | 注册受限任务处理器；提交 JSON payload（≤64 KiB）、幂等键，查询/取消自己的任务；worker 用租约和指数退避重试；任务 handler 在受信进程中运行 |
 
 ## 安全约束（所有能力）
 
@@ -33,7 +34,8 @@
 - 所有数据访问走字段白名单：`usage:read` / `export:usage` 返回聚合（request_count/tokens_used/cached_tokens/weighted_tokens/cost/group_key），**不含** `messages`/`response`/`request_params`/provider 凭证/API Key 明文。
 - `preferences:read` 受用户授权门控：用户未在设置页开启「允许插件读取我的偏好」时，`ctx.preferences.get()` 返回 `{ granted: false, reason: 'not_opted_in' }`。
 - 未知权限在加载时仅 warning，不阻断（向后兼容旧插件），但未知 hook 名会被拒绝。
-- 后端 `main.js` 在管理员显式信任后运行于 CR 主进程；Node VM 不是恶意代码安全边界。
+- 后端 `main.js` 在管理员显式信任后运行于 CR 主进程；Node VM 不是恶意代码安全边界。插件任务 handler 也在该进程执行，数据库重试/租约不等同执行隔离，超时不能终止同步阻塞代码。
+- `tasks:register` 示例：`ctx.tasks.register('refresh', async (payload, meta) => ({ done: true })); const task = await ctx.tasks.enqueue('refresh', { scope: 'self' }, { idempotencyKey: 'refresh-v1', maxAttempts: 5 });`。`enqueue` 的幂等键在同一插件内唯一，重复提交返回已有任务；handler 可用 `meta.signal` 配合取消；结果必须为 JSON 对象且最大 64 KiB。用户插件路由默认可访问该插件自己的任务状态，但取消只对尚未领取的任务有效。
 
 ## Webhook（webhook:register）
 

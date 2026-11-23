@@ -516,6 +516,7 @@
     if (pl.slots?.length) caps.push(`<span class="chip cap">${esc(String(pl.slots.length))} 插槽</span>`);
     if (pl.routes?.length) caps.push(`<span class="chip cap">${esc(String(pl.routes.length))} API</span>`);
     if (pl.cron?.length) caps.push(`<span class="chip cap">${esc(String(pl.cron.length))} 定时任务</span>`);
+    if ((pl.permissions || []).includes('tasks:register')) caps.push('<span class="chip cap">持久化任务</span>');
     if (pl.themes?.length) caps.push(`<span class="chip cap">${esc(String(pl.themes.length))} 主题</span>`);
     const capsHtml = caps.join('') || '<span class="chip off">无能力注册</span>';
 
@@ -567,6 +568,7 @@
           <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
           <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
         </div>
+        ${(pl.permissions || []).includes('tasks:register') ? `<div class="msec">持久化任务状态</div><div data-plugin-tasks="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">展开后加载任务统计</p></div>` : ''}
         <div class="msec">${esc(t('插件数据'))}(plugin_data)</div>
         <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
         ${pl.lastError ? `<div class="msec">${esc(t('最近错误'))}</div><div style="font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}</div>
@@ -655,7 +657,21 @@
         window.alert(t('更新失败') + '：' + e.message);
       }
     },
-    expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) this.loadData(id); },
+    expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) { this.loadData(id); this.loadTasks(id); } },
+    async loadTasks(id) {
+      const box = document.querySelector(`[data-plugin-tasks="${id}"]`);
+      if (!box) return;
+      try {
+        const data = await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/tasks`);
+        const stats = data.stats || {};
+        box.innerHTML = `<span class="chip cap">总计: ${esc(String(data.total || 0))}</span> ` + (Object.keys(stats).length
+          ? Object.entries(stats).map(([status, count]) => `<span class="chip cap">${esc(status)}: ${esc(String(count))}</span>`).join(' ')
+          : '<span class="chip off">暂无任务</span>');
+      } catch (error) {
+        box.innerHTML = `<span style="font-size:12px;color:var(--destructive);">${esc(error.message)}</span>`;
+      }
+    },
+
     async loadData(id) {
       const box = document.querySelector(`[data-plugin-data="${id}"]`);
       if (!box) return;

@@ -37,6 +37,13 @@ const knownManifests = new Map();
 
 // 插件自定义的定时任务：id -> [{ expr, handler, nextTimeout }]
 const cronJobs = new Map();
+const taskHandlers = new Map();
+const taskQueue = require('../utils/plugin-task-queue').createTaskQueue({
+  pool,
+  isLoaded: id => id === undefined ? loaded.size > 0 : loaded.has(id),
+  getHandlers: id => taskHandlers.get(id),
+  logger: Logger,
+});
 const CRON_CHECK_MS = 60000; // 每分钟对下一触发做一次调度精度校正
 
 let initialized = false;
@@ -92,32 +99,39 @@ async function syncDbRecords() {
 async function loadOne(id, manifest, rowConfig) {
   unloadOne(id);
   const dir = path.join(PLUGINS_DIR, id);
-  const plugin = { id, dir, manifest, config: rowConfig || {} };
-
-  const entryPath = path.join(dir, 'main.js');
-  if (fs.existsSync(entryPath)) {
-    const factory = await host.loadPluginMain(plugin);
-    const perms = new Set(manifest.permissions || []);
-    const logPrefix = `plugin:${id}`;
-    const ctx = host.buildContext(plugin, hooksBus, logPrefix);
-    await factory(ctx); // 初始化：内部调用 ctx.on(...) 注册钩子
-    // provider:registerFormats 钩子：插件可在启动时声明式注册客户端格式/上游适配器/协议转换器
-    if (hooksBus.hasSubscribers('provider:registerFormats')) {
-      await hooksBus.apply('provider:registerFormats', { pluginId: id }, { pluginId: id }).catch(err =>
-        Logger.warn(`[plugins] ${id} provider:registerFormats 钩子异常: ${err.message}`)
-      );
-    }
-    Logger.info(`[plugins] 已加载插件 ${id}${perms.has('gateway:modify') ? '（网关钩子）' : ''}`);
-  }
-
+  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map() };
   loaded.set(id, plugin);
-  // 定时任务：基于清单 cron 重建（仅 cron:register 权限）
-  rebuildCron(id, manifest);
+  taskHandlers.set(id, plugin.taskHandlers);
+
+  try {
+    const entryPath = path.join(dir, 'main.js');
+    if (fs.existsSync(entryPath)) {
+      const factory = await host.loadPluginMain(plugin);
+      const perms = new Set(manifest.permissions || []);
+      const logPrefix = `plugin:${id}`;
+      const ctx = host.buildContext(plugin, hooksBus, logPrefix);
+      await factory(ctx);
+      if (!loaded.has(id) || loaded.get(id) !== plugin) throw new Error('插件在初始化过程中被停用或重载');
+      if (hooksBus.hasSubscribers('provider:registerFormats')) {
+        await hooksBus.apply('provider:registerFormats', { pluginId: id }, { pluginId: id }).catch(err =>
+          Logger.warn(`[plugins] ${id} provider:registerFormats 钩子异常: ${err.message}`)
+        );
+      }
+      Logger.info(`[plugins] 已加载插件 ${id}${perms.has('gateway:modify') ? '（网关钩子）' : ''}`);
+    }
+
+    rebuildCron(id, manifest);
+  } catch (error) {
+    unloadOne(id);
+    throw error;
+  }
 }
 
 function unloadOne(id) {
+  taskQueue.cancelPlugin(id).catch(err => Logger.warn(`[plugins] 取消 ${id} 任务失败: ${err.message}`));
   hooksBus.unsubscribePlugin(id);
   clearPluginCron(id);
+  taskHandlers.delete(id);
   for (const key of exposedHandlers.keys()) {
     if (key.startsWith(`${id} `)) exposedHandlers.delete(key);
   }
@@ -277,6 +291,7 @@ async function init() {
   Object.entries(manifests).forEach(([id, m]) => knownManifests.set(id, m));
 
   await syncDbRecords();
+  await taskQueue.ensureSchema();
 
   // 加载所有已启用插件
   try {
@@ -486,5 +501,21 @@ module.exports = {
   clearPluginCron,
   isLoaded: id => loaded.has(id),
   getLoadedManifest: id => loaded.get(id)?.manifest || null,
+  registerTaskHandler(pluginId, name, handler) {
+    if (!loaded.has(pluginId)) throw new Error('插件必须在初始化完成后注册任务');
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name || '')) || typeof handler !== 'function') throw new Error('插件任务处理器无效');
+    taskHandlers.get(pluginId).set(name, handler);
+  },
+  enqueueTask: (...args) => taskQueue.enqueue(...args),
+  getTask: (...args) => taskQueue.get(...args),
+  getTaskHandlers: id => taskHandlers.get(id),
+  getTaskQueueStats: async id => {
+    const result = await pool.query(`SELECT status, COUNT(*)::int AS count FROM plugin_tasks WHERE plugin_id=$1 GROUP BY status`, [id]);
+    const total = await pool.query('SELECT count(*)::int AS count FROM plugin_tasks WHERE plugin_id=$1', [id]);
+    return { stats: Object.fromEntries(result.rows.map(row => [row.status, row.count])), total: total.rows[0]?.count || 0 };
+  },
+  cancelTask: (...args) => taskQueue.cancel(...args),
+  startTaskWorker: () => taskQueue.start(),
+  stopTaskWorker: () => taskQueue.stop(),
   listLoadedIds: () => [...loaded.keys()],
 };

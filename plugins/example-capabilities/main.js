@@ -6,6 +6,12 @@ async (ctx) => {
 
   log.info('已加载（二期能力）config =', config);
 
+  if (ctx.tasks) ctx.tasks.register('record-demo', async payload => {
+    const count = ((await storage.get('task_runs')) || 0) + 1;
+    await storage.set('task_runs', count);
+    return { accepted: payload.label || 'demo', runs: count };
+  });
+
   // ---- 1. provider:registerFormats：注册一个「mock」上游格式适配器与协议转换器 ----
   // 用 ctx.on 注册（权限 apikey/billing/provider 等在 host 层校验）
   // 适配器类定义在沙箱内（基于注册中心导出的 BaseProviderAdapter）
@@ -104,8 +110,34 @@ async (ctx) => {
       ok: true,
       plugin: ctx.pluginId,
       cronTicks: await storage.get('cron_ticks'),
+      taskRuns: await storage.get('task_runs'),
       lastTick: await storage.get('last_tick'),
       lastValidateAt: await storage.get('last_validate_at'),
     });
+  });
+
+  expose('post', '/tasks', async (req, res) => {
+    try {
+      const label = String(req.body?.label || 'demo').slice(0, 100);
+      const task = await ctx.tasks.enqueue('record-demo', { label }, {
+        idempotencyKey: String(req.body?.idempotencyKey || ''),
+        maxAttempts: 3,
+      });
+      res.status(202).json({ id: task.id, status: task.status, task: '/api/plugins/example-capabilities/task?id=' + encodeURIComponent(task.id) });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  expose('get', '/task', async (req, res) => {
+    const task = await ctx.tasks.get(req.query?.id);
+    if (!task) return res.status(404).json({ error: '任务不存在' });
+    res.json(task);
+  });
+
+  expose('delete', '/task', async (req, res) => {
+    const task = await ctx.tasks.cancel(req.query?.id);
+    if (!task) return res.status(409).json({ error: '任务不存在或已开始执行，无法取消' });
+    res.json(task);
   });
 }
