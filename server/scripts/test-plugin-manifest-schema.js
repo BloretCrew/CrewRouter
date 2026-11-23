@@ -5,7 +5,7 @@ const path = require('node:path');
 const schema = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../plugins/plugin-manifest.schema.json'), 'utf8'));
 const host = fs.readFileSync(path.resolve(__dirname, '../plugins/host.js'), 'utf8');
 const permissions = new Set([...host.matchAll(/'([a-z][a-z0-9:_-]+)'/g)].map(m => m[1]));
-const examples = ['all-capabilities', 'example-capabilities', 'example-events', 'example-hello', 'example-theme', 'usage-stats', 'webhook-demo'];
+const examples = ['all-capabilities', 'example-capabilities', 'example-events', 'example-hello', 'example-isolated-task', 'example-theme', 'usage-stats', 'webhook-demo'];
 for (const id of examples) {
   const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../../plugins/${id}/plugin.json`), 'utf8'));
   assert.equal(manifest.id, id);

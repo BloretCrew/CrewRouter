@@ -27,7 +27,7 @@ assert.match(installPage, /signatureTrustConfigured/);
 assert.match(installPage, /hasBackendCode/);
 assert.match(securityDoc, /Ed25519/);
 assert.ok(packageJson.scripts['test:plugins'].includes('test-plugin-signatures.js'));
-for (const id of ['all-capabilities', 'example-hello', 'usage-stats', 'example-capabilities', 'example-events']) {
+for (const id of ['all-capabilities', 'example-hello', 'usage-stats', 'example-capabilities', 'example-events', 'example-isolated-task']) {
   const dir = path.join(root, 'plugins', id);
   const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'plugin.json'), 'utf8'));
   assert.equal(manifest.id, id);

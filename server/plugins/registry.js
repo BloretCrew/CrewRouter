@@ -42,6 +42,7 @@ const taskQueue = require('../utils/plugin-task-queue').createTaskQueue({
   pool,
   isLoaded: id => id === undefined ? loaded.size > 0 : loaded.has(id),
   getHandlers: id => taskHandlers.get(id),
+  getPluginDir: id => loaded.get(id)?.dir || null,
   logger: Logger,
 });
 const CRON_CHECK_MS = 60000; // 每分钟对下一触发做一次调度精度校正
@@ -99,25 +100,37 @@ async function syncDbRecords() {
 async function loadOne(id, manifest, rowConfig) {
   unloadOne(id);
   const dir = path.join(PLUGINS_DIR, id);
-  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map() };
+  const isolatedTasks = manifest.executionMode === 'isolated-task';
+  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), isolatedTasks };
   loaded.set(id, plugin);
   taskHandlers.set(id, plugin.taskHandlers);
 
   try {
-    const entryPath = path.join(dir, 'main.js');
-    if (fs.existsSync(entryPath)) {
-      const factory = await host.loadPluginMain(plugin);
-      const perms = new Set(manifest.permissions || []);
-      const logPrefix = `plugin:${id}`;
-      const ctx = host.buildContext(plugin, hooksBus, logPrefix);
-      await factory(ctx);
-      if (!loaded.has(id) || loaded.get(id) !== plugin) throw new Error('插件在初始化过程中被停用或重载');
-      if (hooksBus.hasSubscribers('provider:registerFormats')) {
-        await hooksBus.apply('provider:registerFormats', { pluginId: id }, { pluginId: id }).catch(err =>
-          Logger.warn(`[plugins] ${id} provider:registerFormats 钩子异常: ${err.message}`)
-        );
+    if (plugin.isolatedTasks) {
+      const taskSandbox = require('./task-sandbox');
+      taskSandbox.assertModeSupported(manifest);
+      taskSandbox.probeRuntime();
+      if (!fs.existsSync(path.join(dir, 'task-entry.js'))) throw new Error('isolated-task 插件必须提供 task-entry.js');
+      for (const name of manifest.taskHandlers || []) {
+        if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name))) throw new Error(`隔离任务名无效: ${name}`);
+        plugin.taskHandlers.set(name, { isolated: true });
       }
-      Logger.info(`[plugins] 已加载插件 ${id}${perms.has('gateway:modify') ? '（网关钩子）' : ''}`);
+    } else {
+      const entryPath = path.join(dir, 'main.js');
+      if (fs.existsSync(entryPath)) {
+        const factory = await host.loadPluginMain(plugin);
+        const perms = new Set(manifest.permissions || []);
+        const logPrefix = `plugin:${id}`;
+        const ctx = host.buildContext(plugin, hooksBus, logPrefix);
+        await factory(ctx);
+        if (!loaded.has(id) || loaded.get(id) !== plugin) throw new Error('插件在初始化过程中被停用或重载');
+        if (hooksBus.hasSubscribers('provider:registerFormats')) {
+          await hooksBus.apply('provider:registerFormats', { pluginId: id }, { pluginId: id }).catch(err =>
+            Logger.warn(`[plugins] ${id} provider:registerFormats 钩子异常: ${err.message}`)
+          );
+        }
+        Logger.info(`[plugins] 已加载插件 ${id}${perms.has('gateway:modify') ? '（网关钩子）' : ''}`);
+      }
     }
 
     rebuildCron(id, manifest);
@@ -424,6 +437,8 @@ async function listAll() {
     lastError: row.last_error || null,
     onDisk: knownManifests.has(row.id),
     loaded: loaded.has(row.id),
+    executionMode: knownManifests.get(row.id)?.executionMode || 'trusted-in-process',
+    taskHandlers: knownManifests.get(row.id)?.taskHandlers || [],
     pages: (knownManifests.get(row.id)?.pages || []),
     slots: (knownManifests.get(row.id)?.slots || []),
     routes: (knownManifests.get(row.id)?.routes || []),
@@ -511,9 +526,17 @@ module.exports = {
   getLoadedManifest: id => loaded.get(id)?.manifest || null,
   registerTaskHandler(pluginId, name, handler) {
     if (!loaded.has(pluginId)) throw new Error('插件必须在初始化完成后注册任务');
+    if (loaded.get(pluginId).isolatedTasks) throw new Error('isolated-task handler 必须由 manifest taskHandlers 声明，不能注册宿主函数');
     if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name || '')) || typeof handler !== 'function') throw new Error('插件任务处理器无效');
     taskHandlers.get(pluginId).set(name, handler);
   },
+  registerIsolatedTaskHandler(pluginId, name) {
+    const plugin = loaded.get(pluginId);
+    if (!plugin?.isolatedTasks) throw new Error('插件未启用 isolated-task 模式');
+    if (!(plugin.manifest.taskHandlers || []).includes(name)) throw new Error('隔离任务名未在 manifest 批准');
+    taskHandlers.get(pluginId).set(name, { isolated: true });
+  },
+  listLoadedIds: () => [...loaded.keys()],
   enqueueTask: (...args) => taskQueue.enqueue(...args),
   getTask: (...args) => taskQueue.get(...args),
   getTaskHandlers: id => taskHandlers.get(id),

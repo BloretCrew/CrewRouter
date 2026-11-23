@@ -93,6 +93,14 @@ function validateManifest(manifest) {
       if (typeof h !== 'string' || !/^[a-z0-9.-]+$/i.test(h)) return 'allowedHosts[] 必须是合法域名';
     }
   }
+  if (manifest.executionMode !== undefined && !['trusted-in-process', 'isolated-task'].includes(manifest.executionMode)) return 'executionMode 无效';
+  if (manifest.executionMode === 'isolated-task') {
+    const { assertModeSupported } = require('./task-sandbox');
+    try { assertModeSupported(manifest); } catch (error) { return error.message; }
+    if (!Array.isArray(manifest.taskHandlers) || !manifest.taskHandlers.length || manifest.taskHandlers.some(name => !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name)))) {
+      return 'isolated-task 需要有效的 taskHandlers 名称数组';
+    }
+  }
   if (manifest.pages && !Array.isArray(manifest.pages)) return 'pages 必须是数组';
   if (manifest.slots && !Array.isArray(manifest.slots)) return 'slots 必须是数组';
   if (manifest.routes && !Array.isArray(manifest.routes)) return 'routes 必须是数组';
@@ -159,6 +167,25 @@ function buildFetch(pluginId) {
 function buildContext(plugin, hooksBus, logPrefix) {
   const { id, manifest, config } = plugin;
   const perms = new Set(manifest.permissions || []);
+  const isolatedTasks = manifest.executionMode === 'isolated-task';
+  if (isolatedTasks) {
+    return {
+      pluginId: id,
+      version: manifest.version || '',
+      config: Object.freeze(JSON.parse(JSON.stringify(config || {}))),
+      log: {
+        info: (...args) => Logger.info(`[${logPrefix}]`, ...args),
+        warn: (...args) => Logger.warn(`[${logPrefix}]`, ...args),
+        error: (...args) => Logger.error(`[${logPrefix}]`, ...args),
+      },
+      tasks: {
+        register(name) { require('./registry').registerIsolatedTaskHandler(id, name); },
+        enqueue(name, payload, options) { return require('./registry').enqueueTask(id, name, payload, options); },
+        get(taskId) { return require('./registry').getTask(id, taskId); },
+        cancel(taskId) { return require('./registry').cancelTask(id, taskId); },
+      },
+    };
+  }
   const ctx = {
     pluginId: id,
     version: manifest.version || '',

@@ -507,6 +507,7 @@
       pl.enabled ? '<span class="chip on">● 已启用</span>' : '<span class="chip off">○ 已禁用</span>',
       pl.onDisk ? '' : '<span class="chip warn">磁盘缺失</span>',
       pl.loaded ? '<span class="chip on">运行中</span>' : '',
+      pl.executionMode === 'isolated-task' ? '<span class="chip on">Linux 隔离任务</span>' : '<span class="chip warn">受信任进程内</span>',
       pl.errorCount > 0 || pl.lastError ? `<span class="chip warn">错误 ${esc(String(pl.errorCount))}</span>` : '',
       pl.storeUpdateAvailable ? `<span class="chip warn">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
     ].join('');

@@ -39,6 +39,7 @@ vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
     if (id === 'fs') return fs;
     if (id === 'os') return require('node:os');
     if (id === 'path') return path;
+    if (id === 'node:crypto') return require('node:crypto');
     if (id === './db') return { getPool: () => pool };
     if (id === '../logger') return { info() {}, warn() {}, error() {} };
     if (id === '../utils/url-validator') return { validateUrl: async () => ({ ok: false }) };

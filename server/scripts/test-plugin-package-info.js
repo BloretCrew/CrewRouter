@@ -14,6 +14,8 @@ assert.match(storeSource, /signatureKeyId: plugin\.signatureKeyId/);
 assert.match(storeSource, /signatureAlgorithm: plugin\.signatureAlgorithm/);
 assert.match(storeSource, /插件包权限与商店审核权限不一致/);
 assert.match(storeSource, /hasBackendCode: !!manifest && !!manifest\._hasBackendCode/);
+assert.match(storeSource, /createHash\('sha256'\)\.update\(archive\)/);
+assert.match(storeSource, /extractZipSafe\(zipPath, extractDir\)/);
 assert.match(routeSource, /inspectStorePackage\(plugin/);
 assert.match(routeSource, /signatureTrustConfigured/);
 assert.match(storeRouteSource, /getPluginPackageInfo\(req\.params\.id\)/);

@@ -1,0 +1,10 @@
+{
+  "id": "example-isolated-task",
+  "name": "隔离任务示例",
+  "version": "1.0.0",
+  "description": "仅演示 bwrap 隔离 task-entry；没有 storage/network/hooks/routes 能力。",
+  "author": "CrewRouter",
+  "permissions": ["tasks:register"],
+  "executionMode": "isolated-task",
+  "taskHandlers": ["sum"]
+}
