@@ -76,6 +76,7 @@ assert.strictEqual(permed.fetch, undefined, '无 network 权限不应有 fetch')
 assert.strictEqual(permed.storage, undefined, '无 storage 权限不应有 storage');
 assert.strictEqual(permed.preferences, undefined, '无 preferences:read 不应有 preferences');
 assert.strictEqual(permed.webhook, undefined, '无 webhook:register 不应有 webhook');
+assert.strictEqual(permed.tasks, undefined, '无 tasks:register 不应有任务 API');
 console.log('PASS 权限门控正确');
 
 // ---- 3. hook 名白名单及主体强制约束 ----

@@ -60,7 +60,7 @@ const KNOWN_PERMISSIONS = new Set([
   'cron:register', 'themes:register',
   // 三期新增能力（数据只读/受控出口）
   'usage:read', 'models:read', 'preferences:read', 'audit:write',
-  'export:usage', 'meta:read', 'webhook:register', 'admin:view',
+  'export:usage', 'meta:read', 'webhook:register', 'admin:view', 'tasks:register',
 ]);
 
 /**
@@ -389,6 +389,15 @@ function buildContext(plugin, hooksBus, logPrefix) {
     if (typeof handler !== 'function') throw new Error(`[plugins:${id}] scheduleCron 需要回调函数`);
     registry.schedulePluginCron(id, expr, handler);
   };
+
+  if (perms.has('tasks:register')) {
+    ctx.tasks = {
+      register(name, handler) { registry.registerTaskHandler(id, name, handler); },
+      enqueue(name, payload, options) { return registry.enqueueTask(id, name, payload, options); },
+      get(taskId) { return registry.getTask(id, taskId); },
+      cancel(taskId) { return registry.cancelTask(id, taskId); },
+    };
+  }
 
   return ctx;
 }

@@ -310,6 +310,16 @@ function createPluginsRoutes() {
   });
 
   // 插件私有 KV（plugin_data）管理：列表与删除
+  adminRouter.get('/:id/tasks', async (req, res) => {
+    try {
+      const stats = await registry().getTaskQueueStats(req.params.id);
+      res.json(stats);
+    } catch (err) {
+      Logger.error(`[plugins-api] 插件任务统计读取失败: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   adminRouter.get('/:id/data', async (req, res) => {
     try {
       const { id } = req.params;

@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "author": "CrewRouter",
   "description": "演示第二期完整能力面：provider 格式注册、协议转换器、供应商选择干预、API Key 校验、计费调整、统计维度元数据、定时任务与 KV 存储。",
-  "permissions": ["storage", "gateway:modify", "provider:register", "apikey:modify", "billing:modify", "cron:register", "pages:register", "routes:register"],
+  "permissions": ["storage", "gateway:modify", "provider:register", "apikey:modify", "billing:modify", "cron:register", "pages:register", "routes:register", "tasks:register"],
   "hooks": {
     "provider:registerFormats": "registerFormats",
     "apikey:validate": "validateKey",
@@ -26,7 +26,10 @@
     { "page": "stats", "position": "top", "render": "renderStatsBanner" }
   ],
   "routes": [
-    { "method": "get", "path": "/overview", "auth": "user" }
+    { "method": "get", "path": "/overview", "auth": "user" },
+    { "method": "post", "path": "/tasks", "auth": "user" },
+    { "method": "get", "path": "/task", "auth": "user" },
+    { "method": "delete", "path": "/task", "auth": "user" }
   ],
   "cron": [
     { "expr": "*/5 * * * *", "handler": "onTick" }

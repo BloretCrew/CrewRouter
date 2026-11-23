@@ -2429,6 +2429,7 @@ async function ensurePluginsTables() {
         PRIMARY KEY (plugin_id, key)
       )
     `);
+    await require('./utils/plugin-task-queue').ensureSchema(pool);
     // 插件商店来源与每日更新检测相关列（幂等）
     await pool.query(`ALTER TABLE plugins
       ADD COLUMN IF NOT EXISTS store_id TEXT,
@@ -3268,6 +3269,11 @@ async function startServer(options = {}) {
         Logger.warn(`[额度定时查询] 调度器启动失败: ${err.message}`);
       }
       try {
+        require('./plugins/registry').startTaskWorker();
+      } catch (err) {
+        Logger.warn(`[插件任务] worker 启动失败: ${err.message}`);
+      }
+      try {
         const { startMessageAnalysisWorker } = require('./utils/message-analysis-store');
         startMessageAnalysisWorker({ intervalMs: 5000, batchSize: 50 });
       } catch (err) {
@@ -3318,6 +3324,7 @@ async function stopServer() {
     if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }
+  try { require('./plugins/registry').stopTaskWorker(); } catch (_) {}
   for (const handle of backgroundHandles.splice(0)) {
     try {
       clearInterval(handle);
