@@ -9,6 +9,7 @@ const { randomUUID } = require('node:crypto');
 const MAX_FRAME_BYTES = 64 * 1024;
 const MAX_STDIO_BYTES = 256 * 1024;
 const TASK_TIMEOUT_MS = 30000;
+const MAX_TASK_ENTRY_BYTES = 256 * 1024;
 const FORBIDDEN_ISOLATED_PERMISSIONS = new Set([
   'storage', 'network', 'gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register',
   'routes:register', 'cron:register', 'events:subscribe', 'usage:read', 'export:usage',
@@ -165,6 +166,7 @@ function runTaskInBwrap({ pluginId, pluginDir, taskName, payload, taskId, attemp
   const canonicalPluginDir = fs.realpathSync(pluginDir);
   const pluginEntry = path.join(canonicalPluginDir, 'task-entry.js');
   if (!fs.existsSync(pluginEntry) || !fs.lstatSync(pluginEntry).isFile() || fs.lstatSync(pluginEntry).isSymbolicLink()) return Promise.reject(new Error('隔离插件缺少普通文件 task-entry.js'));
+  if (fs.statSync(pluginEntry).size > MAX_TASK_ENTRY_BYTES) return Promise.reject(new Error('隔离 task-entry.js 超过 256 KiB'));
   const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-plugin-sandbox-'));
   const hostIdentity = sandboxHostIdentity();
   if (process.getuid() === 0) fs.chownSync(scratchDir, hostIdentity.uid, hostIdentity.gid);
@@ -231,4 +233,4 @@ function runTaskInBwrap({ pluginId, pluginDir, taskName, payload, taskId, attemp
 
 function createSandboxToken() { return randomUUID(); }
 
-module.exports = { MAX_FRAME_BYTES, MAX_STDIO_BYTES, TASK_TIMEOUT_MS, FORBIDDEN_ISOLATED_PERMISSIONS, selectBwrap, resolveSandboxNodePath, assertRuntimeAvailable, probeRuntime, assertModeSupported, buildBwrapArgs, parseWorkerOutput, runTaskInBwrap, createSandboxToken };
+module.exports = { MAX_FRAME_BYTES, MAX_STDIO_BYTES, MAX_TASK_ENTRY_BYTES, TASK_TIMEOUT_MS, FORBIDDEN_ISOLATED_PERMISSIONS, selectBwrap, resolveSandboxNodePath, assertRuntimeAvailable, probeRuntime, assertModeSupported, buildBwrapArgs, parseWorkerOutput, runTaskInBwrap, createSandboxToken };

@@ -3,7 +3,7 @@
 此示例只演示纯计算任务，不访问数据库、文件、网络或宿主 API。
 
 - `plugin.json` 声明 `executionMode: "isolated-task"` 和 `tasks:register`。
-- `task-entry.js` 是无 imports 的 handler factory，返回 manifest taskHandlers 列出的 JSON handler。
+- `task-entry.js` 是 ≤256 KiB、无 imports 的 handler factory，返回 manifest taskHandlers 列出的 JSON handler。
 - Linux 部署需安装 bubblewrap，并由管理员显式设置 `CR_ENABLE_PLUGIN_BWRAP=1`；启动时 live-probe namespace、uid/gid 和 cap-drop。
 - 启动时会 probe user/PID/network namespaces、uid/gid 切换到 65534、capabilities drop；任何失败均拒绝加载，不回退主进程。
 - handler 输入/结果 JSON 限 64 KiB，超时 kill worker process group。
