@@ -15,6 +15,10 @@ const { extractZipSafe, findZipManifest, zipPayloadDir } = require('./zip');
 const DEFAULT_STORE = 'https://crewrouter.bloret.net';
 const MAX_PACKAGE_INFO_BYTES = 1024 * 1024;
 const MAX_PLUGIN_PACKAGE_BYTES = 30 * 1024 * 1024;
+const PACKAGE_INSPECTION_TTL_MS = 5 * 60 * 1000;
+const MAX_PACKAGE_INSPECTIONS = 128;
+const packageInspectionCache = new Map();
+const packageInspectionInflight = new Map();
 
 function getConfig() {
   try { return require('../config-loader'); } catch { return {}; }
@@ -137,20 +141,33 @@ function verifyPluginSignature({ id, version, sha256, permissions, signature, ke
 
 async function inspectStorePackage(info, expectedPluginId) {
   if (!info?.download || !/^[a-f0-9]{64}$/i.test(String(info.sha256 || ''))) throw new Error('商店包缺少有效 SHA-256');
-  const tmpDir = fs.mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'cr-plugin-inspect-'));
-  const zipPath = require('node:path').join(tmpDir, 'plugin.zip');
-  try {
-    await downloadPackage(info.download, zipPath, info.sha256);
-    const extracted = require('node:path').join(tmpDir, 'extract');
-    await extractZipSafe(zipPath, extracted);
-    const manifest = findZipManifest(extracted);
-    if (!manifest || manifest.id !== expectedPluginId) throw new Error('商店包 plugin ID 无效');
-    const payloadDir = zipPayloadDir(extracted, expectedPluginId);
-    if (!payloadDir) throw new Error('商店包目录结构无效');
-    return { manifest, hasBackendCode: fs.existsSync(require('node:path').join(payloadDir, 'main.js')) };
-  } finally {
-    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
-  }
+  const digest = String(info.sha256).toLowerCase();
+  const key = `${expectedPluginId}:${String(info.version || '')}:${digest}`;
+  const cached = packageInspectionCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.result;
+  if (packageInspectionInflight.has(key)) return packageInspectionInflight.get(key);
+  const task = (async () => {
+    const tmpDir = fs.mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'cr-plugin-inspect-'));
+    const zipPath = require('node:path').join(tmpDir, 'plugin.zip');
+    try {
+      await downloadPackage(info.download, zipPath, digest);
+      const extracted = require('node:path').join(tmpDir, 'extract');
+      await extractZipSafe(zipPath, extracted);
+      const manifest = findZipManifest(extracted);
+      if (!manifest || manifest.id !== expectedPluginId || String(manifest.version || '') !== String(info.version || '')) throw new Error('商店包 plugin ID/version 无效');
+      const payloadDir = zipPayloadDir(extracted, expectedPluginId);
+      if (!payloadDir) throw new Error('商店包目录结构无效');
+      const result = { manifest, hasBackendCode: fs.existsSync(require('node:path').join(payloadDir, 'main.js')) };
+      packageInspectionCache.set(key, { result, expiresAt: Date.now() + PACKAGE_INSPECTION_TTL_MS });
+      while (packageInspectionCache.size > MAX_PACKAGE_INSPECTIONS) packageInspectionCache.delete(packageInspectionCache.keys().next().value);
+      return result;
+    } finally {
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+    }
+  })();
+  packageInspectionInflight.set(key, task);
+  try { return await task; }
+  finally { if (packageInspectionInflight.get(key) === task) packageInspectionInflight.delete(key); }
 }
 
 async function downloadPackage(url, destPath, expectedSha256) {
