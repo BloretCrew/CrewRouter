@@ -12,7 +12,7 @@ const TASK_TIMEOUT_MS = 30000;
 const MAX_TASK_ENTRY_BYTES = 256 * 1024;
 const FORBIDDEN_ISOLATED_PERMISSIONS = new Set([
   'storage', 'network', 'apikey:modify',
-  'cron:register', 'events:subscribe', 'usage:read', 'export:usage',
+  'events:subscribe', 'usage:read', 'export:usage',
   'preferences:read', 'audit:write', 'meta:read', 'admin:view', 'webhook:register',
 ]);
 
@@ -99,14 +99,17 @@ function assertModeSupported(manifest, env = process.env) {
   if (incompatible.length) throw new Error(`隔离模式不支持这些宿主进程能力: ${incompatible.join(', ')}`);
   probeRuntime({ env });
   if (manifest.executionMode === 'isolated-task') {
-    const extraPermissions = [...permissions].filter(permission => permission !== 'tasks:register');
-    if (extraPermissions.length) throw new Error(`isolated-task 权限只允许 tasks:register: ${extraPermissions.join(', ')}`);
+    const extraPermissions = [...permissions].filter(permission => !['tasks:register', 'cron:register'].includes(permission));
+    if (extraPermissions.length) throw new Error(`isolated-task 权限只允许 tasks:register/cron:register: ${extraPermissions.join(', ')}`);
     if (!permissions.has('tasks:register')) throw new Error('隔离任务模式需要 tasks:register 权限');
     if (!Array.isArray(manifest.taskHandlers) || !manifest.taskHandlers.length || manifest.taskHandlers.some(name => !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name)))) {
       throw new Error('isolated-task 需要有效的 taskHandlers 名称数组');
     }
-    if (manifest.hooks || (manifest.routes || []).length || (manifest.cron || []).length || (manifest.pages || []).length || (manifest.slots || []).length) {
-      throw new Error('isolated-task 目前仅支持纯后台任务，不支持 hooks/routes/cron/pages/slots');
+    if (manifest.hooks || (manifest.routes || []).length || (manifest.pages || []).length || (manifest.slots || []).length) {
+      throw new Error('isolated-task 目前仅支持纯后台任务，不支持 hooks/routes/pages/slots');
+    }
+    if ((manifest.cron || []).some(job => !permissions.has('cron:register') || !manifest.taskHandlers.includes(job.handler))) {
+      throw new Error('isolated-task cron 必须由 cron:register 授权且 handler 已列入 taskHandlers');
     }
     return;
   }

@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "仅演示 bwrap 隔离 task-entry；没有 storage/network/hooks/routes 能力。",
   "author": "CrewRouter",
-  "permissions": ["tasks:register"],
+  "permissions": ["tasks:register", "cron:register"],
   "executionMode": "isolated-task",
-  "taskHandlers": ["sum"]
+  "taskHandlers": ["sum", "heartbeat"],
+  "cron": [{ "expr": "*/15 * * * *", "handler": "heartbeat" }]
 }

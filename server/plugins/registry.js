@@ -136,7 +136,7 @@ async function loadOne(id, manifest, rowConfig) {
   const isolatedTasks = manifest.executionMode === 'isolated-task';
   const isolatedHooks = manifest.executionMode === 'isolated-hooks';
   const isolatedRoutes = manifest.executionMode === 'isolated-routes';
-  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), isolatedTasks, isolatedHooks, isolatedRoutes };
+  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), cronHandlers: Object.create(null), isolatedTasks, isolatedHooks, isolatedRoutes };
   loaded.set(id, plugin);
   taskHandlers.set(id, plugin.taskHandlers);
 
@@ -152,6 +152,12 @@ async function loadOne(id, manifest, rowConfig) {
       for (const name of manifest.taskHandlers || []) {
         if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name))) throw new Error(`隔离任务名无效: ${name}`);
         plugin.taskHandlers.set(name, { isolated: true });
+      }
+      for (const job of manifest.cron || []) {
+        plugin.cronHandlers[job.handler] = () => {
+          const minute = Math.floor(Date.now() / 60000);
+          return taskQueue.enqueue(id, job.handler, {}, { idempotencyKey: `cron:${job.handler}:${minute}` });
+        };
       }
     } else if (plugin.isolatedRoutes) {
       for (const route of manifest.routes) exposeHandler(id, route.method || 'get', route.path, isolatedRouteHandler(plugin, route));
