@@ -34,7 +34,7 @@ function validatePayload(value) {
   return parsed;
 }
 
-function createTaskQueue({ pool, isLoaded, getHandlers, logger = console }) {
+function createTaskQueue({ pool, isLoaded, getHandlers, getPluginDir = () => null, logger = console }) {
   let timer = null;
   let busy = false;
   const running = new Map();
@@ -106,18 +106,21 @@ function createTaskQueue({ pool, isLoaded, getHandlers, logger = console }) {
         const controller = new AbortController();
         running.set(task.id, { pluginId: task.plugin_id, controller });
         try {
-          const value = await Promise.race([
-            Promise.resolve().then(() => handler(task.payload, { taskId: task.id, attempt: task.attempts, signal: controller.signal })),
-            new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('插件任务执行超时')), TASK_TIMEOUT_MS); }),
-          ]);
+          const value = handler?.isolated
+            ? await require('../plugins/task-sandbox').runTaskInBwrap({ pluginId: task.plugin_id, pluginDir: getPluginDir(task.plugin_id), taskName: task.task_name, payload: task.payload, taskId: task.id, attempt: task.attempts, timeoutMs: TASK_TIMEOUT_MS, signal: controller.signal })
+            : await Promise.race([
+                Promise.resolve().then(() => handler(task.payload, { taskId: task.id, attempt: task.attempts, signal: controller.signal })),
+                new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('插件任务执行超时')), TASK_TIMEOUT_MS); }),
+              ]);
           if (!isLoaded(task.plugin_id) || getHandlers(task.plugin_id)?.get(task.task_name) !== handler) {
             await settle(task, 'failed', null, new Error('插件在任务执行期间已停用或重载'));
           } else {
             await settle(task, 'succeeded', value, null);
           }
         } catch (error) {
-          controller.abort(error);
-          if (error?.message === '插件已停用') {
+          const wasAborted = controller.signal.aborted;
+          if (!wasAborted) controller.abort(error);
+          if (wasAborted) {
             await pool.query(`UPDATE plugin_tasks SET status='cancelled', locked_at=NULL, locked_by=NULL, updated_at=now() WHERE id=$1 AND locked_by=$2`, [task.id, task.locked_by]);
           } else {
             await settle(task, task.attempts < task.max_attempts ? 'retry' : 'failed', null, error);

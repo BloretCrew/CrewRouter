@@ -123,8 +123,9 @@
 
         html += '<div class="pi-section"><h3>权限</h3><ul>' + permHtml(pluginInfo.permissions) + '</ul></div>';
         html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(pluginInfo.behavior) + '</ul></div>';
+        html += '<div class="pi-section"><h3>执行模式</h3><p>' + esc(pluginInfo.executionMode === 'isolated-task' ? 'Linux bubblewrap 隔离任务（仅纯计算 task-entry；需实例启用 CR_ENABLE_PLUGIN_BWRAP=1）' : '受信任进程内后端代码') + '</p></div>';
         html += '<div class="pi-section"><h3>包验证</h3><p>SHA-256：<code>' + esc(pluginInfo.sha256 || '缺失（不可安装）') + '</code></p><p>发布者签名：' + (pluginInfo.signatureTrustConfigured ? '此实例配置了受信 Ed25519 公钥，服务端将强制验签。' : '此实例未配置发布者公钥；哈希只验证包与商店元数据一致，不证明发布者身份。') + '</p></div>';
-        html += '<label class="pi-warn"><input type="checkbox" id="piTrustCode"> 我理解：若插件含 main.js 或申请高影响后端权限，后端代码会在 CrewRouter 主进程运行；VM/权限清单不构成恶意代码安全隔离。</label>';
+        if (pluginInfo.executionMode !== 'isolated-task') html += '<label class="pi-warn"><input type="checkbox" id="piTrustCode"> 我理解：若插件含 main.js 或申请高影响后端权限，后端代码会在 CrewRouter 主进程运行；VM/权限清单不构成恶意代码安全隔离。</label>';
         html += '<label class="pi-warn"><input type="checkbox" id="piConfirmPermissions"> 我已检查并确认上列全部权限。</label>';
         html += '<div class="blora-message pi-warn" data-variant="warning">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
         html += '<div class="pi-actions">' +
@@ -147,7 +148,7 @@
       function confirmInstall() {
         var trust = document.getElementById('piTrustCode');
         var permissions = document.getElementById('piConfirmPermissions');
-        var requiresTrust = !!(info && (info.hasBackendCode || (info.permissions || []).some(function (p) { return ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(p); })));
+        var requiresTrust = !!(info && info.executionMode !== 'isolated-task' && (info.hasBackendCode || (info.permissions || []).some(function (p) { return ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(p); })));
         if (requiresTrust && (!trust || !trust.checked)) {
           renderError('需要确认后端信任', '该插件含后端代码或高影响后端权限，必须确认其进程内执行风险。'); return;
         }
@@ -158,7 +159,7 @@
         fetch('/api/admin/plugins/install-from-store', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plugin: pluginId, source: source, confirmedSha256: info.sha256, confirmedPermissions: info.permissions || [], trustInProcess: !!(document.getElementById('piTrustCode') && document.getElementById('piTrustCode').checked), confirmedVersion: info.version || '' })
+          body: JSON.stringify({ plugin: pluginId, source: source, confirmedSha256: info.sha256, confirmedPermissions: info.permissions || [], trustInProcess: !!(document.getElementById('piTrustCode') && document.getElementById('piTrustCode').checked), confirmedVersion: info.version || '', confirmedExecutionMode: info.executionMode || 'trusted-in-process' })
         }).then(function (r) {
           return r.json().then(function (d) { return { ok: r.ok, data: d }; });
         }).then(function (res) {

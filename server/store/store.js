@@ -8,6 +8,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('node:crypto');
 const { getPool } = require('./db');
 const Logger = require('../logger');
 const { validateUrl } = require('../utils/url-validator');
@@ -1053,7 +1054,10 @@ async function fetchPluginManifest(plugin) {
         }
         chunks.push(Buffer.from(value));
       }
-      fs.writeFileSync(zipPath, Buffer.concat(chunks, size), { mode: 0o600 });
+      const archive = Buffer.concat(chunks, size);
+      const expectedSha256 = normalizeSha256(plugin.sha256);
+      if (!expectedSha256 || crypto.createHash('sha256').update(archive).digest('hex') !== expectedSha256) return null;
+      fs.writeFileSync(zipPath, archive, { mode: 0o600 });
       const extractDir = path.join(tmpDir, 'extract');
       await extractZipSafe(zipPath, extractDir);
       const manifest = findZipManifest(extractDir);
@@ -1117,6 +1121,8 @@ async function getPluginPackageInfo(id) {
     signatureKeyId: plugin.signatureKeyId || '',
     signatureAlgorithm: plugin.signatureAlgorithm || '',
     hasBackendCode: !!manifest && !!manifest._hasBackendCode,
+    executionMode: manifest?.executionMode || 'trusted-in-process',
+    taskHandlers: manifest?.taskHandlers || [],
     behavior,
   };
 }

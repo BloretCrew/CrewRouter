@@ -75,7 +75,8 @@ function createPluginsRoutes() {
       const confirmedSha256 = String(req.body?.confirmedSha256 || '').toLowerCase();
       const confirmedPermissions = req.body?.confirmedPermissions;
       const confirmedVersion = String(req.body?.confirmedVersion || '');
-      if (!/^[a-f0-9]{64}$/.test(confirmedSha256) || !Array.isArray(confirmedPermissions) || !confirmedVersion) {
+      const confirmedExecutionMode = String(req.body?.confirmedExecutionMode || '');
+      if (!/^[a-f0-9]{64}$/.test(confirmedSha256) || !Array.isArray(confirmedPermissions) || !confirmedVersion || !confirmedExecutionMode) {
         return res.status(400).json({ error: '缺少明确的插件包哈希与权限确认，请刷新安装确认页。' });
       }
 
@@ -101,7 +102,11 @@ function createPluginsRoutes() {
         const payloadDir = zipPayloadDir(extractDir, manifest.id);
         if (!payloadDir) return res.status(400).json({ error: '插件包目录结构不合法' });
         const hasBackendCode = fs.existsSync(path.join(payloadDir, 'main.js'));
-        const requiresBackendTrust = hasBackendCode || actualPermissions.some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission));
+        const executionMode = manifest.executionMode || 'trusted-in-process';
+        if (!['trusted-in-process', 'isolated-task'].includes(executionMode) || executionMode !== confirmedExecutionMode) {
+          return res.status(409).json({ error: '插件执行模式已变化，请重新检查并确认。' });
+        }
+        const requiresBackendTrust = executionMode === 'trusted-in-process' && (hasBackendCode || actualPermissions.some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission)));
         if (requiresBackendTrust && req.body?.trustInProcess !== true) {
           return res.status(400).json({ error: '安装确认缺少后端进程信任确认，请返回确认页重新勾选。' });
         }
