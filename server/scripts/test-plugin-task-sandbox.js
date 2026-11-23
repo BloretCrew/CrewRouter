@@ -40,8 +40,10 @@ const sandbox = require('../plugins/task-sandbox');
 
     fs.writeFileSync(entry, '() => ({ loop: () => { while (true) {} } })');
     await assert.rejects(sandbox.runTaskInBwrap({ pluginId: 'fixture', pluginDir, taskName: 'loop', payload: {}, taskId: 18, attempt: 1, timeoutMs: 250 }), /终止|失败/);
-    fs.writeFileSync(entry, '() => ({ escape: () => process })');
+    fs.writeFileSync(entry, '() => ({ escape: () => process, requireCheck: () => typeof require, fetchCheck: () => typeof fetch })');
     await assert.rejects(sandbox.runTaskInBwrap({ pluginId: 'fixture', pluginDir, taskName: 'escape', payload: {}, taskId: 19, attempt: 1 }), /task result|ReferenceError|not defined|失败/);
+    fs.writeFileSync(entry, '() => ({ escape: () => ({}).constructor.constructor("return process")() })');
+    await assert.rejects(sandbox.runTaskInBwrap({ pluginId: 'fixture', pluginDir, taskName: 'escape', payload: {}, taskId: 20, attempt: 1 }), /Code generation from strings disallowed|task result|失败/);
     console.log('PASS bwrap isolated task process: unprivileged UID, network/PID namespaces, capability deny, bounded frame and hard-timeout termination');
   } finally {
     if (previousFlag === undefined) delete process.env.CR_ENABLE_PLUGIN_BWRAP;
