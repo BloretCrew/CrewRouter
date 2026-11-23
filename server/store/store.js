@@ -12,7 +12,7 @@ const { getPool } = require('./db');
 const Logger = require('../logger');
 const { validateUrl } = require('../utils/url-validator');
 const proxyPool = require('../proxy-pool');
-const { readZipManifest } = require('../plugins/zip');
+const { readZipManifest, extractZipSafe, findZipManifest, zipPayloadDir } = require('../plugins/zip');
 
 const MAX_STORE_PLUGIN_ZIP_BYTES = 25 * 1024 * 1024;
 
@@ -174,6 +174,9 @@ function parsePendingUpdate(raw) {
     icon: String(obj.icon || '').trim(),
     download: String(obj.download || '').trim(),
     sha256: String(obj.sha256 || '').trim(),
+    signature: String(obj.signature || '').trim(),
+    signatureKeyId: String(obj.signatureKeyId || obj.signature_key_id || '').trim(),
+    signatureAlgorithm: String(obj.signatureAlgorithm || obj.signature_algorithm || '').trim(),
     permissions: Array.isArray(obj.permissions) ? obj.permissions.map((p) => String(p)) : [],
     tags: Array.isArray(obj.tags) ? obj.tags.map((t) => String(t)) : [],
     screenshots: parseScreenshots(obj.screenshots),
@@ -192,6 +195,9 @@ function editableFieldsFromPlugin(plugin) {
     icon: plugin.icon || '',
     download: plugin.download || '',
     sha256: plugin.sha256 || '',
+    signature: plugin.signature || '',
+    signatureKeyId: plugin.signatureKeyId || '',
+    signatureAlgorithm: plugin.signatureAlgorithm || '',
     permissions: Array.isArray(plugin.permissions) ? plugin.permissions.slice() : [],
     tags: Array.isArray(plugin.tags) ? plugin.tags.slice() : [],
     screenshots: Array.isArray(plugin.screenshots)
@@ -215,6 +221,9 @@ function rowToPlugin(row) {
     icon: row.icon || '',
     download: row.download,
     sha256: row.sha256 || '',
+    signature: row.signature || '',
+    signatureKeyId: row.signature_key_id || '',
+    signatureAlgorithm: row.signature_algorithm || '',
     permissions: Array.isArray(row.permissions) ? row.permissions : [],
     tags: Array.isArray(row.tags) ? row.tags : [],
     screenshots: parseScreenshots(row.screenshots),
@@ -248,6 +257,9 @@ function publicView(plugin, opts = {}) {
     icon: plugin.icon || '',
     download: plugin.download,
     sha256: plugin.sha256 || '',
+    signature: plugin.signature || '',
+    signatureKeyId: plugin.signatureKeyId || '',
+    signatureAlgorithm: plugin.signatureAlgorithm || '',
     permissions: plugin.permissions || [],
     tags: plugin.tags || [],
     screenshots: plugin.screenshots || [],
@@ -321,6 +333,9 @@ ALTER TABLE plugin_store_plugins
   ADD COLUMN IF NOT EXISTS long_description TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS sha256 TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS signature TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS signature_key_id TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS signature_algorithm TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS pending_update JSONB NULL;
 
 CREATE TABLE IF NOT EXISTS plugin_store_ratings (
@@ -536,6 +551,10 @@ async function createPlugin(input, authorUsername) {
 
   const screenshots = normalizeScreenshots(input.screenshots);
   const sha256 = normalizeSha256(input.sha256);
+  const signature = String(input.signature || '').trim();
+  const signatureKeyId = String(input.signatureKeyId || input.signature_key_id || '').trim();
+  const signatureAlgorithm = String(input.signatureAlgorithm || input.signature_algorithm || '').trim();
+  if (signature && (!signatureKeyId || signatureAlgorithm !== 'Ed25519')) throw storeError('签名必须提供 signatureKeyId 且 signatureAlgorithm=Ed25519', 'VALIDATION');
   const plugin = {
     id: String(input.id).trim(),
     name: String(input.name).trim(),
@@ -548,6 +567,9 @@ async function createPlugin(input, authorUsername) {
     icon: input.icon ? String(input.icon).trim() : '',
     download: String(input.download).trim(),
     sha256,
+    signature,
+    signatureKeyId,
+    signatureAlgorithm,
     permissions: normalizePermissions(input.permissions),
     tags: normalizeTags(input.tags),
     screenshots,
@@ -557,13 +579,14 @@ async function createPlugin(input, authorUsername) {
     const res = await q(
       `INSERT INTO plugin_store_plugins (
         id, name, version, author, author_username, description, long_description,
-        url, icon, download, sha256, permissions, tags, screenshots, status, reject_reason, install_count
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14::jsonb,'pending','',0)
+        url, icon, download, sha256, signature, signature_key_id, signature_algorithm, permissions, tags, screenshots, status, reject_reason, install_count
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb,$16::jsonb,$17::jsonb,'pending','',0)
       RETURNING *`,
       [
         plugin.id, plugin.name, plugin.version, plugin.author, plugin.authorUsername,
         plugin.description, plugin.longDescription, plugin.url, plugin.icon, plugin.download,
-        plugin.sha256, JSON.stringify(plugin.permissions), JSON.stringify(plugin.tags),
+        plugin.sha256, plugin.signature, plugin.signatureKeyId, plugin.signatureAlgorithm,
+        JSON.stringify(plugin.permissions), JSON.stringify(plugin.tags),
         JSON.stringify(plugin.screenshots),
       ]
     );
@@ -598,6 +621,9 @@ async function updatePlugin(id, input, user) {
         icon: existing.pendingUpdate.icon,
         download: existing.pendingUpdate.download,
         sha256: existing.pendingUpdate.sha256,
+        signature: existing.pendingUpdate.signature,
+        signatureKeyId: existing.pendingUpdate.signatureKeyId,
+        signatureAlgorithm: existing.pendingUpdate.signatureAlgorithm,
         permissions: existing.pendingUpdate.permissions,
         tags: existing.pendingUpdate.tags,
         screenshots: existing.pendingUpdate.screenshots,
@@ -615,6 +641,9 @@ async function updatePlugin(id, input, user) {
     next.download = String(input.download).trim();
   }
   if (input.sha256 !== undefined) next.sha256 = normalizeSha256(input.sha256);
+  if (input.signature !== undefined) next.signature = String(input.signature || '').trim();
+  if (input.signatureKeyId !== undefined || input.signature_key_id !== undefined) next.signatureKeyId = String(input.signatureKeyId ?? input.signature_key_id ?? '').trim();
+  if (input.signatureAlgorithm !== undefined || input.signature_algorithm !== undefined) next.signatureAlgorithm = String(input.signatureAlgorithm ?? input.signature_algorithm ?? '').trim();
   if (input.url !== undefined) {
     if (input.url && !isHttpsUrl(input.url)) throw storeError('主页 url 必须是 https://', 'VALIDATION');
     next.url = input.url ? String(input.url).trim() : '';
@@ -625,6 +654,16 @@ async function updatePlugin(id, input, user) {
   if (input.screenshots !== undefined) next.screenshots = normalizeScreenshots(input.screenshots);
   if (input.longDescription !== undefined || input.long_description !== undefined) {
     next.longDescription = String(input.longDescription ?? input.long_description ?? '').trim();
+  }
+  const packageIdentityChanged = next.version !== existing.version || next.sha256 !== existing.sha256
+    || JSON.stringify([...next.permissions].sort()) !== JSON.stringify([...existing.permissions].sort());
+  if (packageIdentityChanged && input.signature === undefined) {
+    next.signature = '';
+    next.signatureKeyId = '';
+    next.signatureAlgorithm = '';
+  }
+  if (next.signature && (!next.signatureKeyId || next.signatureAlgorithm !== 'Ed25519')) {
+    throw storeError('签名必须提供 signatureKeyId 且 signatureAlgorithm=Ed25519', 'VALIDATION');
   }
   if (!next.name) throw storeError('插件名称必填', 'VALIDATION');
   if (!next.version) throw storeError('版本号必填', 'VALIDATION');
@@ -663,14 +702,14 @@ async function updatePlugin(id, input, user) {
     res = await q(
       `UPDATE plugin_store_plugins SET
         name=$2, version=$3, author=$4, description=$5, long_description=$6, url=$7, icon=$8,
-        download=$9, sha256=$10, permissions=$11::jsonb, tags=$12::jsonb, screenshots=$13::jsonb,
-        status=$14, reject_reason=$15, reviewed_at=$16::timestamptz, reviewed_by=$17, featured=$18,
-        pending_update=$19::jsonb, updated_at=NOW()
+        download=$9, sha256=$10, signature=$11, signature_key_id=$12, signature_algorithm=$13, permissions=$14::jsonb, tags=$15::jsonb, screenshots=$16::jsonb,
+        status=$17, reject_reason=$18, reviewed_at=$19::timestamptz, reviewed_by=$20, featured=$21,
+        pending_update=$22::jsonb, updated_at=NOW()
       WHERE id=$1 RETURNING *`,
       [
         id, next.name, next.version, next.author, next.description, next.longDescription || '',
-        next.url, next.icon, next.download, next.sha256 || '', JSON.stringify(next.permissions || []),
-        JSON.stringify(next.tags || []), JSON.stringify(next.screenshots || []), status, rejectReason,
+        next.url, next.icon, next.download, next.sha256 || '', next.signature || '', next.signatureKeyId || '', next.signatureAlgorithm || '',
+        JSON.stringify(next.permissions || []), JSON.stringify(next.tags || []), JSON.stringify(next.screenshots || []), status, rejectReason,
         reviewedAt, reviewedBy, !!featured, pendingUpdate ? JSON.stringify(pendingUpdate) : null,
       ]
     );
@@ -701,8 +740,8 @@ async function reviewPlugin(id, action, reason, reviewerUsername) {
       res = await q(
         `UPDATE plugin_store_plugins SET
           name=$2, version=$3, author=$4, description=$5, long_description=$6, url=$7, icon=$8,
-          download=$9, sha256=$10, permissions=$11::jsonb, tags=$12::jsonb, screenshots=$13::jsonb,
-          status='approved', reject_reason='', pending_update=NULL, reviewed_at=NOW(), reviewed_by=$14, updated_at=NOW()
+          download=$9, sha256=$10, signature=$11, signature_key_id=$12, signature_algorithm=$13, permissions=$14::jsonb, tags=$15::jsonb, screenshots=$16::jsonb,
+          status='approved', reject_reason='', pending_update=NULL, reviewed_at=NOW(), reviewed_by=$17, updated_at=NOW()
         WHERE id=$1 RETURNING *`,
         [
           id,
@@ -715,6 +754,9 @@ async function reviewPlugin(id, action, reason, reviewerUsername) {
           draft.icon != null ? draft.icon : existing.icon || '',
           draft.download || existing.download,
           draft.sha256 != null ? draft.sha256 : existing.sha256 || '',
+          draft.signature != null ? draft.signature : existing.signature || '',
+          draft.signatureKeyId != null ? draft.signatureKeyId : existing.signatureKeyId || '',
+          draft.signatureAlgorithm != null ? draft.signatureAlgorithm : existing.signatureAlgorithm || '',
           JSON.stringify(draft.permissions || existing.permissions || []),
           JSON.stringify(draft.tags || existing.tags || []),
           JSON.stringify(draft.screenshots || existing.screenshots || []),
@@ -1012,7 +1054,13 @@ async function fetchPluginManifest(plugin) {
         chunks.push(Buffer.from(value));
       }
       fs.writeFileSync(zipPath, Buffer.concat(chunks, size), { mode: 0o600 });
-      return await readZipManifest(zipPath, plugin.id);
+      const extractDir = path.join(tmpDir, 'extract');
+      await extractZipSafe(zipPath, extractDir);
+      const manifest = findZipManifest(extractDir);
+      if (!manifest || manifest.id !== plugin.id) return null;
+      const payloadDir = zipPayloadDir(extractDir, plugin.id);
+      if (!payloadDir) return null;
+      return { ...manifest, _hasBackendCode: fs.existsSync(path.join(payloadDir, 'main.js')) };
     } catch {
       return null;
     } finally {
@@ -1040,6 +1088,11 @@ async function getPluginPackageInfo(id) {
   const manifest = await fetchPluginManifest(plugin);
   const behavior = {};
   if (manifest) {
+    const approvedPermissions = [...new Set(plugin.permissions || [])].sort();
+    const manifestPermissions = [...new Set(manifest.permissions || [])].sort();
+    if (JSON.stringify(approvedPermissions) !== JSON.stringify(manifestPermissions)) {
+      throw storeError('插件包权限与商店审核权限不一致，拒绝提供安装信息', 'VALIDATION');
+    }
     behavior.pages = Array.isArray(manifest.pages) ? manifest.pages : [];
     behavior.slots = Array.isArray(manifest.slots) ? manifest.slots : [];
     behavior.routes = Array.isArray(manifest.routes) ? manifest.routes : [];
@@ -1060,6 +1113,10 @@ async function getPluginPackageInfo(id) {
     screenshots: plugin.screenshots || [],
     download: plugin.download,
     sha256: plugin.sha256 || '',
+    signature: plugin.signature || '',
+    signatureKeyId: plugin.signatureKeyId || '',
+    signatureAlgorithm: plugin.signatureAlgorithm || '',
+    hasBackendCode: !!manifest && !!manifest._hasBackendCode,
     behavior,
   };
 }

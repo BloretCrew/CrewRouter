@@ -115,14 +115,21 @@ function hasTrustedPluginSigningKeys() {
   return Object.keys(trustedPluginSigningKeys()).length > 0;
 }
 
-function verifyPluginSignature({ id, version, sha256, signature, keyId }) {
+function canonicalPluginSignatureMessage({ id, version, sha256, permissions }) {
+  const digest = String(sha256 || '').toLowerCase();
+  const normalizedPermissions = [...new Set(Array.isArray(permissions) ? permissions.map(String) : [])].sort();
+  return `crewrouter-plugin-v1\n${id}\n${version}\n${digest}\n${JSON.stringify(normalizedPermissions)}`;
+}
+
+function verifyPluginSignature({ id, version, sha256, permissions, signature, keyId, algorithm = 'Ed25519' }) {
   const keys = trustedPluginSigningKeys();
   const keyIds = Object.keys(keys);
   if (!keyIds.length) return { verified: false, mode: 'administrator-trust' };
   if (!keyId || !signature || !keys[keyId]) throw new Error('插件签名缺失或签名密钥不受信任');
+  if (algorithm !== 'Ed25519') throw new Error('插件签名算法不受支持');
   const digest = String(sha256 || '').toLowerCase();
   if (!/^[a-f0-9]{64}$/.test(digest)) throw new Error('插件签名摘要格式无效');
-  const message = `crewrouter-plugin-v1\n${id}\n${version}\n${digest}`;
+  const message = canonicalPluginSignatureMessage({ id, version, sha256: digest, permissions });
   const valid = crypto.verify(null, Buffer.from(message), keys[keyId], Buffer.from(signature, 'base64'));
   if (!valid) throw new Error('插件发布者 Ed25519 签名校验失败');
   return { verified: true, keyId };
@@ -197,4 +204,4 @@ async function downloadPackage(url, destPath, expectedSha256) {
   }
 }
 
-module.exports = { DEFAULT_STORE, allowedSources, isAllowedSource, fetchPackageInfo, downloadPackage, inspectStorePackage, verifyPluginSignature, trustedPluginSigningKeys, hasTrustedPluginSigningKeys };
+module.exports = { DEFAULT_STORE, allowedSources, isAllowedSource, fetchPackageInfo, downloadPackage, inspectStorePackage, canonicalPluginSignatureMessage, verifyPluginSignature, trustedPluginSigningKeys, hasTrustedPluginSigningKeys };

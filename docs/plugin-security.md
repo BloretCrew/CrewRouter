@@ -12,7 +12,7 @@
 
 SHA-256 只证明下载的归档与商店元数据中的摘要相同。若商店元数据和归档由同一发布方控制，哈希**不构成发布者身份签名**。
 
-实例管理员可选择配置 `store.pluginSigningKeys`（key ID → PEM Ed25519 公钥）。配置至少一个受信 key 后，商店包必须提供 `signatureKeyId` 和 Base64 `signature`，签名消息为 `crewrouter-plugin-v1\\n<pluginId>\\n<version>\\n<lowercase-sha256>`；签名缺失、key 未受信或版本/摘要不符都会拒绝安装。没有配置签名 key 时，系统明确处于“管理员信任来源”兼容模式，不声称已验证发布者身份。密钥轮换时先同时配置新旧公钥，待旧版本迁移完成后再移除旧 key。签名证明发布者密钥持有，不证明代码安全；商店审核（若有）也不等于独立安全审计。
+实例管理员可选择配置 `store.pluginSigningKeys`（key ID → PEM Ed25519 公钥）。配置至少一个受信 key 后，商店包必须提供 `signatureKeyId` 和 Base64 `signature`，签名消息为 UTF-8：`crewrouter-plugin-v1`、plugin ID、version、小写 SHA-256、JSON 序列化排序后的 permissions 数组，每段之间用单个 LF 字节分隔（不含末尾 LF）；签名缺失、key 未受信或版本/摘要/权限不符都会拒绝安装。发布者可运行 `node scripts/sign-plugin-package.mjs <id> <version> <sha256> '<permissions-json>' <private-key-pem-file>` 生成表单所需签名字段；设置 `CR_PLUGIN_SIGNING_KEY_ID` 作为 key ID。私钥只保存在发布者受控环境中。没有配置签名 key 时，系统明确处于“管理员信任来源”兼容模式，不声称已验证发布者身份。密钥轮换时先同时配置新旧公钥，待旧版本迁移完成后再移除旧 key。签名证明发布者密钥持有，不证明代码安全；商店审核（若有）也不等于独立安全审计。
 
 安装页面会显示权限、SHA-256、进程内执行警示，并要求管理员确认权限；具有后端权限的包还要求单独确认信任风险。管理员确认不代表插件代码已安全。
 

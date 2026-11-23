@@ -423,7 +423,11 @@
       '<div class="form-group"><label>' + esc(t('简介')) + '</label><textarea id="f_description">' + esc(d.description || '') + '</textarea></div>' +
       '<div class="form-group"><label>' + esc(t('详细描述')) + '</label><textarea id="f_long">' + esc(d.longDescription || '') + '</textarea></div>' +
       '<div class="form-group"><label>' + esc(t('下载地址（https ZIP 直链）')) + '</label><input type="text" id="f_download" value="' + esc(d.download || '') + '"></div>' +
-      '<div class="form-group"><label>' + esc(t('SHA256（可选，64 位十六进制）')) + '</label><input type="text" id="f_sha256" value="' + esc(d.sha256 || '') + '"></div>' +
+      '<div class="form-group"><label>' + esc(t('SHA256（64 位十六进制）')) + '</label><input type="text" id="f_sha256" value="' + esc(d.sha256 || '') + '"></div>' +
+      '<div class="form-group"><label>' + esc(t('Ed25519 签名（Base64，可选）')) + '</label><textarea id="f_signature">' + esc(d.signature || '') + '</textarea></div>' +
+      '<div class="form-group"><label>' + esc(t('签名密钥 ID')) + '</label><input type="text" id="f_signatureKeyId" value="' + esc(d.signatureKeyId || '') + '"></div>' +
+      '<input type="hidden" id="f_signatureAlgorithm" value="Ed25519">' +
+      '<div class="form-help">' + esc(t('签名消息格式见 docs/plugin-security.md；权限、版本或包摘要变化后必须重新签名。私钥只应保存在发布者受控环境中。')) + '</div>' +
       '<div class="form-group"><label>' + esc(t('主页 url（可选）')) + '</label><input type="text" id="f_url" value="' + esc(d.url || '') + '"></div>' +
       '<div class="form-group"><label>' + esc(t('图标 url（可选）')) + '</label><input type="text" id="f_icon" value="' + esc(d.icon || '') + '"></div>' +
       '<div class="form-group"><label>' + esc(t('标签（逗号分隔）')) + '</label><input type="text" id="f_tags" value="' + esc((d.tags || []).join(',')) + '"></div>' +
@@ -446,7 +450,10 @@
     setv('f_version', obj.version);
     setv('f_author', obj.author);
     setv('f_description', obj.description);
-    if (Array.isArray(obj.permissions) || typeof obj.permissions === 'string') setv('f_permissions', Array.isArray(obj.permissions) ? obj.permissions.join(',') : obj.permissions);
+    if (Array.isArray(obj.permissions) || typeof obj.permissions === 'string') {
+      setv('f_permissions', Array.isArray(obj.permissions) ? obj.permissions.join(',') : obj.permissions);
+      setv('f_signature', ''); setv('f_signatureKeyId', '');
+    }
     if (Array.isArray(obj.tags) || typeof obj.tags === 'string') setv('f_tags', Array.isArray(obj.tags) ? obj.tags.join(',') : obj.tags);
     return null;
   }
@@ -515,6 +522,9 @@
         longDescription: document.getElementById('f_long').value.trim(),
         download: document.getElementById('f_download').value.trim(),
         sha256: document.getElementById('f_sha256').value.trim(),
+        signature: document.getElementById('f_signature').value.trim(),
+        signatureKeyId: document.getElementById('f_signatureKeyId').value.trim(),
+        signatureAlgorithm: document.getElementById('f_signatureAlgorithm').value,
         url: document.getElementById('f_url').value.trim(),
         icon: document.getElementById('f_icon').value.trim(),
         tags: document.getElementById('f_tags').value.split(/[,，]+/).map(function (s) { return s.trim(); }).filter(Boolean),
@@ -524,6 +534,8 @@
       if (!payload.name) { setBanner('warn', t('请填写插件名称')); return; }
       if (!payload.version) { setBanner('warn', t('请填写版本号')); return; }
       if (!payload.download) { setBanner('warn', t('请填写下载地址')); return; }
+      if (!/^[a-f0-9]{64}$/i.test(payload.sha256)) { setBanner('warn', t('SHA256 必须为 64 位十六进制')); return; }
+      if (payload.signature && !payload.signatureKeyId) { setBanner('warn', t('签名必须填写密钥 ID')); return; }
       var req = editId
         ? api('/plugins/' + encodeURIComponent(editId), { method: 'PATCH', body: payload })
         : api('/plugins', { method: 'POST', body: payload });

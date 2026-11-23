@@ -116,8 +116,10 @@ function createPluginsRoutes() {
             id: manifest.id,
             version: manifest.version,
             sha256: info.sha256,
+            permissions: manifest.permissions || [],
             signature: info.signature,
             keyId: info.signatureKeyId,
+            algorithm: info.signatureAlgorithm || 'Ed25519',
           });
         } catch (signatureError) {
           return res.status(400).json({ error: signatureError.message });
