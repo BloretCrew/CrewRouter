@@ -13,4 +13,8 @@ assert.deepEqual(stats, { payload: { meta: { 'plugin:shopper': 'x', 'dim:shopper
 const result = sanitizeIsolatedHookResult('shopper', 'stats:record', { meta: { 'plugin:shopper': 'safe', 'plugin:other': 'no', email: 'no' } }, { meta: { existing: true } });
 assert.deepEqual(result, { meta: { existing: true, 'plugin:shopper': 'safe' } });
 assert.throws(() => sanitizeIsolatedHookInput('shopper', 'gateway:beforeUpstream', {}, {}), /不支持/);
+const headers = sanitizeIsolatedHookResult('shopper', 'gateway:finalResponse', { statusCode: 200, headers: {
+  'X-Plugin-shopper-trace': 'ok', 'Set-Cookie': 'secret=1', 'X-Plugin-shopper-bad': 'x\r\nInjected: true',
+} }, { statusCode: 201, headers: {} });
+assert.deepEqual(headers, { statusCode: 201, headers: { 'X-Plugin-shopper-trace': 'ok' } });
 console.log('PASS isolated hook broker strips secrets, constrains billing fields and plugin-owned stats metadata');

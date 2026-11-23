@@ -19,6 +19,9 @@ function sanitizeIsolatedHookInput(pluginId, hookName, payload, meta) {
     const current = scalarFields(payload?.meta, key => key === `plugin:${pluginId}` || key.startsWith(`dim:${pluginId}:`));
     return { payload: { meta: current }, meta: safeMeta };
   }
+  if (hookName === 'gateway:finalResponse') {
+    return { payload: { statusCode: Number(payload?.statusCode) || 0, headers: {} }, meta: safeMeta };
+  }
   throw new Error(`isolated-hooks 不支持 hook ${hookName}`);
 }
 
@@ -34,6 +37,24 @@ function sanitizeIsolatedHookResult(pluginId, hookName, result, original) {
       }
     }
     return output;
+  }
+  if (hookName === 'gateway:finalResponse') {
+    const headers = {};
+    if (result.headers && typeof result.headers === 'object' && !Array.isArray(result.headers)) {
+      for (const [name, value] of Object.entries(result.headers)) {
+        const key = String(name);
+        const safeName = `x-plugin-${pluginId.toLowerCase()}-`;
+        if (!key.toLowerCase().startsWith(safeName) || typeof value !== 'string' || value.length > 1024 || /[\r\n]/.test(value)) continue;
+        headers[key] = value;
+      }
+    }
+    const originalHeaders = {};
+    for (const [name, value] of Object.entries(original.headers || {})) {
+      const key = String(name);
+      const safeName = `x-plugin-${pluginId.toLowerCase()}-`;
+      if (key.toLowerCase().startsWith(safeName) && typeof value === 'string' && value.length <= 1024 && !/[\r\n]/.test(value)) originalHeaders[key] = value;
+    }
+    return { statusCode: original.statusCode, headers: { ...originalHeaders, ...headers } };
   }
   const ownMeta = scalarFields(result.meta, key => key === `plugin:${pluginId}` || key.startsWith(`dim:${pluginId}:`));
   return { ...original, meta: { ...(original.meta || {}), ...ownMeta } };
