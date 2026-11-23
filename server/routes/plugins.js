@@ -296,7 +296,12 @@ function createPluginsRoutes() {
       const r = await pool.query('SELECT enabled FROM plugins WHERE id = $1', [id]);
       if (!r.rows.length) return res.status(404).json({ error: '插件不存在' });
       const next = !r.rows[0].enabled;
-      if (next) await registry().enable(id);
+      if (next) {
+        const manifest = registry().getKnownManifest(id);
+        const requiresTrust = manifest?.executionMode !== 'isolated-task' && (fs.existsSync(path.join(registry().PLUGINS_DIR, id, 'main.js')) || (manifest?.permissions || []).some(permission => ['gateway:modify','billing:modify','apikey:modify','provider:register','network','tasks:register'].includes(permission)));
+        if (requiresTrust && req.body?.trustInProcess !== true) return res.status(400).json({ error: '启用后端插件需要显式确认进程内信任风险。' });
+        await registry().enable(id);
+      }
       else await registry().disable(id);
       await logPluginAdminAction(req, 'plugin.toggle', id,
         `${next ? '启用' : '禁用'}插件「${id}」`, { enabled: next });

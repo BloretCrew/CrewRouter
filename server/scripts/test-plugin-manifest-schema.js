@@ -13,5 +13,7 @@ for (const id of examples) {
   for (const permission of manifest.permissions || []) assert.ok(permissions.has(permission), `${id} declares unknown permission ${permission}`);
 }
 assert.ok(schema.properties.routes.items.properties.auth.enum.includes('none'));
+assert.ok(schema.properties.executionMode.enum.includes('isolated-task'));
+assert.equal(schema.properties.taskHandlers.type, 'array');
 assert.ok(schema.properties.permissions.items.maxLength > 0);
 console.log('PASS plugin manifest schema files parse and example permissions align with host inventory');
