@@ -161,10 +161,23 @@ async function getOpenCodeGoQuotaWarning(provider, enabled = false) {
     const usage = data?.usage || {};
     const periods = ['rolling', 'weekly', 'monthly']
       .map(key => ({ key, ...(usage[key] || {}) }))
-      .filter(period => Number.isFinite(Number(period.percent)) && Number(period.percent) >= 90);
-    if (periods.length === 0) return '';
+      .filter(period => Number.isFinite(Number(period.percent)));
+    try {
+      for (const period of periods) {
+        require('../plugins/events').publish('quota.threshold.v1', {
+          scope: `opencode_go:${period.key}`,
+          remaining: Math.max(0, 100 - Number(period.percent)),
+          threshold: 10,
+          observedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      Logger.warn(`[Signature] 配额事件发布失败: ${err.message}`);
+    }
+    const warningPeriods = periods.filter(period => Number(period.percent) >= 90);
+    if (warningPeriods.length === 0) return '';
     const labels = { rolling: 'Rolling', weekly: 'Weekly', monthly: 'Monthly' };
-    const details = periods.map(period => {
+    const details = warningPeriods.map(period => {
       const remaining = Math.max(0, 100 - Number(period.percent));
       const reset = period.resetsAt ? `，重置于 ${period.resetsAt}` : '';
       return `${labels[period.key] || period.key} 剩余 ${remaining}%${reset}`;
@@ -753,6 +766,7 @@ module.exports = {
   DEFAULT_TEMPLATE,
   SIGNATURE_VARIABLES,
   SIGNATURE_TEMPLATE_MAX_LENGTH,
+  getOpenCodeGoQuotaWarning,
   normalizeSignatureTemplate,
   validateSignatureTemplate,
   validateSignatureEnabled,

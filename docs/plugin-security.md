@@ -23,4 +23,4 @@ SHA-256 只证明下载的归档与商店元数据中的摘要相同。若商店
 ## 任务与事件
 
 - `tasks:register` 提供数据库持久任务记录、幂等、租约、重试与状态；handler 仍在受信任主进程执行。超时/AbortSignal 不能杀死同步阻塞或忽略取消的代码。
-- `events:subscribe` 是字段白名单、版本化的进程内 best-effort 通知，不是 durable message broker；跨重启可靠处理用持久任务。模型健康事件仅在每模型健康状态跃迁时发布。配额阈值事件虽定义 schema 和权限，但尚未自动接入计费热路径；在持久去重和明确用户授权上下文设计完成前不广播个人额度数据。
+- `events:subscribe` 是字段白名单、版本化的进程内 best-effort 通知，不是 durable message broker；跨重启可靠处理用持久任务。模型健康事件仅在每模型健康状态跃迁时发布。配额阈值事件仅在用户为 OpenCode Go Key 显式开启 quota warning、且签名路径成功读取上游额度后发布；payload 仅含窗口 scope、remaining、threshold，不含用户/Key/provider ID。Team 计费限额热路径不广播。事件去重状态目前是内存 best-effort，重启会重新建立基线，不保证 durable delivery。

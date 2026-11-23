@@ -32,7 +32,7 @@
     "docs/plugin-security.md"
   ],
   "scripts": {
-    "test:plugins": "node server/scripts/test-plugin-capabilities.js && node server/scripts/test-plugin-route-auth.js && node server/scripts/test-plugin-pref-optin-transactions.js && node server/scripts/test-plugin-build-artifacts.js && node server/scripts/test-plugin-task-queue.js && node server/scripts/test-plugin-events.js && node server/scripts/test-plugin-manifest-schema.js && node server/scripts/test-plugin-signatures.js && node server/scripts/test-plugin-store-signatures.js && node server/scripts/test-plugin-package-info.js",
+    "test:plugins": "node server/scripts/test-plugin-capabilities.js && node server/scripts/test-plugin-route-auth.js && node server/scripts/test-plugin-pref-optin-transactions.js && node server/scripts/test-plugin-build-artifacts.js && node server/scripts/test-plugin-task-queue.js && node server/scripts/test-plugin-events.js && node server/scripts/test-plugin-manifest-schema.js && node server/scripts/test-plugin-signatures.js && node server/scripts/test-plugin-store-signatures.js && node server/scripts/test-plugin-package-info.js && node server/scripts/test-plugin-quota-events.js",
     "test:signatures": "node --test server/scripts/test-signature-*.js server/scripts/test-user-signature-settings.js server/scripts/test-default-disabled.js",
     "test:signatures:browser": "node scripts/test-settings-defaults-browser.js --signature-only",
     "test:usage-write": "node --test server/scripts/test-token-normalize.js server/scripts/test-usage-write-guards.js",

@@ -52,7 +52,7 @@ ctx.events.on('model.health.changed.v1', async event => {
 当前 schema：
 
 - `model.health.changed.v1`：`modelId`、`health`、`statusCode`、`observedAt`。
-- `quota.threshold.v1`：`scope`、`remaining`、`threshold`、`observedAt`。当前只定义 schema 与双权限门控；因为现有 Team 限额检查运行于计费热路径且缺少可去重的跃迁记录，本版本不自动广播该事件。接入点确定性和持久去重前不会从扣费检查函数发布个人额度事件。
+- `quota.threshold.v1`：`scope`、`remaining`、`threshold`、`observedAt`。OpenCode Go 已在用户显式开启 Key 额度预警且签名构建读取上游 quota 时发布该事件；只包含 `opencode_go:<window>` scope、remaining 与 10% threshold，不含用户、Key 或 provider 标识。Team 限额检查仍运行于计费热路径，不从该路径广播；事件阈值状态为内存 best-effort，服务重启后先重新建立 baseline。
 - `plugin.lifecycle.v1`：`pluginId`、`action`、`version`。
 
 仅返回字段白名单；schema 版本变更用新的事件名，不静默扩展现有 payload。
