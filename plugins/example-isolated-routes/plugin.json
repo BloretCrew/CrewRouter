@@ -1,0 +1,12 @@
+{
+  "id": "example-isolated-routes",
+  "name": "隔离路由示例",
+  "version": "1.0.0",
+  "description": "演示仅处理 JSON 请求/响应的 bwrap 隔离 user route。",
+  "author": "CrewRouter",
+  "permissions": ["routes:register"],
+  "executionMode": "isolated-routes",
+  "routes": [
+    { "method": "post", "path": "/echo", "auth": "user", "handler": "echo" }
+  ]
+}

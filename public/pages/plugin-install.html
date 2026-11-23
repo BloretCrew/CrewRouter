@@ -123,7 +123,7 @@
 
         html += '<div class="pi-section"><h3>权限</h3><ul>' + permHtml(pluginInfo.permissions) + '</ul></div>';
         html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(pluginInfo.behavior) + '</ul></div>';
-        html += '<div class="pi-section"><h3>执行模式</h3><p>' + esc(pluginInfo.executionMode === 'isolated-task' ? 'Linux bubblewrap 隔离任务（纯计算）' : (pluginInfo.executionMode === 'isolated-hooks' ? 'Linux bubblewrap 隔离 JSON hooks（billing/stats）' : '受信任进程内后端代码')) + '</p></div>';
+        html += '<div class="pi-section"><h3>执行模式</h3><p>' + esc(pluginInfo.executionMode === 'isolated-task' ? 'Linux bubblewrap 隔离任务（纯计算）' : (pluginInfo.executionMode === 'isolated-hooks' ? 'Linux bubblewrap 隔离 JSON hooks（billing/stats/finalResponse/models/provider-select）' : (pluginInfo.executionMode === 'isolated-routes' ? 'Linux bubblewrap 隔离 JSON routes（user/admin auth，仅静态路径）' : '受信任进程内后端代码'))) + '</p></div>';
         html += '<div class="pi-section"><h3>包验证</h3><p>SHA-256：<code>' + esc(pluginInfo.sha256 || '缺失（不可安装）') + '</code></p><p>发布者签名：' + (pluginInfo.signatureTrustConfigured ? '此实例配置了受信 Ed25519 公钥，服务端将强制验签。' : '此实例未配置发布者公钥；哈希只验证包与商店元数据一致，不证明发布者身份。') + '</p></div>';
         if (pluginInfo.executionMode === 'trusted-in-process') html += '<label class="pi-warn"><input type="checkbox" id="piTrustCode"> 我理解：若插件含 main.js 或申请高影响后端权限，后端代码会在 CrewRouter 主进程运行；VM/权限清单不构成恶意代码安全隔离。</label>';
         html += '<label class="pi-warn"><input type="checkbox" id="piConfirmPermissions"> 我已检查并确认上列全部权限。</label>';

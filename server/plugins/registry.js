@@ -99,20 +99,52 @@ async function syncDbRecords() {
   }
 }
 
+function isolatedRouteHandler(plugin, route) {
+  const method = String(route.method || 'get').toLowerCase();
+  const routePath = route.path;
+  const handlerName = route.handler;
+  return async (req, res) => {
+    const input = {
+      method: req.method,
+      path: routePath,
+      body: req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {},
+      query: req.query && typeof req.query === 'object' && !Array.isArray(req.query) ? req.query : {},
+      authRole: req.authUser?.isAdmin === true ? 'admin' : 'user',
+    };
+    const result = await require('./task-sandbox').runPluginEntryInBwrap({
+      pluginId: plugin.id,
+      pluginDir: plugin.dir,
+      entryName: 'route-entry.js',
+      taskName: handlerName,
+      payload: input,
+      meta: { method, path: routePath },
+      taskId: `route:${randomUUID()}`,
+      attempt: 1,
+      timeoutMs: 10000,
+    });
+    if (!result || typeof result !== 'object' || Array.isArray(result) || !result.body || typeof result.body !== 'object' || Array.isArray(result.body)) {
+      throw new Error('isolated route must return {body: JSON object, status?: integer}');
+    }
+    const status = Number.isInteger(result.status) && result.status >= 200 && result.status <= 599 ? result.status : 200;
+    return res.status(status).json(result.body);
+  };
+}
+
 async function loadOne(id, manifest, rowConfig) {
   unloadOne(id);
   const dir = path.join(PLUGINS_DIR, id);
   const isolatedTasks = manifest.executionMode === 'isolated-task';
   const isolatedHooks = manifest.executionMode === 'isolated-hooks';
-  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), isolatedTasks, isolatedHooks };
+  const isolatedRoutes = manifest.executionMode === 'isolated-routes';
+  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), isolatedTasks, isolatedHooks, isolatedRoutes };
   loaded.set(id, plugin);
   taskHandlers.set(id, plugin.taskHandlers);
 
   try {
-    if (plugin.isolatedTasks || plugin.isolatedHooks) {
+    if (plugin.isolatedTasks || plugin.isolatedHooks || plugin.isolatedRoutes) {
       const taskSandbox = require('./task-sandbox');
       taskSandbox.assertModeSupported(manifest);
-      const entry = plugin.isolatedTasks ? 'task-entry.js' : 'hook-entry.js';
+      const entry = plugin.isolatedTasks ? 'task-entry.js' : (plugin.isolatedHooks ? 'hook-entry.js' : 'route-entry.js');
       const entryPath = path.join(dir, entry);
       if (!fs.existsSync(entryPath) || !fs.lstatSync(entryPath).isFile() || fs.lstatSync(entryPath).isSymbolicLink()) throw new Error(`隔离插件必须提供普通文件 ${entry}`);
     }
@@ -121,6 +153,8 @@ async function loadOne(id, manifest, rowConfig) {
         if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name))) throw new Error(`隔离任务名无效: ${name}`);
         plugin.taskHandlers.set(name, { isolated: true });
       }
+    } else if (plugin.isolatedRoutes) {
+      for (const route of manifest.routes) exposeHandler(id, route.method || 'get', route.path, isolatedRouteHandler(plugin, route));
     } else if (manifest.executionMode === 'isolated-hooks') {
       const hookPermissions = require('./task-sandbox').ISOLATED_HOOK_PERMISSIONS;
       for (const [hookName, handlerName] of Object.entries(manifest.hooks)) {

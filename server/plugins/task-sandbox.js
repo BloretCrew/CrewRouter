@@ -12,7 +12,7 @@ const TASK_TIMEOUT_MS = 30000;
 const MAX_TASK_ENTRY_BYTES = 256 * 1024;
 const FORBIDDEN_ISOLATED_PERMISSIONS = new Set([
   'storage', 'network', 'apikey:modify',
-  'routes:register', 'cron:register', 'events:subscribe', 'usage:read', 'export:usage',
+  'cron:register', 'events:subscribe', 'usage:read', 'export:usage',
   'preferences:read', 'audit:write', 'meta:read', 'admin:view', 'webhook:register',
 ]);
 
@@ -110,6 +110,34 @@ function assertModeSupported(manifest, env = process.env) {
     }
     return;
   }
+  if (manifest.executionMode === 'isolated-routes') {
+    const extraPermissions = [...permissions].filter(permission => permission !== 'routes:register');
+    if (extraPermissions.length || !permissions.has('routes:register')) throw new Error(`isolated-routes 权限只允许 routes:register: ${extraPermissions.join(', ')}`);
+    const routes = manifest.routes;
+    if (!Array.isArray(routes) || !routes.length) throw new Error('isolated-routes 需要 manifest.routes');
+    for (const route of routes) {
+      if (!['get', 'post', 'put', 'delete'].includes(String(route.method || 'get').toLowerCase())) throw new Error('isolated-routes method 不受支持');
+      if (!['user', 'admin'].includes(route.auth || 'user')) throw new Error('isolated-routes 禁止公开路由 auth:none');
+      if (typeof route.path !== 'string' || !route.path.startsWith('/') || route.path.includes(':') || route.path.includes('*')) throw new Error('isolated-routes 只支持精确静态路径');
+      if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(route.handler || ''))) throw new Error('isolated-routes handler 名无效');
+    }
+    if (manifest.hooks || (manifest.cron || []).length || (manifest.pages || []).length || (manifest.slots || []).length || manifest.taskHandlers) throw new Error('isolated-routes 不支持 hooks/cron/pages/slots/tasks');
+    return;
+  }
+  if (manifest.executionMode === 'isolated-routes') {
+    const extraPermissions = [...permissions].filter(permission => permission !== 'routes:register');
+    if (!permissions.has('routes:register') || extraPermissions.length) throw new Error(`isolated-routes 权限只允许 routes:register: ${extraPermissions.join(', ')}`);
+    const routes = manifest.routes;
+    if (!Array.isArray(routes) || !routes.length) throw new Error('isolated-routes 需要 manifest.routes');
+    for (const route of routes) {
+      if (!['get', 'post', 'put', 'delete'].includes(String(route.method || 'get').toLowerCase())) throw new Error('isolated-routes method 不受支持');
+      if (!['user', 'admin'].includes(route.auth || 'user')) throw new Error('isolated-routes 禁止公开路由 auth:none');
+      if (typeof route.path !== 'string' || !route.path.startsWith('/') || route.path.length > 200 || route.path.includes(':') || route.path.includes('*') || route.path.split('/').includes('..')) throw new Error('isolated-routes 只支持安全精确静态路径');
+      if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(route.handler || ''))) throw new Error('isolated-routes handler 名无效');
+    }
+    if (manifest.hooks || (manifest.cron || []).length || (manifest.pages || []).length || (manifest.slots || []).length || manifest.taskHandlers) throw new Error('isolated-routes 不支持 hooks/cron/pages/slots/tasks');
+    return;
+  }
   if (manifest.executionMode === 'isolated-hooks') {
     const hooks = manifest.hooks;
     if (!hooks || typeof hooks !== 'object' || Array.isArray(hooks) || !Object.keys(hooks).length) throw new Error('isolated-hooks 需要 manifest.hooks');
@@ -186,7 +214,7 @@ function parseWorkerOutput(output) {
 function runPluginEntryInBwrap({ pluginId, pluginDir, entryName = 'task-entry.js', taskName, payload, taskId, attempt = 1, meta = {}, env = process.env, timeoutMs = TASK_TIMEOUT_MS, signal }) {
   const bwrap = selectBwrap(env);
   if (!bwrap) return Promise.reject(new Error('未找到 bubblewrap；拒绝回退到主进程执行隔离代码'));
-  if (!['task-entry.js', 'hook-entry.js'].includes(entryName)) return Promise.reject(new Error('隔离入口文件名不受支持'));
+  if (!['task-entry.js', 'hook-entry.js', 'route-entry.js'].includes(entryName)) return Promise.reject(new Error('隔离入口文件名不受支持'));
   const nodePath = resolveSandboxNodePath(env);
   const canonicalPluginDir = fs.realpathSync(pluginDir);
   const pluginEntry = path.join(canonicalPluginDir, entryName);
