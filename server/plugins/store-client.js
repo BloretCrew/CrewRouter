@@ -139,11 +139,10 @@ async function downloadPackage(url, destPath, expectedSha256) {
     }
     await new Promise((resolve, reject) => out.end((e) => (e ? reject(e) : resolve())));
     out = null;
-    if (expectedSha256) {
-      const got = hash.digest('hex');
-      if (got.toLowerCase() !== String(expectedSha256).toLowerCase()) {
-        throw new Error('插件包 SHA256 校验失败');
-      }
+    if (!/^[a-f0-9]{64}$/i.test(String(expectedSha256 || ''))) throw new Error('商店插件包缺少有效 SHA256，拒绝安装');
+    const got = hash.digest('hex');
+    if (got.toLowerCase() !== String(expectedSha256).toLowerCase()) {
+      throw new Error('插件包 SHA256 校验失败');
     }
   } catch (e) {
     await res?.body?.cancel().catch(() => {});

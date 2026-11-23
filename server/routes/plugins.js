@@ -89,6 +89,7 @@ function createPluginsRoutes() {
         const { validateManifest } = require('../plugins/host');
         const verr = validateManifest(manifest);
         if (verr) return res.status(400).json({ error: '插件清单校验失败: ' + verr });
+        if (manifest.id !== pluginId) return res.status(400).json({ error: '商店包插件 ID 与请求 ID 不一致' });
         const id = manifest.id;
         const payloadDir = zipPayloadDir(extractDir, id);
         if (!payloadDir) return res.status(400).json({ error: '插件包根结构不合法' });
@@ -125,7 +126,7 @@ function createPluginsRoutes() {
            VALUES ($1,$2,$3,$4,$5,$6::jsonb,true,$7,$8,$9,$10)
            ON CONFLICT (id) DO UPDATE SET
              name=EXCLUDED.name, version=EXCLUDED.version, description=EXCLUDED.description,
-             author=EXCLUDED.author, permissions=EXCLUDED.permissions, enabled=true,
+             author=EXCLUDED.author, permissions=EXCLUDED.permissions, enabled=plugins.enabled,
              store_id=EXCLUDED.store_id, store_source=EXCLUDED.store_source,
              store_download=EXCLUDED.store_download, store_sha256=EXCLUDED.store_sha256,
              store_latest_version=NULL, store_update_available=false, store_latest=NULL,
@@ -426,6 +427,9 @@ function createPluginsRoutes() {
 
       // 路由鉴权：默认 user；admin 要求管理员；none 公开
       const routeAuth = findRouteAuth(reg, req.params.pluginId, req.method, rest);
+      if (!['user', 'admin', 'none'].includes(routeAuth)) {
+        return res.status(403).json({ error: '插件路由鉴权配置无效' });
+      }
       if (routeAuth === 'none') return await handler(req, res);
       const authorize = routeAuth === 'admin' ? requireAdmin : requireAuth;
       return await authorize(req, res, () => handler(req, res));
@@ -445,13 +449,13 @@ function createPluginsRoutes() {
 // 从已加载插件的清单中查路由的 auth 声明
 function findRouteAuth(registry, pluginId, method, reqPath) {
   const manifest = registry.getLoadedManifest(pluginId);
-  if (!manifest || !Array.isArray(manifest.routes)) return 'user';
+  if (!manifest || !Array.isArray(manifest.routes)) return null;
   const clean = ('/' + String(reqPath).replace(/^\/+/g, '')).replace(/\/+$/, '') || '/';
   const route = manifest.routes.find(r =>
     String(r.method || 'get').toUpperCase() === method.toUpperCase() &&
     (('/' + String(r.path || '').replace(/^\/+/g, '')).replace(/\/+$/, '') || '/') === clean
   );
-  return route?.auth || 'user';
+  return route ? (route.auth || 'user') : null;
 }
 
 module.exports = { createPluginsRoutes };

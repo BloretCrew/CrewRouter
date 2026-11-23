@@ -77,9 +77,17 @@ async function apply(hookName, payload, meta = {}) {
   let current = payload;
   for (const sub of list) {
     try {
-      const result = await sub.handler(current, meta);
-      if (result !== undefined && result !== null) current = result;
-      consecutiveErrors.set(sub.pluginId, 0);
+      let timer;
+      try {
+        const timeout = new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`插件钩子 ${hookName} 执行超时`)), 2000);
+        });
+        const result = await Promise.race([Promise.resolve().then(() => sub.handler(current, meta)), timeout]);
+        if (result !== undefined && result !== null) current = result;
+        consecutiveErrors.set(sub.pluginId, 0);
+      } finally {
+        clearTimeout(timer);
+      }
     } catch (err) {
       reportError(sub.pluginId, hookName, err);
     }

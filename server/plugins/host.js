@@ -11,7 +11,7 @@
  *  - storage        允许读写 plugin_data KV 存储
  *  - network        允许通过 ctx.fetch 访问外部地址（过 SSRF 校验）
  *  - gateway:modify 允许注册网关钩子（beforeUpstream / upstreamResponse 等）
- *  - pages:register 清单中声明的页面/插槽才会暴露给前端
+ *  - pages:register / slots:register 分别控制清单中声明的页面和插槽
  *  - routes:register 允许挂载自有 HTTP API
  *  - provider:register 允许注册新的客户端格式/上游适配器/协议转换器（provider:registerFormats）
  *  - apikey:modify    允许注册 apikey:validate / apikey:created 钩子
@@ -39,6 +39,7 @@ const GATEWAY_HOOKS = new Set([
 
 // 各钩子所需权限
 const HOOK_PERMISSIONS = {
+  ...Object.fromEntries([...GATEWAY_HOOKS].map(name => [name, 'gateway:modify'])),
   'apikey:validate': 'apikey:modify',
   'apikey:created': 'apikey:modify',
   'billing:calculate': 'billing:modify',
@@ -170,11 +171,9 @@ function buildContext(plugin, hooksBus, logPrefix) {
     },
     // 钩子注册：按权限收口
     on(hookName, handler, priority) {
-      if (GATEWAY_HOOKS.has(hookName) && !perms.has('gateway:modify')) {
-        throw new Error(`[plugins:${id}] 注册 ${hookName} 需要 gateway:modify 权限`);
-      }
       const need = HOOK_PERMISSIONS[hookName];
-      if (need && !perms.has(need)) {
+      if (!need) throw new Error(`[plugins:${id}] 未知或不允许的钩子: ${String(hookName)}`);
+      if (!perms.has(need)) {
         throw new Error(`[plugins:${id}] 注册 ${hookName} 需要 ${need} 权限`);
       }
       hooksBus.subscribe(id, hookName, handler, priority);
@@ -223,11 +222,18 @@ function buildContext(plugin, hooksBus, logPrefix) {
   // —— 三期开放能力（只读/受控）——
   const dataRead = require('../utils/plugin-data-read');
 
-  // usage:read — 用量/成本聚合（不含正文）
+  // usage:read requires a verified request principal; plugin-supplied IDs are never authorization inputs.
   if (perms.has('usage:read')) {
+    const scopedUsage = async (req, opts = {}, groupBy) => {
+      const userId = Number(req?.authUser?.id);
+      if (!Number.isSafeInteger(userId) || userId <= 0) {
+        throw new Error(`[plugins:${id}] 用量查询需要已认证的用户请求上下文`);
+      }
+      return dataRead.usageSummary({ ...opts, userId, apiKeyId: null, groupBy: groupBy || opts.groupBy });
+    };
     ctx.usage = {
-      summary: (opts = {}) => dataRead.usageSummary(opts),
-      models: (opts = {}) => dataRead.usageSummary({ ...opts, groupBy: 'model_id' }),
+      summary: (req, opts = {}) => scopedUsage(req, opts),
+      models: (req, opts = {}) => scopedUsage(req, opts, 'model_id'),
     };
   }
 
@@ -282,11 +288,15 @@ function buildContext(plugin, hooksBus, logPrefix) {
     };
   }
 
-  // export:usage — 用量安全子集导出
+  // export:usage requires a verified request principal; plugin-supplied IDs never widen scope.
   if (perms.has('export:usage')) {
     ctx.exportUsage = {
-      json: async (opts = {}) => {
-        const out = await dataRead.usageSummary(opts);
+      json: async (req, opts = {}) => {
+        const userId = Number(req?.authUser?.id);
+        if (!Number.isSafeInteger(userId) || userId <= 0) {
+          throw new Error(`[plugins:${id}] 用量导出需要已认证的用户请求上下文`);
+        }
+        const out = await dataRead.usageSummary({ ...opts, userId, apiKeyId: null });
         return { exportedAt: new Date().toISOString(), ...out };
       },
     };

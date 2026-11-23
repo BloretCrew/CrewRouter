@@ -19,6 +19,7 @@ COPY deploy/build/ ./deploy/build/
 
 # 复制源代码
 COPY server/ ./server/
+COPY plugins/ ./plugins/
 COPY public/ ./public/
 COPY config.example.json ./
 

@@ -93,6 +93,15 @@ async function build() {
   });
   console.log(`[build] 已复制 public/ → dist/public/`);
 
+  // Step 3.25: 携带内置插件目录，供发布产物启动时扫描 manifest 和静态资源。
+  const pluginsSrc = path.join(ROOT, 'plugins');
+  if (fs.existsSync(pluginsSrc)) {
+    const pluginsDest = path.join(DIST, 'plugins');
+    fs.rmSync(pluginsDest, { recursive: true, force: true });
+    copyDir(pluginsSrc, pluginsDest);
+    console.log(`[build] 已复制 plugins/ → dist/plugins/`);
+  }
+
   // Step 3.5: 复制 i18n 语言目录（服务端磁盘回退用）
   const langSrc = path.join(ROOT, 'lang');
   if (fs.existsSync(langSrc)) {

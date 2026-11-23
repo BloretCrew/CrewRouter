@@ -700,7 +700,7 @@
       } catch (e) { msg(id, e.message, false); }
     },
     async uninstall(id) {
-      if (!confirm(t('确定卸载该插件的记录？（需先禁用；插件目录不会被删除）'))) return;
+      if (!confirm(t('确定卸载该插件？需先禁用；插件目录和插件私有数据将被删除。'))) return;
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' });
         this.refresh();

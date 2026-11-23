@@ -14,15 +14,16 @@
 | `provider:register` | `ctx.registerProviderFormat/registerTransform` | 注册上游格式/协议转换 |
 | `stats:record` | `ctx.on` 统计钩子 | 加 plugin_meta 维度 |
 | `pages:register` | manifest.pages | 前端页面 |
+| `slots:register` | manifest.slots | 前端插槽 |
 | `routes:register` | `ctx.expose` | 插件自有 HTTP API |
 | `cron:register` | `ctx.cronHandler`/`ctx.scheduleCron` | 定时任务 |
 | `themes:register` | manifest.themes | 主题 |
-| **`usage:read`** | `ctx.usage` | 用量/成本聚合（不含正文） |
+| **`usage:read`** | `ctx.usage` | 当前已认证用户的用量/成本聚合（不含正文；必须传入已认证请求上下文，插件提供的 userId/apiKeyId 不用于授权） |
 | **`models:read`** | `ctx.models` | 模型目录 + 健康度（只读） |
 | **`preferences:read`** | `ctx.preferences` | 用户偏好（授权门控） |
 | **`audit:write`** | `ctx.audit` | 插件自有审计日志（只读自己的） |
-| **`export:usage`** | `ctx.exportUsage` | 用量安全子集导出 |
-| **`meta:read`** | `ctx.pluginMeta` | 插件注册信息（只读） |
+| **`export:usage`** | `ctx.exportUsage` | 当前已认证用户用量安全子集导出；`json(req, opts)` 必须传入经宿主鉴权的请求上下文 |
+| **`meta:read`** | `ctx.pluginMeta` | 当前插件注册信息（只读，不可查询其他插件） |
 | **`webhook:register`** | `ctx.registerWebhook`/`ctx.webhook` | 出站 Webhook（域白名单） |
 | **`admin:view`** | `ctx.adminView` | 管理面板只读视图 |
 
@@ -31,7 +32,8 @@
 - **绝不暴露**裸 `fs` / `child_process` / `net` / 裸数据库连接。
 - 所有数据访问走字段白名单：`usage:read` / `export:usage` 返回聚合（request_count/tokens_used/cached_tokens/weighted_tokens/cost/group_key），**不含** `messages`/`response`/`request_params`/provider 凭证/API Key 明文。
 - `preferences:read` 受用户授权门控：用户未在设置页开启「允许插件读取我的偏好」时，`ctx.preferences.get()` 返回 `{ granted: false, reason: 'not_opted_in' }`。
-- 未知权限在加载时仅 warning，不阻断（向后兼容旧插件）。
+- 未知权限在加载时仅 warning，不阻断（向后兼容旧插件），但未知 hook 名会被拒绝。
+- 后端 `main.js` 在管理员显式信任后运行于 CR 主进程；Node VM 不是恶意代码安全边界。
 
 ## Webhook（webhook:register）
 

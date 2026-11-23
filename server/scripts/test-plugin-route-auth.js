@@ -27,7 +27,10 @@ const { requireApiKeyPermission } = load('middleware/api-key-permissions.js', {
 });
 const registry = {
   isLoaded: () => true,
-  getLoadedManifest: () => ({ routes: ['admin', 'user', 'none', 'unexpected'].map(auth => ({ method: 'get', path: '/' + auth, auth })) }),
+  getLoadedManifest: () => ({ routes: [
+    ...['admin', 'user', 'none', 'default', 'unexpected'].map(auth => ({ method: 'get', path: '/' + auth, auth: auth === 'unexpected' ? 'invalid' : (auth === 'default' ? undefined : auth) })),
+    { method: 'post', path: '/user', auth: 'user' },
+  ] }),
   findHandler: () => async (req, res) => { calls++; res.json({ id: req.authUser?.id, isAdmin: req.authUser?.isAdmin }); },
 };
 const router = () => ({ use() {}, get() {}, post() {}, put() {}, delete() {}, all(route, handler) { dispatch = handler; } });
@@ -56,7 +59,8 @@ async function check(route, req = {}, status = 200, method = 'GET') {
   const stale = session();
   await check('admin', stale, 403);
   assert.equal(stale.session.user.isAdmin, false);
-  for (const route of ['user', 'default', 'unexpected']) assert.equal((await check(route, session())).isAdmin, false);
+  for (const route of ['user', 'default']) assert.equal((await check(route, session())).isAdmin, false);
+  await check('unexpected', session(), 403);
   console.log('PASS stale administrator demotion and refreshed user/default/unknown auth identity');
   deleted = true;
   for (const route of ['admin', 'user', 'default']) {

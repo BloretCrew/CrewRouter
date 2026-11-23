@@ -73,17 +73,8 @@ async (ctx) => {
     log.warn('[provider:register] 被拒（未授予 provider:register 权限）');
   }
 
-  // ---- usage:read：近 7 天用量聚合 ----
-  if (ctx.usage) {
-    try {
-      const s = await ctx.usage.summary({ days: 7, groupBy: 'day' });
-      log.info('[usage:read] 可用 summary(days=7) 行数 =', (s.rows || []).length);
-    } catch (e) {
-      log.error('[usage:read] 调用失败:', e.message);
-    }
-  } else {
-    log.warn('[usage:read] 被拒（未授予 usage:read 权限）');
-  }
+  // 用量接口要求已认证路由请求上下文，因此不能在插件初始化或 cron 中调用。
+  if (!ctx.usage) log.warn('[usage:read] 被拒（未授予 usage:read 权限）');
 
   // ---- models:read：模型目录 ----
   if (ctx.models) {
@@ -119,17 +110,8 @@ async (ctx) => {
     log.warn('[audit:write] 被拒（未授予 audit:write 权限）');
   }
 
-  // ---- export:usage：用量导出 ----
-  if (ctx.exportUsage) {
-    try {
-      const out = await ctx.exportUsage.json({ days: 1 });
-      log.info('[export:usage] 可用 exportUsage.json(days=1) exportedAt =', out.exportedAt);
-    } catch (e) {
-      log.error('[export:usage] 调用失败:', e.message);
-    }
-  } else {
-    log.warn('[export:usage] 被拒（未授予 export:usage 权限）');
-  }
+  // 用量导出要求已认证路由请求上下文，因此不能在插件初始化或 cron 中调用。
+  if (!ctx.exportUsage) log.warn('[export:usage] 被拒（未授予 export:usage 权限）');
 
   // ---- meta:read：读取本插件注册信息 ----
   if (ctx.pluginMeta) {
@@ -184,12 +166,15 @@ async (ctx) => {
       });
       ctx.expose('get', '/usage', async (req, res) => {
         const summary = ctx.usage
-          ? await ctx.usage.summary({ days: 7, groupBy: 'day' })
+          ? await ctx.usage.summary(req, { days: 7, groupBy: 'day' })
           : { error: 'usage:read 未授予' };
+        const exported = ctx.exportUsage
+          ? await ctx.exportUsage.json(req, { days: 7 })
+          : { error: 'export:usage 未授予' };
         const prefs = ctx.preferences
           ? await ctx.preferences.get(req)
           : { granted: false, reason: 'preferences:read 未授予' };
-        res.json({ ok: true, plugin: ctx.pluginId, summary, preferences: prefs });
+        res.json({ ok: true, plugin: ctx.pluginId, summary, exportedAt: exported.exportedAt || null, preferences: prefs });
       });
       log.info('[routes:register] 可用（已登记 GET /ping、GET /usage）');
     } catch (e) {
