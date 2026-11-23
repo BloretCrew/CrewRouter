@@ -548,5 +548,4 @@ module.exports = {
   cancelTask: (...args) => taskQueue.cancel(...args),
   startTaskWorker: () => taskQueue.start(),
   stopTaskWorker: () => taskQueue.stop(),
-  listLoadedIds: () => [...loaded.keys()],
 };
