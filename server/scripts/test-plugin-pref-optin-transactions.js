@@ -22,7 +22,7 @@ function loadRoute(pool, onResponse = () => {}) {
   });
   return async (method, userId, enabled) => {
     const res = { statusCode: 200, status(value) { this.statusCode = value; return this; }, json(value) { onResponse(value); this.body = value; } };
-    await handlers.get(method)({ session: { user: { id: userId } }, body: { enabled } }, res);
+    await handlers.get(method)({ authUser: { id: userId }, session: { user: { id: userId } }, body: { enabled } }, res);
     return res;
   };
 }

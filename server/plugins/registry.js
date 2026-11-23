@@ -18,6 +18,7 @@ const host = require('./host');
 // 插件目录：开发在项目根 plugins/；构建后在 dist/plugins/ 或上级
 const PLUGINS_DIR = (() => {
   const candidates = [
+    path.join(__dirname, 'plugins'),
     path.join(__dirname, '../../plugins'),
     path.join(__dirname, '../plugins'),
     path.join(process.cwd(), 'plugins'),
@@ -117,6 +118,9 @@ async function loadOne(id, manifest, rowConfig) {
 function unloadOne(id) {
   hooksBus.unsubscribePlugin(id);
   clearPluginCron(id);
+  for (const key of exposedHandlers.keys()) {
+    if (key.startsWith(`${id} `)) exposedHandlers.delete(key);
+  }
   loaded.delete(id);
 }
 
@@ -432,8 +436,8 @@ function getRuntimeManifest() {
       id,
       name: p.manifest.name,
       version: p.manifest.version || '',
-      pages: (p.manifest.pages || []),
-      slots: (p.manifest.slots || []),
+      pages: perms.includes('pages:register') ? (p.manifest.pages || []) : [],
+      slots: perms.includes('slots:register') ? (p.manifest.slots || []) : [],
       themes,
       assetsBase: `/plugins/${id}`,
     });

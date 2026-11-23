@@ -100,7 +100,8 @@ function pluginMetaView(registry, pluginId) {
   return {
     get(id) {
       const target = id || pluginId;
-      const manifest = registry.getLoadedManifest(target);
+      if (target !== pluginId) return null;
+      const manifest = registry.getLoadedManifest(pluginId);
       if (!manifest) return null;
       return {
         id: target,
@@ -126,8 +127,12 @@ function pluginMetaView(registry, pluginId) {
  * 用户偏好（preferences:read）— 受用户授权门控
  */
 async function getPreferences(req) {
-  const userId = req?.session?.user?.id;
-  if (!userId) return { granted: false, reason: 'no_session' };
+  const authUserId = Number(req?.authUser?.id);
+  const sessionUserId = Number(req?.session?.user?.id);
+  if (!Number.isSafeInteger(authUserId) || authUserId <= 0 || (Number.isSafeInteger(sessionUserId) && sessionUserId > 0 && sessionUserId !== authUserId)) {
+    return { granted: false, reason: 'no_verified_user' };
+  }
+  const userId = authUserId;
 
   // 用户级开关：settings 表 plugin_pref_optin
   const opt = await pool.query(
