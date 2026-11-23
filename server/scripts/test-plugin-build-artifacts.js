@@ -31,7 +31,7 @@ for (const id of ['all-capabilities', 'example-hello', 'usage-stats', 'example-c
   const dir = path.join(root, 'plugins', id);
   const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'plugin.json'), 'utf8'));
   assert.equal(manifest.id, id);
-  for (const entry of ['main.js', ...(manifest.pages || []).map(page => page.entry).filter(Boolean)]) {
+  for (const entry of ['main.js', ...(manifest.executionMode === 'isolated-task' ? ['task-entry.js'] : []), ...(manifest.pages || []).map(page => page.entry).filter(Boolean)]) {
     if (fs.existsSync(path.join(dir, entry))) assert.ok(fs.statSync(path.join(dir, entry)).isFile());
   }
 }
