@@ -4,6 +4,10 @@ const subscriptions = new Map();
 const MAX_EVENT_BYTES = 32 * 1024;
 const lastHealthState = new Map();
 const lastQuotaThreshold = new Map();
+const deliveryQueue = [];
+let deliveryTimer = null;
+const MAX_PENDING_DELIVERIES = 1000;
+const HANDLER_TIMEOUT_MS = 1000;
 const EVENT_DEFINITIONS = Object.freeze({
   'plugin.lifecycle.v1': { permissions: ['events:subscribe'], fields: ['pluginId', 'action', 'version'] },
   'model.health.changed.v1': { permissions: ['events:subscribe', 'models:read'], fields: ['modelId', 'health', 'statusCode', 'observedAt'] },
@@ -37,11 +41,34 @@ function subscribePluginEvents(pluginId, eventName, handler, permissions = []) {
 
 function unsubscribePluginEvents(pluginId) {
   for (const key of subscriptions.keys()) if (key.startsWith(`${pluginId}:`)) subscriptions.delete(key);
+  for (let index = deliveryQueue.length - 1; index >= 0; index--) {
+    if (deliveryQueue[index].pluginId === pluginId) deliveryQueue.splice(index, 1);
+  }
 }
 
 function resetEventStateForTests() {
   lastHealthState.clear();
   lastQuotaThreshold.clear();
+  deliveryQueue.length = 0;
+}
+
+function drainDeliveryQueue() {
+  deliveryTimer = null;
+  const batch = deliveryQueue.splice(0, 100);
+  for (const { handler, event } of batch) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new Error('插件事件处理超时')), HANDLER_TIMEOUT_MS);
+    Promise.resolve().then(() => handler(event, { signal: controller.signal })).catch(error => {
+      console.warn(`[plugins] event handler failed (${event.event}): ${String(error?.message || error).slice(0, 300)}`);
+    }).finally(() => clearTimeout(timer));
+  }
+  if (deliveryQueue.length) scheduleDelivery();
+}
+
+function scheduleDelivery() {
+  if (deliveryTimer) return;
+  deliveryTimer = setImmediate(drainDeliveryQueue);
+  deliveryTimer.unref?.();
 }
 
 function publish(eventName, value) {
@@ -70,11 +97,14 @@ function publish(eventName, value) {
   for (const [key, handlers] of subscriptions) {
     if (!key.endsWith(`:${eventName}`)) continue;
     for (const handler of handlers) {
-      Promise.resolve().then(() => handler(normalizedEvent)).catch(error => {
-        console.warn(`[plugins] event handler failed (${eventName}): ${String(error?.message || error).slice(0, 300)}`);
-      });
+      if (deliveryQueue.length >= MAX_PENDING_DELIVERIES) {
+        console.warn(`[plugins] event delivery queue full; dropping ${eventName}`);
+        continue;
+      }
+      deliveryQueue.push({ pluginId: key.slice(0, key.indexOf(':')), handler, event: normalizedEvent });
     }
   }
+  scheduleDelivery();
   return normalizedEvent;
 }
 
