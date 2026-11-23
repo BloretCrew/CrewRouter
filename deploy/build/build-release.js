@@ -93,6 +93,15 @@ async function build() {
   });
   console.log(`[build] 已复制 public/ → dist/public/`);
 
+  // 插件安全/信任边界文档随 release 发布。
+  const pluginSecurityDoc = path.join(ROOT, 'docs/plugin-security.md');
+  if (fs.existsSync(pluginSecurityDoc)) {
+    const docsDest = path.join(DIST, 'docs');
+    fs.mkdirSync(docsDest, { recursive: true });
+    fs.copyFileSync(pluginSecurityDoc, path.join(docsDest, 'plugin-security.md'));
+    console.log('[build] 已复制插件安全文档 → dist/docs/');
+  }
+
   // 发布者离线签名工具（不携带任何私钥）。
   const pluginSigner = path.join(ROOT, 'scripts/sign-plugin-package.mjs');
   if (fs.existsSync(pluginSigner)) {
