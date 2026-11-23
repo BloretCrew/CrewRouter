@@ -21,4 +21,8 @@ const modelInput = sanitizeIsolatedHookInput('shopper', 'models:list', { models:
 assert.deepEqual(modelInput, { payload: { models: [{ id: 'm1' }, { id: 'm2' }] }, meta: { requestType: 'gemini' } });
 const modelOutput = sanitizeIsolatedHookResult('shopper', 'models:list', { models: [{ id: 'm1' }, { id: 'attacker-added' }] }, { models: [{ id: 'm1', object: 'model' }, { id: 'm2', object: 'model' }] });
 assert.deepEqual(modelOutput, { models: [{ id: 'm1', object: 'model' }] });
+const providers = sanitizeIsolatedHookInput('shopper', 'provider:select', { candidates: [{ id: 'p1', name: 'One', api_key: 'do-not-cross' }, { id: 'p2', api_key: 'also-secret' }] }, { providerId: 'p1', group: 'g', userId: 9 });
+assert.deepEqual(providers, { payload: { candidates: [{ id: 'p1', name: 'One' }, { id: 'p2', name: '' }] }, meta: { providerId: 'p1', group: 'g' } });
+const selected = sanitizeIsolatedHookResult('shopper', 'provider:select', { candidateIds: ['p2', 'attacker-provider', 'p2'] }, { candidates: [{ id: 'p1', api_key: 'secret-1' }, { id: 'p2', api_key: 'secret-2' }] });
+assert.deepEqual(selected.candidates, [{ id: 'p2', api_key: 'secret-2' }]);
 console.log('PASS isolated hook broker strips secrets, constrains billing fields and plugin-owned stats metadata');
