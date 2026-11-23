@@ -60,7 +60,7 @@ const KNOWN_PERMISSIONS = new Set([
   'cron:register', 'themes:register',
   // 三期新增能力（数据只读/受控出口）
   'usage:read', 'models:read', 'preferences:read', 'audit:write',
-  'export:usage', 'meta:read', 'webhook:register', 'admin:view', 'tasks:register',
+  'export:usage', 'meta:read', 'webhook:register', 'admin:view', 'tasks:register', 'events:subscribe',
 ]);
 
 /**
@@ -389,6 +389,16 @@ function buildContext(plugin, hooksBus, logPrefix) {
     if (typeof handler !== 'function') throw new Error(`[plugins:${id}] scheduleCron 需要回调函数`);
     registry.schedulePluginCron(id, expr, handler);
   };
+
+  if (perms.has('events:subscribe')) {
+    const { subscribePluginEvents } = require('./events');
+    ctx.events = {
+      on(eventName, handler) {
+        if (typeof handler !== 'function') throw new Error(`[plugins:${id}] 事件处理器必须是函数`);
+        subscribePluginEvents(id, eventName, handler);
+      },
+    };
+  }
 
   if (perms.has('tasks:register')) {
     ctx.tasks = {

@@ -121,6 +121,9 @@ async function loadOne(id, manifest, rowConfig) {
     }
 
     rebuildCron(id, manifest);
+    if (manifest.permissions?.includes('events:subscribe')) {
+      require('./events').publish('plugin.lifecycle.v1', { pluginId: id, action: 'loaded', version: manifest.version || '' });
+    }
   } catch (error) {
     unloadOne(id);
     throw error;
@@ -129,6 +132,7 @@ async function loadOne(id, manifest, rowConfig) {
 
 function unloadOne(id) {
   taskQueue.cancelPlugin(id).catch(err => Logger.warn(`[plugins] 取消 ${id} 任务失败: ${err.message}`));
+  require('./events').unsubscribePluginEvents(id);
   hooksBus.unsubscribePlugin(id);
   clearPluginCron(id);
   taskHandlers.delete(id);

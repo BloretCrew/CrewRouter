@@ -60,6 +60,7 @@
       var pluginId = params.get('plugin') || '';
       var source = params.get('source') || location.origin;
       var root = document.getElementById('pi-root');
+      var info = null;
 
       var PERM_LABELS = {
         'storage': '读写插件私有存储',
@@ -113,14 +114,18 @@
         return out || '<li>（无额外行为）</li>';
       }
 
-      function render(info) {
+      function render(pluginInfo) {
+        info = pluginInfo;
         var html = '';
-        html += '<div class="pi-title">' + esc(info.name) + '</div>';
-        html += '<div class="pi-byline">v' + esc(info.version) + ' · ' + esc(info.author || info.authorUsername || '') + ' · <code>' + esc(info.id) + '</code></div>';
-        if (info.description) html += '<div class="pi-desc">' + esc(info.description) + '</div>';
+        html += '<div class="pi-title">' + esc(pluginInfo.name) + '</div>';
+        html += '<div class="pi-byline">v' + esc(pluginInfo.version) + ' · ' + esc(pluginInfo.author || pluginInfo.authorUsername || '') + ' · <code>' + esc(pluginInfo.id) + '</code></div>';
+        if (pluginInfo.description) html += '<div class="pi-desc">' + esc(pluginInfo.description) + '</div>';
 
-        html += '<div class="pi-section"><h3>权限</h3><ul>' + permHtml(info.permissions) + '</ul></div>';
-        html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(info.behavior) + '</ul></div>';
+        html += '<div class="pi-section"><h3>权限</h3><ul>' + permHtml(pluginInfo.permissions) + '</ul></div>';
+        html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(pluginInfo.behavior) + '</ul></div>';
+        html += '<div class="pi-section"><h3>包验证</h3><p>SHA-256：<code>' + esc(pluginInfo.sha256 || '缺失（不可安装）') + '</code></p><p>发布者签名：当前协议未提供独立签名验证；哈希只能核对包与商店元数据一致，不能证明发布者身份。</p></div>';
+        html += '<label class="pi-warn"><input type="checkbox" id="piTrustCode"> 我理解：若插件含 main.js，后端代码会在 CrewRouter 主进程运行；VM/权限清单不构成恶意代码安全隔离。</label>';
+        html += '<label class="pi-warn"><input type="checkbox" id="piConfirmPermissions"> 我已检查并确认上列全部权限。</label>';
         html += '<div class="blora-message pi-warn" data-variant="warning">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
         html += '<div class="pi-actions">' +
           '<button class="blora-button" data-variant="primary" id="piConfirm">确认安装</button>' +
@@ -140,12 +145,19 @@
       }
 
       function confirmInstall() {
+        var trust = document.getElementById('piTrustCode');
+        var permissions = document.getElementById('piConfirmPermissions');
+        if (!trust || !trust.checked) {
+          renderError('需要确认后端信任', '该插件声明了高影响后端权限，必须确认其进程内执行风险。'); return;
+        }
+        if (!permissions || !permissions.checked) { renderError('需要确认权限', '请先检查并确认插件权限。'); return; }
+        if (!info || !/^[a-f0-9]{64}$/i.test(info.sha256 || '')) { renderError('无法验证插件包', '商店没有提供有效 SHA-256，拒绝安装。'); return; }
         var btn = document.getElementById('piConfirm');
         if (btn) { btn.disabled = true; btn.textContent = '安装中…'; }
         fetch('/api/admin/plugins/install-from-store', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plugin: pluginId, source: source })
+          body: JSON.stringify({ plugin: pluginId, source: source, confirmedSha256: info.sha256, confirmedPermissions: info.permissions || [] })
         }).then(function (r) {
           return r.json().then(function (d) { return { ok: r.ok, data: d }; });
         }).then(function (res) {

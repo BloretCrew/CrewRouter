@@ -71,6 +71,11 @@ function createPluginsRoutes() {
       const source = String((req.body && req.body.source) || '').trim();
       if (!pluginId) return res.status(400).json({ error: '缺少插件 id' });
       if (!storeClient.isAllowedSource(source)) return res.status(400).json({ error: '插件商店源不受信任' });
+      const confirmedSha256 = String(req.body?.confirmedSha256 || '').toLowerCase();
+      const confirmedPermissions = req.body?.confirmedPermissions;
+      if (!/^[a-f0-9]{64}$/.test(confirmedSha256) || !Array.isArray(confirmedPermissions)) {
+        return res.status(400).json({ error: '缺少明确的插件包哈希与权限确认，请刷新安装确认页。' });
+      }
 
       // 服务端向商店拉取包信息（不信任客户端提供的 download/sha256）
       const info = await storeClient.fetchPackageInfo(source, pluginId);
@@ -90,6 +95,13 @@ function createPluginsRoutes() {
         const verr = validateManifest(manifest);
         if (verr) return res.status(400).json({ error: '插件清单校验失败: ' + verr });
         if (manifest.id !== pluginId) return res.status(400).json({ error: '商店包插件 ID 与请求 ID 不一致' });
+        const actualPermissions = [...new Set(manifest.permissions || [])].sort();
+        if (JSON.stringify(actualPermissions) !== JSON.stringify([...new Set(confirmedPermissions.map(String))].sort())) {
+          return res.status(409).json({ error: '插件权限已变化，请重新查看并确认权限后安装。' });
+        }
+        if (String(info.sha256 || '').toLowerCase() !== confirmedSha256) {
+          return res.status(409).json({ error: '商店包哈希已变化，请重新查看安装信息后再确认。' });
+        }
         const id = manifest.id;
         const payloadDir = zipPayloadDir(extractDir, id);
         if (!payloadDir) return res.status(400).json({ error: '插件包根结构不合法' });
