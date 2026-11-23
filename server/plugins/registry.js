@@ -438,6 +438,7 @@ async function listAll() {
     onDisk: knownManifests.has(row.id),
     loaded: loaded.has(row.id),
     executionMode: knownManifests.get(row.id)?.executionMode || 'trusted-in-process',
+    mainEntry: fs.existsSync(path.join(PLUGINS_DIR, row.id, 'main.js')),
     taskHandlers: knownManifests.get(row.id)?.taskHandlers || [],
     pages: (knownManifests.get(row.id)?.pages || []),
     slots: (knownManifests.get(row.id)?.slots || []),
@@ -524,6 +525,7 @@ module.exports = {
   clearPluginCron,
   isLoaded: id => loaded.has(id),
   getLoadedManifest: id => loaded.get(id)?.manifest || null,
+  getKnownManifest: id => knownManifests.get(id) || null,
   registerTaskHandler(pluginId, name, handler) {
     if (!loaded.has(pluginId)) throw new Error('插件必须在初始化完成后注册任务');
     if (loaded.get(pluginId).isolatedTasks) throw new Error('isolated-task handler 必须由 manifest taskHandlers 声明，不能注册宿主函数');

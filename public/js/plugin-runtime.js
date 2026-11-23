@@ -507,7 +507,7 @@
       pl.enabled ? '<span class="chip on">● 已启用</span>' : '<span class="chip off">○ 已禁用</span>',
       pl.onDisk ? '' : '<span class="chip warn">磁盘缺失</span>',
       pl.loaded ? '<span class="chip on">运行中</span>' : '',
-      pl.executionMode === 'isolated-task' ? '<span class="chip on">Linux 隔离任务</span>' : '<span class="chip warn">受信任进程内</span>',
+      pl.executionMode === 'isolated-task' ? '<span class="chip on">Linux 隔离任务</span>' : (pl.mainEntry ? '<span class="chip warn">受信任进程内</span>' : '<span class="chip off">纯前端</span>'),
       pl.errorCount > 0 || pl.lastError ? `<span class="chip warn">错误 ${esc(String(pl.errorCount))}</span>` : '',
       pl.storeUpdateAvailable ? `<span class="chip warn">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
     ].join('');
@@ -705,8 +705,19 @@
       } catch (e) { alert(e.message); }
     },
     async toggle(id, enabled) {
+      const plugin = manageState.plugins.find(item => item.id === id);
+      const highRisk = plugin && plugin.executionMode !== 'isolated-task'
+        && ((plugin.permissions || []).some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission)) || (plugin.onDisk && plugin.mainEntry));
+      let trustInProcess = false;
+      if (enabled && highRisk) {
+        trustInProcess = confirm('该后端插件将在 CrewRouter 服务进程内执行；Node VM/权限声明不构成恶意代码隔离。请先审查源码。确认信任并启用？');
+        if (!trustInProcess) { this.refresh(); return; }
+      }
       try {
-        await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/toggle`, { method: 'POST' });
+        await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/toggle`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trustInProcess }),
+        });
         this.refresh();
       } catch (e) { alert(e.message); this.refresh(); }
     },
