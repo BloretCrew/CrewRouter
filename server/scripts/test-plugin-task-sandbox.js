@@ -34,6 +34,8 @@ const sandbox = require('../plugins/task-sandbox');
     assert.throws(() => sandbox.assertModeSupported({ executionMode: 'isolated-task', permissions: ['tasks:register'], routes: [{ path: '/x' }], taskHandlers: ['sum'] }), /不支持/);
     assert.throws(() => sandbox.assertModeSupported({ executionMode: 'trusted-in-process', permissions: ['tasks:register'], taskHandlers: ['sum'] }), /隔离 executionMode/);
     assert.throws(() => sandbox.assertModeSupported({ executionMode: 'isolated-task', permissions: ['tasks:register'], taskHandlers: ['../escape'] }), /taskHandlers/);
+    sandbox.assertModeSupported({ executionMode: 'isolated-task', permissions: ['tasks:register', 'cron:register'], taskHandlers: ['heartbeat'], cron: [{ expr: '*/15 * * * *', handler: 'heartbeat' }] });
+    assert.throws(() => sandbox.assertModeSupported({ executionMode: 'isolated-task', permissions: ['tasks:register'], taskHandlers: ['sum'], cron: [{ expr: '* * * * *', handler: 'sum' }] }), /cron:register/);
     sandbox.assertModeSupported({ executionMode: 'isolated-hooks', permissions: ['billing:modify'], hooks: { 'billing:calculate': 'adjust' } });
     assert.throws(() => sandbox.assertModeSupported({ executionMode: 'isolated-hooks', permissions: ['billing:modify','network'], hooks: { 'billing:calculate': 'adjust' } }), /不支持/);
     assert.throws(() => sandbox.assertModeSupported({ executionMode: 'isolated-hooks', permissions: ['billing:modify'], hooks: { 'gateway:beforeUpstream': 'rewrite' } }), /不支持 hook/);
