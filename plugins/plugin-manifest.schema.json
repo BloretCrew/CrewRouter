@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "plugin-manifest.schema.json",
+  "title": "CrewRouter Plugin Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "name"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+    "version": { "type": "string", "maxLength": 32 },
+    "description": { "type": "string", "maxLength": 4096 },
+    "author": { "type": "string", "maxLength": 255 },
+    "permissions": { "type": "array", "uniqueItems": true, "items": { "type": "string", "maxLength": 100 } },
+    "allowedHosts": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" } },
+    "pages": { "type": "array", "items": { "type": "object", "required": ["path", "title", "entry"], "properties": { "path": { "type": "string" }, "title": { "type": "string" }, "entry": { "type": "string" }, "area": { "type": "string" } } } },
+    "slots": { "type": "array", "items": { "type": "object", "required": ["page", "position", "render"], "properties": { "page": { "type": "string" }, "position": { "type": "string" }, "render": { "type": "string" } } } },
+    "routes": { "type": "array", "items": { "type": "object", "required": ["method", "path"], "properties": { "method": { "enum": ["get", "post", "put", "patch", "delete"] }, "path": { "type": "string" }, "auth": { "enum": ["user", "admin", "none"] } } } },
+    "cron": { "type": "array", "items": { "type": "object", "required": ["expr", "handler"], "properties": { "expr": { "type": "string" }, "handler": { "type": "string" } } } },
+    "themes": { "type": "array", "items": { "type": "object", "required": ["id", "entry"], "properties": { "id": { "type": "string" }, "entry": { "type": "string" }, "js": { "type": "string" } } } }
+  }
+}

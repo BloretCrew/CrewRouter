@@ -27,6 +27,7 @@
 | **`webhook:register`** | `ctx.registerWebhook`/`ctx.webhook` | 出站 Webhook（域白名单） |
 | **`admin:view`** | `ctx.adminView` | 管理面板只读视图 |
 | **`tasks:register`** | `ctx.tasks` | 注册受限任务处理器；提交 JSON payload（≤64 KiB）、幂等键，查询/取消自己的任务；worker 用租约和指数退避重试；任务 handler 在受信进程中运行 |
+| **`events:subscribe`** | `ctx.events.on` | 订阅版本化模型健康、配额阈值和插件生命周期事件；进程内异步 best-effort，不保证跨重启投递 |
 
 ## 安全约束（所有能力）
 
@@ -34,8 +35,27 @@
 - 所有数据访问走字段白名单：`usage:read` / `export:usage` 返回聚合（request_count/tokens_used/cached_tokens/weighted_tokens/cost/group_key），**不含** `messages`/`response`/`request_params`/provider 凭证/API Key 明文。
 - `preferences:read` 受用户授权门控：用户未在设置页开启「允许插件读取我的偏好」时，`ctx.preferences.get()` 返回 `{ granted: false, reason: 'not_opted_in' }`。
 - 未知权限在加载时仅 warning，不阻断（向后兼容旧插件），但未知 hook 名会被拒绝。
+- `events:subscribe` 目前提供 best-effort 进程内通知，事件版本名以 `.v1` 结尾；需要跨重启保证的工作请用 `tasks:register`，而非把事件订阅当作消息队列。
 - 后端 `main.js` 在管理员显式信任后运行于 CR 主进程；Node VM 不是恶意代码安全边界。插件任务 handler 也在该进程执行，数据库重试/租约不等同执行隔离，超时不能终止同步阻塞代码。
 - `tasks:register` 示例：`ctx.tasks.register('refresh', async (payload, meta) => ({ done: true })); const task = await ctx.tasks.enqueue('refresh', { scope: 'self' }, { idempotencyKey: 'refresh-v1', maxAttempts: 5 });`。`enqueue` 的幂等键在同一插件内唯一，重复提交返回已有任务；handler 可用 `meta.signal` 配合取消；结果必须为 JSON 对象且最大 64 KiB。用户插件路由默认可访问该插件自己的任务状态，但取消只对尚未领取的任务有效。
+
+## 事件（events:subscribe）
+
+事件 API 是进程内 best-effort 通知；它不保证跨进程、跨重启或断网期间投递。需要持久化工作的请使用 `tasks:register`。
+
+```js
+ctx.events.on('model.health.changed.v1', async event => {
+  ctx.log.info(event.payload.modelId, event.payload.health);
+});
+```
+
+当前 schema：
+
+- `model.health.changed.v1`：`modelId`、`health`、`statusCode`、`observedAt`。
+- `quota.threshold.v1`：`scope`、`remaining`、`threshold`、`observedAt`。
+- `plugin.lifecycle.v1`：`pluginId`、`action`、`version`。
+
+仅返回字段白名单；schema 版本变更用新的事件名，不静默扩展现有 payload。
 
 ## Webhook（webhook:register）
 

@@ -1,0 +1,8 @@
+{
+  "id": "example-events",
+  "name": "事件订阅示例",
+  "version": "1.0.0",
+  "description": "演示版本化、字段白名单的插件事件订阅。",
+  "author": "CrewRouter",
+  "permissions": ["events:subscribe"]
+}
