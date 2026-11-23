@@ -103,7 +103,7 @@ function createPluginsRoutes() {
         if (!payloadDir) return res.status(400).json({ error: '插件包目录结构不合法' });
         const hasBackendCode = fs.existsSync(path.join(payloadDir, 'main.js'));
         const executionMode = manifest.executionMode || 'trusted-in-process';
-        if (!['trusted-in-process', 'isolated-task', 'isolated-hooks'].includes(executionMode) || executionMode !== confirmedExecutionMode) {
+        if (!['trusted-in-process', 'isolated-task', 'isolated-hooks', 'isolated-routes'].includes(executionMode) || executionMode !== confirmedExecutionMode) {
           return res.status(409).json({ error: '插件执行模式已变化，请重新检查并确认。' });
         }
         const requiresBackendTrust = executionMode === 'trusted-in-process' && (hasBackendCode || actualPermissions.some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission)));

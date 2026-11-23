@@ -5,7 +5,7 @@ const { Buffer } = require('node:buffer');
 
 const MAX_RESULT_BYTES = 65536;
 const request = JSON.parse(fs.readFileSync('/tmp/request.json', 'utf8'));
-if (!request || request.protocol !== 1 || typeof request.pluginId !== 'string' || typeof request.taskName !== 'string' || !['task-entry.js', 'hook-entry.js'].includes(request.entryName)) {
+if (!request || request.protocol !== 1 || typeof request.pluginId !== 'string' || typeof request.taskName !== 'string' || !['task-entry.js', 'hook-entry.js', 'route-entry.js'].includes(request.entryName)) {
   process.stdout.write(JSON.stringify({ protocol: 1, taskId: request?.taskId, error: 'invalid request frame' }) + '\n');
   process.exit(2);
 }

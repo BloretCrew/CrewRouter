@@ -93,7 +93,7 @@ function validateManifest(manifest) {
       if (typeof h !== 'string' || !/^[a-z0-9.-]+$/i.test(h)) return 'allowedHosts[] 必须是合法域名';
     }
   }
-  if (manifest.executionMode !== undefined && !['trusted-in-process', 'isolated-task', 'isolated-hooks'].includes(manifest.executionMode)) return 'executionMode 无效';
+  if (manifest.executionMode !== undefined && !['trusted-in-process', 'isolated-task', 'isolated-hooks', 'isolated-routes'].includes(manifest.executionMode)) return 'executionMode 无效';
   if (manifest.executionMode === 'isolated-task') {
     const { assertModeSupported } = require('./task-sandbox');
     try { assertModeSupported(manifest); } catch (error) { return error.message; }

@@ -47,7 +47,10 @@ function loadRegistry(pool, hooksBus, warnings) {
     async query(sql, params = []) {
       if (/INSERT INTO plugins/.test(sql)) return { rows: [] };
       if (/CREATE TABLE|CREATE INDEX/.test(sql)) return { rows: [] };
-      if (/SELECT id, config FROM plugins/.test(sql)) return { rows: [{ id: 'example-isolated-hooks', config: {} }] };
+      if (/SELECT id, config FROM plugins/.test(sql)) return { rows: [
+        { id: 'example-isolated-hooks', config: {} },
+        { id: 'example-isolated-routes', config: {} },
+      ] };
       if (/UPDATE plugins SET last_error|UPDATE plugins SET enabled/.test(sql)) return { rows: [] };
       if (/SELECT \* FROM plugins ORDER BY id/.test(sql)) return { rows: [] };
       throw new Error(`Unexpected SQL: ${sql} ${JSON.stringify(params)}`);
@@ -65,7 +68,7 @@ function loadRegistry(pool, hooksBus, warnings) {
     assert.equal(registry.PLUGINS_DIR, path.resolve(__dirname, '../../plugins'));
     assert.ok(fs.existsSync(path.join(registry.PLUGINS_DIR, 'example-isolated-hooks', 'plugin.json')));
     await registry.init();
-    assert.deepEqual(JSON.parse(JSON.stringify(registry.listLoadedIds())), ['example-isolated-hooks'], warnings.join('; '));
+    assert.deepEqual(JSON.parse(JSON.stringify(registry.listLoadedIds())).sort(), ['example-isolated-hooks', 'example-isolated-routes'], warnings.join('; '));
     const subscription = calls.find(row => row[1] === 'billing:calculate');
     assert.ok(subscription, 'isolated billing hook registered through the host bus');
     const result = await subscription[2]({ cost: 3, ratio: 1, weightedTokens: 100, password: 'must-not-cross-ipc' }, { requestType: 'openai', userId: 42, provider: { api_key: 'secret' } });
@@ -83,8 +86,15 @@ function loadRegistry(pool, hooksBus, warnings) {
     const candidates = [{ id: 'provider-a', name: 'A', api_key: 'secret-a' }, { id: 'provider-b', name: 'B', api_key: 'secret-b' }];
     const chosen = await selectProvider[2]({ candidates }, { providerId: 'provider-a', group: 'test', api_key: 'meta-secret' });
     assert.deepEqual(JSON.parse(JSON.stringify(chosen.candidates)), [candidates[1], candidates[0]]);
+    const route = registry.findHandler('example-isolated-routes', 'POST', '/echo');
+    assert.ok(route, 'isolated JSON route registered without in-process handler function');
+    const routeResponse = { statusCode: 200, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return body; } };
+    await route({ method: 'POST', body: { text: 'hello' }, query: { q: '1' }, authUser: { id: 42, isAdmin: false, email: 'private' }, headers: { cookie: 'secret' } }, routeResponse);
+    assert.deepEqual(JSON.parse(JSON.stringify(routeResponse.body)), { ok: true, method: 'POST', authRole: 'user', body: { text: 'hello' } });
     await registry.disable('example-isolated-hooks');
     assert.equal(calls.length, 0, 'disable removes isolated hook subscriber');
+    await registry.disable('example-isolated-routes');
+    assert.equal(registry.findHandler('example-isolated-routes', 'POST', '/echo'), null, 'disable removes isolated route handler');
     console.log('PASS isolated billing hook runs under bwrap; host secrets are projected out and disable unloads it');
   } finally {
     if (prevEnabled === undefined) delete process.env.CR_ENABLE_PLUGIN_BWRAP; else process.env.CR_ENABLE_PLUGIN_BWRAP = prevEnabled;

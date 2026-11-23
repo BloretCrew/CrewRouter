@@ -11,7 +11,7 @@
     "version": { "type": "string", "maxLength": 32 },
     "description": { "type": "string", "maxLength": 4096 },
     "author": { "type": "string", "maxLength": 255 },
-    "executionMode": { "enum": ["trusted-in-process", "isolated-task", "isolated-hooks"] },
+    "executionMode": { "enum": ["trusted-in-process", "isolated-task", "isolated-hooks", "isolated-routes"] },
     "taskHandlers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$" } },
     "permissions": { "type": "array", "uniqueItems": true, "items": { "type": "string", "maxLength": 100 } },
     "allowedHosts": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" } },
