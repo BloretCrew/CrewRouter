@@ -22,6 +22,10 @@ function sanitizeIsolatedHookInput(pluginId, hookName, payload, meta) {
   if (hookName === 'gateway:finalResponse') {
     return { payload: { statusCode: Number(payload?.statusCode) || 0, headers: {} }, meta: safeMeta };
   }
+  if (hookName === 'models:list') {
+    const models = Array.isArray(payload?.models) ? payload.models.slice(0, 500).map(model => ({ id: String(model?.id || '').slice(0, 256) })).filter(model => model.id) : [];
+    return { payload: { models }, meta: safeMeta };
+  }
   throw new Error(`isolated-hooks 不支持 hook ${hookName}`);
 }
 
@@ -37,6 +41,18 @@ function sanitizeIsolatedHookResult(pluginId, hookName, result, original) {
       }
     }
     return output;
+  }
+  if (hookName === 'models:list') {
+    const allowed = new Set((original.models || []).map(model => String(model?.id || '')).filter(Boolean));
+    const seen = new Set();
+    const models = [];
+    for (const model of Array.isArray(result.models) ? result.models.slice(0, 500) : []) {
+      const id = String(model?.id || '').slice(0, 256);
+      if (!allowed.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      models.push({ ...((original.models || []).find(item => String(item.id) === id) || { id }) });
+    }
+    return { ...original, models };
   }
   if (hookName === 'gateway:finalResponse') {
     const headers = {};

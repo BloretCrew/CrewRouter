@@ -17,4 +17,8 @@ const headers = sanitizeIsolatedHookResult('shopper', 'gateway:finalResponse', {
   'X-Plugin-shopper-trace': 'ok', 'Set-Cookie': 'secret=1', 'X-Plugin-shopper-bad': 'x\r\nInjected: true',
 } }, { statusCode: 201, headers: {} });
 assert.deepEqual(headers, { statusCode: 201, headers: { 'X-Plugin-shopper-trace': 'ok' } });
+const modelInput = sanitizeIsolatedHookInput('shopper', 'models:list', { models: [{ id: 'm1', object: 'model', api_key: 'secret' }, { id: 'm2' }] }, { requestType: 'gemini', userId: 9 });
+assert.deepEqual(modelInput, { payload: { models: [{ id: 'm1' }, { id: 'm2' }] }, meta: { requestType: 'gemini' } });
+const modelOutput = sanitizeIsolatedHookResult('shopper', 'models:list', { models: [{ id: 'm1' }, { id: 'attacker-added' }] }, { models: [{ id: 'm1', object: 'model' }, { id: 'm2', object: 'model' }] });
+assert.deepEqual(modelOutput, { models: [{ id: 'm1', object: 'model' }] });
 console.log('PASS isolated hook broker strips secrets, constrains billing fields and plugin-owned stats metadata');

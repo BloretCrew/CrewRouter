@@ -5,4 +5,7 @@
   addHeader(payload) {
     return { statusCode: payload.statusCode, headers: { 'X-Plugin-example-isolated-hooks-Trace': 'sandboxed' } };
   },
+  filterModels(payload) {
+    return { models: payload.models.filter(model => !model.id.startsWith('internal-')) };
+  },
 })
