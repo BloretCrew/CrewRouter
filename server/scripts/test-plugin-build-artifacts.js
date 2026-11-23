@@ -13,6 +13,7 @@ const securityDoc = fs.readFileSync(path.join(root, 'docs/plugin-security.md'), 
 const installPage = fs.readFileSync(path.join(root, 'public/pages/plugin-install.html'), 'utf8');
 assert.match(build, /const pluginsSrc = path\.join\(ROOT, 'plugins'\)/);
 assert.match(build, /copyDir\(pluginsSrc, pluginsDest\)/);
+assert.match(build, /sign-plugin-package\.mjs/);
 assert.match(registry, /path\.join\(__dirname, 'plugins'\)/);
 assert.match(docker, /COPY plugins\/ \.\/plugins\//);
 assert.match(dockerSaas, /COPY plugins\/ \.\/plugins\//);

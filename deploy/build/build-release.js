@@ -93,6 +93,15 @@ async function build() {
   });
   console.log(`[build] 已复制 public/ → dist/public/`);
 
+  // 发布者离线签名工具（不携带任何私钥）。
+  const pluginSigner = path.join(ROOT, 'scripts/sign-plugin-package.mjs');
+  if (fs.existsSync(pluginSigner)) {
+    const scriptsDest = path.join(DIST, 'scripts');
+    fs.mkdirSync(scriptsDest, { recursive: true });
+    fs.copyFileSync(pluginSigner, path.join(scriptsDest, 'sign-plugin-package.mjs'));
+    console.log('[build] 已复制插件签名工具 → dist/scripts/');
+  }
+
   // Step 3.25: 携带内置插件目录，供发布产物启动时扫描 manifest 和静态资源。
   const pluginsSrc = path.join(ROOT, 'plugins');
   if (fs.existsSync(pluginsSrc)) {
