@@ -29,7 +29,7 @@
 | **`tasks:register`** | `ctx.tasks` | 注册受限任务处理器；提交 JSON payload（≤64 KiB）、幂等键，查询/取消自己的任务；worker 用租约和指数退避重试。默认 trusted-in-process；`executionMode: isolated-task` 时仅允许运行 Linux/bwrap 纯计算 `task-entry.js`，不提供 storage/network/hooks/routes/cron 等 host API |
 | **`events:subscribe`** | `ctx.events.on` | 订阅版本化模型健康、配额阈值和插件生命周期事件；进程内异步 best-effort，不保证跨重启投递 |
 
-- `executionMode: "isolated-hooks"` 是独立运行模式而非权限；目前只允许运行 JSON-safe `billing:calculate`、`stats:record`、`gateway:finalResponse` 和 `models:list`，宿主每次调用启动 bwrap worker；finalResponse 只可写 `X-Plugin-<pluginId>-*` header；models:list 只能返回宿主给定列表的子集，不能添加模型或改字段。Secrets、请求正文、用户 ID、provider ID 不会传给 handler；其它 hook 均在 trusted-in-process 中运行。
+- `executionMode: "isolated-hooks"` 是独立运行模式而非权限；目前只允许运行 JSON-safe `billing:calculate`、`stats:record`、`gateway:finalResponse`、`models:list`、`provider:select`，宿主每次调用启动 bwrap worker；finalResponse 只可写 `X-Plugin-<pluginId>-*` header；models:list 只能过滤原列表；provider:select 只收到候选 ID/name，只能重排/过滤原候选，由宿主映射回含凭据对象。Secrets、请求正文、用户 ID 不会传给 handler；其它 hook 均在 trusted-in-process 中运行。
 
 ## 安全约束（所有能力）
 

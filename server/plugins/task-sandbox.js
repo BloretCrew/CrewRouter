@@ -11,7 +11,7 @@ const MAX_STDIO_BYTES = 256 * 1024;
 const TASK_TIMEOUT_MS = 30000;
 const MAX_TASK_ENTRY_BYTES = 256 * 1024;
 const FORBIDDEN_ISOLATED_PERMISSIONS = new Set([
-  'storage', 'network', 'apikey:modify', 'provider:register',
+  'storage', 'network', 'apikey:modify',
   'routes:register', 'cron:register', 'events:subscribe', 'usage:read', 'export:usage',
   'preferences:read', 'audit:write', 'meta:read', 'admin:view', 'webhook:register',
 ]);
@@ -91,7 +91,7 @@ function probeRuntime({ env = process.env, timeoutMs = 3000 } = {}) {
   return { bwrap, uid: 65534, networkNamespace: true, pidNamespace: true, capabilitiesDropped: true };
 }
 
-const ISOLATED_HOOK_PERMISSIONS = Object.freeze({ 'billing:calculate': 'billing:modify', 'stats:record': 'gateway:modify', 'gateway:finalResponse': 'gateway:modify', 'models:list': 'models:read' });
+const ISOLATED_HOOK_PERMISSIONS = Object.freeze({ 'billing:calculate': 'billing:modify', 'stats:record': 'gateway:modify', 'gateway:finalResponse': 'gateway:modify', 'models:list': 'models:read', 'provider:select': 'provider:register' });
 
 function assertModeSupported(manifest, env = process.env) {
   const permissions = new Set(manifest.permissions || []);

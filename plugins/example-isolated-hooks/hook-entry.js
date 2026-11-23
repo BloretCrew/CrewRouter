@@ -8,4 +8,7 @@
   filterModels(payload) {
     return { models: payload.models.filter(model => !model.id.startsWith('internal-')) };
   },
+  sortCandidates(payload) {
+    return { candidateIds: payload.candidates.map(candidate => candidate.id).reverse() };
+  },
 })

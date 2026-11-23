@@ -26,6 +26,10 @@ function sanitizeIsolatedHookInput(pluginId, hookName, payload, meta) {
     const models = Array.isArray(payload?.models) ? payload.models.slice(0, 500).map(model => ({ id: String(model?.id || '').slice(0, 256) })).filter(model => model.id) : [];
     return { payload: { models }, meta: safeMeta };
   }
+  if (hookName === 'provider:select') {
+    const candidates = Array.isArray(payload?.candidates) ? payload.candidates.slice(0, 100).map(candidate => ({ id: String(candidate?.id || candidate?.provider_id || '').slice(0, 128), name: String(candidate?.name || '').slice(0, 128) })).filter(candidate => candidate.id) : [];
+    return { payload: { candidates }, meta: { providerId: String(meta?.providerId || '').slice(0, 128), group: String(meta?.group || '').slice(0, 128) } };
+  }
   throw new Error(`isolated-hooks 不支持 hook ${hookName}`);
 }
 
@@ -53,6 +57,19 @@ function sanitizeIsolatedHookResult(pluginId, hookName, result, original) {
       models.push({ ...((original.models || []).find(item => String(item.id) === id) || { id }) });
     }
     return { ...original, models };
+  }
+  if (hookName === 'provider:select') {
+    const allowed = new Set((original.candidates || []).map(candidate => String(candidate?.id || candidate?.provider_id || '')).filter(Boolean));
+    const seen = new Set();
+    const candidates = [];
+    for (const value of Array.isArray(result.candidateIds) ? result.candidateIds.slice(0, 100) : []) {
+      const id = String(value || '').slice(0, 128);
+      if (!allowed.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      const candidate = (original.candidates || []).find(item => String(item?.id || item?.provider_id || '') === id);
+      if (candidate) candidates.push(candidate);
+    }
+    return candidates.length ? { ...original, candidates } : original;
   }
   if (hookName === 'gateway:finalResponse') {
     const headers = {};

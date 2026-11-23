@@ -78,6 +78,11 @@ function loadRegistry(pool, hooksBus, warnings) {
     assert.ok(modelList);
     const filteredModels = await modelList[2]({ models: [{ id: 'public-model', api_key: 'secret' }, { id: 'internal-hidden', api_key: 'secret' }] }, { requestType: 'gemini', userId: 42 });
     assert.deepEqual(JSON.parse(JSON.stringify(filteredModels)), { models: [{ id: 'public-model', api_key: 'secret' }] });
+    const selectProvider = calls.find(row => row[1] === 'provider:select');
+    assert.ok(selectProvider);
+    const candidates = [{ id: 'provider-a', name: 'A', api_key: 'secret-a' }, { id: 'provider-b', name: 'B', api_key: 'secret-b' }];
+    const chosen = await selectProvider[2]({ candidates }, { providerId: 'provider-a', group: 'test', api_key: 'meta-secret' });
+    assert.deepEqual(JSON.parse(JSON.stringify(chosen.candidates)), [candidates[1], candidates[0]]);
     await registry.disable('example-isolated-hooks');
     assert.equal(calls.length, 0, 'disable removes isolated hook subscriber');
     console.log('PASS isolated billing hook runs under bwrap; host secrets are projected out and disable unloads it');
