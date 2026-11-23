@@ -22,6 +22,11 @@ assert.match(readme, /非恶意代码沙箱/);
 assert.match(securityDoc, /SHA-256.*不构成发布者身份签名/s);
 assert.match(installPage, /confirmedSha256/);
 assert.match(installPage, /confirmedPermissions/);
+assert.match(installPage, /trustInProcess/);
+assert.match(installPage, /signatureTrustConfigured/);
+assert.match(installPage, /hasBackendCode/);
+assert.match(securityDoc, /Ed25519/);
+assert.ok(packageJson.scripts['test:plugins'].includes('test-plugin-signatures.js'));
 for (const id of ['all-capabilities', 'example-hello', 'usage-stats', 'example-capabilities', 'example-events']) {
   const dir = path.join(root, 'plugins', id);
   const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'plugin.json'), 'utf8'));

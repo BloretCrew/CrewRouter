@@ -131,7 +131,11 @@ async function loadOne(id, manifest, rowConfig) {
 }
 
 function unloadOne(id) {
+  const previous = loaded.get(id);
   taskQueue.cancelPlugin(id).catch(err => Logger.warn(`[plugins] 取消 ${id} 任务失败: ${err.message}`));
+  if (previous?.manifest?.permissions?.includes('events:subscribe')) {
+    require('./events').publish('plugin.lifecycle.v1', { pluginId: id, action: 'unloaded', version: previous.manifest.version || '' });
+  }
   require('./events').unsubscribePluginEvents(id);
   hooksBus.unsubscribePlugin(id);
   clearPluginCron(id);

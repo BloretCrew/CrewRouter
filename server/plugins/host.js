@@ -395,7 +395,7 @@ function buildContext(plugin, hooksBus, logPrefix) {
     ctx.events = {
       on(eventName, handler) {
         if (typeof handler !== 'function') throw new Error(`[plugins:${id}] 事件处理器必须是函数`);
-        subscribePluginEvents(id, eventName, handler);
+        subscribePluginEvents(id, eventName, handler, [...perms]);
       },
     };
   }

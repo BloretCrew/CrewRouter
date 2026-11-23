@@ -55,7 +55,8 @@ function createPluginsRoutes() {
       if (!pluginId) return res.status(400).json({ error: '缺少插件 id' });
       if (!storeClient.isAllowedSource(source)) return res.status(400).json({ error: '插件商店源不受信任' });
       const plugin = await storeClient.fetchPackageInfo(source, pluginId);
-      res.json({ ok: true, plugin });
+      const inspected = await storeClient.inspectStorePackage(plugin, String(req.query.plugin || '').trim());
+      res.json({ ok: true, plugin: { ...plugin, hasBackendCode: inspected.hasBackendCode, permissions: inspected.manifest.permissions || [], signatureTrustConfigured: storeClient.hasTrustedPluginSigningKeys() } });
     } catch (err) {
       Logger.error('[plugins-api] store-package 失败', err.message);
       res.status(err.status || 500).json({ error: err.message });
@@ -73,7 +74,8 @@ function createPluginsRoutes() {
       if (!storeClient.isAllowedSource(source)) return res.status(400).json({ error: '插件商店源不受信任' });
       const confirmedSha256 = String(req.body?.confirmedSha256 || '').toLowerCase();
       const confirmedPermissions = req.body?.confirmedPermissions;
-      if (!/^[a-f0-9]{64}$/.test(confirmedSha256) || !Array.isArray(confirmedPermissions)) {
+      const confirmedVersion = String(req.body?.confirmedVersion || '');
+      if (!/^[a-f0-9]{64}$/.test(confirmedSha256) || !Array.isArray(confirmedPermissions) || !confirmedVersion) {
         return res.status(400).json({ error: '缺少明确的插件包哈希与权限确认，请刷新安装确认页。' });
       }
 
@@ -96,15 +98,31 @@ function createPluginsRoutes() {
         if (verr) return res.status(400).json({ error: '插件清单校验失败: ' + verr });
         if (manifest.id !== pluginId) return res.status(400).json({ error: '商店包插件 ID 与请求 ID 不一致' });
         const actualPermissions = [...new Set(manifest.permissions || [])].sort();
+        const payloadDir = zipPayloadDir(extractDir, manifest.id);
+        if (!payloadDir) return res.status(400).json({ error: '插件包目录结构不合法' });
+        const hasBackendCode = fs.existsSync(path.join(payloadDir, 'main.js'));
+        const requiresBackendTrust = hasBackendCode || actualPermissions.some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission));
+        if (requiresBackendTrust && req.body?.trustInProcess !== true) {
+          return res.status(400).json({ error: '安装确认缺少后端进程信任确认，请返回确认页重新勾选。' });
+        }
         if (JSON.stringify(actualPermissions) !== JSON.stringify([...new Set(confirmedPermissions.map(String))].sort())) {
           return res.status(409).json({ error: '插件权限已变化，请重新查看并确认权限后安装。' });
         }
-        if (String(info.sha256 || '').toLowerCase() !== confirmedSha256) {
-          return res.status(409).json({ error: '商店包哈希已变化，请重新查看安装信息后再确认。' });
+        if (String(info.sha256 || '').toLowerCase() !== confirmedSha256 || String(info.version || '') !== confirmedVersion || String(manifest.version || '') !== confirmedVersion) {
+          return res.status(409).json({ error: '商店包版本或哈希已变化，请重新查看安装信息后再确认。' });
+        }
+        try {
+          storeClient.verifyPluginSignature({
+            id: manifest.id,
+            version: manifest.version,
+            sha256: info.sha256,
+            signature: info.signature,
+            keyId: info.signatureKeyId,
+          });
+        } catch (signatureError) {
+          return res.status(400).json({ error: signatureError.message });
         }
         const id = manifest.id;
-        const payloadDir = zipPayloadDir(extractDir, id);
-        if (!payloadDir) return res.status(400).json({ error: '插件包根结构不合法' });
         const dest = path.join(pluginsDir, id);
         // 防路径穿越：逐文件校验目标路径
         const entries = collectDirEntries(payloadDir);

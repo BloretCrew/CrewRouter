@@ -143,14 +143,12 @@ function recordModelCall(modelId, ok) {
   const slot = utcSlotString();
   const s = ok ? 1 : 0;
   const f = ok ? 0 : 1;
-  if (!ok) {
-    try {
-      require('../plugins/events').publish('model.health.changed.v1', {
-        modelId, health: 'degraded', statusCode: 0, observedAt: new Date().toISOString(),
-      });
-    } catch (err) {
-      Logger.warn(`[ModelUptime] 插件事件发布失败: ${err.message}`);
-    }
+  try {
+    require('../plugins/events').publish('model.health.changed.v1', {
+      modelId, health: ok ? 'healthy' : 'degraded', statusCode: ok ? 200 : 0, observedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    Logger.warn(`[ModelUptime] 插件事件发布失败: ${err.message}`);
   }
 
   pool.query(

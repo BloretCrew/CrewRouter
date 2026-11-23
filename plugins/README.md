@@ -52,7 +52,7 @@ ctx.events.on('model.health.changed.v1', async event => {
 当前 schema：
 
 - `model.health.changed.v1`：`modelId`、`health`、`statusCode`、`observedAt`。
-- `quota.threshold.v1`：`scope`、`remaining`、`threshold`、`observedAt`。
+- `quota.threshold.v1`：`scope`、`remaining`、`threshold`、`observedAt`。当前只定义 schema 与双权限门控；因为现有 Team 限额检查运行于计费热路径且缺少可去重的跃迁记录，本版本不自动广播该事件。接入点确定性和持久去重前不会从扣费检查函数发布个人额度事件。
 - `plugin.lifecycle.v1`：`pluginId`、`action`、`version`。
 
 仅返回字段白名单；schema 版本变更用新的事件名，不静默扩展现有 payload。
