@@ -74,6 +74,10 @@ function loadRegistry(pool, hooksBus, warnings) {
     assert.ok(finalResponse, 'isolated finalResponse hook registered');
     const headerResult = await finalResponse[2]({ statusCode: 200, headers: { Authorization: 'must-not-cross-ipc' } }, { requestType: 'openai', model: 'secret-model' });
     assert.deepEqual(JSON.parse(JSON.stringify(headerResult)), { statusCode: 200, headers: { 'X-Plugin-example-isolated-hooks-Trace': 'sandboxed' } });
+    const modelList = calls.find(row => row[1] === 'models:list');
+    assert.ok(modelList);
+    const filteredModels = await modelList[2]({ models: [{ id: 'public-model', api_key: 'secret' }, { id: 'internal-hidden', api_key: 'secret' }] }, { requestType: 'gemini', userId: 42 });
+    assert.deepEqual(JSON.parse(JSON.stringify(filteredModels)), { models: [{ id: 'public-model', api_key: 'secret' }] });
     await registry.disable('example-isolated-hooks');
     assert.equal(calls.length, 0, 'disable removes isolated hook subscriber');
     console.log('PASS isolated billing hook runs under bwrap; host secrets are projected out and disable unloads it');
