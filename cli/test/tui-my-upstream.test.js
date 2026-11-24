@@ -14,13 +14,13 @@ test('my upstream page mirrors providers/models tabs and Team model columns', as
   const page = buildPages(runtime).find(item => item.id === 'my-upstream');
   assert.deepEqual(page.tabs.map(tab => tab.id), ['providers', 'models']);
   const data = await page.load();
-  const section = data.sections.find(item => item.title === '个人 Team 模型');
+  const section = data.sections.find(item => item.title === '我的模型');
   assert.equal(section.rows[0].cells.name, 'Friendly');
   assert.equal(section.rows[0].cells.upstream_id, 'up-1');
   assert.equal(section.rows[0].cells.provider, 'Personal');
   assert.equal(section.rows[0].cells.multiplier, '计费倍率 ×1.20');
   assert.deepEqual(calls, ['/api/user/my-providers', '/api/user/my-team-models']);
-  const rows = data.sections.find(item => item.title === '个人 Team 模型').rows;
+  const rows = data.sections.find(item => item.title === '我的模型').rows;
   assert.equal(rows[0].cells.name, 'Friendly');
   assert.equal(rows[0].cells.upstream_id, 'up-1');
   assert.equal(rows[0].cells.provider, 'Personal');
@@ -201,7 +201,7 @@ test('personal Team model edit sends the complete web form and delete warns abou
   });
   const page = buildPages(runtime).find(item => item.id === 'my-upstream');
   const data = await page.load();
-  const row = data.sections.find(section => section.title === '个人 Team 模型').rows[0];
+  const row = data.sections.find(section => section.title === '我的模型').rows[0];
   let formFields = [];
   const form = async (_title, fields) => { formFields = fields; return { upstream_model_id: 'up-1', alias: 'Updated', description: 'desc', series: 'S', enabled: true, input_price_per_1k_tokens: '1.5', output_price_per_1k_tokens: '2.5', cached_output_price_per_1k_tokens: '3.5', reference_input_price_per_1k_tokens: '4', reference_output_price_per_1k_tokens: '5', rate_limit_rpm: '10', rate_limit_tpm: '20', model_multiplier: '1.4', completion_multiplier: '1.3', thinking_model_id: '', non_thinking_model_id: '' }; };
   await row.run({ choose: async () => 'edit', form, confirm: async () => false });

@@ -76,7 +76,7 @@ test('Team page separates member, model access and quota sections in web order',
   };
   const data = await pageById('admin-teams').load(api);
   const section = data.sections[0];
-  assert.equal(section.title, 'Team Four · Team #4');
+  assert.equal(section.title, 'Team Four · 团队编号 4');
   assert.deepEqual(section.cards.map(card => card.label), ['成员', '模型授权', '限额规则']);
   const labels = section.rows.map(row => row.label);
   assert.ok(labels.findIndex(label => label.startsWith('成员列表')) < labels.findIndex(label => label.startsWith('模型授权')));

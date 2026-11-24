@@ -107,16 +107,16 @@ async function showSessionMessages(ctx, runtime, item) {
   const data = await getSessionMessages(runtime.client, item.sessionKey, { page: 1, pageSize: 30 });
   const records = Array.isArray(data.records) ? data.records : [];
   const lines = [
-    `Session Key：${item.sessionKey}`,
-    `Harness：${item.harness || 'unknown'}`,
-    `请求：${item.requestCount || 0} · Token：${formatBigNumber(item.totalTokens)} · 工具调用：${item.toolCallCount || 0}`,
+    `会话标识：${item.sessionKey}`,
+    `客户端类型：${item.harness || '未知客户端'}`,
+    `请求数：${item.requestCount || 0} · Token 用量：${formatBigNumber(item.totalTokens)} · 工具调用数：${item.toolCallCount || 0}`,
     `首次：${formatTime(item.firstSeen)} · 最后：${formatTime(item.lastSeen)}`,
     item.summary ? `摘要：${text(item.summary)}` : '摘要：无',
     '',
     `最近 ${records.length} 条记录：`,
   ];
   for (const record of records.slice(0, 20)) {
-    lines.push(`${formatTime(record.created_at || record.ts || record.time)} · ${record.model_name || record.model_id || record.resolved_model || '未知模型'} · ${formatBigNumber(record.tokens_used || record.tokens || 0)} tokens`);
+    lines.push(`${formatTime(record.created_at || record.ts || record.time)} · ${record.model_name || record.model_id || record.resolved_model || '未知模型'} · ${formatBigNumber(record.tokens_used || record.tokens || 0)} Token`);
     if (record.response_preview) lines.push(`  ${String(record.response_preview).slice(0, 240)}`);
   }
   if (!records.length) lines.push('  （没有可显示的消息记录）');
@@ -128,7 +128,7 @@ function sessionsPage(runtime) {
   return {
     id: 'sessions',
     label: '会话',
-    description: '按 Harness 查看最近使用会话与消息摘要。',
+    description: '查看最近使用会话、客户端类型和消息摘要。',
     async load(api) {
       const days = runtime.sessionsDays || 30;
       const search = runtime.sessionsSearch || '';
@@ -136,8 +136,9 @@ function sessionsPage(runtime) {
         ? await searchSessions(runtime.client, { q: search, days })
         : await listSessions(runtime.client, { days, page: runtime.sessionsPageNumber, pageSize: 30 });
       const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
+      const clientName = value => ({ claude_code: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', grok: 'Grok', qwen_code: 'Qwen Code' })[String(value || '').toLowerCase()] || value || '未知客户端';
       const rows = items.map(item => ({
-        label: `${item.sessionKey || '未知会话'} · ${item.harness || 'unknown'} · ${Number(item.requestCount || 0).toLocaleString()} 请求 · ${formatBigNumber(item.totalTokens)} tokens`,
+        label: `${item.sessionKey || '未知会话'} · ${clientName(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token`,
         detail: `${item.lastSeen ? `最后活动 ${formatTime(item.lastSeen)}` : ''}${item.models && item.models.length ? ` · 模型 ${item.models.slice(0, 3).join(', ')}` : ''}${item.summary ? ' · 有摘要' : ''}`,
         run: async ctx => {
           const choice = await ctx.choose(`会话 · ${item.sessionKey}`, [{ label: '查看消息', value: 'messages' }, { label: '查看已缓存摘要', value: 'summary' }]);

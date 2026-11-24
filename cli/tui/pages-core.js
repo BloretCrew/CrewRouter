@@ -43,10 +43,10 @@ function overviewPage(runtime) {
           title: '账户与用量',
           description: `最近 ${days} 天。`,
           cards: [
-            { label: '余额', value: text(values.balance && values.balance.balance, '未知'), detail: values.balance && values.balance.group ? `Team：${values.balance.group.name || ''}` : '' },
+            { label: '余额', value: text(values.balance && values.balance.balance, '未知'), detail: values.balance && values.balance.group ? `所属团队：${values.balance.group.name || ''}` : '' },
             { label: '请求', value: Number(summary.total_requests || 0).toLocaleString(), detail: '成功计费的请求' },
-            { label: 'Token', value: formatBigNumber(summary.total_tokens), detail: '含缓存命中' },
-            { label: '费用', value: formatCost(summary.total_cost), detail: `平均延迟 ${Math.round(Number(summary.avg_latency || 0))} ms` },
+            { label: 'Token 用量', value: formatBigNumber(summary.total_tokens), detail: '含缓存命中量' },
+            { label: '费用（积分）', value: `${formatCost(summary.total_cost)} 积分`, detail: `平均响应时间 ${Math.round(Number(summary.avg_latency || 0))} 毫秒` },
           ],
           rows: [
             ...(values.current && values.current.currentModel ? [{ label: `当前模型：${values.current.currentModel.name || values.current.currentModel.id}` }] : []),
@@ -57,7 +57,7 @@ function overviewPage(runtime) {
           sections.push({
             title: '最近每日用量',
             rows: daily.slice(-7).map(row => ({
-              label: `${row.date || '未知日期'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`,
+              label: `${row.date || '未知日期'} · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分`,
               detail: bar(row.tokens, max, 24),
             })),
           });
@@ -91,7 +91,7 @@ function servicePage(runtime) {
         rows: [
           { label: `Profile：${runtime.profileName}（${runtime.profile && runtime.profile.type === 'local' ? '本机' : '远程'}）` },
           { label: `地址：${runtime.client.baseUrl}` },
-          { label: health.ok ? `服务：在线 · ${text(health.version && health.version.version, '')} · ${health.latencyMs} ms` : `服务：离线 · ${health.error || '连接失败'}` },
+          { label: health.ok ? `服务：在线 · ${text(health.version && health.version.version, '')} · 响应时间 ${health.latencyMs} 毫秒` : `服务：离线 · ${health.error || '连接失败'}` },
           ...(health.ok && health.instance ? [{ label: `实例：${text(health.instance.edition)} · ${text(health.instance.runtime)}` }] : []),
           ...(health.ok && health.setup && (health.setup.needsSetup || health.setup.needsEdition) ? [{ label: '初始化：尚未完成，请打开 /setup' }] : []),
         ],
@@ -145,7 +145,7 @@ function servicePage(runtime) {
           } },
           { label: '查看日志', run: async ctx => { const log = readLogs(120); await ctx.show('本地服务日志', log || '暂无日志。'); } },
           { label: '添加远程服务器', run: async ctx => { await runtime.addRemote(ctx); } },
-          { label: '测试当前连接', run: async ctx => { const probe = await probeHealth(runtime.client.baseUrl, { timeoutMs: 3000 }); await ctx.show('连接测试', probe.ok ? `在线 · ${probe.latencyMs} ms · ${text(probe.version && probe.version.version, '')}` : `失败：${probe.error || '连接失败'}`); } },
+          { label: '测试当前连接', run: async ctx => { const probe = await probeHealth(runtime.client.baseUrl, { timeoutMs: 3000 }); await ctx.show('连接测试', probe.ok ? `在线 · 响应延迟 ${probe.latencyMs} 毫秒 · ${text(probe.version && probe.version.version, '')}` : `失败：${probe.error || '连接失败'}`); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ],
       };
@@ -183,7 +183,7 @@ function accountPage(runtime) {
         rows: [
           { label: `余额：${text(values.balance && values.balance.balance, '未知')}` },
           { label: `可退款余额：${text(values.balance && values.balance.refund_balance, '0')}` },
-          ...(values.balance && values.balance.rate_limit_rpm ? [{ label: `速率限制：${values.balance.rate_limit_rpm} RPM · ${values.balance.rate_limit_tpm || 0} TPM` }] : []),
+          ...(values.balance && values.balance.rate_limit_rpm ? [{ label: `个人速率限制：每分钟 ${values.balance.rate_limit_rpm} 次请求 · ${values.balance.rate_limit_tpm || 0} Token` }] : []),
           ...(Array.isArray(values.codes) ? [{ label: `兑换码余额记录：${values.codes.length} 条` }] : []),
           ...errorRows(errors, { me: '账户', balance: '余额', codes: '兑换码余额' }),
         ],
