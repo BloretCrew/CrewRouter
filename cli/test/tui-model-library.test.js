@@ -13,7 +13,7 @@ test('user model library renders teams, provider summaries, stars and searchable
   const calls = [];
   const api = async (path, options = {}) => {
     calls.push({ path, options });
-    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ model_id: 'star-1', name: 'Starred', provider_name: 'Provider A' }], available_series: ['S'], total_models: 4 };
+    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: false, test_error: `HTTP 400 ${'long upstream error '.repeat(100)}` }], available_series: ['S'], total_models: 4 };
     if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main' }];
     if (path === '/api/user/provider-tags') return [{ id: 5, name: 'Featured' }];
     if (path.endsWith('/models')) return { queue: [], models: [] };
@@ -23,7 +23,10 @@ test('user model library renders teams, provider summaries, stars and searchable
   const page = buildPages(runtime).find(item => item.id === 'model-library');
   const initial = await page.load(api);
   assert.ok(initial.sections.some(section => section.title === '模型库概览'));
-  assert.ok(initial.sections.some(section => section.title === '星标模型'));
+  assert.ok(initial.sections.some(section => section.title === '已收藏模型'));
+  const starRow = initial.sections.find(section => section.title === '已收藏模型').rows[0];
+  assert.ok(starRow.detail.length < 140, 'long upstream errors must not expand the list row');
+  assert.deepEqual(initial.sections[0].cards.map(card => card.label), ['所属团队', '可用模型', '模型系列', '已收藏模型']);
   const providerRow = initial.sections.find(section => section.title === '团队与供应商目录').rows[0];
   assert.match(providerRow.label, /Team A.*Provider A.*3\/4 模型/);
   await providerRow.run({ refresh: async () => {} });
