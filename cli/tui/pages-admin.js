@@ -194,8 +194,22 @@ function createAdminPages(runtime) {
         ] };
       },
     },
-    adminOnly(collectionPage({ id: 'admin-plugins', label: '插件管理', description: '插件管理由 CrewRouter 插件系统托管；此页列出服务端可见插件。', path: '/api/admin/plugins', pick: itemsOf,
-      map: { label: item => display(item.name, item.id, item.version), detail: item => display(item.enabled === false ? '停用' : '启用', item.description) } })),
+    adminOnly({
+      id: 'admin-plugins', label: '插件管理', description: '查看插件、启停与重载。安装/卸载暂不开放。',
+      async load(api) {
+        const payload = await api('/api/admin/plugins');
+        const plugins = array(payload && payload.plugins);
+        return { sections: [{ title: '插件管理', rows: plugins.length ? plugins.map(plugin => ({ label: display(plugin.name, plugin.id, plugin.version, plugin.enabled ? '启用' : '停用'), detail: display(plugin.executionMode || plugin.execution_mode, array(plugin.permissions).join(', '), plugin.description), run: async ctx => {
+          const trusted = (plugin.executionMode || plugin.execution_mode) === 'trusted-in-process';
+          const actions = [{ label: '查看详情', value: 'detail' }, { label: '重载代码', value: 'reload' }];
+          if (!trusted) actions.push({ label: plugin.enabled ? '停用插件' : '启用插件', value: 'toggle' });
+          const choice = await ctx.choose(`插件 · ${plugin.name || plugin.id}`, actions, { description: trusted ? '受信任进程插件不会在此处快速启用。' : plugin.description || '' });
+          if (choice === 'detail') await ctx.show(`插件详情 · ${plugin.name || plugin.id}`, JSON.stringify(plugin, null, 2));
+          if (choice === 'reload') { if (!await ctx.confirm('重载插件代码', `重载 ${plugin.name || plugin.id}？运行中的任务可能受到影响。`)) return; await api(`/api/admin/plugins/${encodeURIComponent(plugin.id)}/reload`, { method: 'POST', body: {} }); ctx.notify('插件已重载。'); await ctx.refresh(); }
+          if (choice === 'toggle') { const enabled = !plugin.enabled; if (!await ctx.confirm(enabled ? '启用插件' : '停用插件', `${plugin.name || plugin.id}\n${plugin.description || ''}`)) return; await api(`/api/admin/plugins/${encodeURIComponent(plugin.id)}/toggle`, { method: 'POST', body: {} }); ctx.notify(`插件已${enabled ? '启用' : '停用'}。`); await ctx.refresh(); }
+        } })) : [{ label: '暂无插件。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+      },
+    }),
     adminOnly({
       id: 'admin-prompts', label: '管理员提示词', description: '管理员可查看全局历史提示词。',
       async load(api) {
