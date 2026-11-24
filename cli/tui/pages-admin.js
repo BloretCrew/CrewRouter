@@ -405,23 +405,44 @@ function createAdminPages(runtime) {
       },
     }),
     adminOnly({
-      id: 'admin-stats', label: '管理统计', description: '全局请求与用量统计。',
+      id: 'admin-stats', label: '统计信息', description: '管理员全局请求、成本与模型分析。',
+      onTabChange(tab) { runtime.adminStatsTab = tab?.id || 'overview'; },
+      tabs: [
+        { id: 'overview', label: '概览' }, { id: 'daily', label: '每日' }, { id: 'models', label: '模型' },
+        { id: 'providers', label: '供应商' }, { id: 'sources', label: '客户端' }, { id: 'users', label: '用户' },
+        { id: 'teams', label: 'Team' }, { id: 'latency', label: '延迟' },
+      ],
       async load(api) {
-        const data = await api('/api/admin/stats', { query: { days: 30 } });
-        const daily = array(data && data.daily);
-        const cards = [
-          { label: '用户', value: text(data && data.users, '0') },
-          { label: '模型', value: text(data && data.models, '0') },
-          { label: 'API Key', value: text(data && data.apiKeys, '0') },
-          { label: '周期', value: `${text(data && data.days, '自定义')} 天` },
+        const days = runtime.adminStatsDays || 30;
+        const data = await api('/api/admin/stats', { query: { days, ...(runtime.adminStatsFilters || {}) } });
+        const summaryCards = [
+          { label: '用户', value: text(data && data.users, '0') }, { label: '模型', value: text(data && data.models, '0') },
+          { label: 'API Key', value: text(data && data.apiKeys, '0') }, { label: '周期', value: `${days} 天` },
         ];
-        return { sections: [
-          { title: '统计概览', cards },
-          { title: '每日用量', rows: daily.slice(-30).map(item => ({ label: display(item.date, `${item.requests || 0} 请求`, `${item.tokens || 0} tokens`, `费用 ${item.cost || 0}`) })) },
-          { title: '按模型', rows: array(data && data.byModel).slice(0, 30).map(item => ({ label: display(item.model_name || item.model_id, `${item.requests || 0} 请求`, `${item.tokens || 0} tokens`, `费用 ${item.cost || 0}`) })) },
-          { title: '按用户', rows: array(data && data.byUser).slice(0, 30).map(item => ({ label: display(item.user_name, `${item.requests || 0} 请求`, `${item.tokens || 0} tokens`) })) },
-          { title: '按 Team', rows: array(data && data.byTeam).slice(0, 30).map(item => ({ label: display(item.team_name, `${item.requests || 0} 请求`, `${item.tokens || 0} tokens`) })) },
-        ], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+        const daily = array(data && data.daily);
+        const byRows = (items, name, extra = []) => array(items).slice(0, 50).map(item => ({ label: display(name(item), `${Number(item.requests || 0).toLocaleString()} 请求`, `${formatBigNumber(item.tokens)} tokens`, `成本 ${formatCost(item.cost)}`), detail: display(item.cached_tokens && `缓存 ${formatBigNumber(item.cached_tokens)}`, item.avg_latency && `平均 ${Math.round(item.avg_latency)} ms`, ...extra(item)) }));
+        const tab = runtime.adminStatsTab || 'overview';
+        const sections = [];
+        if (tab === 'overview') sections.push({ title: '统计概览', cards: summaryCards, rows: [{ label: '使用页签查看每日趋势、模型、供应商、客户端、用户、Team 与延迟分布。' }] });
+        if (tab === 'daily' || tab === 'overview') sections.push({ title: '每日用量', tab: 'daily', rows: daily.slice(-30).map(item => ({ label: display(item.date, `${Number(item.requests || 0).toLocaleString()} 请求`, `${formatBigNumber(item.tokens)} tokens`, `成本 ${formatCost(item.cost)}`), detail: `${item.prompt_tokens || 0} 输入 / ${item.completion_tokens || 0} 输出 tokens` })) });
+        if (tab === 'models') sections.push({ title: '按模型', rows: byRows(data.byModel, item => item.model_name || item.model_id || '未知模型', () => []) });
+        if (tab === 'providers') sections.push({ title: '按供应商', rows: byRows(data.byProvider, item => item.provider_name || item.provider_id || '未知供应商', () => []) });
+        if (tab === 'sources') sections.push({ title: '按客户端来源', rows: byRows(data.bySource, item => item.request_source || 'unknown', () => []) });
+        if (tab === 'users') sections.push({ title: '按用户', rows: byRows(data.byUser, item => item.user_name || item.username || `用户 ${item.user_id}`, () => []) });
+        if (tab === 'teams') sections.push({ title: '按 Team', rows: byRows(data.byTeam, item => item.team_name || `Team ${item.team_id}`, () => []) });
+        if (tab === 'latency') {
+          const latency = await api('/api/admin/stats/latency', { query: { days, ...(runtime.adminStatsFilters || {}) } });
+          const summary = latency.summary || {};
+          const percentile = (group, key) => group && group[key] != null ? Math.round(Number(group[key])) : null;
+          sections.push({ title: '全局延迟与吞吐', cards: [
+            { label: '端到端 P50', value: text(percentile(summary.e2e, 'p50'), '—'), detail: 'ms' }, { label: '端到端 P95', value: text(percentile(summary.e2e, 'p95'), '—'), detail: 'ms' },
+            { label: '首字 P95', value: text(percentile(summary.ttft, 'p95'), '—'), detail: 'ms' }, { label: '测量请求', value: text(summary.measuredRequests, '0'), detail: `覆盖 ${(Number(summary.coverage || 0) * 100).toFixed(1)}%` },
+          ], rows: array(latency.daily).map(item => ({ label: display(item.date, `${item.requests || 0} 请求`, `E2E P95 ${percentile(item.e2e, 'p95') ?? '—'} ms`, `TTFT P95 ${percentile(item.ttft, 'p95') ?? '—'} ms`, `输出 ${percentile(item.outputTps, 'p50') ?? '—'} tok/s`) })) });
+        }
+        return { sections, actions: [
+          ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, tab: 'overview', run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
       },
     }),
     {
