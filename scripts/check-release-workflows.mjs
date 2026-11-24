@@ -32,6 +32,7 @@ for (const event of ['push', 'pull_request']) {
   for (const required of ['cli/**', 'CrewRouter-Desktop/package.json', 'server/index.js', 'server/routes/mount-loader.js']) if (!paths.includes(required)) throw new Error(`SDK CI ${event} path filter omits ${required}`);
 }
 if (!sdkWorkflow.jobs.contract.steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('SDK CI contract job must run cross-language conformance');
+if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run?.includes('npm run sdk:conformance'))) throw new Error('Node SDK CI must run shared conformance and package checks');
 const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install isolated PostgreSQL test runtime');
 if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');
 if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-') && step.if?.includes("inputs.dry_run"))) throw new Error('npm beta candidate tarballs must be uploaded for dry-runs and tagged builds');

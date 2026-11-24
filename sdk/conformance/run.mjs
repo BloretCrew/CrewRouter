@@ -14,8 +14,14 @@ const ROOT = path.resolve(__dirname, '../..');
 const COMMANDS = {
   node: {
     command: 'npm',
-    args: ['--prefix', 'sdk/typescript', 'test'],
+    args: ['--prefix', 'sdk/typescript', 'run', 'test'],
     cwd: ROOT,
+    env: {},
+  },
+  nodePackage: {
+    command: 'npm',
+    args: ['pack', '--dry-run'],
+    cwd: path.join(ROOT, 'sdk/typescript'),
     env: {},
   },
   python: {
@@ -48,10 +54,10 @@ const args = process.argv.slice(2);
 const langArgs = args.filter((arg) => arg.startsWith('--lang='));
 const languages = langArgs.length
   ? langArgs.map((arg) => arg.slice('--lang='.length))
-  : ['node', 'python', 'go'];
+  : ['node', 'nodePackage', 'python', 'go'];
 
 if (!languages.length) {
-  console.error('Usage: node sdk/conformance/run.mjs [--all] [--lang=node|python|go]');
+  console.error('Usage: node sdk/conformance/run.mjs [--all] [--lang=node|nodePackage|python|go]');
   process.exit(2);
 }
 

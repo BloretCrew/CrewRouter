@@ -75,6 +75,7 @@ jobs:
           cache-dependency-path: sdk/typescript/package-lock.json
       - run: npm ci --prefix sdk/typescript
       - run: npm --prefix sdk/typescript test
+      - run: npm run sdk:conformance -- --lang=nodePackage
       - working-directory: sdk/typescript
         run: npm pack --dry-run
 
