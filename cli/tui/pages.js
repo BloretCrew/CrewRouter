@@ -17,7 +17,7 @@ const WEB_PAGE_MAP = Object.freeze([
 
   { area: 'console', web: 'projectWork', cli: 'projects' },
   { area: 'console', web: 'leaderboard', cli: 'leaderboard' },
-  { area: 'console', web: 'balance', cli: 'account' },
+  { area: 'console', web: 'balance', cli: 'balance' },
   { area: 'console', web: 'auditLogs', cli: 'audit-logs' },
   { area: 'console', web: 'prompts', cli: 'prompts' },
   { area: 'console', web: 'sessions', cli: 'sessions' },
@@ -51,6 +51,7 @@ function buildPages(runtime) {
     usagePage(runtime),
     adminById.get('projects'),
     adminById.get('leaderboard'),
+    adminById.get('balance'),
     adminById.get('audit-logs'),
     sessionsPage(runtime),
     adminById.get('blora-agent'),
@@ -72,7 +73,7 @@ function buildPages(runtime) {
 }
 
 const navGroups = [
-  { id: 'console', label: '控制台', pages: ['home', 'overview', 'models', 'model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'admin-policies', 'account', 'settings'] },
+  { id: 'console', label: '控制台', pages: ['home', 'overview', 'models', 'model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'admin-policies', 'account', 'settings'] },
   { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-model-library', 'admin-models', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-teams', 'admin-settings'] },
   { id: 'cli', label: 'CLI 服务', pages: ['service'] },
 ];

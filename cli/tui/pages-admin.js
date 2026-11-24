@@ -361,6 +361,22 @@ function createAdminPages(runtime) {
       },
     }),
     {
+      id: 'balance', label: '积分', description: '当前积分、可退款余额、Team 与个人限额。',
+      async load(api) {
+        const data = await api('/api/user/balance');
+        const group = data && data.group || {};
+        const rules = array(group.rules);
+        return { sections: [
+          { title: '当前积分', cards: [{ label: '积分', value: text(data && data.balance, '0') }, { label: '可退款', value: text(data && data.refund_balance, '0') }] },
+          { title: 'Team 与个人限额', rows: [
+            { label: `Team：${text(group.name, '未分配')}` },
+            { label: `个人速率限制：${Number(data && data.rate_limit_rpm || 0)} RPM · ${Number(data && data.rate_limit_tpm || 0)} TPM` },
+            ...rules.map(rule => ({ label: `${rule.rule_type === 'requests' ? '请求' : 'Token'} 限额：${rule.rule_value} / ${rule.duration_hours || 24} 小时`, detail: `当前用量 ${rule.current || 0}${rule.rule_type === 'requests' ? ' 请求' : ' tokens'}${rule.description ? ` · ${rule.description}` : ''}` })),
+          ] },
+        ], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+      },
+    },
+    {
       id: 'settings', label: '用户设置', description: '网页个人设置页面。',
       async load(api) {
         const [signature, profile] = await Promise.allSettled([api('/api/user/signature'), api('/auth/me')]);

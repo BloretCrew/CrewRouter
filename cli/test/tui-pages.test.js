@@ -42,6 +42,7 @@ test('user console pages query matching endpoints and expose equivalent controls
     if (path === '/api/user/project-stats') return { summary: { projects: 1, requests: 2, tokens: 30 }, projects: [{ workspace_path: '/repo/a', requests: 2, tokens: 30, sources: { codex: 2 } }], daily: [] };
     if (path === '/api/user/leaderboard') return { leaderboard: [{ rank: 1, username: 'alice', totalRequests: 4, totalTokens: 40, totalPoints: 2, cacheHitRate: 25, balance: 3 }] };
     if (path === '/api/user/audit-logs') return { items: [{ action: 'api_key', description: 'created', created_at: '2026-11-01T00:00:00Z' }], total: 1, page: 1 };
+    if (path === '/api/user/balance') return { balance: 25, refund_balance: 10, rate_limit_rpm: 60, rate_limit_tpm: 1000, group: { name: 'Team A', rules: [{ rule_type: 'requests', rule_value: 100, duration_hours: 24, current: 8 }] } };
     if (path === '/api/user/custom-instructions') return { items: [{ file: 'CLAUDE.md', source: 'claude_code', chars: 4, occurrence_count: 2, fingerprint: 'fp', preview: 'hint' }], total: 1, page: 1 };
     if (path === '/api/user/inject-prompts') return [];
     if (path === '/api/user/model-library') return { models: [{ id: 'm1', name: 'Model One' }] };
@@ -56,6 +57,9 @@ test('user console pages query matching endpoints and expose equivalent controls
   const leaderboard = await pages.get('leaderboard').load(api);
   assert.ok(leaderboard.sections[0].rows[0].label.includes('alice'));
   assert.ok(leaderboard.actions.some(action => action.label === '按缓存命中率排序'));
+  const balance = await pages.get('balance').load(api);
+  assert.ok(balance.sections.some(section => section.title === 'Team 与个人限额'));
+  assert.ok(balance.sections[0].cards.some(card => card.label === '积分'));
   const audit = await pages.get('audit-logs').load(api);
   assert.ok(audit.sections[0].rows[0].label.includes('api_key'));
   assert.ok(audit.actions.some(action => action.label === '下一页'));
