@@ -530,6 +530,39 @@
         ],
         "additionalProperties": true
       },
+      "UserProviderListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "responses",
+              "gemini"
+            ]
+          },
+          "created_by": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "format",
+          "created_by"
+        ],
+        "additionalProperties": true
+      },
       "TeamQuotaRule": {
         "type": "object",
         "properties": {
@@ -17413,8 +17446,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserProviderListItem"
+                  }
                 }
               }
             }

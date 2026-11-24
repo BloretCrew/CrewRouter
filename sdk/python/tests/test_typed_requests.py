@@ -9,6 +9,7 @@ from crewrouter import (
     DailyUsageItem,
     UserBalance,
     UserModelListItem,
+    UserProviderListItem,
     ChatCompletionRequest,
     ChatMessage,
     OpenAIResponsesRequest,
@@ -55,7 +56,14 @@ class TypedRequestTests(unittest.TestCase):
         self.assertIsNone(key["key_value"])
         self.assertEqual(usage["total_tokens"], "12")
         self.assertIsNone(balance["group"])
+        provider: UserProviderListItem = {
+            "id": "shared-provider",
+            "name": "Shared",
+            "format": "openai",
+            "created_by": None,
+        }
         self.assertIsNone(model["alias"])
+        self.assertIsNone(provider["created_by"])
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

@@ -31,6 +31,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if model.Alias != nil || model.UpstreamModelID != "upstream-1" {
 		t.Fatalf("unexpected user model payload: %#v", model)
 	}
+
+	var provider crewrouter.UserProviderListItem
+	if err := json.Unmarshal([]byte(`{"id":"shared-provider","name":"Shared","format":"openai","created_by":null}`), &provider); err != nil {
+		t.Fatalf("decode provider: %v", err)
+	}
+	if provider.CreatedBy != nil || provider.Format != "openai" {
+		t.Fatalf("unexpected provider payload: %#v", provider)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

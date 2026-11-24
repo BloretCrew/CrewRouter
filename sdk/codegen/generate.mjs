@@ -440,6 +440,11 @@ function managementSchemas() {
       input_price_per_1k_tokens: numberOrString, output_price_per_1k_tokens: numberOrString,
       output_kind: { type: 'string' },
     }, ['id', 'upstream_model_id', 'name', 'provider', 'provider_name', 'output_kind']),
+    UserProviderListItem: object({
+      id: { type: 'string' }, name: { type: 'string' },
+      format: { type: 'string', enum: ['openai', 'anthropic', 'responses', 'gemini'] },
+      created_by: { type: ['integer', 'null'] },
+    }, ['id', 'name', 'format', 'created_by']),
     TeamQuotaRule: object({
       rule_type: { type: 'string' }, duration_hours: { type: 'number' }, current: numberOrString,
     }, ['rule_type']),
@@ -461,6 +466,7 @@ function managementResponseSchema(operationId) {
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
+    'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
   };
   return schemas[operationId] || null;
 }

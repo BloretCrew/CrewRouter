@@ -153,6 +153,13 @@ export interface DailyUsageItem {
   total_requests: number | string;
 }
 
+export interface UserProviderListItem {
+  id: string;
+  name: string;
+  format: 'openai' | 'anthropic' | 'responses' | 'gemini';
+  created_by: number | null;
+}
+
 export interface UserModelListItem {
   id: string;
   upstream_model_id: string;

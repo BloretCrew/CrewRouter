@@ -98,6 +98,14 @@ type BalanceGroup struct {
 	Rules       []TeamQuotaRule `json:"rules"`
 }
 
+// UserProviderListItem is one user-visible provider returned by GET /api/user/providers.
+type UserProviderListItem struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Format    string `json:"format"`
+	CreatedBy *int64 `json:"created_by"`
+}
+
 // UserModelListItem is one model returned by GET /api/user/models.
 type UserModelListItem struct {
 	ID                     string  `json:"id"`

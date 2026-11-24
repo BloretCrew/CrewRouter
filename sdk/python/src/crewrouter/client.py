@@ -76,6 +76,13 @@ class UserBalance(TypedDict):
     group: Optional[dict[str, Any]]
 
 
+class UserProviderListItem(TypedDict):
+    id: str
+    name: str
+    format: str
+    created_by: Optional[int]
+
+
 class UserModelListItem(TypedDict):
     id: str
     upstream_model_id: str

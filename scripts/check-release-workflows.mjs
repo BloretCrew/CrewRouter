@@ -66,6 +66,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const usage = openapi.paths['/api/user/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const balance = openapi.paths['/api/user/balance']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const models = openapi.paths['/api/user/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const providers = openapi.paths['/api/user/providers']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
@@ -75,6 +76,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   for (const field of ['upstream_model_id', 'provider_name', 'input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'output_kind']) {
     if (!openapi.components.schemas.UserModelListItem?.properties?.[field]) throw new Error(`${openapiPath} is missing UserModelListItem.${field}`);
   }
+  if (providers?.type !== 'array' || providers.items?.$ref !== '#/components/schemas/UserProviderListItem') throw new Error(`${openapiPath} must define visible provider list responses`);
+  if (!openapi.components.schemas.UserProviderListItem?.properties?.created_by?.type?.includes('null')) throw new Error(`${openapiPath} must allow shared providers without created_by`);
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {
