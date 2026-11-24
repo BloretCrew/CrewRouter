@@ -50,10 +50,12 @@ You can also call `stream.abort(reason)` directly. Aborting raises
 
 ## Idle timeout
 
-Streams use an idle timeout, not a total duration. If no bytes arrive within
-`streamIdleTimeoutMs` (default 120 seconds), the SDK cancels the reader and
-throws `CrewRouterTimeoutError`. This catches a stalled upstream without
-penalizing long generations that keep emitting tokens.
+Streams use a chunk idle timeout, not a total duration. If no bytes arrive
+between chunks within `streamIdleTimeoutMs` (default 120 seconds), the SDK
+cancels the reader and throws `CrewRouterTimeoutError`. Waiting for response
+headers uses the regular gateway `timeoutMs` (default 600 seconds), so setting a
+short idle timeout does not limit connection establishment. This catches a
+stalled upstream without penalizing long generations that keep emitting tokens.
 
 ```ts
 const client = new CrewRouter({ baseUrl, apiKey, streamIdleTimeoutMs: 300_000 });

@@ -23,7 +23,7 @@ function streamOptions(options: StreamOptions | undefined): Pick<RequestOptions,
   return {
     signal: options?.signal,
     timeoutMs: options?.timeoutMs,
-    streamIdleTimeoutMs: options?.streamIdleTimeoutMs ?? options?.idleTimeoutMs,
+    streamIdleTimeoutMs: options?.idleTimeoutMs,
   };
 }
 

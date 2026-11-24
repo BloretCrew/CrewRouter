@@ -44,7 +44,7 @@ const npmPublishStep = beta.jobs['npm-beta-publish'].steps.find(step => step.nam
 if (!npmPublishStep?.run?.includes('npm publish candidates/bloret-crew-crewrouter-sdk-${PRODUCT_VERSION}.tgz') || !npmPublishStep.run.includes('npm publish candidates/bloret-crew-crewrouter-${PRODUCT_VERSION}.tgz')) throw new Error('npm publish must publish both scoped candidates');
 if (!npmPublishStep.run.includes('@bloret-crew/crewrouter-sdk @bloret-crew/crewrouter')) throw new Error('npm publish must target the scoped package names');
 if (!npmPublishStep.run.includes('doc.versions')) throw new Error('npm publish must check the target version is still unpublished');
-if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run === 'npm pack --dry-run')) throw new Error('Node SDK CI must inspect the package from the SDK workspace');
+if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('Node SDK CI must run shared fixtures and the package inspection');
 const npmNameGate = beta.jobs.gate.steps.find(step => step.name === 'Verify npm beta names are unclaimed');
 if (!npmNameGate?.run?.includes('doc.versions')) throw new Error('npm name gate must allow already-owned packages when the target version is new');
 if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop,npm-beta-candidate') throw new Error('GitHub release must wait for all release and candidate build gates');

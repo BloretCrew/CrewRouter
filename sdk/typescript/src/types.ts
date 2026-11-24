@@ -115,8 +115,6 @@ export interface StreamOptions {
   timeoutMs?: number;
   /** Maximum wait between stream chunks. */
   idleTimeoutMs?: number;
-  /** Alias for idleTimeoutMs using the client option naming convention. */
-  streamIdleTimeoutMs?: number;
 }
 
 export interface StreamHandle<T = StreamEvent> extends AsyncIterable<T> {

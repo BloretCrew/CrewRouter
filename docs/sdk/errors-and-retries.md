@@ -77,8 +77,10 @@ a higher-level job queue.
 - Gateway non-streaming requests default to 600 seconds.
 - Streams use an idle timeout (default 120 seconds) rather than a total duration.
 
-Override with `timeoutMs` (non-streaming) or `streamIdleTimeoutMs` / the
-`idleTimeoutMs` stream option.
+For non-streaming requests, override with `timeoutMs`. For streams, the
+response-header wait uses the gateway `timeoutMs` (default 600 seconds), while
+`streamIdleTimeoutMs` (default 120 seconds) limits the wait between chunks. The
+per-stream `idleTimeoutMs` option overrides only the chunk idle timeout.
 
 ## Errors during streaming
 
