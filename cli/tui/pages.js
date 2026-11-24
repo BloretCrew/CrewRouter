@@ -1,7 +1,7 @@
 'use strict';
 
 const { overviewPage, servicePage, accountPage } = require('./pages-core');
-const { providersPage, providerTagsPage, modelsPage, keysPage } = require('./pages-resources');
+const { providersPage, myUpstreamPage, providerTagsPage, modelsPage, keysPage } = require('./pages-resources');
 const { usagePage, sessionsPage } = require('./pages-data');
 const { createAdminPages } = require('./pages-admin');
 const { notificationSettingsPage, securitySettingsPage } = require('./pages-user-settings');
@@ -14,7 +14,7 @@ const WEB_PAGE_MAP = Object.freeze([
   { area: 'admin', web: 'adminProviders', cli: 'providers' },
   { area: 'admin', web: 'providerTags', cli: 'provider-tags', kind: 'tab' },
   { area: 'admin', web: 'adminTeams', cli: 'admin-teams' },
-  { area: 'console', web: 'myUpstream', cli: 'providers' },
+  { area: 'console', web: 'myUpstream', cli: 'my-upstream' },
   { area: 'console', web: 'stats', cli: 'usage' },
   { area: 'console', web: 'apiKeys', cli: 'keys' },
 
@@ -55,6 +55,7 @@ function buildPages(runtime) {
   const adminById = new Map(adminPages.map(page => [page.id, page]));
   const pages = [
     adminById.get('model-library'),
+    myUpstreamPage(runtime),
     providersPage(runtime),
     providerTagsPage(runtime),
     keysPage(runtime),
@@ -100,10 +101,10 @@ function buildPages(runtime) {
 }
 
 const navGroups = [
-  { id: 'console', label: '控制台', pages: ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings'] },
+  { id: 'console', label: '控制台', pages: ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings'] },
   { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings'] },
   { id: 'admin-subpages', label: '管理子页面', pages: ['admin-policy-settings', 'admin-policy-members', 'admin-policy-approvals', 'admin-policy-clients', 'admin-policy-notifications', 'admin-models', 'admin-teams', 'admin-oauth-clients', 'admin-popups', 'admin-retention', 'admin-invites', 'admin-updates'] },
-  { id: 'tools', label: '终端工具与设置子页', pages: ['provider-tags', 'models', 'account', 'overview', 'security-settings'] },
+  { id: 'tools', label: '终端工具与设置子页', pages: ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings'] },
   { id: 'cli', label: 'CLI 服务', pages: ['service'] },
 ];
 

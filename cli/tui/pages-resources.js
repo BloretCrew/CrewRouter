@@ -6,6 +6,7 @@ const {
 } = require('../lib/api');
 const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 const { text, enabledLabel } = require('./pages-common');
+const display = (...values) => values.map(value => String(value || '').trim()).filter(Boolean).join(' · ');
 
 function providerDetail(provider) {
   const { api_key, api_keys, ark_secret_key, cpa_management_key, ...safe } = provider || {};
@@ -93,6 +94,35 @@ function providersPage(runtime) {
             ...(Array.isArray(stats.tags) ? stats.tags.map(tag => ({ label: `标签：${tag.name}`, run: async ctx => { runtime.providerTagId = String(tag.id); await ctx.refresh(); } })) : []),
           ] : []),
           { label: '清除筛选', run: async ctx => { runtime.providerSearch = ''; runtime.providerScope = ''; runtime.providerEnabled = ''; runtime.providerKeyMode = ''; runtime.providerTagId = ''; await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ],
+      };
+    },
+  };
+}
+
+function myUpstreamPage(runtime) {
+  return {
+    id: 'my-upstream', label: '我的上游', description: '网页“我的上游”供应商与个人 Team 模型双标签页。',
+    tabs: [{ id: 'providers', label: '供应商' }, { id: 'models', label: '模型' }],
+    async load() {
+      const [providersResult, modelsResult] = await Promise.allSettled([
+        runtime.client.get('/api/user/my-providers'), runtime.client.get('/api/user/my-team-models'),
+      ]);
+      const providers = providersResult.status === 'fulfilled' ? (Array.isArray(providersResult.value) ? providersResult.value : []) : [];
+      const models = modelsResult.status === 'fulfilled' ? (Array.isArray(modelsResult.value) ? modelsResult.value : []) : [];
+      const providerQuery = String(runtime.myUpstreamProviderSearch || '').toLowerCase();
+      const modelQuery = String(runtime.myUpstreamModelSearch || '').toLowerCase();
+      const visibleProviders = providers.filter(item => !providerQuery || [item.name, item.id, item.base_url, item.format].some(value => String(value || '').toLowerCase().includes(providerQuery)));
+      const visibleModels = models.filter(item => !modelQuery || [item.alias, item.name, item.id, item.upstream_model_id, item.provider_name, item.series].some(value => String(value || '').toLowerCase().includes(modelQuery)));
+      return {
+        sections: [
+          { title: '供应商', tab: 'providers', description: `${visibleProviders.length}/${providers.length} 个供应商 · 搜索 ${providerQuery || '无'}`, rows: visibleProviders.length ? visibleProviders.map(item => ({ label: display(item.name, item.format, item.enabled === false ? '停用' : '启用', `${item.model_count || 0} 个模型`), detail: display(item.id, item.base_url, item.notes), run: async ctx => { const choice = await ctx.choose(`供应商 · ${item.name || item.id}`, [{ label: '查看详情', value: 'detail' }, { label: '检测连通性', value: 'ping' }], { description: item.base_url || '' }); if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, JSON.stringify(providerDetail(item), null, 2)); if (choice === 'ping') { const result = await pingProvider(runtime.client, item.id); await ctx.show('连通性检测', JSON.stringify(result, null, 2)); } } })) : [{ label: providersResult.status === 'rejected' ? providersResult.reason.message : '暂无我的上游供应商。' }] },
+          { title: '个人 Team 模型', tab: 'models', description: `${visibleModels.length}/${models.length} 个模型 · 搜索 ${modelQuery || '无'}`, rows: visibleModels.length ? visibleModels.map(item => ({ label: display(item.alias || item.name || item.id, item.upstream_model_id || item.name || item.id, item.provider_name || item.provider, item.series || '—'), detail: display(`倍率 ×${Number(item.model_multiplier || 1).toFixed(2)}`, item.enabled === false ? '停用' : '启用', item.description), run: async ctx => await ctx.show(`个人 Team 模型 · ${item.alias || item.name || item.id}`, JSON.stringify(item, null, 2)) })) : [{ label: modelsResult.status === 'rejected' ? modelsResult.reason.message : '暂无个人 Team 模型。' }] },
+        ],
+        actions: [
+          { label: '搜索我的供应商', tab: 'providers', run: async ctx => { runtime.myUpstreamProviderSearch = String(await ctx.ask('供应商名称、ID 或地址', { defaultValue: runtime.myUpstreamProviderSearch || '' }) || '').trim(); await ctx.refresh(); } },
+          { label: '搜索个人 Team 模型', tab: 'models', run: async ctx => { runtime.myUpstreamModelSearch = String(await ctx.ask('模型名称、ID、上游 ID、供应商或系列', { defaultValue: runtime.myUpstreamModelSearch || '' }) || '').trim(); await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ],
       };
@@ -287,4 +317,4 @@ function keysPage(runtime) {
   };
 }
 
-module.exports = { providersPage, providerTagsPage, modelsPage, keysPage };
+module.exports = { providersPage, myUpstreamPage, providerTagsPage, modelsPage, keysPage };

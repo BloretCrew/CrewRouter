@@ -16,9 +16,9 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.ok(ids.has('service'), 'CLI retains its local service/profile page');
   assert.ok(ids.has('overview'), 'CLI retains its overview page');
   assert.deepEqual(navGroups.map(group => group.id), ['console', 'admin', 'admin-subpages', 'tools', 'cli']);
-  assert.deepEqual(navGroups[0].pages, ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings']);
+  assert.deepEqual(navGroups[0].pages, ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings']);
   assert.deepEqual(navGroups[1].pages, ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings']);
-  assert.deepEqual(navGroups[3].pages, ['provider-tags', 'models', 'account', 'overview', 'security-settings']);
+  assert.deepEqual(navGroups[3].pages, ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings']);
   assert.equal(WEB_PAGE_MAP.find(mapping => mapping.area === 'admin' && mapping.web === 'adminPolicies').kind, 'tabbed-page');
   assert.equal(WEB_PAGE_MAP.find(mapping => mapping.area === 'admin' && mapping.web === 'policyMembers').kind, 'tab');
   for (const page of pages) assert.ok(navGroups.some(group => group.pages.includes(page.id)), `${page.id} belongs to a navigation group`);
