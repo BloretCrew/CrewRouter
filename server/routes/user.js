@@ -4059,13 +4059,13 @@ router.get('/my-providers', requireAuth, async (req, res) => {
     let result;
     if (req.personalProviderManager) {
       result = await pool.query(
-        `SELECT p.id, p.name, p.base_url, p.format, p.endpoints, p.enabled, p.notes, p.created_at,
+        `SELECT p.id, p.name, p.base_url, p.format, p.endpoints, p.enabled, p.notes, p.models_url, p.test_user_agent, p.forward_headers, p.created_at,
                 (SELECT COUNT(*)::int FROM models m WHERE m.provider = p.id) AS model_count
            FROM providers p ORDER BY p.created_at DESC`
       );
     } else if (hasCreatedBy) {
       result = await pool.query(
-        `SELECT p.id, p.name, p.base_url, p.format, p.endpoints, p.enabled, p.notes, p.created_at,
+        `SELECT p.id, p.name, p.base_url, p.format, p.endpoints, p.enabled, p.notes, p.models_url, p.test_user_agent, p.forward_headers, p.created_at,
                 (SELECT COUNT(*)::int FROM models m WHERE m.provider = p.id) AS model_count
            FROM providers p
           WHERE p.created_by = $1
@@ -4170,12 +4170,15 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
   descriptionFrom: (req) => `更新供应商 #${req.params.id}`,
 }), async (req, res) => {
   const providerId = req.params.id;
-  const { name, base_url, api_key, format, notes, enabled } = req.body;
+  const { name, base_url, api_key, format, notes, enabled, models_url, test_user_agent, forward_headers } = req.body;
   if (name != null && (typeof name !== 'string' || !name.trim())) return res.status(400).json({ error: '供应商名称不能为空' });
   if (base_url != null && (typeof base_url !== 'string' || !base_url.trim())) return res.status(400).json({ error: 'Base URL 不能为空' });
   if (format != null && !['openai', 'anthropic', 'responses', 'gemini'].includes(format)) return res.status(400).json({ error: 'API 格式无效' });
   if (enabled != null && typeof enabled !== 'boolean') return res.status(400).json({ error: '启用状态无效' });
   if (notes != null && typeof notes !== 'string') return res.status(400).json({ error: '备注格式无效' });
+  if (models_url != null && (typeof models_url !== 'string' || (models_url && !models_url.startsWith('/') && !/^https?:\/\//i.test(models_url)))) return res.status(400).json({ error: '模型列表 URL 格式无效' });
+  if (test_user_agent != null && (typeof test_user_agent !== 'string' || test_user_agent.length > 500)) return res.status(400).json({ error: '测试 User-Agent 格式无效' });
+  if (forward_headers != null && typeof forward_headers !== 'boolean') return res.status(400).json({ error: '请求头转发设置无效' });
 
   try {
     // 检查是否是用户自己的供应商
@@ -4214,6 +4217,18 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
     if (notes != null) {
       updates.push(`notes = $${paramIndex++}`);
       values.push(notes.trim());
+    }
+    if (models_url != null) {
+      updates.push(`models_url = $${paramIndex++}`);
+      values.push(models_url.trim());
+    }
+    if (test_user_agent != null) {
+      updates.push(`test_user_agent = $${paramIndex++}`);
+      values.push(test_user_agent.trim());
+    }
+    if (forward_headers != null) {
+      updates.push(`forward_headers = $${paramIndex++}`);
+      values.push(forward_headers);
     }
     if (enabled != null) {
       updates.push(`enabled = $${paramIndex++}`);

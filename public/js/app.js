@@ -10005,6 +10005,10 @@ ${extractorBody}
       document.getElementById('editProviderEnabled').checked = provider.enabled !== false;
       document.getElementById('editProviderApiKey').value = '';
       document.getElementById('editProviderFormat').value = provider.format || 'openai';
+      document.getElementById('editProviderModelsUrl').value = provider.models_url || '';
+      document.getElementById('editProviderTestUserAgent').value = provider.test_user_agent || '';
+      document.getElementById('editProviderForwardHeaders').checked = provider.forward_headers !== false;
+      this.setEditProviderPage(0);
       this._editProviderEndpoints = (Array.isArray(provider.endpoints) ? provider.endpoints : [])
         .map(e => ({
           url: String(e?.url || ''),
@@ -10022,6 +10026,20 @@ ${extractorBody}
     }
   }
 
+  setEditProviderPage(page = 0) {
+    const root = document.getElementById('editProviderModal');
+    if (!root) return;
+    const index = Math.max(0, Math.min(3, Number(page) || 0));
+    root.querySelectorAll('[data-edit-provider-panel]').forEach(panel => { panel.hidden = Number(panel.dataset.editProviderPanel) !== index; });
+    root.querySelectorAll('[data-edit-provider-page]').forEach(button => {
+      const active = Number(button.dataset.editProviderPage) === index;
+      button.setAttribute('aria-current', active ? 'page' : 'false');
+      button.dataset.variant = active ? 'primary' : 'ghost';
+    });
+    const body = root.querySelector('.edit-provider-body');
+    if (body) body.scrollTop = 0;
+  }
+
   async updateProvider() {
     const errorEl = document.getElementById('editProviderError');
     errorEl.style.display = 'none';
@@ -10033,6 +10051,9 @@ ${extractorBody}
     const format = document.getElementById('editProviderFormat').value;
     const notes = document.getElementById('editProviderNotes').value.trim();
     const enabled = document.getElementById('editProviderEnabled').checked;
+    const models_url = document.getElementById('editProviderModelsUrl').value.trim();
+    const test_user_agent = document.getElementById('editProviderTestUserAgent').value.trim();
+    const forward_headers = document.getElementById('editProviderForwardHeaders').checked;
 
     if (!name) {
       errorEl.textContent = t('请输入供应商名称');
@@ -10046,7 +10067,7 @@ ${extractorBody}
     }
 
     try {
-      const body = { name, base_url: baseUrl, format, notes, enabled };
+      const body = { name, base_url: baseUrl, format, notes, enabled, models_url, test_user_agent, forward_headers };
       if (apiKey) body.api_key = apiKey;
       if (Array.isArray(this._editProviderEndpoints)) {
         body.endpoints = this._collectEditProviderEndpoints();

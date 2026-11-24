@@ -1949,22 +1949,42 @@
   <blora-dialog id="editProviderModal" class="lg-scope" role="dialog" aria-modal="true" aria-labelledby="editProviderModalTitle">
     <span slot="title" id="editProviderModalTitle">编辑供应商</span>
     <button type="button" class="blora-button modal-close" aria-label="关闭" onclick="this.closest('blora-dialog').close()">&times;</button>
-    <div class="up-dialog-stack">
-      <div id="editProviderError" class="up-dialog-error" data-blora-state="error" style="display:none;"></div>
-      <input type="hidden" id="editProviderId">
-      <blora-field label="供应商名称"><input type="text" id="editProviderName"></blora-field>
-      <blora-field label="Base URL"><input type="text" id="editProviderBaseUrl"></blora-field>
-      <blora-field label="备注"><input type="text" id="editProviderNotes" placeholder="供应商备注（可选）"></blora-field>
-      <label class="up-check-label"><input type="checkbox" id="editProviderEnabled">启用供应商</label>
-      <blora-field label="API Key" hint="留空则不更新"><input type="password" id="editProviderApiKey" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm"></blora-field>
-      <div class="blora-field"><label class="blora-field__label" for="editProviderFormat">API 格式</label><blora-select id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option><blora-option value="gemini">Gemini (generateContent)</blora-option></blora-select></div>
-      <div class="blora-field">
-        <span class="blora-field__label">附加端点（可选）</span>
-        <div class="up-dialog-hint" style="font-size:12px;line-height:1.6;margin-bottom:8px;">
-          第一行为上方 Base URL 的主端点；附加端点按顺序参与回退。请求优先使用原生格式的端点（Chat → OpenAI、Messages → Anthropic、Responses → Responses），返回连接错误、408、429 或 5xx 时自动切换到下一个端点。
-        </div>
-        <div id="editProviderEndpointsList"></div>
-        <button type="button" class="blora-button" data-variant="secondary" data-size="sm" style="margin-top:8px;" onclick="app.addEditProviderEndpointRow()">+ 添加端点</button>
+    <div class="edit-provider-editor">
+      <nav class="edit-provider-pages" aria-label="供应商配置分区">
+        <button type="button" class="blora-button" data-variant="primary" aria-current="page" data-edit-provider-page="0" onclick="app.setEditProviderPage(0)"><strong>基本信息</strong><small>名称与连接</small></button>
+        <button type="button" class="blora-button" data-variant="ghost" aria-current="false" data-edit-provider-page="1" onclick="app.setEditProviderPage(1)"><strong>模型列表</strong><small>模型发现地址</small></button>
+        <button type="button" class="blora-button" data-variant="ghost" aria-current="false" data-edit-provider-page="2" onclick="app.setEditProviderPage(2)"><strong>请求设置</strong><small>测试 UA 与请求头</small></button>
+        <button type="button" class="blora-button" data-variant="ghost" aria-current="false" data-edit-provider-page="3" onclick="app.setEditProviderPage(3)"><strong>端点</strong><small>多格式与回退</small></button>
+      </nav>
+      <div class="edit-provider-body">
+        <div id="editProviderError" class="up-dialog-error" data-blora-state="error" style="display:none;"></div>
+        <input type="hidden" id="editProviderId">
+        <section data-edit-provider-panel="0" class="up-dialog-stack">
+          <div class="edit-provider-card">
+            <blora-field label="供应商名称"><input type="text" id="editProviderName"></blora-field>
+            <blora-field label="Base URL"><input type="text" id="editProviderBaseUrl"></blora-field>
+            <div class="blora-field"><label class="blora-field__label" for="editProviderFormat">API 格式</label><blora-select id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option><blora-option value="gemini">Gemini (generateContent)</blora-option></blora-select></div>
+            <label class="up-check-label"><input type="checkbox" id="editProviderEnabled">启用供应商</label>
+            <blora-field label="备注"><input type="text" id="editProviderNotes" placeholder="供应商备注（可选）"></blora-field>
+          </div>
+          <blora-field label="API Key" hint="留空则不更新"><input type="password" id="editProviderApiKey" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm"></blora-field>
+        </section>
+        <section data-edit-provider-panel="1" class="up-dialog-stack" hidden>
+          <div class="edit-provider-card"><blora-field label="模型列表 URL（可选）" hint="留空自动推断；可填写 /v1/models 或完整 URL"><input type="text" id="editProviderModelsUrl" placeholder="/v1/models"></blora-field></div>
+        </section>
+        <section data-edit-provider-panel="2" class="up-dialog-stack" hidden>
+          <div class="edit-provider-card">
+            <blora-field label="测试 User-Agent" hint="仅用于供应商连接与模型测试"><input type="text" id="editProviderTestUserAgent" maxlength="500" autocomplete="off"></blora-field>
+            <label class="up-check-label"><input type="checkbox" id="editProviderForwardHeaders">转发客户端 User-Agent、Accept 等请求头</label>
+          </div>
+        </section>
+        <section data-edit-provider-panel="3" class="up-dialog-stack" hidden>
+          <div class="edit-provider-card">
+            <p class="up-dialog-note">主端点使用上方 Base URL；附加端点按顺序回退。连接错误、408、429 或 5xx 时会尝试下一个可用端点。</p>
+            <div id="editProviderEndpointsList"></div>
+            <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.addEditProviderEndpointRow()">+ 添加端点</button>
+          </div>
+        </section>
       </div>
     </div>
     <div slot="footer" class="up-dialog-actions">

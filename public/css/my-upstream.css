@@ -91,6 +91,16 @@
 /* 「我的上游」的弹窗：弹窗会移到 body 下，所以按弹窗 id 限定；外观由 .lg-scope 启用 */
 :is(#addProviderModal, #editProviderModal, #batchEditMyModelsModal, #manageModelsModal, #addEditModelModal, #batchPriceModal) {
   & .up-dialog-stack { display: flex; flex-direction: column; gap: 16px; }
+  & .edit-provider-editor { display: grid; grid-template-columns: 180px minmax(0, 1fr); min-height: min(560px, 68dvh); overflow: hidden; border: 1px solid var(--lg-divider); border-radius: var(--lg-radius-card); background: var(--lg-group-bg); }
+  & .edit-provider-pages { display: flex; flex-direction: column; gap: 5px; padding: 12px; border-inline-end: 1px solid var(--lg-divider); }
+  & .edit-provider-pages .blora-button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 48px; height: auto; padding: 8px 11px; text-align: start; }
+  & .edit-provider-pages small { color: var(--lg-fg-secondary); font-size: 11px; }
+  & .edit-provider-body { min-width: 0; max-height: min(560px, 68dvh); overflow: auto; padding: 18px; }
+  & .edit-provider-body [hidden] { display: none !important; }
+  & .edit-provider-card { display: flex; flex-direction: column; gap: 16px; padding: 18px; border: 1px solid var(--lg-divider); border-radius: var(--lg-radius-card); background: var(--lg-surface); }
+  & .edit-provider-card > * { margin-block-end: 0; }
+  & .edit-provider-card blora-field { display: flex; flex-direction: column; gap: 6px; }
+  & #editProviderEndpointsList { display: flex; flex-direction: column; gap: 8px; }
   & .up-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   & .up-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
   & .blora-field, & blora-field, & blora-select, & blora-search { display: block; inline-size: 100%; min-inline-size: 0; }
@@ -181,4 +191,9 @@
 #manageModelsModal #manageModelsList:empty { display: none; }
 @media (max-width: 560px) {
   :is(#batchEditMyModelsModal, #addEditModelModal) :is(.up-grid-2, .up-grid-3) { grid-template-columns: minmax(0, 1fr); }
+  #editProviderModal .edit-provider-editor { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  #editProviderModal .edit-provider-pages { flex-direction: row; overflow-x: auto; border-inline-end: 0; border-bottom: 1px solid var(--lg-divider); }
+  #editProviderModal .edit-provider-pages .blora-button { flex: 0 0 auto; min-width: 112px; }
+  #editProviderModal .edit-provider-pages small { display: none; }
+  #editProviderModal .edit-provider-body { max-height: 55dvh; padding: 12px; }
 }
