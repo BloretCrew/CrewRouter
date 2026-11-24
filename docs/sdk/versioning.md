@@ -7,7 +7,7 @@
 | `@bloret-crew/crewrouter-sdk` (npm) | 27.0.0-beta.1 | `sdk/typescript/vX.Y.Z` |
 | `crewrouter-sdk` (PyPI) | 27.0.0b1 (repository metadata; registry publication status must be verified per release) | `sdk/python/vX.Y.Z` |
 | Go module | 27.0.0-beta.1 (repository metadata; tag/publication status must be verified per release) | `sdk/go/vX.Y.Z` |
-| `crewrouter/embedded` | preview | root `vX.Y.Z` |
+| `crewrouter/embedded` | limited preview; excluded from client SDK stable commitment | root `vX.Y.Z` |
 
 Go requires the module tag to be prefixed with the module subdirectory. For
 example, `go get github.com/BloretCrew/CrewRouter/sdk/go@v27.0.0-beta.1` resolves

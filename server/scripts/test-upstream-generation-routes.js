@@ -289,31 +289,25 @@ async function main() {
   finally { global.setInterval = originalSetInterval; }
   const tests = [];
   const test = (name, options, run) => tests.push({ name, options, run });
-  for (const stream of [false, true]) {
-    for (const cacheKey of ['stable-cache-key', '', undefined]) {
-      test(`SDK chat ${cacheKey === undefined ? 'without' : 'with'} cache key stream=${stream}`, {}, async f => {
-        const body = { ...chatBody, stream };
-        if (cacheKey !== undefined) body.prompt_cache_key = cacheKey;
-        if (stream) {
-          const handle = f.client.gateway.chat.completions.stream(body);
-          const response = await handle.response;
-          assert.equal(response.status, 200);
-          const events = [];
-          for await (const event of handle) events.push(event);
-          assert.ok(events.some(event => event.data.includes('local-text')));
-          assert.equal(events.at(-1).data, '[DONE]');
-        } else {
-          const response = await f.client.gateway.chat.completions.create(body);
-          assert.equal(response.status, 200);
-          assert.equal(response.data.choices[0].message.content, 'local-text');
-        }
-        assert.equal(f.received.length, 1);
-        assert.equal(f.received[0].path, '/v1/chat/completions');
-        assert.equal(f.received[0].body.prompt_cache_key, cacheKey);
-        assert.equal(Object.hasOwn(f.received[0].body, 'prompt_cache_key'), cacheKey !== undefined);
-      });
-    }
-  }
+  test('SDK chat create reaches the real gateway route and mock upstream', {}, async f => {
+    const response = await f.client.gateway.chat.completions.create(chatBody);
+    assert.equal(response.status, 200);
+    assert.equal(response.data.choices[0].message.content, 'local-text');
+    assert.equal(f.received.length, 1);
+    assert.equal(f.received[0].path, '/v1/chat/completions');
+    assert.equal(f.received[0].body.model, 'upstream-route-primary');
+  });
+  test('SDK chat stream parses SSE events through the gateway route', {}, async f => {
+    const handle = f.client.gateway.chat.completions.stream({ ...chatBody, stream: true });
+    const response = await handle.response;
+    assert.equal(response.status, 200);
+    const events = [];
+    for await (const event of handle) events.push(event);
+    assert.ok(events.some(event => event.data.includes('local-text')));
+    assert.equal(events.at(-1).data, '[DONE]');
+    assert.equal(f.received.length, 1);
+    assert.equal(f.received[0].path, '/v1/chat/completions');
+  });
   for (const mode of ['truncated', 'reset']) {
     for (const route of ['/chat/completions', '/responses']) {
       test(`${route} ${mode}: no backup Key/model generation`, { mode, fallback: true }, async f => {

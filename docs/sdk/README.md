@@ -9,7 +9,7 @@ applications a consistent way to call both surfaces.
 | Form | What it does | Status |
 | --- | --- | --- |
 | **Client SDK** | Calls a running CrewRouter instance over HTTP: gateway + full management API. | Node/TypeScript, Python and Go available (0.1.0). |
-| **Embeddable server SDK** | Mounts the CrewRouter gateway inside a Node/Express application. | Preview available; see [embedded-server.md](./embedded-server.md). |
+| **Embeddable server SDK** | Mounts the CrewRouter gateway inside a Node/Express application. | Limited preview only; not part of the client SDK stable-release commitment. See [embedded-server.md](./embedded-server.md). |
 
 The embeddable form is Node-only because CrewRouter itself is a Node/Express +
 PostgreSQL service. Python and Go applications use the client SDK; running the

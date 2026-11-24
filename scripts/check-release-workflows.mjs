@@ -46,6 +46,7 @@ if (!npmPublishStep?.run?.includes('npm publish candidates/bloret-crew-crewroute
 if (!npmPublishStep.run.includes('@bloret-crew/crewrouter-sdk @bloret-crew/crewrouter')) throw new Error('npm publish must target the scoped package names');
 if (!npmPublishStep.run.includes('doc.versions')) throw new Error('npm publish must check the target version is still unpublished');
 if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('Node SDK CI must run shared fixtures and the package inspection');
+if (!sdkWorkflow.jobs['go-sdk'].steps.some(step => step.run === 'go test ./...' && step['working-directory'] === 'sdk/go/consumer')) throw new Error('Go SDK CI omits external module consumer smoke test');
 for (const required of ['python -m build --wheel --sdist sdk/python', 'python -m pip install --no-deps sdk/python/dist/*.whl']) {
   if (!sdkWorkflow.jobs['python-sdk'].steps.some(step => step.run === required)) throw new Error(`Python SDK CI omits package artifact validation: ${required}`);
 }

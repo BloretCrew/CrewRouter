@@ -1,6 +1,6 @@
-# Embedded server SDK (preview)
+# Embedded server SDK (limited preview)
 
-The embedded form runs CrewRouter in-process inside a Node/Express application.
+The embedded form runs CrewRouter in-process inside a Node/Express application. It is not a generally available production SDK and is excluded from the stable client SDK release commitment. Existing limitations below are part of the preview boundary, not implicit support guarantees.
 A **preview** is available from `crewrouter/embedded`. It is intentionally
 limited; the full feature-preset design is a later phase.
 
@@ -97,6 +97,25 @@ The preview rejects invalid configurations before loading any CrewRouter module:
 - **PostgreSQL required** outside demo mode. For a first-time database, pass
   `migrate: true`.
 - **Express 4 hosts.** Express 5 is not validated.
+
+## GA readiness gate
+
+Do not describe the embedded SDK as generally available until all of the
+following are true:
+
+- A supported Express/runtime/database matrix is published and exercised in CI.
+- Startup failure and repeated start/stop paths close every owned listener, timer,
+  and database resource; externally owned pools are never closed by the SDK.
+- Background subsystems that can be enabled have documented shutdown guarantees
+  and tests proving those guarantees.
+- The declared mount-path and multi-instance policies are either supported or
+  explicitly accepted as permanent restrictions with dedicated integration
+  coverage.
+- A production host example is executed in CI, and migration, upgrade, security,
+  and GPL distribution guidance is reviewed.
+- A release owner approves the compatibility and support commitment.
+
+Until then, keep this package labeled **limited preview**.
 
 ## Example: host Express app
 
