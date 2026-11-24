@@ -116,6 +116,42 @@ type ApiKeyMember struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// UserUsageLog is one user-visible request record returned in usage logs.
+type UserUsageLog struct {
+	ID               int64   `json:"id"`
+	UserID           int64   `json:"user_id"`
+	ModelID          *string `json:"model_id"`
+	APIKeyID         *int64  `json:"api_key_id"`
+	TokensUsed       any     `json:"tokens_used"`
+	PromptTokens     any     `json:"prompt_tokens"`
+	CompletionTokens any     `json:"completion_tokens"`
+	CachedTokens     any     `json:"cached_tokens"`
+	ProviderID       *string `json:"provider_id"`
+	RequestType      *string `json:"request_type"`
+	RequestSource    string  `json:"request_source"`
+	UserAgent        *string `json:"user_agent"`
+	LatencyMS        any     `json:"latency_ms"`
+	IPAddress        *string `json:"ip_address"`
+	Cost             any     `json:"cost"`
+	CreatedAt        string  `json:"created_at"`
+	KeyPrefix        *string `json:"key_prefix"`
+	KeyName          *string `json:"key_name"`
+	Series           *string `json:"series"`
+	ModelName        *string `json:"model_name"`
+	UpstreamModelID  *string `json:"upstream_model_id"`
+	RequestedModel   *string `json:"requested_model"`
+	ResolvedModel    *string `json:"resolved_model"`
+	ResponseModel    *string `json:"response_model"`
+	ProviderName     *string `json:"provider_name"`
+}
+
+// UserUsageLogsResponse is the paginated response from GET /api/user/usage-logs.
+type UserUsageLogsResponse struct {
+	Total int64          `json:"total"`
+	Page  int            `json:"page"`
+	Logs  []UserUsageLog `json:"logs"`
+}
+
 // CurrentModel is the selected model summary returned by the current-model API.
 type CurrentModel struct {
 	ID          string  `json:"id"`

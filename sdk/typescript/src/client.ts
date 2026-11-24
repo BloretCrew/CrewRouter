@@ -18,6 +18,7 @@ import type {
   UserKeyTag,
   UserModelListItem,
   UserProviderListItem,
+  UserUsageLogsResponse,
   RequestOptions,
   StreamHandle,
   StreamOptions,
@@ -179,6 +180,8 @@ export class CrewRouter {
   readonly usage = {
     get: <T = DailyUsageItem[]>(query?: Record<string, string | number | boolean | null | undefined | Array<string | number | boolean>>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.usage.list', { ...options, query }),
+    logs: <T = UserUsageLogsResponse>(query?: Record<string, string | number | boolean | null | undefined | Array<string | number | boolean>>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.usageLogs.list', { ...options, query }),
   };
 
   readonly balance = {

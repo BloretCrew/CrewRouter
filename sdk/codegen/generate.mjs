@@ -463,6 +463,22 @@ function managementSchemas() {
     CurrentModelResponse: object({
       currentModel: { anyOf: [{ $ref: '#/components/schemas/CurrentModel' }, { type: 'null' }] },
     }, ['currentModel']),
+    UserUsageLog: object({
+      id: { type: 'integer' }, user_id: { type: 'integer' }, model_id: nullableString,
+      api_key_id: { type: ['integer', 'null'] }, tokens_used: { type: ['integer', 'string', 'null'] },
+      prompt_tokens: { type: ['integer', 'string', 'null'] }, completion_tokens: { type: ['integer', 'string', 'null'] },
+      cached_tokens: { type: ['integer', 'string', 'null'] }, provider_id: { type: ['string', 'null'] },
+      request_type: nullableString, request_source: { type: 'string' }, user_agent: nullableString,
+      latency_ms: { type: ['number', 'string', 'null'] }, ip_address: nullableString,
+      cost: { type: ['number', 'string', 'null'] }, created_at: { type: 'string', format: 'date-time' },
+      key_prefix: nullableString, key_name: nullableString, series: nullableString,
+      model_name: nullableString, upstream_model_id: nullableString, requested_model: nullableString,
+      resolved_model: nullableString, response_model: nullableString, provider_name: nullableString,
+    }, ['id', 'user_id', 'request_source', 'created_at']),
+    UserUsageLogsResponse: object({
+      total: { type: 'integer' }, page: { type: 'integer' },
+      logs: { type: 'array', items: { $ref: '#/components/schemas/UserUsageLog' } },
+    }, ['total', 'page', 'logs']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -509,6 +525,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.quotaWarning.update': { $ref: '#/components/schemas/ApiKeyQuotaWarning' },
     'user.apiKeys.byId.schedule.list': { $ref: '#/components/schemas/ApiKeySchedule' },
     'user.currentModel.list': { $ref: '#/components/schemas/CurrentModelResponse' },
+    'user.usageLogs.list': { $ref: '#/components/schemas/UserUsageLogsResponse' },
   };
   return schemas[operationId] || null;
 }

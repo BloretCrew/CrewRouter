@@ -79,6 +79,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if current.CurrentModel != nil {
 		t.Fatalf("expected no current model, got %#v", current.CurrentModel)
 	}
+
+	var usageLogs crewrouter.UserUsageLogsResponse
+	if err := json.Unmarshal([]byte(`{"total":1,"page":1,"logs":[{"id":1,"user_id":7,"model_id":null,"api_key_id":3,"tokens_used":"12","prompt_tokens":"10","completion_tokens":"2","cached_tokens":"0","provider_id":null,"request_type":"chat","request_source":"unknown","user_agent":null,"latency_ms":"25","ip_address":null,"cost":"0.01","created_at":"2026-01-01T00:00:00Z","key_prefix":"sk-test","key_name":"CI","series":null,"model_name":"Model","upstream_model_id":null,"requested_model":null,"resolved_model":null,"response_model":null,"provider_name":null}]}`), &usageLogs); err != nil {
+		t.Fatalf("decode usage logs: %v", err)
+	}
+	if usageLogs.Total != 1 || usageLogs.Logs[0].TokensUsed != "12" {
+		t.Fatalf("unexpected usage log response: %#v", usageLogs)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

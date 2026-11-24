@@ -196,6 +196,41 @@ export interface CurrentModelResponse {
   currentModel: CurrentModel | null;
 }
 
+export interface UserUsageLog {
+  id: number;
+  user_id: number;
+  model_id: string | null;
+  api_key_id: number | null;
+  tokens_used: number | string | null;
+  prompt_tokens: number | string | null;
+  completion_tokens: number | string | null;
+  cached_tokens: number | string | null;
+  provider_id: string | null;
+  request_type: string | null;
+  request_source: string;
+  user_agent: string | null;
+  latency_ms: number | string | null;
+  ip_address: string | null;
+  cost: number | string | null;
+  created_at: string;
+  key_prefix: string | null;
+  key_name: string | null;
+  series: string | null;
+  model_name: string | null;
+  upstream_model_id: string | null;
+  requested_model: string | null;
+  resolved_model: string | null;
+  response_model: string | null;
+  provider_name: string | null;
+  [key: string]: unknown;
+}
+
+export interface UserUsageLogsResponse {
+  total: number;
+  page: number;
+  logs: UserUsageLog[];
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;

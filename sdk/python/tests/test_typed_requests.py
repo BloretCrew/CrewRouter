@@ -17,6 +17,8 @@ from crewrouter import (
     UserModelListItem,
     UserProviderListItem,
     UserKeyTag,
+    UserUsageLog,
+    UserUsageLogsResponse,
     ChatCompletionRequest,
     ChatMessage,
     OpenAIResponsesRequest,
@@ -106,7 +108,18 @@ class TypedRequestTests(unittest.TestCase):
         selected_model: UserCurrentModel = {"id": "m1", "name": "Model", "provider": "p1"}
         self.assertIsNone(schedule["schedule_on_time"])
         self.assertIsNone(current_model["currentModel"])
+        usage_log: UserUsageLog = {
+            "id": 1, "user_id": 7, "model_id": None, "api_key_id": 3,
+            "tokens_used": "12", "prompt_tokens": "10", "completion_tokens": "2", "cached_tokens": "0",
+            "provider_id": None, "request_type": "chat", "request_source": "unknown", "user_agent": None,
+            "latency_ms": "25", "ip_address": None, "cost": "0.01", "created_at": "2026-01-01T00:00:00Z",
+            "key_prefix": "sk-test", "key_name": "CI", "series": None, "model_name": "Model",
+            "upstream_model_id": None, "requested_model": None, "resolved_model": None,
+            "response_model": None, "provider_name": None,
+        }
+        usage_logs: UserUsageLogsResponse = {"total": 1, "page": 1, "logs": [usage_log]}
         self.assertEqual(selected_model["id"], "m1")
+        self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

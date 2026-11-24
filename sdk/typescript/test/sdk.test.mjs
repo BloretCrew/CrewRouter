@@ -137,6 +137,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { currentModel: null });
       return;
     }
+    if (req.url.startsWith('/api/user/usage-logs')) {
+      json(res, 200, { total: 1, page: 1, logs: [{ id: 1, user_id: 7, model_id: null, api_key_id: 3, tokens_used: '12', prompt_tokens: '10', completion_tokens: '2', cached_tokens: '0', provider_id: null, request_type: 'chat', request_source: 'unknown', user_agent: null, latency_ms: '25', ip_address: null, cost: '0.01', created_at: '2026-01-01T00:00:00.000Z', key_prefix: 'sk-test', key_name: 'CI', series: null, model_name: 'Model', upstream_model_id: null, requested_model: null, resolved_model: null, response_model: null, provider_name: null }] });
+      return;
+    }
     json(res, 404, { error: 'not found' });
   });
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
@@ -151,6 +155,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const quotaWarning = await client.keys.getQuotaWarning(7);
   const schedule = await client.keys.getSchedule(7);
   const currentModel = await client.currentModel.get();
+  const usageLogs = await client.usage.logs({ page: 1 });
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -169,6 +174,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(schedule.data.schedule_on_time, null);
   assert.deepEqual(schedule.data.schedule_days, [0, 1, 2, 3, 4, 5, 6]);
   assert.equal(currentModel.data.currentModel, null);
+  assert.equal(usageLogs.data.total, 1);
+  assert.equal(usageLogs.data.logs[0].tokens_used, '12');
 });
 
 test('management errors expose code and permission', async () => {

@@ -128,6 +128,40 @@ class CurrentModelResponse(TypedDict):
     currentModel: Optional[UserCurrentModel]
 
 
+class UserUsageLog(TypedDict, total=False):
+    id: int
+    user_id: int
+    model_id: Optional[str]
+    api_key_id: Optional[int]
+    tokens_used: Optional[Union[int, str]]
+    prompt_tokens: Optional[Union[int, str]]
+    completion_tokens: Optional[Union[int, str]]
+    cached_tokens: Optional[Union[int, str]]
+    provider_id: Optional[str]
+    request_type: Optional[str]
+    request_source: str
+    user_agent: Optional[str]
+    latency_ms: Optional[Union[float, str]]
+    ip_address: Optional[str]
+    cost: Optional[Union[float, str]]
+    created_at: str
+    key_prefix: Optional[str]
+    key_name: Optional[str]
+    series: Optional[str]
+    model_name: Optional[str]
+    upstream_model_id: Optional[str]
+    requested_model: Optional[str]
+    resolved_model: Optional[str]
+    response_model: Optional[str]
+    provider_name: Optional[str]
+
+
+class UserUsageLogsResponse(TypedDict):
+    total: int
+    page: int
+    logs: list[UserUsageLog]
+
+
 class UserKeyTag(TypedDict):
     id: int
     name: str

@@ -40,6 +40,8 @@ export type {
   ApiKeySchedule,
   CurrentModel,
   CurrentModelResponse,
+  UserUsageLog,
+  UserUsageLogsResponse,
   UserKeyTag,
   DailyUsageItem,
   TeamQuotaRule,

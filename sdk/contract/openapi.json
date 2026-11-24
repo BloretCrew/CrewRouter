@@ -679,6 +679,186 @@
         ],
         "additionalProperties": true
       },
+      "UserUsageLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "api_key_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tokens_used": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ]
+          },
+          "prompt_tokens": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ]
+          },
+          "completion_tokens": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ]
+          },
+          "cached_tokens": {
+            "type": [
+              "integer",
+              "string",
+              "null"
+            ]
+          },
+          "provider_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "request_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "request_source": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "latency_ms": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "ip_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cost": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "key_prefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "key_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "upstream_model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requested_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolved_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "response_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "request_source",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "UserUsageLogsResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserUsageLog"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "logs"
+        ],
+        "additionalProperties": true
+      },
       "UserModelListItem": {
         "type": "object",
         "properties": {
@@ -19251,8 +19431,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/UserUsageLogsResponse"
                 }
               }
             }
