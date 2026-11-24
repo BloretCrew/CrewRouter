@@ -93,6 +93,33 @@ async function build() {
   });
   console.log(`[build] 已复制 public/ → dist/public/`);
 
+  // 插件安全/信任边界文档随 release 发布。
+  const pluginSecurityDoc = path.join(ROOT, 'docs/plugin-security.md');
+  if (fs.existsSync(pluginSecurityDoc)) {
+    const docsDest = path.join(DIST, 'docs');
+    fs.mkdirSync(docsDest, { recursive: true });
+    fs.copyFileSync(pluginSecurityDoc, path.join(docsDest, 'plugin-security.md'));
+    console.log('[build] 已复制插件安全文档 → dist/docs/');
+  }
+
+  // 发布者离线签名工具（不携带任何私钥）。
+  const pluginSigner = path.join(ROOT, 'scripts/sign-plugin-package.mjs');
+  if (fs.existsSync(pluginSigner)) {
+    const scriptsDest = path.join(DIST, 'scripts');
+    fs.mkdirSync(scriptsDest, { recursive: true });
+    fs.copyFileSync(pluginSigner, path.join(scriptsDest, 'sign-plugin-package.mjs'));
+    console.log('[build] 已复制插件签名工具 → dist/scripts/');
+  }
+
+  // Step 3.25: 携带内置插件目录，供发布产物启动时扫描 manifest 和静态资源。
+  const pluginsSrc = path.join(ROOT, 'plugins');
+  if (fs.existsSync(pluginsSrc)) {
+    const pluginsDest = path.join(DIST, 'plugins');
+    fs.rmSync(pluginsDest, { recursive: true, force: true });
+    copyDir(pluginsSrc, pluginsDest);
+    console.log(`[build] 已复制 plugins/ → dist/plugins/`);
+  }
+
   // Step 3.5: 复制 i18n 语言目录（服务端磁盘回退用）
   const langSrc = path.join(ROOT, 'lang');
   if (fs.existsSync(langSrc)) {

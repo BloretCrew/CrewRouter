@@ -10,14 +10,17 @@
 
 const fs = require('fs');
 const path = require('path');
+const { randomUUID } = require('node:crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const hooksBus = require('./hooks');
 const host = require('./host');
+const { sanitizeIsolatedHookInput, sanitizeIsolatedHookResult } = require('./isolated-hook-contract');
 
 // 插件目录：开发在项目根 plugins/；构建后在 dist/plugins/ 或上级
 const PLUGINS_DIR = (() => {
   const candidates = [
+    path.join(__dirname, 'plugins'),
     path.join(__dirname, '../../plugins'),
     path.join(__dirname, '../plugins'),
     path.join(process.cwd(), 'plugins'),
@@ -36,6 +39,14 @@ const knownManifests = new Map();
 
 // 插件自定义的定时任务：id -> [{ expr, handler, nextTimeout }]
 const cronJobs = new Map();
+const taskHandlers = new Map();
+const taskQueue = require('../utils/plugin-task-queue').createTaskQueue({
+  pool,
+  isLoaded: id => id === undefined ? loaded.size > 0 : loaded.has(id),
+  getHandlers: id => taskHandlers.get(id),
+  getPluginDir: id => loaded.get(id)?.dir || null,
+  logger: Logger,
+});
 const CRON_CHECK_MS = 60000; // 每分钟对下一触发做一次调度精度校正
 
 let initialized = false;
@@ -88,35 +99,124 @@ async function syncDbRecords() {
   }
 }
 
+function isolatedRouteHandler(plugin, route) {
+  const method = String(route.method || 'get').toLowerCase();
+  const routePath = route.path;
+  const handlerName = route.handler;
+  return async (req, res) => {
+    const input = {
+      method: req.method,
+      path: routePath,
+      body: req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {},
+      query: req.query && typeof req.query === 'object' && !Array.isArray(req.query) ? req.query : {},
+      authRole: req.authUser?.isAdmin === true ? 'admin' : 'user',
+    };
+    const result = await require('./task-sandbox').runPluginEntryInBwrap({
+      pluginId: plugin.id,
+      pluginDir: plugin.dir,
+      entryName: 'route-entry.js',
+      taskName: handlerName,
+      payload: input,
+      meta: { method, path: routePath },
+      taskId: `route:${randomUUID()}`,
+      attempt: 1,
+      timeoutMs: 10000,
+    });
+    if (!result || typeof result !== 'object' || Array.isArray(result) || !result.body || typeof result.body !== 'object' || Array.isArray(result.body)) {
+      throw new Error('isolated route must return {body: JSON object, status?: integer}');
+    }
+    const status = Number.isInteger(result.status) && result.status >= 200 && result.status <= 599 ? result.status : 200;
+    return res.status(status).json(result.body);
+  };
+}
+
 async function loadOne(id, manifest, rowConfig) {
   unloadOne(id);
   const dir = path.join(PLUGINS_DIR, id);
-  const plugin = { id, dir, manifest, config: rowConfig || {} };
-
-  const entryPath = path.join(dir, 'main.js');
-  if (fs.existsSync(entryPath)) {
-    const factory = await host.loadPluginMain(plugin);
-    const perms = new Set(manifest.permissions || []);
-    const logPrefix = `plugin:${id}`;
-    const ctx = host.buildContext(plugin, hooksBus, logPrefix);
-    await factory(ctx); // 初始化：内部调用 ctx.on(...) 注册钩子
-    // provider:registerFormats 钩子：插件可在启动时声明式注册客户端格式/上游适配器/协议转换器
-    if (hooksBus.hasSubscribers('provider:registerFormats')) {
-      await hooksBus.apply('provider:registerFormats', { pluginId: id }, { pluginId: id }).catch(err =>
-        Logger.warn(`[plugins] ${id} provider:registerFormats 钩子异常: ${err.message}`)
-      );
-    }
-    Logger.info(`[plugins] 已加载插件 ${id}${perms.has('gateway:modify') ? '（网关钩子）' : ''}`);
-  }
-
+  const isolatedTasks = manifest.executionMode === 'isolated-task';
+  const isolatedHooks = manifest.executionMode === 'isolated-hooks';
+  const isolatedRoutes = manifest.executionMode === 'isolated-routes';
+  const plugin = { id, dir, manifest, config: rowConfig || {}, taskHandlers: new Map(), cronHandlers: Object.create(null), isolatedTasks, isolatedHooks, isolatedRoutes };
   loaded.set(id, plugin);
-  // 定时任务：基于清单 cron 重建（仅 cron:register 权限）
-  rebuildCron(id, manifest);
+  taskHandlers.set(id, plugin.taskHandlers);
+
+  try {
+    if (plugin.isolatedTasks || plugin.isolatedHooks || plugin.isolatedRoutes) {
+      const taskSandbox = require('./task-sandbox');
+      taskSandbox.assertModeSupported(manifest);
+      const entry = plugin.isolatedTasks ? 'task-entry.js' : (plugin.isolatedHooks ? 'hook-entry.js' : 'route-entry.js');
+      const entryPath = path.join(dir, entry);
+      if (!fs.existsSync(entryPath) || !fs.lstatSync(entryPath).isFile() || fs.lstatSync(entryPath).isSymbolicLink()) throw new Error(`隔离插件必须提供普通文件 ${entry}`);
+    }
+    if (plugin.isolatedTasks) {
+      for (const name of manifest.taskHandlers || []) {
+        if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name))) throw new Error(`隔离任务名无效: ${name}`);
+        plugin.taskHandlers.set(name, { isolated: true });
+      }
+      for (const job of manifest.cron || []) {
+        plugin.cronHandlers[job.handler] = () => {
+          const minute = Math.floor(Date.now() / 60000);
+          return taskQueue.enqueue(id, job.handler, {}, { idempotencyKey: `cron:${job.handler}:${minute}` });
+        };
+      }
+    } else if (plugin.isolatedRoutes) {
+      for (const route of manifest.routes) exposeHandler(id, route.method || 'get', route.path, isolatedRouteHandler(plugin, route));
+    } else if (manifest.executionMode === 'isolated-hooks') {
+      const hookPermissions = require('./task-sandbox').ISOLATED_HOOK_PERMISSIONS;
+      for (const [hookName, handlerName] of Object.entries(manifest.hooks)) {
+        if (!hookPermissions[hookName]) throw new Error(`isolated-hooks 不支持 hook ${hookName}`);
+        const handler = async (payload, meta) => {
+          const serialized = sanitizeIsolatedHookInput(id, hookName, payload, meta);
+          const result = await require('./task-sandbox').runPluginEntryInBwrap({
+            pluginId: id, pluginDir: dir, entryName: 'hook-entry.js', taskName: handlerName,
+            payload: serialized.payload, meta: serialized.meta, taskId: `hook:${randomUUID()}`, attempt: 1,
+            timeoutMs: host.HOOK_TIMEOUT_MS,
+          });
+          return sanitizeIsolatedHookResult(id, hookName, result, payload);
+        };
+        hooksBus.subscribe(id, hookName, handler);
+      }
+    } else {
+      const entryPath = path.join(dir, 'main.js');
+      if (fs.existsSync(entryPath)) {
+        const factory = await host.loadPluginMain(plugin);
+        const perms = new Set(manifest.permissions || []);
+        const logPrefix = `plugin:${id}`;
+        const ctx = host.buildContext(plugin, hooksBus, logPrefix);
+        await factory(ctx);
+        if (!loaded.has(id) || loaded.get(id) !== plugin) throw new Error('插件在初始化过程中被停用或重载');
+        if (hooksBus.hasSubscribers('provider:registerFormats')) {
+          await hooksBus.apply('provider:registerFormats', { pluginId: id }, { pluginId: id }).catch(err =>
+            Logger.warn(`[plugins] ${id} provider:registerFormats 钩子异常: ${err.message}`)
+          );
+        }
+        Logger.info(`[plugins] 已加载插件 ${id}${perms.has('gateway:modify') ? '（网关钩子）' : ''}`);
+      }
+    }
+
+    rebuildCron(id, manifest);
+    if (manifest.permissions?.includes('events:subscribe')) {
+      require('./events').publish('plugin.lifecycle.v1', { pluginId: id, action: 'loaded', version: manifest.version || '' });
+    }
+  } catch (error) {
+    unloadOne(id);
+    throw error;
+  }
 }
 
 function unloadOne(id) {
+  const previous = loaded.get(id);
+  taskQueue.cancelPlugin(id).catch(err => Logger.warn(`[plugins] 取消 ${id} 任务失败: ${err.message}`));
+  if (previous?.manifest?.permissions?.includes('events:subscribe')) {
+    require('./events').publish('plugin.lifecycle.v1', { pluginId: id, action: 'unloaded', version: previous.manifest.version || '' });
+  }
+  require('./events').unsubscribePluginEvents(id);
   hooksBus.unsubscribePlugin(id);
   clearPluginCron(id);
+  taskHandlers.delete(id);
+  for (const key of exposedHandlers.keys()) {
+    if (key.startsWith(`${id} `)) exposedHandlers.delete(key);
+  }
   loaded.delete(id);
 }
 
@@ -273,6 +373,7 @@ async function init() {
   Object.entries(manifests).forEach(([id, m]) => knownManifests.set(id, m));
 
   await syncDbRecords();
+  await taskQueue.ensureSchema();
 
   // 加载所有已启用插件
   try {
@@ -397,6 +498,9 @@ async function listAll() {
     lastError: row.last_error || null,
     onDisk: knownManifests.has(row.id),
     loaded: loaded.has(row.id),
+    executionMode: knownManifests.get(row.id)?.executionMode || 'trusted-in-process',
+    mainEntry: fs.existsSync(path.join(PLUGINS_DIR, row.id, 'main.js')),
+    taskHandlers: knownManifests.get(row.id)?.taskHandlers || [],
     pages: (knownManifests.get(row.id)?.pages || []),
     slots: (knownManifests.get(row.id)?.slots || []),
     routes: (knownManifests.get(row.id)?.routes || []),
@@ -432,8 +536,8 @@ function getRuntimeManifest() {
       id,
       name: p.manifest.name,
       version: p.manifest.version || '',
-      pages: (p.manifest.pages || []),
-      slots: (p.manifest.slots || []),
+      pages: perms.includes('pages:register') ? (p.manifest.pages || []) : [],
+      slots: perms.includes('slots:register') ? (p.manifest.slots || []) : [],
       themes,
       assetsBase: `/plugins/${id}`,
     });
@@ -482,5 +586,29 @@ module.exports = {
   clearPluginCron,
   isLoaded: id => loaded.has(id),
   getLoadedManifest: id => loaded.get(id)?.manifest || null,
+  getKnownManifest: id => knownManifests.get(id) || null,
+  registerTaskHandler(pluginId, name, handler) {
+    if (!loaded.has(pluginId)) throw new Error('插件必须在初始化完成后注册任务');
+    if (loaded.get(pluginId).isolatedTasks) throw new Error('isolated-task handler 必须由 manifest taskHandlers 声明，不能注册宿主函数');
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name || '')) || typeof handler !== 'function') throw new Error('插件任务处理器无效');
+    taskHandlers.get(pluginId).set(name, handler);
+  },
+  registerIsolatedTaskHandler(pluginId, name) {
+    const plugin = loaded.get(pluginId);
+    if (!plugin?.isolatedTasks) throw new Error('插件未启用 isolated-task 模式');
+    if (!(plugin.manifest.taskHandlers || []).includes(name)) throw new Error('隔离任务名未在 manifest 批准');
+    taskHandlers.get(pluginId).set(name, { isolated: true });
+  },
   listLoadedIds: () => [...loaded.keys()],
+  enqueueTask: (...args) => taskQueue.enqueue(...args),
+  getTask: (...args) => taskQueue.get(...args),
+  getTaskHandlers: id => taskHandlers.get(id),
+  getTaskQueueStats: async id => {
+    const result = await pool.query(`SELECT status, COUNT(*)::int AS count FROM plugin_tasks WHERE plugin_id=$1 GROUP BY status`, [id]);
+    const total = await pool.query('SELECT count(*)::int AS count FROM plugin_tasks WHERE plugin_id=$1', [id]);
+    return { stats: Object.fromEntries(result.rows.map(row => [row.status, row.count])), total: total.rows[0]?.count || 0 };
+  },
+  cancelTask: (...args) => taskQueue.cancel(...args),
+  startTaskWorker: () => taskQueue.start(),
+  stopTaskWorker: () => taskQueue.stop(),
 };

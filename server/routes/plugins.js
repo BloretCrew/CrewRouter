@@ -55,7 +55,8 @@ function createPluginsRoutes() {
       if (!pluginId) return res.status(400).json({ error: '缺少插件 id' });
       if (!storeClient.isAllowedSource(source)) return res.status(400).json({ error: '插件商店源不受信任' });
       const plugin = await storeClient.fetchPackageInfo(source, pluginId);
-      res.json({ ok: true, plugin });
+      const inspected = await storeClient.inspectStorePackage(plugin, String(req.query.plugin || '').trim());
+      res.json({ ok: true, plugin: { ...plugin, hasBackendCode: inspected.hasBackendCode, permissions: inspected.manifest.permissions || [], signatureTrustConfigured: storeClient.hasTrustedPluginSigningKeys() } });
     } catch (err) {
       Logger.error('[plugins-api] store-package 失败', err.message);
       res.status(err.status || 500).json({ error: err.message });
@@ -71,6 +72,13 @@ function createPluginsRoutes() {
       const source = String((req.body && req.body.source) || '').trim();
       if (!pluginId) return res.status(400).json({ error: '缺少插件 id' });
       if (!storeClient.isAllowedSource(source)) return res.status(400).json({ error: '插件商店源不受信任' });
+      const confirmedSha256 = String(req.body?.confirmedSha256 || '').toLowerCase();
+      const confirmedPermissions = req.body?.confirmedPermissions;
+      const confirmedVersion = String(req.body?.confirmedVersion || '');
+      const confirmedExecutionMode = String(req.body?.confirmedExecutionMode || '');
+      if (!/^[a-f0-9]{64}$/.test(confirmedSha256) || !Array.isArray(confirmedPermissions) || !confirmedVersion || !confirmedExecutionMode) {
+        return res.status(400).json({ error: '缺少明确的插件包哈希与权限确认，请刷新安装确认页。' });
+      }
 
       // 服务端向商店拉取包信息（不信任客户端提供的 download/sha256）
       const info = await storeClient.fetchPackageInfo(source, pluginId);
@@ -89,9 +97,39 @@ function createPluginsRoutes() {
         const { validateManifest } = require('../plugins/host');
         const verr = validateManifest(manifest);
         if (verr) return res.status(400).json({ error: '插件清单校验失败: ' + verr });
+        if (manifest.id !== pluginId) return res.status(400).json({ error: '商店包插件 ID 与请求 ID 不一致' });
+        const actualPermissions = [...new Set(manifest.permissions || [])].sort();
+        const payloadDir = zipPayloadDir(extractDir, manifest.id);
+        if (!payloadDir) return res.status(400).json({ error: '插件包目录结构不合法' });
+        const hasBackendCode = fs.existsSync(path.join(payloadDir, 'main.js'));
+        const executionMode = manifest.executionMode || 'trusted-in-process';
+        if (!['trusted-in-process', 'isolated-task', 'isolated-hooks', 'isolated-routes'].includes(executionMode) || executionMode !== confirmedExecutionMode) {
+          return res.status(409).json({ error: '插件执行模式已变化，请重新检查并确认。' });
+        }
+        const requiresBackendTrust = executionMode === 'trusted-in-process' && (hasBackendCode || actualPermissions.some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission)));
+        if (requiresBackendTrust && req.body?.trustInProcess !== true) {
+          return res.status(400).json({ error: '安装确认缺少后端进程信任确认，请返回确认页重新勾选。' });
+        }
+        if (JSON.stringify(actualPermissions) !== JSON.stringify([...new Set(confirmedPermissions.map(String))].sort())) {
+          return res.status(409).json({ error: '插件权限已变化，请重新查看并确认权限后安装。' });
+        }
+        if (String(info.sha256 || '').toLowerCase() !== confirmedSha256 || String(info.version || '') !== confirmedVersion || String(manifest.version || '') !== confirmedVersion) {
+          return res.status(409).json({ error: '商店包版本或哈希已变化，请重新查看安装信息后再确认。' });
+        }
+        try {
+          storeClient.verifyPluginSignature({
+            id: manifest.id,
+            version: manifest.version,
+            sha256: info.sha256,
+            permissions: manifest.permissions || [],
+            signature: info.signature,
+            keyId: info.signatureKeyId,
+            algorithm: info.signatureAlgorithm || 'Ed25519',
+          });
+        } catch (signatureError) {
+          return res.status(400).json({ error: signatureError.message });
+        }
         const id = manifest.id;
-        const payloadDir = zipPayloadDir(extractDir, id);
-        if (!payloadDir) return res.status(400).json({ error: '插件包根结构不合法' });
         const dest = path.join(pluginsDir, id);
         // 防路径穿越：逐文件校验目标路径
         const entries = collectDirEntries(payloadDir);
@@ -125,7 +163,7 @@ function createPluginsRoutes() {
            VALUES ($1,$2,$3,$4,$5,$6::jsonb,true,$7,$8,$9,$10)
            ON CONFLICT (id) DO UPDATE SET
              name=EXCLUDED.name, version=EXCLUDED.version, description=EXCLUDED.description,
-             author=EXCLUDED.author, permissions=EXCLUDED.permissions, enabled=true,
+             author=EXCLUDED.author, permissions=EXCLUDED.permissions, enabled=plugins.enabled,
              store_id=EXCLUDED.store_id, store_source=EXCLUDED.store_source,
              store_download=EXCLUDED.store_download, store_sha256=EXCLUDED.store_sha256,
              store_latest_version=NULL, store_update_available=false, store_latest=NULL,
@@ -258,7 +296,12 @@ function createPluginsRoutes() {
       const r = await pool.query('SELECT enabled FROM plugins WHERE id = $1', [id]);
       if (!r.rows.length) return res.status(404).json({ error: '插件不存在' });
       const next = !r.rows[0].enabled;
-      if (next) await registry().enable(id);
+      if (next) {
+        const manifest = registry().getKnownManifest(id);
+        const requiresTrust = manifest?.executionMode === 'trusted-in-process' && (fs.existsSync(path.join(registry().PLUGINS_DIR, id, 'main.js')) || (manifest?.permissions || []).some(permission => ['gateway:modify','billing:modify','apikey:modify','provider:register','network','tasks:register'].includes(permission)));
+        if (requiresTrust && req.body?.trustInProcess !== true) return res.status(400).json({ error: '启用后端插件需要显式确认进程内信任风险。' });
+        await registry().enable(id);
+      }
       else await registry().disable(id);
       await logPluginAdminAction(req, 'plugin.toggle', id,
         `${next ? '启用' : '禁用'}插件「${id}」`, { enabled: next });
@@ -309,6 +352,16 @@ function createPluginsRoutes() {
   });
 
   // 插件私有 KV（plugin_data）管理：列表与删除
+  adminRouter.get('/:id/tasks', async (req, res) => {
+    try {
+      const stats = await registry().getTaskQueueStats(req.params.id);
+      res.json(stats);
+    } catch (err) {
+      Logger.error(`[plugins-api] 插件任务统计读取失败: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   adminRouter.get('/:id/data', async (req, res) => {
     try {
       const { id } = req.params;
@@ -426,6 +479,9 @@ function createPluginsRoutes() {
 
       // 路由鉴权：默认 user；admin 要求管理员；none 公开
       const routeAuth = findRouteAuth(reg, req.params.pluginId, req.method, rest);
+      if (!['user', 'admin', 'none'].includes(routeAuth)) {
+        return res.status(403).json({ error: '插件路由鉴权配置无效' });
+      }
       if (routeAuth === 'none') return await handler(req, res);
       const authorize = routeAuth === 'admin' ? requireAdmin : requireAuth;
       return await authorize(req, res, () => handler(req, res));
@@ -445,13 +501,13 @@ function createPluginsRoutes() {
 // 从已加载插件的清单中查路由的 auth 声明
 function findRouteAuth(registry, pluginId, method, reqPath) {
   const manifest = registry.getLoadedManifest(pluginId);
-  if (!manifest || !Array.isArray(manifest.routes)) return 'user';
+  if (!manifest || !Array.isArray(manifest.routes)) return null;
   const clean = ('/' + String(reqPath).replace(/^\/+/g, '')).replace(/\/+$/, '') || '/';
   const route = manifest.routes.find(r =>
     String(r.method || 'get').toUpperCase() === method.toUpperCase() &&
     (('/' + String(r.path || '').replace(/^\/+/g, '')).replace(/\/+$/, '') || '/') === clean
   );
-  return route?.auth || 'user';
+  return route ? (route.auth || 'user') : null;
 }
 
 module.exports = { createPluginsRoutes };

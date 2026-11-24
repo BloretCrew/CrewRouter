@@ -11,7 +11,7 @@
  *  - storage        允许读写 plugin_data KV 存储
  *  - network        允许通过 ctx.fetch 访问外部地址（过 SSRF 校验）
  *  - gateway:modify 允许注册网关钩子（beforeUpstream / upstreamResponse 等）
- *  - pages:register 清单中声明的页面/插槽才会暴露给前端
+ *  - pages:register / slots:register 分别控制清单中声明的页面和插槽
  *  - routes:register 允许挂载自有 HTTP API
  *  - provider:register 允许注册新的客户端格式/上游适配器/协议转换器（provider:registerFormats）
  *  - apikey:modify    允许注册 apikey:validate / apikey:created 钩子
@@ -39,6 +39,7 @@ const GATEWAY_HOOKS = new Set([
 
 // 各钩子所需权限
 const HOOK_PERMISSIONS = {
+  ...Object.fromEntries([...GATEWAY_HOOKS].map(name => [name, 'gateway:modify'])),
   'apikey:validate': 'apikey:modify',
   'apikey:created': 'apikey:modify',
   'billing:calculate': 'billing:modify',
@@ -59,7 +60,7 @@ const KNOWN_PERMISSIONS = new Set([
   'cron:register', 'themes:register',
   // 三期新增能力（数据只读/受控出口）
   'usage:read', 'models:read', 'preferences:read', 'audit:write',
-  'export:usage', 'meta:read', 'webhook:register', 'admin:view',
+  'export:usage', 'meta:read', 'webhook:register', 'admin:view', 'tasks:register', 'events:subscribe',
 ]);
 
 /**
@@ -90,6 +91,14 @@ function validateManifest(manifest) {
     if (!Array.isArray(manifest.allowedHosts)) return 'allowedHosts 必须是数组';
     for (const h of manifest.allowedHosts) {
       if (typeof h !== 'string' || !/^[a-z0-9.-]+$/i.test(h)) return 'allowedHosts[] 必须是合法域名';
+    }
+  }
+  if (manifest.executionMode !== undefined && !['trusted-in-process', 'isolated-task', 'isolated-hooks', 'isolated-routes'].includes(manifest.executionMode)) return 'executionMode 无效';
+  if (manifest.executionMode === 'isolated-task') {
+    const { assertModeSupported } = require('./task-sandbox');
+    try { assertModeSupported(manifest); } catch (error) { return error.message; }
+    if (!Array.isArray(manifest.taskHandlers) || !manifest.taskHandlers.length || manifest.taskHandlers.some(name => !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(String(name)))) {
+      return 'isolated-task 需要有效的 taskHandlers 名称数组';
     }
   }
   if (manifest.pages && !Array.isArray(manifest.pages)) return 'pages 必须是数组';
@@ -158,6 +167,25 @@ function buildFetch(pluginId) {
 function buildContext(plugin, hooksBus, logPrefix) {
   const { id, manifest, config } = plugin;
   const perms = new Set(manifest.permissions || []);
+  const isolatedTasks = manifest.executionMode === 'isolated-task';
+  if (isolatedTasks) {
+    return {
+      pluginId: id,
+      version: manifest.version || '',
+      config: Object.freeze(JSON.parse(JSON.stringify(config || {}))),
+      log: {
+        info: (...args) => Logger.info(`[${logPrefix}]`, ...args),
+        warn: (...args) => Logger.warn(`[${logPrefix}]`, ...args),
+        error: (...args) => Logger.error(`[${logPrefix}]`, ...args),
+      },
+      tasks: {
+        register(name) { require('./registry').registerIsolatedTaskHandler(id, name); },
+        enqueue(name, payload, options) { return require('./registry').enqueueTask(id, name, payload, options); },
+        get(taskId) { return require('./registry').getTask(id, taskId); },
+        cancel(taskId) { return require('./registry').cancelTask(id, taskId); },
+      },
+    };
+  }
   const ctx = {
     pluginId: id,
     version: manifest.version || '',
@@ -170,11 +198,9 @@ function buildContext(plugin, hooksBus, logPrefix) {
     },
     // 钩子注册：按权限收口
     on(hookName, handler, priority) {
-      if (GATEWAY_HOOKS.has(hookName) && !perms.has('gateway:modify')) {
-        throw new Error(`[plugins:${id}] 注册 ${hookName} 需要 gateway:modify 权限`);
-      }
       const need = HOOK_PERMISSIONS[hookName];
-      if (need && !perms.has(need)) {
+      if (!need) throw new Error(`[plugins:${id}] 未知或不允许的钩子: ${String(hookName)}`);
+      if (!perms.has(need)) {
         throw new Error(`[plugins:${id}] 注册 ${hookName} 需要 ${need} 权限`);
       }
       hooksBus.subscribe(id, hookName, handler, priority);
@@ -223,11 +249,18 @@ function buildContext(plugin, hooksBus, logPrefix) {
   // —— 三期开放能力（只读/受控）——
   const dataRead = require('../utils/plugin-data-read');
 
-  // usage:read — 用量/成本聚合（不含正文）
+  // usage:read requires a verified request principal; plugin-supplied IDs are never authorization inputs.
   if (perms.has('usage:read')) {
+    const scopedUsage = async (req, opts = {}, groupBy) => {
+      const userId = Number(req?.authUser?.id);
+      if (!Number.isSafeInteger(userId) || userId <= 0) {
+        throw new Error(`[plugins:${id}] 用量查询需要已认证的用户请求上下文`);
+      }
+      return dataRead.usageSummary({ ...opts, userId, apiKeyId: null, groupBy: groupBy || opts.groupBy });
+    };
     ctx.usage = {
-      summary: (opts = {}) => dataRead.usageSummary(opts),
-      models: (opts = {}) => dataRead.usageSummary({ ...opts, groupBy: 'model_id' }),
+      summary: (req, opts = {}) => scopedUsage(req, opts),
+      models: (req, opts = {}) => scopedUsage(req, opts, 'model_id'),
     };
   }
 
@@ -282,11 +315,15 @@ function buildContext(plugin, hooksBus, logPrefix) {
     };
   }
 
-  // export:usage — 用量安全子集导出
+  // export:usage requires a verified request principal; plugin-supplied IDs never widen scope.
   if (perms.has('export:usage')) {
     ctx.exportUsage = {
-      json: async (opts = {}) => {
-        const out = await dataRead.usageSummary(opts);
+      json: async (req, opts = {}) => {
+        const userId = Number(req?.authUser?.id);
+        if (!Number.isSafeInteger(userId) || userId <= 0) {
+          throw new Error(`[plugins:${id}] 用量导出需要已认证的用户请求上下文`);
+        }
+        const out = await dataRead.usageSummary({ ...opts, userId, apiKeyId: null });
         return { exportedAt: new Date().toISOString(), ...out };
       },
     };
@@ -379,6 +416,25 @@ function buildContext(plugin, hooksBus, logPrefix) {
     if (typeof handler !== 'function') throw new Error(`[plugins:${id}] scheduleCron 需要回调函数`);
     registry.schedulePluginCron(id, expr, handler);
   };
+
+  if (perms.has('events:subscribe')) {
+    const { subscribePluginEvents } = require('./events');
+    ctx.events = {
+      on(eventName, handler) {
+        if (typeof handler !== 'function') throw new Error(`[plugins:${id}] 事件处理器必须是函数`);
+        subscribePluginEvents(id, eventName, handler, [...perms]);
+      },
+    };
+  }
+
+  if (perms.has('tasks:register')) {
+    ctx.tasks = {
+      register(name, handler) { registry.registerTaskHandler(id, name, handler); },
+      enqueue(name, payload, options) { return registry.enqueueTask(id, name, payload, options); },
+      get(taskId) { return registry.getTask(id, taskId); },
+      cancel(taskId) { return registry.cancelTask(id, taskId); },
+    };
+  }
 
   return ctx;
 }

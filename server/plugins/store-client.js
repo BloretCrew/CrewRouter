@@ -10,10 +10,15 @@ const fs = require('fs');
 const Logger = require('../logger');
 const { validateUrl } = require('../utils/url-validator');
 const proxyPool = require('../proxy-pool');
+const { extractZipSafe, findZipManifest, zipPayloadDir } = require('./zip');
 
 const DEFAULT_STORE = 'https://crewrouter.bloret.net';
 const MAX_PACKAGE_INFO_BYTES = 1024 * 1024;
 const MAX_PLUGIN_PACKAGE_BYTES = 30 * 1024 * 1024;
+const PACKAGE_INSPECTION_TTL_MS = 5 * 60 * 1000;
+const MAX_PACKAGE_INSPECTIONS = 128;
+const packageInspectionCache = new Map();
+const packageInspectionInflight = new Map();
 
 function getConfig() {
   try { return require('../config-loader'); } catch { return {}; }
@@ -104,6 +109,67 @@ async function fetchPackageInfo(storeBase, pluginId) {
 }
 
 /** 下载插件 zip 到本地文件；若提供 sha256 则校验；限制大小与超时 */
+function trustedPluginSigningKeys() {
+  const configured = getConfig().store?.pluginSigningKeys;
+  if (!configured || typeof configured !== 'object' || Array.isArray(configured)) return {};
+  return configured;
+}
+
+function hasTrustedPluginSigningKeys() {
+  return Object.keys(trustedPluginSigningKeys()).length > 0;
+}
+
+function canonicalPluginSignatureMessage({ id, version, sha256, permissions }) {
+  const digest = String(sha256 || '').toLowerCase();
+  const normalizedPermissions = [...new Set(Array.isArray(permissions) ? permissions.map(String) : [])].sort();
+  return `crewrouter-plugin-v1\n${id}\n${version}\n${digest}\n${JSON.stringify(normalizedPermissions)}`;
+}
+
+function verifyPluginSignature({ id, version, sha256, permissions, signature, keyId, algorithm = 'Ed25519' }) {
+  const keys = trustedPluginSigningKeys();
+  const keyIds = Object.keys(keys);
+  if (!keyIds.length) return { verified: false, mode: 'administrator-trust' };
+  if (!keyId || !signature || !keys[keyId]) throw new Error('插件签名缺失或签名密钥不受信任');
+  if (algorithm !== 'Ed25519') throw new Error('插件签名算法不受支持');
+  const digest = String(sha256 || '').toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(digest)) throw new Error('插件签名摘要格式无效');
+  const message = canonicalPluginSignatureMessage({ id, version, sha256: digest, permissions });
+  const valid = crypto.verify(null, Buffer.from(message), keys[keyId], Buffer.from(signature, 'base64'));
+  if (!valid) throw new Error('插件发布者 Ed25519 签名校验失败');
+  return { verified: true, keyId };
+}
+
+async function inspectStorePackage(info, expectedPluginId) {
+  if (!info?.download || !/^[a-f0-9]{64}$/i.test(String(info.sha256 || ''))) throw new Error('商店包缺少有效 SHA-256');
+  const digest = String(info.sha256).toLowerCase();
+  const key = `${expectedPluginId}:${String(info.version || '')}:${digest}`;
+  const cached = packageInspectionCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.result;
+  if (packageInspectionInflight.has(key)) return packageInspectionInflight.get(key);
+  const task = (async () => {
+    const tmpDir = fs.mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'cr-plugin-inspect-'));
+    const zipPath = require('node:path').join(tmpDir, 'plugin.zip');
+    try {
+      await downloadPackage(info.download, zipPath, digest);
+      const extracted = require('node:path').join(tmpDir, 'extract');
+      await extractZipSafe(zipPath, extracted);
+      const manifest = findZipManifest(extracted);
+      if (!manifest || manifest.id !== expectedPluginId || String(manifest.version || '') !== String(info.version || '')) throw new Error('商店包 plugin ID/version 无效');
+      const payloadDir = zipPayloadDir(extracted, expectedPluginId);
+      if (!payloadDir) throw new Error('商店包目录结构无效');
+      const result = { manifest, hasBackendCode: fs.existsSync(require('node:path').join(payloadDir, 'main.js')) };
+      packageInspectionCache.set(key, { result, expiresAt: Date.now() + PACKAGE_INSPECTION_TTL_MS });
+      while (packageInspectionCache.size > MAX_PACKAGE_INSPECTIONS) packageInspectionCache.delete(packageInspectionCache.keys().next().value);
+      return result;
+    } finally {
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+    }
+  })();
+  packageInspectionInflight.set(key, task);
+  try { return await task; }
+  finally { if (packageInspectionInflight.get(key) === task) packageInspectionInflight.delete(key); }
+}
+
 async function downloadPackage(url, destPath, expectedSha256) {
   const check = await validateUrl(String(url), { allowPrivate: false });
   if (!check.ok) throw new Error(`插件下载 URL 校验失败: ${check.error}`);
@@ -139,11 +205,10 @@ async function downloadPackage(url, destPath, expectedSha256) {
     }
     await new Promise((resolve, reject) => out.end((e) => (e ? reject(e) : resolve())));
     out = null;
-    if (expectedSha256) {
-      const got = hash.digest('hex');
-      if (got.toLowerCase() !== String(expectedSha256).toLowerCase()) {
-        throw new Error('插件包 SHA256 校验失败');
-      }
+    if (!/^[a-f0-9]{64}$/i.test(String(expectedSha256 || ''))) throw new Error('商店插件包缺少有效 SHA256，拒绝安装');
+    const got = hash.digest('hex');
+    if (got.toLowerCase() !== String(expectedSha256).toLowerCase()) {
+      throw new Error('插件包 SHA256 校验失败');
     }
   } catch (e) {
     await res?.body?.cancel().catch(() => {});
@@ -156,4 +221,4 @@ async function downloadPackage(url, destPath, expectedSha256) {
   }
 }
 
-module.exports = { DEFAULT_STORE, allowedSources, isAllowedSource, fetchPackageInfo, downloadPackage };
+module.exports = { DEFAULT_STORE, allowedSources, isAllowedSource, fetchPackageInfo, downloadPackage, inspectStorePackage, canonicalPluginSignatureMessage, verifyPluginSignature, trustedPluginSigningKeys, hasTrustedPluginSigningKeys };

@@ -507,6 +507,7 @@
       pl.enabled ? '<span class="chip on">● 已启用</span>' : '<span class="chip off">○ 已禁用</span>',
       pl.onDisk ? '' : '<span class="chip warn">磁盘缺失</span>',
       pl.loaded ? '<span class="chip on">运行中</span>' : '',
+      pl.executionMode === 'isolated-task' ? '<span class="chip on">Linux 隔离任务</span>' : (pl.executionMode === 'isolated-hooks' ? '<span class="chip on">Linux 隔离 Hooks</span>' : (pl.executionMode === 'isolated-routes' ? '<span class="chip on">Linux 隔离 Routes</span>' : (pl.mainEntry ? '<span class="chip warn">受信任进程内</span>' : '<span class="chip off">纯前端</span>')),
       pl.errorCount > 0 || pl.lastError ? `<span class="chip warn">错误 ${esc(String(pl.errorCount))}</span>` : '',
       pl.storeUpdateAvailable ? `<span class="chip warn">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
     ].join('');
@@ -516,6 +517,7 @@
     if (pl.slots?.length) caps.push(`<span class="chip cap">${esc(String(pl.slots.length))} 插槽</span>`);
     if (pl.routes?.length) caps.push(`<span class="chip cap">${esc(String(pl.routes.length))} API</span>`);
     if (pl.cron?.length) caps.push(`<span class="chip cap">${esc(String(pl.cron.length))} 定时任务</span>`);
+    if ((pl.permissions || []).includes('tasks:register')) caps.push('<span class="chip cap">持久化任务</span>');
     if (pl.themes?.length) caps.push(`<span class="chip cap">${esc(String(pl.themes.length))} 主题</span>`);
     const capsHtml = caps.join('') || '<span class="chip off">无能力注册</span>';
 
@@ -567,6 +569,7 @@
           <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
           <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
         </div>
+        ${(pl.permissions || []).includes('tasks:register') ? `<div class="msec">持久化任务状态</div><div data-plugin-tasks="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">展开后加载任务统计</p></div>` : ''}
         <div class="msec">${esc(t('插件数据'))}(plugin_data)</div>
         <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
         ${pl.lastError ? `<div class="msec">${esc(t('最近错误'))}</div><div style="font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}</div>
@@ -655,7 +658,21 @@
         window.alert(t('更新失败') + '：' + e.message);
       }
     },
-    expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) this.loadData(id); },
+    expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) { this.loadData(id); this.loadTasks(id); } },
+    async loadTasks(id) {
+      const box = document.querySelector(`[data-plugin-tasks="${id}"]`);
+      if (!box) return;
+      try {
+        const data = await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/tasks`);
+        const stats = data.stats || {};
+        box.innerHTML = `<span class="chip cap">总计: ${esc(String(data.total || 0))}</span> ` + (Object.keys(stats).length
+          ? Object.entries(stats).map(([status, count]) => `<span class="chip cap">${esc(status)}: ${esc(String(count))}</span>`).join(' ')
+          : '<span class="chip off">暂无任务</span>');
+      } catch (error) {
+        box.innerHTML = `<span style="font-size:12px;color:var(--destructive);">${esc(error.message)}</span>`;
+      }
+    },
+
     async loadData(id) {
       const box = document.querySelector(`[data-plugin-data="${id}"]`);
       if (!box) return;
@@ -688,8 +705,19 @@
       } catch (e) { alert(e.message); }
     },
     async toggle(id, enabled) {
+      const plugin = manageState.plugins.find(item => item.id === id);
+      const highRisk = plugin && plugin.executionMode !== 'isolated-task'
+        && ((plugin.permissions || []).some(permission => ['gateway:modify', 'billing:modify', 'apikey:modify', 'provider:register', 'network', 'tasks:register'].includes(permission)) || (plugin.onDisk && plugin.mainEntry));
+      let trustInProcess = false;
+      if (enabled && highRisk) {
+        trustInProcess = confirm('该后端插件将在 CrewRouter 服务进程内执行；Node VM/权限声明不构成恶意代码隔离。请先审查源码。确认信任并启用？');
+        if (!trustInProcess) { this.refresh(); return; }
+      }
       try {
-        await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/toggle`, { method: 'POST' });
+        await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/toggle`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trustInProcess }),
+        });
         this.refresh();
       } catch (e) { alert(e.message); this.refresh(); }
     },
@@ -700,7 +728,7 @@
       } catch (e) { msg(id, e.message, false); }
     },
     async uninstall(id) {
-      if (!confirm(t('确定卸载该插件的记录？（需先禁用；插件目录不会被删除）'))) return;
+      if (!confirm(t('确定卸载该插件？需先禁用；插件目录和插件私有数据将被删除。'))) return;
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' });
         this.refresh();

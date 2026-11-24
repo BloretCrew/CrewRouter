@@ -143,8 +143,17 @@ function recordModelCall(modelId, ok) {
   const slot = utcSlotString();
   const s = ok ? 1 : 0;
   const f = ok ? 0 : 1;
+  const publishHealthTransition = () => {
+    try {
+      require('../plugins/events').publish('model.health.changed.v1', {
+        modelId, health: ok ? 'healthy' : 'degraded', statusCode: ok ? 200 : 0, observedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      Logger.warn(`[ModelUptime] 插件事件发布失败: ${err.message}`);
+    }
+  };
 
-  pool.query(
+  const dailyWrite = pool.query(
     `INSERT INTO model_uptime_daily (model_id, day, success, fail)
      VALUES ($1, $2::date, $3, $4)
      ON CONFLICT (model_id, day) DO UPDATE SET
@@ -153,9 +162,10 @@ function recordModelCall(modelId, ok) {
     [modelId, day, s, f]
   ).catch(err => {
     Logger.warn(`[ModelUptime] 日记录失败 model=${modelId} ok=${ok}: ${err.message}`);
+    return false;
   });
 
-  pool.query(
+  const slotWrite = pool.query(
     `INSERT INTO model_uptime_hourly (model_id, hour, success, fail)
      VALUES ($1, $2::timestamptz, $3, $4)
      ON CONFLICT (model_id, hour) DO UPDATE SET
@@ -164,7 +174,12 @@ function recordModelCall(modelId, ok) {
     [modelId, slot, s, f]
   ).catch(err => {
     Logger.warn(`[ModelUptime] 15 分钟槽记录失败 model=${modelId} ok=${ok}: ${err.message}`);
+    return false;
   });
+  Promise.all([dailyWrite, slotWrite]).then(results => {
+    if (results.some(result => result === false)) return;
+    publishHealthTransition();
+  }).catch(err => Logger.warn(`[ModelUptime] 健康事件调度失败: ${err.message}`));
 }
 
 function useSlotGranularity(days) {
