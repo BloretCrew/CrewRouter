@@ -39,7 +39,13 @@ test('user model library renders teams, provider summaries, stars and searchable
   const query = calls.filter(call => call.path === '/api/user/model-library/search').at(-1).options.query;
   assert.equal(query.provider, 'p1');
   assert.equal(query.sort, 'test_tps_desc');
-  const modelRow = expanded.sections.find(section => section.title.includes('模型目录')).rows[0];
+  const modelSection = expanded.sections.find(section => section.title.includes('模型目录'));
+  assert.deepEqual(modelSection.columns.map(column => column.label), ['模型名称', '模型 ID', '供应商', '系列', '输入价格', '输出价格', '接口测试', '当前 Key 队列', '操作']);
+  const modelRow = modelSection.rows[0];
+  assert.equal(modelRow.cells.input_price, '0.1 积分/1,000 Token');
+  assert.equal(modelRow.cells.output_price, '0.2 积分/1,000 Token');
+  assert.match(modelRow.cells.test, /通过 · 21 毫秒/);
+  assert.equal(modelRow.cells.queue, '未加入');
   assert.ok(modelRow.detail.includes('测试通过'));
   const actions = [];
   const liveApi = async (path, options = {}) => { actions.push({ path, options }); if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 1, visible_model_count: 1 }] }], starred_models: [], available_series: [], total_models: 1 }; if (path === '/api/user/api-keys') return [{ id: 8, name: 'Main Key' }]; if (path === '/api/user/provider-tags') return []; if (path.endsWith('/models')) return { queue: [] }; if (path === '/api/user/model-library/search') return { page: 1, total: 1, items: [{ id: 'm1', name: 'Model One', provider: 'p1', team_id: 2, team_name: 'Team A', is_starred: false, is_hidden: false }] }; return {}; };
