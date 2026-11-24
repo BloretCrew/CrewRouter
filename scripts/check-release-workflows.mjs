@@ -60,6 +60,16 @@ if (beta.jobs['npm-beta-publish'].steps.find(step => step.uses === 'actions/down
 if (beta.jobs['github-release-manual'].needs.includes('npm-beta-publish') !== true) throw new Error('manual GitHub release must await npm publish if publish was explicitly selected');
 const electronGate = beta.jobs.gate.steps.find(step => step.name === 'Desktop behavior, sandboxed launcher and syntax');
 if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-sandbox') || !electronGate.run.includes('chmod 4755 node_modules/electron/dist/chrome-sandbox') || electronGate.run.includes('--no-sandbox')) throw new Error('Electron launcher gate must retain sandbox and configure the isolated SUID helper');
+for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']) {
+  const openapi = JSON.parse(await readFile(openapiPath, 'utf8'));
+  const apiKeyList = openapi.paths['/api/user/api-keys']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const usage = openapi.paths['/api/user/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const balance = openapi.paths['/api/user/balance']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
+  if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
+  if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
+  if (balance?.$ref !== '#/components/schemas/UserBalance' || !openapi.components.schemas.UserBalance?.properties?.group?.anyOf?.some(item => item.type === 'null')) throw new Error(`${openapiPath} must define nullable balance group responses`);
+}
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {
   if (!embeddedSdkDocs.includes(required)) throw new Error(`Embedded SDK release boundary omits ${required}`);

@@ -379,6 +379,85 @@ function openApiPath(expressPath) {
   return expressPath.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
 }
 
+function managementSchemas() {
+  const nullableString = { type: ['string', 'null'] };
+  const numberOrString = { oneOf: [{ type: 'number' }, { type: 'string' }] };
+  const object = (properties, required = []) => ({
+    type: 'object', properties, required, additionalProperties: true,
+  });
+  return {
+    ApiKeyTag: object({ id: { oneOf: [{ type: 'integer' }, { type: 'string' }] }, name: { type: 'string' }, color: nullableString }, ['id', 'name']),
+    ApiKeyModelQueueItem: object({
+      model_id: { type: 'string' }, name: nullableString, sort_order: { type: 'integer' },
+    }, ['model_id']),
+    ApiKeyHarnessModel: object({
+      harness: { type: 'string' }, model_id: { type: 'string' }, name: nullableString, provider_name: nullableString,
+    }, ['harness', 'model_id']),
+    ApiKeyRequestModelBinding: object({
+      request_model_name: { type: 'string' }, harness: nullableString, model_id: { type: 'string' },
+      name: nullableString, provider_name: nullableString,
+    }, ['request_model_name', 'model_id']),
+    ApiKeyMember: object({
+      id: { type: 'integer' }, username: { type: 'string' }, email: nullableString,
+    }, ['id', 'username']),
+    ApiKeyOwner: object({
+      id: { type: 'integer' }, username: { type: 'string' }, email: nullableString,
+    }, ['id', 'username']),
+    ApiKeyListItem: object({
+      id: { type: 'integer' }, name: { type: 'string' }, key_group: { type: 'string' },
+      key_prefix: nullableString,
+      key_value: { ...nullableString, description: 'Redacted as null unless the credential has keys.secret and the key is owned by the caller.' },
+      permissions: { type: 'array', items: { type: 'string' } },
+      custom_model_name: { type: 'string' }, current_model_id: nullableString,
+      current_model_name: nullableString, current_model_provider_name: nullableString,
+      is_system: { type: 'boolean' }, created_at: nullableString, last_used_at: nullableString,
+      expires_at: nullableString, signature_enabled: { type: 'boolean' }, signature_template: { type: 'string' },
+      api_signature_enabled: { type: 'boolean' }, api_signature_template: { type: 'string' },
+      quota_warning_enabled: { type: 'boolean' }, swallow_images: { type: 'boolean' },
+      crewrouter_commands: { type: 'boolean' }, enabled: { type: 'boolean' },
+      schedule_enabled: { type: 'boolean' }, schedule_on_time: nullableString, schedule_off_time: nullableString,
+      schedule_days: { type: 'array', items: { type: 'integer' } }, schedule_timezone: nullableString,
+      current_model_test_ok: { type: ['boolean', 'null'] }, current_model_test_latency_ms: { type: ['integer', 'null'] },
+      current_model_test_tokens_per_second: { type: ['number', 'null'] }, current_model_test_tested_at: nullableString,
+      total_tokens: numberOrString, total_cost: numberOrString, total_requests: numberOrString,
+      tags: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyTag' } },
+      model_queue: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyModelQueueItem' } },
+      harness_models: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyHarnessModel' } },
+      request_model_bindings: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyRequestModelBinding' } },
+      owner: { anyOf: [{ $ref: '#/components/schemas/ApiKeyOwner' }, { type: 'null' }] },
+      members: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyMember' } },
+      member_count: { type: 'integer' }, is_owner: { type: 'boolean' }, is_co_key: { type: 'boolean' },
+      key_type: { type: 'string', enum: ['normal', 'co_key'] },
+      co_key_role: { type: ['string', 'null'], enum: ['owner', 'member', null] },
+    }, ['id', 'name', 'key_value', 'permissions', 'enabled', 'tags', 'model_queue']),
+    DailyUsageItem: object({
+      date: { type: 'string', format: 'date' }, total_tokens: numberOrString,
+      total_cost: numberOrString, total_requests: numberOrString,
+    }, ['date', 'total_tokens', 'total_cost', 'total_requests']),
+    TeamQuotaRule: object({
+      rule_type: { type: 'string' }, duration_hours: { type: 'number' }, current: numberOrString,
+    }, ['rule_type']),
+    BalanceGroup: object({
+      id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
+      rules: { type: 'array', items: { $ref: '#/components/schemas/TeamQuotaRule' } },
+    }, ['id', 'name', 'rules']),
+    UserBalance: object({
+      balance: { type: 'number' }, refund_balance: { type: 'number' },
+      rate_limit_rpm: { type: 'integer' }, rate_limit_tpm: { type: 'integer' },
+      group: { anyOf: [{ $ref: '#/components/schemas/BalanceGroup' }, { type: 'null' }] },
+    }, ['balance', 'refund_balance', 'rate_limit_rpm', 'rate_limit_tpm', 'group']),
+  };
+}
+
+function managementResponseSchema(operationId) {
+  const schemas = {
+    'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
+    'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
+    'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
+  };
+  return schemas[operationId] || null;
+}
+
 function signatureSchemas() {
   const object = (properties, required = Object.keys(properties)) => ({ type: 'object', properties, required, additionalProperties: false });
   const template = {
@@ -456,7 +535,7 @@ function buildOpenApi(operations) {
           description: 'Successful response',
           content: op.streaming
             ? { 'text/event-stream': { schema: { type: 'string' } } }
-            : { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+            : { 'application/json': { schema: managementResponseSchema(op.operationId) || { type: 'object', additionalProperties: true } } },
         },
       },
       'x-crewrouter-permission': op.permission,
@@ -506,7 +585,7 @@ function buildOpenApi(operations) {
     },
     servers: [{ url: 'https://your-host', description: 'CrewRouter instance' }],
     components: {
-      schemas: signatureSchemas(),
+      schemas: { ...managementSchemas(), ...signatureSchemas() },
       securitySchemes: {
         bearerApiKey: { type: 'http', scheme: 'bearer', description: 'API Key: Authorization: Bearer sk-...' },
         xApiKey: { type: 'apiKey', in: 'header', name: 'x-api-key' },

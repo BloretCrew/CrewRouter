@@ -47,6 +47,8 @@ type ApiKeyListItem struct {
 	MemberCount                  int                    `json:"member_count,omitempty"`
 	IsOwner                      bool                   `json:"is_owner,omitempty"`
 	IsCoKey                      bool                   `json:"is_co_key,omitempty"`
+	KeyType                      string                 `json:"key_type,omitempty"`
+	CoKeyRole                    *string                `json:"co_key_role,omitempty"`
 	CustomModelName              string                 `json:"custom_model_name,omitempty"`
 	IsSystem                     bool                   `json:"is_system,omitempty"`
 	SignatureEnabled             bool                   `json:"signature_enabled,omitempty"`
