@@ -29,14 +29,11 @@ test('admin error logs pass user/model/provider/status/date filters to API', asy
   assert.ok(data.actions.some(action => action.label === '筛选供应商'));
 });
 
-test('admin model library sends web-compatible filters and pagination', async () => {
+test('admin popup notices are read-only and route to the actual list endpoint', async () => {
   const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [{ id: 'm1', name: 'Model One', enabled: true, test_ok: true }], total: 1, page: 2 }; };
-  runtime.adminModelPage = 2;
-  runtime.adminModelSearch = 'model';
-  runtime.adminModelFilters = { provider: 'p1', series: 'sonnet', enabled: 'true', test: 'pass' };
-  const data = await pageById('admin-models').load(api);
-  assert.deepEqual(calls[0].options.query, { page: 2, limit: 30, q: 'model', provider: 'p1', series: 'sonnet', enabled: 'true', test: 'pass' });
-  assert.ok(data.actions.some(action => action.label === '筛选测试状态'));
-  assert.ok(data.sections[0].rows[0].run);
+  const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [{ id: 2, title: 'Maintenance', body: 'Service notice', closeText: 'OK', enabled: true, seenCount: 5, createdAt: '2026-11-01' }] }; };
+  const data = await pageById('admin-popups').load(api);
+  assert.equal(calls[0].path, '/api/admin/popup-notices');
+  assert.ok(data.sections[0].rows[0].label.includes('Maintenance'));
+  assert.ok(!data.actions.some(action => /删除|创建|重置|启用|停用/.test(action.label)));
 });

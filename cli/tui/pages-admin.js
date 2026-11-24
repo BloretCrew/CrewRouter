@@ -427,7 +427,30 @@ function createAdminPages(runtime) {
       },
     },
     adminOnly({
-      id: 'admin-settings', label: '系统设置', description: '常规、请求采集、Agent 资料与数据保留配置。',
+      id: 'admin-popups', label: '弹窗通知', description: '已发布弹窗的只读状态与内容。TUI 不会修改或重置用户已读状态。',
+      async load(api) {
+        const data = await api('/api/admin/popup-notices');
+        const items = array(data && data.items);
+        const rows = items.map(item => ({
+          label: display(item.title, item.enabled ? '启用' : '停用', `${item.seenCount || 0} 人已读`, formatTime(item.updatedAt || item.createdAt)),
+          detail: `关闭按钮：${item.closeText || '知道了'} · ${String(item.body || '').replace(/\\s+/g, ' ').slice(0, 120)}`,
+          run: async ctx => {
+            const detail = `状态：${item.enabled ? '启用' : '停用'}\n已读人数：${item.seenCount || 0}\n创建：${formatTime(item.createdAt)}\n更新：${formatTime(item.updatedAt)}\n关闭按钮：${item.closeText || '知道了'}\n\n${item.body || ''}`;
+            await ctx.show(`弹窗通知 · ${item.title}`, detail);
+          },
+        }));
+        return { sections: [{ title: '弹窗通知', description: `${items.length} 条通知`, rows: rows.length ? rows : [{ label: '暂无弹窗通知。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+      },
+    }),
+    adminOnly({
+      id: 'admin-retention', label: '数据保留', description: '数据保留规则只读概览；立即压缩/清除任务不在 TUI 快捷执行。',
+      async load(api) {
+        const data = await api('/api/admin/retention-config');
+        return { sections: [{ title: '数据保留配置', rows: Object.entries(data || {}).map(([key, value]) => ({ label: `${key}：${typeof value === 'boolean' ? (value ? '启用' : '关闭') : value}` })) }, { title: '任务状态', rows: [{ label: '任务状态只在网页管理后台启动任务后显示；CLI 不会触发数据清理。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+      },
+    }),
+    adminOnly({
+      id: 'admin-settings', label: '系统设置', description: '常规、请求采集、Agent 资料与认证配置。',
       async load(api) {
         const [generalResult, quotaResult, agentResult, retentionResult, feishuResult] = await Promise.allSettled([
           api('/api/admin/settings'), api('/api/admin/request-quota-config'), api('/api/admin/agent-web'), api('/api/admin/retention-config'), api('/api/admin/feishu-login'),
@@ -457,6 +480,8 @@ function createAdminPages(runtime) {
             { name: 'apiKey', label: 'API Key（已设密钥留空可保留）', secret: true },
             { name: 'fetch_enabled', label: '启用链接抓取', type: 'boolean', value: fetch.enabled !== false },
           ]); if (!values) return; if (!await ctx.confirm('保存 Agent Web 配置', `联网搜索 ${values.search_enabled ? '开启' : '关闭'}\n提供方 ${values.provider}\n链接抓取 ${values.fetch_enabled ? '开启' : '关闭'}\n密钥不会在界面回显。`)) return; await api('/api/admin/agent-web', { method: 'PUT', body: { search: { enabled: values.search_enabled, provider: values.provider, ...(values.apiKey ? { apiKey: values.apiKey } : {}) }, fetch: { enabled: values.fetch_enabled } } }); ctx.notify('Agent Web 配置已保存。'); await ctx.refresh(); } },
+          { label: '查看弹窗通知', run: async ctx => { await ctx.navigate('admin-popups'); } },
+          { label: '查看数据保留', run: async ctx => { await ctx.navigate('admin-retention'); } },
           { label: '编辑飞书登录', run: async ctx => { const values = await ctx.form('编辑飞书登录', [{ name: 'enabled', label: '启用飞书登录', type: 'boolean', value: feishu.enabled === true }, { name: 'appId', label: 'App ID', value: feishu.appId || '' }, { name: 'appSecret', label: 'App Secret（留空保留现有密钥）', secret: true }, { name: 'tenantKey', label: 'Tenant Key', value: feishu.tenantKey || '' }]); if (!values) return; if (values.enabled && (!values.appId || (!values.appSecret && !feishu.hasAppSecret))) { await ctx.show('配置不完整', '启用飞书登录需要 App ID 与 App Secret。'); return; } if (!await ctx.confirm('保存飞书登录配置', `启用：${values.enabled}\nApp ID：${values.appId}\n密钥不会回显。`)) return; await api('/api/admin/feishu-login', { method: 'PUT', body: values }); ctx.notify('飞书登录配置已保存。'); await ctx.refresh(); } },
           { label: '测试 Agent Web 搜索', run: async ctx => { const query = await ctx.ask('测试查询词'); if (!query) return; const result = await api('/api/admin/agent-web/test', { method: 'POST', body: { query } }); await ctx.show('Agent Web 搜索测试', JSON.stringify(result, null, 2)); } },
           { label: '编辑数据保留配置', run: async ctx => { const numeric = ['provider_quota_days', 'compress_days', 'purge_days', 'compress_size_gb', 'purge_size_gb']; const values = await ctx.form('编辑数据保留配置', numeric.map(name => ({ name, label: name, value: String(retention[name] ?? 0) })).concat([{ name: 'agg_enabled', label: '启用聚合', type: 'boolean', value: retention.agg_enabled === true }])); if (!values) return; const body = Object.fromEntries(numeric.map(name => [name, Number(values[name])]).concat([['agg_enabled', values.agg_enabled]])); if (!await ctx.confirm('保存数据保留配置', JSON.stringify(body))) return; await api('/api/admin/retention-config', { method: 'PUT', body }); ctx.notify('数据保留配置已保存；本操作不会立即清理数据。'); await ctx.refresh(); } },
