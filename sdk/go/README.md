@@ -83,6 +83,18 @@ for {
 
 ```go
 keys, err := client.Keys.List(ctx)
+var keyRows []crewrouter.ApiKeyListItem
+if err := keys.JSON(&keyRows); err != nil { panic(err) }
+// KeyValue is nil unless the caller has keys.secret and owns the Key.
+
+usage, err := client.Usage.Get(ctx, map[string]any{"days": 7})
+var dailyUsage []crewrouter.DailyUsageItem
+if err := usage.JSON(&dailyUsage); err != nil { panic(err) }
+
+balance, err := client.Balance.Get(ctx)
+var balanceSummary crewrouter.UserBalance
+if err := balance.JSON(&balanceSummary); err != nil { panic(err) }
+
 created, err := client.Keys.Create(ctx, map[string]any{
     "name":        "CI",
     "expiresIn":   720,
@@ -90,8 +102,6 @@ created, err := client.Keys.Create(ctx, map[string]any{
 })
 client.Keys.SetModels(ctx, id, map[string]any{"models": []string{"claude-fable-5"}})
 
-usage, err := client.Usage.Get(ctx, map[string]any{"days": 7})
-balance, err := client.Balance.Get(ctx)
 ```
 
 Every non-session operation is reachable through `Call`:

@@ -22,7 +22,7 @@ Requires Python >= 3.9. The only runtime dependency is `httpx`.
 
 ```python
 import os
-from crewrouter import CrewRouter
+from crewrouter import CrewRouter, ApiKeyListItem, DailyUsageItem, UserBalance
 
 client = CrewRouter(
     base_url=os.environ["CREWROUTER_BASE_URL"],
@@ -59,6 +59,13 @@ with client.gateway.chat.completions.stream({
 
 ```python
 keys = client.keys.list()
+key_rows: list[ApiKeyListItem] = keys.data
+# The server returns key_value=null unless this key has keys.secret permission.
+usage = client.usage.get({"days": 7})
+usage_rows: list[DailyUsageItem] = usage.data
+balance = client.balance.get()
+balance_summary: UserBalance = balance.data
+
 created = client.keys.create({
     "name": "CI",
     "expiresIn": 720,
@@ -66,8 +73,6 @@ created = client.keys.create({
 })
 client.keys.set_models(created.data["id"], {"models": ["claude-fable-5"]})
 
-usage = client.usage.get({"days": 7})
-balance = client.balance.get()
 ```
 
 Every non-session operation is reachable through `call`:

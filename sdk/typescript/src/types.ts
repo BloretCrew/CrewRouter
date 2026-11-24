@@ -88,6 +88,92 @@ export interface OpenAIResponsesRequest {
   [key: string]: unknown;
 }
 
+export interface ApiKeyTag {
+  id: number | string;
+  name: string;
+  color?: string | null;
+}
+
+export interface ApiKeyModelQueueItem {
+  model_id: string;
+  name?: string | null;
+  provider?: string | null;
+}
+
+export interface ApiKeyListItem {
+  id: number | string;
+  name: string;
+  key_group?: string;
+  key_prefix?: string | null;
+  key_value: string | null;
+  permissions: string[];
+  current_model_id?: string | null;
+  current_model_name?: string | null;
+  current_model_provider_name?: string | null;
+  current_model_test_ok?: boolean | null;
+  current_model_test_latency_ms?: number | null;
+  current_model_test_tokens_per_second?: number | null;
+  current_model_test_tested_at?: string | null;
+  custom_model_name?: string;
+  is_system?: boolean;
+  signature_enabled?: boolean;
+  signature_template?: string;
+  api_signature_enabled?: boolean;
+  api_signature_template?: string;
+  quota_warning_enabled?: boolean;
+  swallow_images?: boolean;
+  crewrouter_commands?: boolean;
+  schedule_enabled?: boolean;
+  schedule_on_time?: string | null;
+  schedule_off_time?: string | null;
+  schedule_days?: number[];
+  schedule_timezone?: string | null;
+  enabled: boolean;
+  expires_at?: string | null;
+  created_at?: string | null;
+  last_used_at?: string | null;
+  total_tokens?: number | string;
+  total_cost?: number | string;
+  total_requests?: number | string;
+  tags: ApiKeyTag[];
+  model_queue: ApiKeyModelQueueItem[];
+  harness_models?: Array<Record<string, unknown>>;
+  request_model_bindings?: Array<Record<string, unknown>>;
+  owner?: { id: number | string; username: string; email?: string | null };
+  members?: Array<{ id: number | string; username: string; email?: string | null }>;
+  member_count?: number;
+  is_owner?: boolean;
+  is_co_key?: boolean;
+}
+
+export interface DailyUsageItem {
+  date: string;
+  total_tokens: number | string;
+  total_cost: number | string;
+  total_requests: number | string;
+}
+
+export interface TeamQuotaRule {
+  rule_type: string;
+  limit_value?: number | string;
+  duration_hours?: number;
+  current?: number;
+  [key: string]: unknown;
+}
+
+export interface UserBalance {
+  balance: number;
+  refund_balance: number;
+  rate_limit_rpm: number;
+  rate_limit_tpm: number;
+  group: null | {
+    id: number | string;
+    name: string;
+    description?: string | null;
+    rules: TeamQuotaRule[];
+  };
+}
+
 export interface CrewRouterResponse<T = unknown> {
   data: T;
   raw: Response;

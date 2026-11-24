@@ -67,6 +67,7 @@ administrator.
 
 ```ts
 const keys = await client.keys.list();
+const keyRows = keys.data; // ApiKeyListItem[]; key_value can be null when redacted
 const created = await client.keys.create({
   name: 'CI',
   expiresIn: 720,
@@ -75,8 +76,8 @@ const created = await client.keys.create({
 
 await client.keys.setModels(created.data.id, { models: ['claude-fable-5'] });
 
-const usage = await client.usage.get({ days: 7 });
-const balance = await client.balance.get();
+const usage = await client.usage.get({ days: 7 }); // DailyUsageItem[]
+const balance = await client.balance.get(); // UserBalance
 ```
 
 Every non-session operation is reachable through `call`:

@@ -91,6 +91,34 @@ test('call() substitutes path params and serializes query arrays', async () => {
   assert.equal(requests[0].url, '/api/user/api-keys/42/models?days=7&tag=a&tag=b');
 });
 
+test('management wrappers preserve their documented response payload shapes', async () => {
+  reset((req, res) => {
+    if (req.url === '/api/user/api-keys') {
+      json(res, 200, [{ id: 7, name: 'CI', key_value: null, permissions: ['keys.read'], tags: [], model_queue: [] }]);
+      return;
+    }
+    if (req.url === '/api/user/usage') {
+      json(res, 200, [{ date: '2026-01-01', total_tokens: '12', total_cost: '0.25', total_requests: '2' }]);
+      return;
+    }
+    if (req.url === '/api/user/balance') {
+      json(res, 200, { balance: 10, refund_balance: 8, rate_limit_rpm: 60, rate_limit_tpm: 1000, group: null });
+      return;
+    }
+    json(res, 404, { error: 'not found' });
+  });
+  const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
+  const keys = await client.keys.list();
+  const usage = await client.usage.get();
+  const balance = await client.balance.get();
+
+  assert.equal(keys.data[0].key_value, null);
+  assert.deepEqual(keys.data[0].permissions, ['keys.read']);
+  assert.equal(usage.data[0].total_tokens, '12');
+  assert.equal(balance.data.refund_balance, 8);
+  assert.equal(balance.data.group, null);
+});
+
 test('management errors expose code and permission', async () => {
   reset((req, res) => json(res, 403, {
     error: 'API Key 没有该权限: keys.read',

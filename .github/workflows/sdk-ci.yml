@@ -60,6 +60,7 @@ jobs:
       - run: npm run sdk:check
       - run: npm run sdk:conformance
       - run: npm --prefix sdk/typescript run build
+      - run: node server/scripts/test-sdk-auth-integration.js
       - run: node server/scripts/test-upstream-generation-routes.js
       - run: node server/scripts/test-console-route-auth-coverage.js
       - run: npm run test:embedded-sdk
@@ -93,11 +94,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install "sdk/python[test]"
-      - run: python -m pip install --no-deps build
+      - run: python -m pip install build
       - run: python -m build --wheel --sdist sdk/python
       - run: python -m pip install --no-deps sdk/python/dist/*.whl
-      - run: python -c "from crewrouter import ChatCompletionRequest, AnthropicMessagesRequest, OpenAIResponsesRequest; print('SDK wheel import OK')"
+      - run: python -m pip install "httpx>=0.27"
+      - run: python -c "import crewrouter; from crewrouter import ChatCompletionRequest, AnthropicMessagesRequest, OpenAIResponsesRequest, ApiKeyListItem, DailyUsageItem, UserBalance; print(crewrouter.__file__); print('SDK wheel import OK')"
+      - run: python -m pip install "sdk/python[test]"
       - run: python -m pytest sdk/python
 
   go-sdk:

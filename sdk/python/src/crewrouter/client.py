@@ -14,6 +14,68 @@ from .generated.operations import CONTRACT_VERSION, OPERATIONS
 _PATH_PARAM = re.compile(r":([A-Za-z0-9_]+)")
 
 
+class ApiKeyTag(TypedDict, total=False):
+    id: Union[int, str]
+    name: str
+    color: Optional[str]
+
+
+class ApiKeyListItem(TypedDict, total=False):
+    id: Union[int, str]
+    name: str
+    key_group: str
+    key_prefix: Optional[str]
+    key_value: Optional[str]
+    permissions: list[str]
+    current_model_id: Optional[str]
+    current_model_name: Optional[str]
+    current_model_provider_name: Optional[str]
+    current_model_test_ok: Optional[bool]
+    current_model_test_latency_ms: Optional[int]
+    current_model_test_tokens_per_second: Optional[float]
+    current_model_test_tested_at: Optional[str]
+    custom_model_name: str
+    is_system: bool
+    signature_enabled: bool
+    signature_template: str
+    api_signature_enabled: bool
+    api_signature_template: str
+    quota_warning_enabled: bool
+    swallow_images: bool
+    crewrouter_commands: bool
+    schedule_enabled: bool
+    schedule_on_time: Optional[str]
+    schedule_off_time: Optional[str]
+    schedule_days: list[int]
+    schedule_timezone: Optional[str]
+    enabled: bool
+    expires_at: Optional[str]
+    total_tokens: Union[int, str]
+    total_cost: Union[float, str]
+    total_requests: Union[int, str]
+    tags: list[ApiKeyTag]
+    model_queue: list[dict[str, Any]]
+    members: list[dict[str, Any]]
+    member_count: int
+    is_owner: bool
+    is_co_key: bool
+
+
+class DailyUsageItem(TypedDict, total=False):
+    date: str
+    total_tokens: Union[int, str]
+    total_cost: Union[float, str]
+    total_requests: Union[int, str]
+
+
+class UserBalance(TypedDict):
+    balance: float
+    refund_balance: float
+    rate_limit_rpm: int
+    rate_limit_tpm: int
+    group: Optional[dict[str, Any]]
+
+
 class _ChatMessageRequired(TypedDict):
     role: str
 
@@ -316,7 +378,13 @@ class _Keys:
         self._client = client
 
     def list(self, **kwargs: Any) -> CrewRouterResponse:
+        """List API keys visible to the current identity.
+
+        ``key_value`` is null unless this credential has ``keys.secret`` and
+        the row is owned by the authenticated user.
+        """
         return self._client.call("user.apiKeys.list", **kwargs)
+
 
     def create(self, body: Mapping[str, Any], **kwargs: Any) -> CrewRouterResponse:
         return self._client.call("user.apiKeys.create", body=body, **kwargs)
@@ -342,6 +410,7 @@ class _Usage:
         self._client = client
 
     def get(self, query: Optional[Mapping[str, QueryValue]] = None, **kwargs: Any) -> CrewRouterResponse:
+        """Return recent daily usage rows as an unwrapped JSON array."""
         return self._client.call("user.usage.list", query=query, **kwargs)
 
 
@@ -350,6 +419,7 @@ class _Balance:
         self._client = client
 
     def get(self, **kwargs: Any) -> CrewRouterResponse:
+        """Return balance, rate limits, refund balance and optional team quota."""
         return self._client.call("user.balance.list", **kwargs)
 
 

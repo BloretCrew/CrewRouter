@@ -3,10 +3,13 @@ import { OPERATIONS, type CrewRouterOperation, type OperationId } from './genera
 import { HttpClient } from './http.js';
 import type {
   AnthropicMessagesRequest,
+  ApiKeyListItem,
   CallOptions,
   ChatCompletionRequest,
   CrewRouterOptions,
   CrewRouterResponse,
+  DailyUsageItem,
+  UserBalance,
   RequestOptions,
   StreamHandle,
   StreamOptions,
@@ -139,7 +142,7 @@ export class CrewRouter {
   // ---------------------------------------------------------------------------
 
   readonly keys = {
-    list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+    list: <T = ApiKeyListItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.list', options),
     create: <T = unknown>(body: ApiKeyCreateInput, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.create', { ...options, body }),
@@ -156,12 +159,12 @@ export class CrewRouter {
   };
 
   readonly usage = {
-    get: <T = unknown>(query?: Record<string, string | number | boolean | null | undefined | Array<string | number | boolean>>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+    get: <T = DailyUsageItem[]>(query?: Record<string, string | number | boolean | null | undefined | Array<string | number | boolean>>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.usage.list', { ...options, query }),
   };
 
   readonly balance = {
-    get: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+    get: <T = UserBalance>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.balance.list', options),
   };
 

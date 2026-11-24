@@ -33,6 +33,7 @@ for (const event of ['push', 'pull_request']) {
 }
 if (!sdkWorkflow.jobs.contract.steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('SDK CI contract job must run cross-language conformance');
 if (!sdkWorkflow.jobs.contract.steps.some(step => step.run === 'node server/scripts/test-upstream-generation-routes.js')) throw new Error('SDK CI contract job must run the SDK-to-isolated-gateway integration suite');
+if (!sdkWorkflow.jobs.contract.steps.some(step => step.run === 'node server/scripts/test-sdk-auth-integration.js')) throw new Error('SDK CI contract job must run the SDK authentication integration suite');
 if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run?.includes('npm run sdk:conformance'))) throw new Error('Node SDK CI must run shared conformance and package checks');
 const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install isolated PostgreSQL test runtime');
 if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');
@@ -47,7 +48,7 @@ if (!npmPublishStep.run.includes('@bloret-crew/crewrouter-sdk @bloret-crew/crewr
 if (!npmPublishStep.run.includes('doc.versions')) throw new Error('npm publish must check the target version is still unpublished');
 if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('Node SDK CI must run shared fixtures and the package inspection');
 if (!sdkWorkflow.jobs['go-sdk'].steps.some(step => step.run === 'go test ./...' && step['working-directory'] === 'sdk/go/consumer')) throw new Error('Go SDK CI omits external module consumer smoke test');
-for (const required of ['python -m build --wheel --sdist sdk/python', 'python -m pip install --no-deps sdk/python/dist/*.whl']) {
+for (const required of ['python -m build --wheel --sdist sdk/python', 'python -m pip install --no-deps sdk/python/dist/*.whl', 'python -m pip install "httpx>=0.27"']) {
   if (!sdkWorkflow.jobs['python-sdk'].steps.some(step => step.run === required)) throw new Error(`Python SDK CI omits package artifact validation: ${required}`);
 }
 const npmNameGate = beta.jobs.gate.steps.find(step => step.name === 'Verify npm beta names are unclaimed');
