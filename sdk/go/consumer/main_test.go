@@ -55,6 +55,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if !members.IsOwner || len(members.Members) != 1 || members.Members[0].Username != "member" {
 		t.Fatalf("unexpected API key members payload: %#v", members)
 	}
+
+	var warning crewrouter.ApiKeyQuotaWarning
+	if err := json.Unmarshal([]byte(`{"quota_warning_enabled":true}`), &warning); err != nil {
+		t.Fatalf("decode quota warning: %v", err)
+	}
+	if !warning.QuotaWarningEnabled {
+		t.Fatalf("unexpected quota warning payload: %#v", warning)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

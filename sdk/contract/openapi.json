@@ -579,6 +579,16 @@
         ],
         "additionalProperties": true
       },
+      "ApiKeyQuotaWarning": {
+        "type": "object",
+        "properties": {
+          "quota_warning_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": true
+      },
       "UserModelListItem": {
         "type": "object",
         "properties": {
@@ -13929,8 +13939,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyQuotaWarning"
                 }
               }
             }
@@ -13971,8 +13980,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyQuotaWarning"
                 }
               }
             }

@@ -116,6 +116,11 @@ type ApiKeyMember struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// ApiKeyQuotaWarning is returned by the API Key quota-warning setting routes.
+type ApiKeyQuotaWarning struct {
+	QuotaWarningEnabled bool `json:"quota_warning_enabled"`
+}
+
 // ApiKeyMembersResponse is returned by GET /api/user/api-keys/:id/members.
 type ApiKeyMembersResponse struct {
 	IsOwner bool           `json:"is_owner"`

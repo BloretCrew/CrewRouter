@@ -172,6 +172,10 @@ export interface ApiKeyMembersResponse {
   members: ApiKeyMember[];
 }
 
+export interface ApiKeyQuotaWarning {
+  quota_warning_enabled: boolean;
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;

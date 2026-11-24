@@ -450,6 +450,7 @@ function managementSchemas() {
       is_owner: { type: 'boolean' },
       members: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyMember' } },
     }, ['is_owner', 'members']),
+    ApiKeyQuotaWarning: object({ quota_warning_enabled: { type: 'boolean' } }),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -492,6 +493,8 @@ function managementResponseSchema(operationId) {
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },
     'user.apiKeys.byId.members.list': { $ref: '#/components/schemas/ApiKeyMembersResponse' },
+    'user.apiKeys.byId.quotaWarning.list': { $ref: '#/components/schemas/ApiKeyQuotaWarning' },
+    'user.apiKeys.byId.quotaWarning.update': { $ref: '#/components/schemas/ApiKeyQuotaWarning' },
   };
   return schemas[operationId] || null;
 }

@@ -6,6 +6,7 @@ import type {
   ApiKeyDailyUsageItem,
   ApiKeyListItem,
   ApiKeyMembersResponse,
+  ApiKeyQuotaWarning,
   CallOptions,
   ChatCompletionRequest,
   CrewRouterOptions,
@@ -165,6 +166,10 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.usage.list', mergePathParams(options, { id })),
     getMembers: <T = ApiKeyMembersResponse>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.members.list', mergePathParams(options, { id })),
+    getQuotaWarning: <T = ApiKeyQuotaWarning>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.quotaWarning.list', mergePathParams(options, { id })),
+    setQuotaWarning: <T = ApiKeyQuotaWarning>(id: string | number, body: ApiKeyQuotaWarning, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.quotaWarning.update', mergePathParams({ ...options, body }, { id })),
   };
 
   readonly usage = {

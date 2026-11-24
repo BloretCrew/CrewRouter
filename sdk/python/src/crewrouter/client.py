@@ -104,6 +104,10 @@ class ApiKeyMembersResponse(TypedDict):
     members: list[ApiKeyMember]
 
 
+class ApiKeyQuotaWarning(TypedDict):
+    quota_warning_enabled: bool
+
+
 class UserKeyTag(TypedDict):
     id: int
     name: str

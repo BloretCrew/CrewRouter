@@ -125,6 +125,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { is_owner: true, members: [{ id: 9, username: 'member', email: 'member@example.test', created_at: '2026-01-01T00:00:00.000Z' }] });
       return;
     }
+    if (req.url === '/api/user/api-keys/7/quota-warning') {
+      json(res, 200, { quota_warning_enabled: true });
+      return;
+    }
     json(res, 404, { error: 'not found' });
   });
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
@@ -136,6 +140,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const keyUsage = await client.keys.getUsage(7);
   const keyTags = await client.keyTags.list();
   const members = await client.keys.getMembers(7);
+  const quotaWarning = await client.keys.getQuotaWarning(7);
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -150,6 +155,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(keyTags.data[0].sort_order, 1);
   assert.equal(members.data.is_owner, true);
   assert.equal(members.data.members[0].username, 'member');
+  assert.equal(quotaWarning.data.quota_warning_enabled, true);
 });
 
 test('management errors expose code and permission', async () => {
