@@ -166,6 +166,8 @@ async function runPagedTui({
     if (data) {
       const sections = (Array.isArray(data.sections) ? data.sections : []).filter(section => !tab || !section.tab || section.tab === tab.id);
       const actions = (Array.isArray(data.actions) ? data.actions : []).filter(action => !tab || !action.tab || action.tab === tab.id);
+      const toolbarActions = actions.filter(action => action.toolbar === true);
+      const footerActions = actions.filter(action => action.toolbar !== true);
       let first = true;
       for (const section of sections) {
         if (!first) add('', 'text', null, 0);
@@ -205,23 +207,54 @@ async function runPagedTui({
             }
           }
         }
+        if (section.toolbar === true && toolbarActions.length) {
+          addSpans([{ text: '▸ ', fg: 'rose' }, { text: '常用操作', fg: 'dim', bold: true }], 'heading', null, 0);
+          for (const action of toolbarActions) add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
+        }
+        const columns = Array.isArray(section.columns) ? section.columns : [];
+        if (columns.length && w >= (Number(section.tableMinWidth) || 92)) {
+          const gap = 1;
+          const widths = columns.map(column => Math.max(1, Math.floor((w - gap * (columns.length - 1)) * (Number(column.ratio) || 1 / columns.length))));
+          let remaining = w - gap * (columns.length - 1) - widths.reduce((sum, value) => sum + value, 0);
+          for (let index = 0; remaining > 0; index = (index + 1) % widths.length, remaining--) widths[index]++;
+          const heading = [];
+          columns.forEach((column, index) => { if (index) heading.push({ text: ' '.repeat(gap), fg: 'fg' }); heading.push({ text: pad(cut(column.label, widths[index]), widths[index]), fg: 'dim', bold: true }); });
+          addSpans(heading, 'heading', null, 0);
+        }
         for (const entry of section.rows || []) {
           const row = typeof entry === 'string' ? { label: entry } : entry;
           if (!row) continue;
           const action = typeof row.run === 'function' && !row.disabled ? row : null;
-          const lines = wrapRow(row.label || '', w, 2);
-          lines.forEach((line, index) => {
-            add(line, 'text', index === 0 ? action : null, action ? 0 : 2);
-          });
-          if (row.detail) {
-            for (const line of wrap(text(row.detail), Math.max(1, w - 6))) add(line, 'mute', null, 4);
+          if (!columns.length) {
+            const lines = wrapRow(row.label || '', w, 2);
+            lines.forEach((line, index) => add(line, 'text', index === 0 ? action : null, action ? 0 : 2));
+          } else if (w >= (Number(section.tableMinWidth) || 92) && row.cells) {
+            const gap = 1;
+            const widths = columns.map(column => Math.max(1, Math.floor((w - gap * (columns.length - 1)) * (Number(column.ratio) || 1 / columns.length))));
+            let remaining = w - gap * (columns.length - 1) - widths.reduce((sum, value) => sum + value, 0);
+            for (let index = 0; remaining > 0; index = (index + 1) % widths.length, remaining--) widths[index]++;
+            const spans = [];
+            columns.forEach((column, index) => { if (index) spans.push({ text: ' '.repeat(gap), fg: 'fg' }); spans.push({ text: pad(cut(clean(text(row.cells[column.key] ?? '—')), widths[index]), widths[index]), fg: index === 0 ? 'fg' : 'mute', bold: index === 0 }); });
+            addSpans(spans, 'text', action, 0);
+          } else if (row.cells) {
+            const primaryValue = row.label || clean(text(row.cells[columns[0].key] || ''));
+            add(`${columns[0].label}：${primaryValue}`, 'text', action, action ? 0 : 2);
+            for (const column of columns.slice(1)) {
+              const value = row.cells[column.key];
+              if (value === undefined || value === null || value === '') continue;
+              for (const line of wrap(`${column.label}：${clean(text(value))}`, Math.max(1, w - 6))) add(line, 'mute', null, 4);
+            }
+          } else {
+            const lines = wrapRow(row.label || '', w, 2);
+            lines.forEach((line, index) => add(line, 'text', index === 0 ? action : null, action ? 0 : 2));
           }
+          if (row.detail) for (const line of wrap(text(row.detail), Math.max(1, w - 6))) add(line, 'mute', null, 4);
         }
       }
-      if (actions.length) {
+      if (footerActions.length) {
         if (!first) add('', 'text', null, 0);
-        addSpans([{ text: '▸ ', fg: 'rose' }, { text: '操作', fg: 'dim', bold: true }], 'heading', null, 0);
-        for (const action of actions) {
+        addSpans([{ text: '▸ ', fg: 'rose' }, { text: '更多操作', fg: 'dim', bold: true }], 'heading', null, 0);
+        for (const action of footerActions) {
           if (!action || !action.label) continue;
           add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
         }

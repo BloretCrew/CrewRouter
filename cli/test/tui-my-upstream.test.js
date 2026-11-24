@@ -3,6 +3,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buildPages } = require('../tui/pages');
+const { runPagedTui } = require('../tui/engine');
+const { terminal, until, tick } = require('./helpers/tty');
 
 function makeRuntime(client = {}) { return { client: { isAdmin: false, ...client }, cfg: { tui: { days: 30 } }, profileName: 'test' }; }
 
@@ -13,11 +15,17 @@ test('my upstream page mirrors providers/models tabs and Team model columns', as
   assert.deepEqual(page.tabs.map(tab => tab.id), ['providers', 'models']);
   const data = await page.load();
   const section = data.sections.find(item => item.title === '个人 Team 模型');
-  assert.ok(section.rows[0].label.includes('Friendly'));
-  assert.ok(section.rows[0].label.includes('up-1'));
-  assert.ok(section.rows[0].label.includes('Personal'));
-  assert.ok(section.rows[0].detail.includes('×1.20'));
+  assert.equal(section.rows[0].cells.name, 'Friendly');
+  assert.equal(section.rows[0].cells.upstream_id, 'up-1');
+  assert.equal(section.rows[0].cells.provider, 'Personal');
+  assert.equal(section.rows[0].cells.multiplier, '计费倍率 ×1.20');
   assert.deepEqual(calls, ['/api/user/my-providers', '/api/user/my-team-models']);
+  const rows = data.sections.find(item => item.title === '个人 Team 模型').rows;
+  assert.equal(rows[0].cells.name, 'Friendly');
+  assert.equal(rows[0].cells.upstream_id, 'up-1');
+  assert.equal(rows[0].cells.provider, 'Personal');
+  assert.equal(rows[0].cells.multiplier, '计费倍率 ×1.20');
+  assert.equal(rows[0].cells.status, '已启用');
 });
 
 test('my upstream provider page exposes web statistics and enabled/disabled filters', async () => {
@@ -33,6 +41,51 @@ test('my upstream provider page exposes web statistics and enabled/disabled filt
   assert.deepEqual(enabled.sections.find(section => section.title === '供应商').rows.map(row => row.label.split(' · ')[0]), ['On']);
   assert.ok(enabled.actions.some(action => action.label === '添加供应商'));
   assert.ok(enabled.actions.some(action => action.label === '检测本页供应商'));
+});
+
+test('my provider table places toolbar after stats and before web column headers', { timeout: 15000 }, async () => {
+  const runtime = makeRuntime({ get: async path => path === '/api/user/my-providers' ? [{ id: 'p1', name: 'Personal', base_url: 'https://p.example', format: 'openai', enabled: true, model_count: 2 }] : [] });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const providerPage = { ...page, tabs: [{ id: 'providers', label: '供应商' }] };
+  const tty = terminal(160, 32);
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages: [providerPage], authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('Personal'));
+    const screen = tty.screen();
+    const stats = screen.indexOf('我的供应商');
+    const toolbar = screen.indexOf('常用操作');
+    const header = screen.indexOf('名称');
+    assert.ok(stats >= 0 && stats < toolbar && toolbar < header, 'provider layout must be stats → toolbar → table');
+    for (const column of ['名称', 'Base URL', '格式', '状态', '延迟', '模型数', '操作']) assert.ok(screen.includes(column), `provider column missing: ${column}`);
+    for (const value of ['https://p.example', 'OpenAI 兼容', '2 个', 'Enter 管理']) assert.ok(screen.includes(value), `provider cell missing: ${value}`);
+  } finally { tty.input.write('q'); await task; }
+});
+
+test('my upstream uses web column order on wide terminals and readable field rows on narrow terminals', { timeout: 15000 }, async () => {
+  const model = { id: 'm1', alias: 'Friendly', name: 'Model One', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Personal', series: 'S', enabled: true, model_multiplier: 1.2, description: 'Short description' };
+  const runtime = makeRuntime({ get: async path => path === '/api/user/my-providers' ? [] : [model] });
+  const basePage = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const modelsPage = { ...basePage, id: 'my-upstream-model-layout', tabs: [{ id: 'models', label: '模型' }] };
+  const wide = terminal(160, 32);
+  const wideTask = runPagedTui({ ...wide, env: { NO_COLOR: '1' }, api: async () => ({}), pages: [modelsPage], authenticate: async () => true });
+  try {
+    await until(() => wide.screen().includes('Friendly'));
+    const wideScreen = wide.screen();
+    assert.ok(wideScreen.indexOf('常用操作') < wideScreen.indexOf('模型名称'));
+    for (const header of ['模型名称', '上游模型 ID', '供应商', '系列', '计费倍率', '状态', '操作']) assert.ok(wideScreen.includes(header), `wide table header missing: ${header}`);
+    for (const value of ['Friendly', 'up-1', 'Personal', 'S', '计费倍率 ×1.20', '已启用']) assert.ok(wideScreen.includes(value), `wide table value missing: ${value}`);
+  } finally { wide.input.write('q'); await wideTask; }
+
+  const narrow = terminal(60, 20);
+  const narrowTask = runPagedTui({ ...narrow, env: { NO_COLOR: '1' }, api: async () => ({}), pages: [modelsPage], authenticate: async () => true });
+  try {
+    await until(() => narrow.screen().includes('模型名称：Friendly'));
+    let narrowScreen = narrow.screen();
+    narrow.input.write('\x1b[6~');
+    await tick(30);
+    narrowScreen += narrow.screen();
+    for (const field of ['模型名称：Friendly', '上游模型 ID：up-1', '供应商：Personal', '系列：S', '计费倍率：计费倍率 ×1.20', '状态：已启用']) assert.ok(narrowScreen.includes(field), `narrow field missing: ${field}`);
+  } finally { narrow.input.write('q'); await narrowTask; }
 });
 
 test('my upstream provider detail uses readable labels without exposing the API key', async () => {
