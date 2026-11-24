@@ -17,6 +17,20 @@ test('user audit log filters send action/resource_type and page size', async () 
   assert.deepEqual(calls.at(-1).options.query, { page: 1, limit: 50, action: 'provider', resource_type: 'team' });
 });
 
+test('admin user edits confirm before sending profile and quota fields', async () => {
+  const calls = [];
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/users') return { items: [{ id: 5, username: 'alice', email: 'a@example.test', is_admin: false, email_verified: false, team_id: 2, rate_limit_rpm: 10, rate_limit_tpm: 100, tags: ['ops'] }], total: 1, page: 1 }; return {}; };
+  const page = pageById('admin-users');
+  const data = await page.load(api);
+  const row = data.sections[0].rows[0];
+  const formValues = { email: 'new@example.test', email_verified: true, isAdmin: false, balance: '12', team_id: '3', rate_limit_rpm: '20', rate_limit_tpm: '200', tags: 'ops,urgent' };
+  await row.run({ choose: async () => 'edit', form: async () => formValues, confirm: async () => false, notify() {}, refresh: async () => {} });
+  assert.equal(calls.some(call => call.options.method === 'PUT'), false);
+  await row.run({ choose: async () => 'edit', form: async () => formValues, confirm: async () => true, notify() {}, refresh: async () => {} });
+  const write = calls.find(call => call.options.method === 'PUT');
+  assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
+});
+
 test('admin error logs pass user/model/provider/status/date filters to API', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { logs: [], total: 0, page: 1 }; };

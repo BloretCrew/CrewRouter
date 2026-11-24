@@ -126,14 +126,22 @@ function createAdminPages(runtime) {
           if (choice === 'edit') {
             const values = await ctx.form('修改用户', [
               { name: 'email', label: '邮箱', value: item.email || '' },
+              { name: 'email_verified', label: '邮箱已验证', type: 'boolean', value: item.email_verified === true },
               { name: 'isAdmin', label: '管理员', type: 'boolean', value: item.is_admin === true },
               { name: 'balance', label: '余额（留空不修改）', value: '' },
-              { name: 'team_id', label: 'Team ID（留空不修改）', value: '' },
+              { name: 'team_id', label: 'Team ID（留空不修改）', value: String(item.team_id || '') },
+              { name: 'rate_limit_rpm', label: 'RPM 限额（留空不修改）', value: String(item.rate_limit_rpm || '') },
+              { name: 'rate_limit_tpm', label: 'TPM 限额（留空不修改）', value: String(item.rate_limit_tpm || '') },
+              { name: 'tags', label: '用户标签（逗号分隔；留空不修改）', value: Array.isArray(item.tags) ? item.tags.join(',') : '' },
             ]);
             if (!values) return;
-            const body = { email: values.email, isAdmin: values.isAdmin };
+            const body = { email: values.email, email_verified: values.email_verified, isAdmin: values.isAdmin };
             if (values.balance !== '') body.balance = Number(values.balance);
             if (values.team_id !== '') body.team_id = Number(values.team_id);
+            if (values.rate_limit_rpm !== '') body.rate_limit_rpm = Number(values.rate_limit_rpm);
+            if (values.rate_limit_tpm !== '') body.rate_limit_tpm = Number(values.rate_limit_tpm);
+            if (values.tags !== '') body.tags = values.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+            if (!await ctx.confirm('确认更新用户', `${item.username}\n管理员：${body.isAdmin ? '是' : '否'} · 邮箱验证：${body.email_verified ? '是' : '否'}${body.balance !== undefined ? ` · 余额 ${body.balance}` : ''}${body.team_id !== undefined ? ` · Team ${body.team_id}` : ''}`)) return;
             await api(`/api/admin/users/${encodeURIComponent(item.id)}`, { method: 'PUT', body });
             ctx.notify('用户已更新。'); await ctx.refresh();
           }
