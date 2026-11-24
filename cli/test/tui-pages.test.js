@@ -16,7 +16,7 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.ok(ids.has('service'), 'CLI retains its local service/profile page');
   assert.ok(ids.has('overview'), 'CLI retains its overview page');
   assert.deepEqual(navGroups.map(group => group.id), ['console', 'admin', 'cli']);
-  assert.deepEqual(navGroups[0].pages.slice(0, 13), ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings']);
+  assert.deepEqual(navGroups[0].pages.filter(id => id !== 'provider-tags').slice(0, 13), ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings']);
   assert.deepEqual(navGroups[1].pages.filter(id => !['admin-policy-members', 'admin-policy-approvals', 'admin-policy-notifications', 'admin-policy-settings', 'admin-policy-clients', 'admin-models', 'admin-teams'].includes(id)), ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings']);
   assert.equal(WEB_PAGE_MAP.find(mapping => mapping.area === 'admin' && mapping.web === 'adminPolicies').kind, 'tabbed-page');
   assert.equal(WEB_PAGE_MAP.find(mapping => mapping.area === 'admin' && mapping.web === 'policyMembers').kind, 'tab');

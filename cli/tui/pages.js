@@ -1,7 +1,7 @@
 'use strict';
 
 const { overviewPage, servicePage, accountPage } = require('./pages-core');
-const { providersPage, modelsPage, keysPage } = require('./pages-resources');
+const { providersPage, providerTagsPage, modelsPage, keysPage } = require('./pages-resources');
 const { usagePage, sessionsPage } = require('./pages-data');
 const { createAdminPages } = require('./pages-admin');
 
@@ -11,6 +11,7 @@ const WEB_PAGE_MAP = Object.freeze([
   { area: 'admin', web: 'adminModelLibrary', cli: 'admin-model-library' },
   { area: 'admin', web: 'adminModels', cli: 'admin-models' },
   { area: 'admin', web: 'adminProviders', cli: 'providers' },
+  { area: 'admin', web: 'providerTags', cli: 'provider-tags', kind: 'tab' },
   { area: 'admin', web: 'adminTeams', cli: 'admin-teams' },
   { area: 'console', web: 'myUpstream', cli: 'providers' },
   { area: 'console', web: 'stats', cli: 'usage' },
@@ -47,6 +48,7 @@ function buildPages(runtime) {
   const pages = [
     adminById.get('model-library'),
     providersPage(runtime),
+    providerTagsPage(runtime),
     keysPage(runtime),
     usagePage(runtime),
     adminById.get('projects'),
@@ -83,7 +85,7 @@ function buildPages(runtime) {
 }
 
 const navGroups = [
-  { id: 'console', label: '控制台', pages: ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'home', 'models', 'account', 'overview'] },
+  { id: 'console', label: '控制台', pages: ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'provider-tags', 'home', 'models', 'account', 'overview'] },
   { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-policy-settings', 'admin-policy-members', 'admin-policy-approvals', 'admin-policy-clients', 'admin-policy-notifications', 'admin-model-library', 'admin-models', 'admin-teams', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings'] },
   { id: 'cli', label: 'CLI 服务', pages: ['service'] },
 ];

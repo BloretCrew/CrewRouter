@@ -8,17 +8,13 @@ const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 const { text, enabledLabel } = require('./pages-common');
 
 function providerDetail(provider) {
+  const { api_key, api_keys, ark_secret_key, cpa_management_key, ...safe } = provider || {};
   return {
-    id: provider.id,
-    name: provider.name,
-    format: provider.format,
-    base_url: provider.base_url,
-    enabled: provider.enabled,
-    has_api_key: provider.has_api_key,
-    api_key_count: provider.api_key_count,
-    endpoint_count: provider.endpoint_count,
-    created_by: provider.created_by,
-    tags: provider.tags,
+    ...safe,
+    api_key: api_key ? '[已配置]' : '',
+    api_keys: Array.isArray(api_keys) ? api_keys.map(entry => ({ ...entry, key: entry.key ? '[已配置]' : '' })) : api_keys,
+    ark_secret_key: ark_secret_key ? '[已配置]' : '',
+    cpa_management_key: cpa_management_key ? '[已配置]' : '',
   };
 }
 
@@ -26,8 +22,8 @@ function providersPage(runtime) {
   return {
     id: 'providers',
     label: '供应商',
-    description: '查看供应商状态，检测连通性；管理员可启停。',
-    async load(api) {
+    description: '查看供应商状态、筛选目录并检测连通性；管理员可启停。',
+    async load() {
       const search = runtime.providerSearch || '';
       const scope = runtime.providerScope || '';
       const enabledFilter = runtime.providerEnabled || '';
@@ -42,12 +38,25 @@ function providersPage(runtime) {
         run: async ctx => {
           const actions = [
             { label: '查看详情', value: 'detail' },
+            ...(data.scope === 'admin' ? [{ label: '设置供应商标签', value: 'tags' }] : []),
             { label: '检测连通性', value: 'ping' },
             ...(data.scope === 'admin' ? [{ label: item.enabled === false ? '启用供应商' : '停用供应商', value: 'toggle' }] : []),
           ];
           const choice = await ctx.choose('供应商操作', actions, { description: `${item.name || item.id}\n${item.base_url || ''}`.trim() });
           if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, JSON.stringify(providerDetail(item), null, 2));
-          else if (choice === 'ping') {
+          else if (choice === 'tags') {
+            const [allTags, provider] = await Promise.all([runtime.client.get('/api/admin/provider-tags'), runtime.client.get(`/api/admin/providers/${encodeURIComponent(item.id)}`)]);
+            const current = new Set((provider.tags || []).map(tag => String(tag.id)));
+            const selected = await ctx.choose(`设置标签 · ${item.name || item.id}`, [
+              ...allTags.map(tag => ({ label: `${current.has(String(tag.id)) ? '✓ ' : ''}${tag.name}（#${tag.id}）`, value: String(tag.id) })),
+              { label: '清空所有标签', value: '__clear__' },
+            ]);
+            if (selected === null) return;
+            const next = selected === '__clear__' ? [] : [...new Set([...current, selected])];
+            if (!await ctx.confirm('保存供应商标签', `${item.name || item.id}\n标签 ID：${next.join(', ') || '无'}`)) return;
+            await runtime.client.put(`/api/admin/providers/${encodeURIComponent(item.id)}/tags`, { tagIds: next.map(Number) });
+            ctx.notify('供应商标签已更新。'); await ctx.refresh();
+          } else if (choice === 'ping') {
             ctx.notify('正在检测连通性…');
             const result = await pingProvider(runtime.client, item.id);
             await ctx.show('连通性检测', result && result.ok
@@ -77,6 +86,7 @@ function providersPage(runtime) {
         actions: [
           { label: '搜索供应商', run: async ctx => { runtime.providerSearch = String(await ctx.ask('供应商名称、ID 或地址', { defaultValue: runtime.providerSearch || '' }) || '').trim(); await ctx.refresh(); } },
           ...(data.scope === 'admin' ? [
+            { label: '供应商标签管理', run: async ctx => ctx.navigate('provider-tags') },
             ...[['', '全部供应商'], ['global', '全局供应商'], ['user', '用户供应商']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerScope = value; await ctx.refresh(); } })),
             ...[['', '全部状态'], ['enabled', '仅启用'], ['disabled', '仅停用']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerEnabled = value; await ctx.refresh(); } })),
             ...[['', '全部密钥模式'], ['fixed', '固定密钥'], ['script', '脚本密钥']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerKeyMode = value; await ctx.refresh(); } })),
@@ -90,6 +100,31 @@ function providersPage(runtime) {
   };
 }
 
+function providerTagsPage(runtime) {
+  return {
+    id: 'provider-tags', label: '供应商标签', description: '管理供应商目录筛选标签。',
+    async load(api) {
+      const tags = await api('/api/admin/provider-tags');
+      return { sections: [{ title: '供应商标签', rows: tags.length ? tags.map(tag => ({ label: `${tag.name} · #${tag.id}`, detail: `颜色 ${tag.color || '默认'} · 顺序 ${tag.sort_order || 0}`, run: async ctx => {
+        const choice = await ctx.choose(`标签 · ${tag.name}`, [{ label: '编辑名称/颜色', value: 'edit' }, { label: '删除标签', value: 'delete' }]);
+        if (choice === 'edit') {
+          const values = await ctx.form('编辑供应商标签', [{ name: 'name', label: '名称', value: tag.name }, { name: 'color', label: '颜色', value: tag.color || '#3b82f6' }]);
+          if (!values || !await ctx.confirm('保存供应商标签', `${tag.name} → ${values.name}`)) return;
+          await api(`/api/admin/provider-tags/${tag.id}`, { method: 'PUT', body: values }); ctx.notify('标签已更新。'); await ctx.refresh();
+        }
+        if (choice === 'delete') {
+          if (!await ctx.confirm('删除供应商标签', `删除「${tag.name}」？相关供应商标签关联会被级联删除。`)) return;
+          await api(`/api/admin/provider-tags/${tag.id}`, { method: 'DELETE' }); ctx.notify('标签已删除。'); await ctx.refresh();
+        }
+      } })) : [{ label: '暂无标签。' }] }], actions: [
+        { label: '新建标签', run: async ctx => { const values = await ctx.form('新建供应商标签', [{ name: 'name', label: '名称' }, { name: 'color', label: '颜色', value: '#3b82f6' }]); if (!values || !String(values.name || '').trim()) return; await api('/api/admin/provider-tags', { method: 'POST', body: values }); ctx.notify('标签已创建。'); await ctx.refresh(); } },
+        { label: '返回供应商', run: ctx => ctx.navigate('providers') },
+        { label: '刷新', run: ctx => ctx.refresh() },
+      ] };
+    },
+  };
+}
+
 function modelsPage(runtime) {
   if (runtime.modelSearch === undefined) runtime.modelSearch = '';
   if (runtime.modelPage === undefined) runtime.modelPage = 1;
@@ -97,7 +132,7 @@ function modelsPage(runtime) {
     id: 'models',
     label: '模型',
     description: '浏览模型、测试连通性并切换当前模型。',
-    async load(api) {
+    async load() {
       const data = await listModels(runtime.client, { search: runtime.modelSearch, page: runtime.modelPage, limit: 100 });
       const rows = data.items.map(item => ({
         label: `${item.name || item.alias || item.id} · ${item.provider_name || item.provider || '未知供应商'} · ${enabledLabel(item.enabled)}`,
@@ -150,7 +185,7 @@ function keysPage(runtime) {
     id: 'keys',
     label: 'API Key',
     description: '管理 API Key；原始 Key 只在创建时显示一次。',
-    async load(api) {
+    async load() {
       const keys = await listApiKeys(runtime.client);
       const rows = keys.map(key => ({
         label: `${key.name || '未命名'} · ${key.key_prefix || ''} · ${enabledLabel(key.enabled)} · ${key.current_model_name || key.current_model_id || '未绑定模型'}`,
@@ -227,4 +262,4 @@ function keysPage(runtime) {
   };
 }
 
-module.exports = { providersPage, modelsPage, keysPage };
+module.exports = { providersPage, providerTagsPage, modelsPage, keysPage };
