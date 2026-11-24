@@ -154,8 +154,12 @@ function createAdminPages(runtime) {
         const data = await api('/api/admin/error-logs', { query: { page, limit: 30, ...filters } });
         const items = array(data && data.logs);
         return { sections: [{ title: '调用错误', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · 保留 ${data.retention_days || '—'} 天`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.model_name || item.model_id, item.provider_name, `${item.status_code || ''} ${item.error_type || ''}`), detail: display(item.error_message, item.username, item.latency_ms && `${item.latency_ms} ms`), run: async ctx => await ctx.show('错误详情', JSON.stringify(item, null, 2)) })) }], actions: [
-          { label: '筛选错误类型', run: async ctx => { const value = await ctx.choose('错误类型', [{ label: '全部', value: '' }, ...['auth', 'rate_limit', 'timeout', 'upstream', 'validation', 'unknown'].map(item => ({ label: item, value: item }))]); if (value !== null) { runtime.errorFilters = { ...filters, error_type: value }; runtime.errorPage = 1; await ctx.refresh(); } } },
-          { label: '仅最终错误', run: async ctx => { runtime.errorFilters = { ...filters, is_final: filters.is_final === 'true' ? '' : 'true' }; runtime.errorPage = 1; await ctx.refresh(); } },
+          { label: '筛选错误类型', run: async ctx => { const value = await ctx.ask('错误类型（留空全部）', { defaultValue: filters.error_type || '' }); if (value !== null) { runtime.errorFilters = { ...filters, error_type: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '仅最终错误', run: async ctx => { runtime.errorFilters = { ...filters, final_only: filters.final_only === '1' ? '' : '1' }; runtime.errorPage = 1; await ctx.refresh(); } },
+          { label: '筛选状态码', run: async ctx => { const value = await ctx.ask('HTTP 状态码（留空全部）', { defaultValue: filters.status_code || '' }); if (value !== null) { runtime.errorFilters = { ...filters, status_code: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '筛选模型', run: async ctx => { const value = await ctx.ask('模型名称或 ID（留空全部）', { defaultValue: filters.model_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, model_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '筛选用户', run: async ctx => { const value = await ctx.ask('用户名或用户 ID（留空全部）', { defaultValue: filters.user_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, user_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '清除筛选', run: async ctx => { runtime.errorFilters = {}; runtime.errorPage = 1; await ctx.refresh(); } },
           { label: '上一页', run: async ctx => { runtime.errorPage = Math.max(1, page - 1); await ctx.refresh(); } },
           { label: '下一页', run: async ctx => { runtime.errorPage = page + 1; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },

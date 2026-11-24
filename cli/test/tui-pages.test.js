@@ -48,10 +48,8 @@ test('user console pages query matching endpoints and expose equivalent controls
     if (path === '/api/user/api-keys') return [{ id: 8, name: 'Main Key' }];
     if (path === '/api/user/provider-tags') return [{ id: 2, name: 'Featured' }];
     if (path.endsWith('/models')) return { models: [{ id: 'm1', name: 'Model One' }], queue: [] };
-    if (path.endsWith('/fp')) return { file: 'CLAUDE.md', content: 'prompt body' };
     return {};
   };
-
   const project = await pages.get('projects').load(api);
   assert.ok(project.sections.some(section => section.title === '每日活动'));
   assert.ok(project.actions.some(action => action.label === '自定义日期范围'));
@@ -89,6 +87,18 @@ test('model library requires confirmation and sends the ordered key model queue'
   await row.run({ choose: async () => 'toggle', confirm: async () => true, notify() {}, refresh: async () => {} });
   assert.equal(calls.at(-1).options.method, 'PUT');
   assert.deepEqual(calls.at(-1).options.body.modelIds, ['m1']);
+});
+
+test('error log filters use the actual admin API parameter names', async () => {
+  const runtimeState = runtime(true);
+  const page = buildPages(runtimeState).find(item => item.id === 'admin-error-logs');
+  const calls = [];
+  const api = async (path, options = {}) => { calls.push({ path, options }); return { logs: [], total: 0, page: 1, retention_days: 30 }; };
+  const first = await page.load(api);
+  const finalOnly = first.actions.find(action => action.label === '仅最终错误');
+  await finalOnly.run({ refresh: async () => page.load(api) });
+  assert.equal(calls.at(-1).options.query.final_only, '1');
+  assert.equal(calls.at(-1).options.query.is_final, undefined);
 });
 
 test('project date query sends the web API range parameters', async () => {
