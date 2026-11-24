@@ -504,6 +504,10 @@ function managementSchemas() {
       format: { type: 'string', enum: ['openai', 'anthropic', 'responses', 'gemini'] },
       created_by: { type: ['integer', 'null'] },
     }, ['id', 'name', 'format', 'created_by']),
+    UserProduct: object({
+      id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
+      image_url: nullableString, link: nullableString, sort_order: { type: 'integer' },
+    }, ['id', 'name', 'sort_order']),
     TeamQuotaRule: object({
       rule_type: { type: 'string' }, duration_hours: { type: 'number' }, current: numberOrString,
     }, ['rule_type']),
@@ -530,6 +534,7 @@ function managementResponseSchema(operationId) {
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
     'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
+    'user.products.list': { type: 'array', items: { $ref: '#/components/schemas/UserProduct' } },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },

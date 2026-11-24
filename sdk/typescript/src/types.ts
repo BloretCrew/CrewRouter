@@ -183,6 +183,15 @@ export interface UserProviderListItem {
   created_by: number | null;
 }
 
+export interface UserProduct {
+  id: number;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  link: string | null;
+  sort_order: number;
+}
+
 export interface ApiKeyMember {
   id: number;
   username: string;

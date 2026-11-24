@@ -223,6 +223,16 @@ type UserKeyTag struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// UserProduct is one active product returned by GET /api/user/products.
+type UserProduct struct {
+	ID          int64   `json:"id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	ImageURL    *string `json:"image_url"`
+	Link        *string `json:"link"`
+	SortOrder   int     `json:"sort_order"`
+}
+
 // UserProviderListItem is one user-visible provider returned by GET /api/user/providers.
 type UserProviderListItem struct {
 	ID        string `json:"id"`

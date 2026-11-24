@@ -1086,6 +1086,44 @@
         ],
         "additionalProperties": true
       },
+      "UserProduct": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "link": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort_order": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sort_order"
+        ],
+        "additionalProperties": true
+      },
       "TeamQuotaRule": {
         "type": "object",
         "properties": {
@@ -17860,8 +17898,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserProduct"
+                  }
                 }
               }
             }

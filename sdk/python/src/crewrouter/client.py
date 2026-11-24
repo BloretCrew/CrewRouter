@@ -131,6 +131,15 @@ class UserProviderListItem(TypedDict):
     created_by: Optional[int]
 
 
+class UserProduct(TypedDict):
+    id: int
+    name: str
+    description: Optional[str]
+    image_url: Optional[str]
+    link: Optional[str]
+    sort_order: int
+
+
 class ApiKeyMember(TypedDict):
     id: int
     username: str

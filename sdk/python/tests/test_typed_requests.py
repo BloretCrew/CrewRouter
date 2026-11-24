@@ -9,9 +9,7 @@ from crewrouter import (
     ApiKeyModelsResponse,
     ApiKeyAvailableModel,
     ApiKeyModelQueueItem,
-    ApiKeyModelsResponse,
     ApiKeyQueueItem,
-    ApiKeyAvailableModel,
     ApiKeyDailyUsageItem,
     ApiKeyMembersResponse,
     ApiKeyQuotaWarning,
@@ -22,6 +20,7 @@ from crewrouter import (
     UserBalance,
     UserModelListItem,
     UserProviderListItem,
+    UserProduct,
     UserKeyTag,
     UserUsageLog,
     UserUsageLogsResponse,
@@ -137,7 +136,9 @@ class TypedRequestTests(unittest.TestCase):
         key_models: ApiKeyModelsResponse = {"models": [available_model], "queue": [queue_item]}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
+        product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)
+        self.assertIsNone(product["description"])
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

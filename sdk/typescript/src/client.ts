@@ -19,6 +19,7 @@ import type {
   UserKeyTag,
   UserModelListItem,
   UserProviderListItem,
+  UserProduct,
   UserUsageLogsResponse,
   RequestOptions,
   StreamHandle,
@@ -205,6 +206,11 @@ export class CrewRouter {
   readonly providers = {
     list: <T = UserProviderListItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.providers.list', options),
+  };
+
+  readonly products = {
+    list: <T = UserProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.products.list', options),
   };
 
   readonly keyTags = {

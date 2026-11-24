@@ -95,6 +95,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(keyModels.Queue) != 1 || keyModels.Queue[0].SortOrder != 0 || len(keyModels.Models) != 1 {
 		t.Fatalf("unexpected API key models payload: %#v", keyModels)
 	}
+
+	var products []crewrouter.UserProduct
+	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"image_url":null,"link":null,"sort_order":0}]`), &products); err != nil {
+		t.Fatalf("decode user products: %v", err)
+	}
+	if len(products) != 1 || products[0].Description != nil || products[0].SortOrder != 0 {
+		t.Fatalf("unexpected products payload: %#v", products)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

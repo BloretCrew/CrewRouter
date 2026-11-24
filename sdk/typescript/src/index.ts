@@ -50,6 +50,7 @@ export type {
   UserBalance,
   UserModelListItem,
   UserProviderListItem,
+  UserProduct,
   ChatCompletionRequest,
   AnthropicMessagesRequest,
   OpenAIResponsesRequest,
