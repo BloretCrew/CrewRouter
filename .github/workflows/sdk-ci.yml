@@ -75,6 +75,8 @@ jobs:
           cache-dependency-path: sdk/typescript/package-lock.json
       - run: npm ci --prefix sdk/typescript
       - run: npm --prefix sdk/typescript test
+      - working-directory: sdk/typescript
+        run: npm pack --dry-run
 
   python-sdk:
     name: Python SDK (minimum and current)

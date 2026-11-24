@@ -2,12 +2,15 @@ import { CrewRouterError } from './errors.js';
 import { OPERATIONS, type CrewRouterOperation, type OperationId } from './generated/operations.js';
 import { HttpClient } from './http.js';
 import type {
+  AnthropicMessagesRequest,
   CallOptions,
+  ChatCompletionRequest,
   CrewRouterOptions,
   CrewRouterResponse,
   RequestOptions,
   StreamHandle,
   StreamOptions,
+  OpenAIResponsesRequest,
 } from './types.js';
 
 type JsonObject = Record<string, unknown>;
@@ -102,22 +105,22 @@ export class CrewRouter {
   readonly gateway = {
     chat: {
       completions: {
-        create: <T = unknown>(body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        create: <T = unknown>(body: ChatCompletionRequest, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
           this.call<T>('gateway.chat.completions.create', { ...options, body }),
-        stream: (body: JsonObject, options?: StreamOptions): StreamHandle =>
+        stream: (body: ChatCompletionRequest, options?: StreamOptions): StreamHandle =>
           this.http.stream({ method: 'POST', path: '/v1/chat/completions', body, ...streamOptions(options) }),
       },
     },
     messages: {
-      create: <T = unknown>(body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      create: <T = unknown>(body: AnthropicMessagesRequest, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('gateway.messages.create', { ...options, body }),
-      stream: (body: JsonObject, options?: StreamOptions): StreamHandle =>
+      stream: (body: AnthropicMessagesRequest, options?: StreamOptions): StreamHandle =>
         this.http.stream({ method: 'POST', path: '/v1/messages', body, ...streamOptions(options) }),
     },
     responses: {
-      create: <T = unknown>(body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      create: <T = unknown>(body: OpenAIResponsesRequest, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('gateway.responses.create', { ...options, body }),
-      stream: (body: JsonObject, options?: StreamOptions): StreamHandle =>
+      stream: (body: OpenAIResponsesRequest, options?: StreamOptions): StreamHandle =>
         this.http.stream({ method: 'POST', path: '/v1/responses', body, ...streamOptions(options) }),
     },
     models: {

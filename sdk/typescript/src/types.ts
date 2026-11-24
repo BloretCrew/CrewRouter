@@ -64,6 +64,28 @@ export interface CallOptions {
   retryNonIdempotent?: boolean;
 }
 
+export interface ChatCompletionRequest {
+  model?: string;
+  messages: Array<Record<string, unknown>>;
+  stream?: boolean;
+  [key: string]: unknown;
+}
+
+export interface AnthropicMessagesRequest {
+  model?: string;
+  max_tokens: number;
+  messages: Array<Record<string, unknown>>;
+  stream?: boolean;
+  [key: string]: unknown;
+}
+
+export interface OpenAIResponsesRequest {
+  model?: string;
+  input: string | Array<Record<string, unknown>>;
+  stream?: boolean;
+  [key: string]: unknown;
+}
+
 export interface CrewRouterResponse<T = unknown> {
   data: T;
   raw: Response;
