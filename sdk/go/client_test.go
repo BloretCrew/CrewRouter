@@ -193,6 +193,37 @@ func TestStreamParsesEventsAndDone(t *testing.T) {
 	}
 }
 
+func TestStreamIdleTimeoutIsTerminalAndClosesBody(t *testing.T) {
+	closed := make(chan struct{})
+	client, _, _ := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		<-r.Context().Done()
+		close(closed)
+	}, Options{APIKey: "sk-test", StreamIdleTimeout: 25 * time.Millisecond})
+
+	stream, err := client.Stream(context.Background(), http.MethodPost, "/stream", map[string]any{}, StreamOptions{})
+	if err != nil {
+		t.Fatalf("Stream() error = %v", err)
+	}
+	_, err = stream.Next()
+	var timeoutErr *TimeoutError
+	if !errors.As(err, &timeoutErr) {
+		t.Fatalf("Next() error = %T (%v), want *TimeoutError", err, err)
+	}
+	if _, err := stream.Next(); err != io.EOF {
+		t.Fatalf("Next() after timeout error = %v, want io.EOF", err)
+	}
+	select {
+	case <-closed:
+	case <-time.After(time.Second):
+		t.Fatal("stream request context remained active after timeout")
+	}
+}
+
 func TestGetRetries429AndPostDoesNotByDefault(t *testing.T) {
 	var getAttempts atomic.Int32
 	var postAttempts atomic.Int32

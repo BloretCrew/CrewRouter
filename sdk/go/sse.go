@@ -55,6 +55,9 @@ func (s *Stream) Close() error {
 
 // Next returns the next event, or io.EOF when the stream ends.
 func (s *Stream) Next() (StreamEvent, error) {
+	if s.closed {
+		return StreamEvent{}, io.EOF
+	}
 	for {
 		line, err := s.readLine()
 		if err != nil && err != io.EOF {
@@ -128,9 +131,11 @@ func (s *Stream) readLine() (string, error) {
 	case item := <-ch:
 		return item.line, item.err
 	case <-timer.C:
+		s.closed = true
 		_ = s.body.Close()
 		return "", &TimeoutError{Err: fmt.Errorf("stream idle timeout after %s", s.idle)}
 	case <-s.ctx.Done():
+		s.closed = true
 		_ = s.body.Close()
 		return "", &AbortError{Err: s.ctx.Err()}
 	}
