@@ -47,6 +47,7 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   timeoutMs?: number;
+  streamIdleTimeoutMs?: number;
   responseType?: ResponseType;
   maxRetries?: number;
   retryNonIdempotent?: boolean;
@@ -59,6 +60,7 @@ export interface CallOptions {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   timeoutMs?: number;
+  streamIdleTimeoutMs?: number;
   responseType?: ResponseType;
   maxRetries?: number;
   retryNonIdempotent?: boolean;
@@ -109,7 +111,12 @@ export interface StreamEvent {
 
 export interface StreamOptions {
   signal?: AbortSignal;
+  /** Timeout for receiving response headers; defaults to the normal gateway timeout. */
+  timeoutMs?: number;
+  /** Maximum wait between stream chunks. */
   idleTimeoutMs?: number;
+  /** Alias for idleTimeoutMs using the client option naming convention. */
+  streamIdleTimeoutMs?: number;
 }
 
 export interface StreamHandle<T = StreamEvent> extends AsyncIterable<T> {

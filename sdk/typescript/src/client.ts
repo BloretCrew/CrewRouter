@@ -19,8 +19,12 @@ function mergePathParams(options: CallOptions | undefined, extra: Record<string,
   return { ...options, pathParams: { ...(options?.pathParams || {}), ...extra } };
 }
 
-function streamOptions(options: StreamOptions | undefined): Pick<RequestOptions, 'signal' | 'timeoutMs'> {
-  return { signal: options?.signal, timeoutMs: options?.idleTimeoutMs };
+function streamOptions(options: StreamOptions | undefined): Pick<RequestOptions, 'signal' | 'timeoutMs' | 'streamIdleTimeoutMs'> {
+  return {
+    signal: options?.signal,
+    timeoutMs: options?.timeoutMs,
+    streamIdleTimeoutMs: options?.streamIdleTimeoutMs ?? options?.idleTimeoutMs,
+  };
 }
 
 export interface ApiKeyCreateInput extends JsonObject {

@@ -271,8 +271,9 @@ export class HttpClient {
       else userSignal.addEventListener('abort', onAbort, { once: true });
     }
 
-    const idleTimeoutMs = options.timeoutMs ?? this.options.streamIdleTimeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS;
-    const headerTimeout = this.timeoutSignal(requestController.signal, prepared.timeoutMs || DEFAULT_GATEWAY_TIMEOUT_MS);
+    const idleTimeoutMs = options.streamIdleTimeoutMs ?? this.options.streamIdleTimeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS;
+    const headerTimeoutMs = options.timeoutMs ?? this.options.timeoutMs ?? prepared.timeoutMs;
+    const headerTimeout = this.timeoutSignal(requestController.signal, headerTimeoutMs || DEFAULT_GATEWAY_TIMEOUT_MS);
     const responsePromise = this.fetchImpl(prepared.url, { ...prepared.init, signal: headerTimeout.signal })
       .then(async (response) => {
         headerTimeout.cleanup();
@@ -286,7 +287,7 @@ export class HttpClient {
         headerTimeout.cleanup();
         requestController.abort(error);
         if (isAbortError(error)) throw new CrewRouterAbortError('Request aborted', { cause: error });
-        if (headerTimeout.timedOut()) throw new CrewRouterTimeoutError(`Stream request timed out after ${prepared.timeoutMs}ms`, { cause: error });
+        if (headerTimeout.timedOut()) throw new CrewRouterTimeoutError(`Stream request timed out after ${headerTimeoutMs}ms`, { cause: error });
         if (error instanceof CrewRouterError) throw error;
         throw new CrewRouterConnectionError(error instanceof Error ? error.message : String(error), { cause: error });
       });

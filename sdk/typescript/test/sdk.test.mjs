@@ -148,6 +148,20 @@ test('SSE parser handles split UTF-8, multi-line data and [DONE]', async () => {
   assert.equal(events[2].data, '[DONE]');
 });
 
+test('stream idle timeout does not limit response header wait time', async () => {
+  reset((req, res) => {
+    setTimeout(() => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write('data: {"ready":true}\n\n');
+      setTimeout(() => res.end(), 10);
+    }, 80);
+  });
+  const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
+  const events = [];
+  for await (const event of client.gateway.chat.completions.stream({ messages: [] }, { idleTimeoutMs: 50 })) events.push(event);
+  assert.equal(events[0].data, '{"ready":true}');
+});
+
 test('breaking from an SSE iterator cancels the reader and closes the response', async () => {
   let responseClosed = false;
   reset((req, res) => {
