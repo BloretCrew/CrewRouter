@@ -235,15 +235,19 @@ function createAdminPages(runtime) {
     adminOnly({
       id: 'admin-models', label: '模型管理', description: '管理员模型的独立管理视图。',
       async load(api) {
-        const data = await api('/api/admin/models', { query: { page: runtime.adminModelPage || 1, limit: 30, q: runtime.adminModelSearch || '' } });
+        const filters = runtime.adminModelFilters || {};
+        const data = await api('/api/admin/models', { query: { page: runtime.adminModelPage || 1, limit: 30, q: runtime.adminModelSearch || '', ...filters } });
         const items = array(data && (data.items || data));
         return { sections: [{ title: '模型管理', description: `第 ${data.page || runtime.adminModelPage || 1} 页 · 共 ${data.total || items.length} 个`, rows: items.map(item => ({ label: display(item.name, item.alias, item.id), detail: display(item.provider_name || item.provider, item.enabled === false ? '停用' : '启用', item.description), run: async ctx => {
-          const choice = await ctx.choose('模型操作', [{ label: '查看详情', value: 'detail' }, { label: '测试模型', value: 'test' }, { label: item.enabled === false ? '启用' : '停用', value: 'toggle' }]);
+          const choice = await ctx.choose('模型操作', [{ label: '查看详情', value: 'detail' }, { label: '测试模型', value: 'test' }]);
           if (choice === 'detail') await ctx.show(`模型 · ${item.name || item.id}`, JSON.stringify(item, null, 2));
-          if (choice === 'test') { const result = await api(`/api/admin/models/${encodeURIComponent(item.id)}/test`, { method: 'POST', body: {} }); await ctx.show('模型测试', JSON.stringify(result, null, 2)); }
-          if (choice === 'toggle') { const enabled = item.enabled === false; if (!await ctx.confirm(enabled ? '启用模型' : '停用模型', item.name || item.id)) return; await api('/api/admin/models/batch-update', { method: 'POST', body: { ids: [item.id], enabled } }); await ctx.refresh(); }
+          if (choice === 'test') { if (!await ctx.confirm('测试模型', `将使用当前模型配置对 ${item.name || item.id} 发起一次真实测试请求。继续？`)) return; const result = await api(`/api/admin/models/${encodeURIComponent(item.id)}/test`, { method: 'POST', body: {} }); await ctx.show('模型测试', JSON.stringify(result, null, 2)); }
         } })) }], actions: [
           { label: '搜索模型', run: async ctx => { runtime.adminModelSearch = String(await ctx.ask('模型搜索', { defaultValue: runtime.adminModelSearch || '' }) || '').trim(); runtime.adminModelPage = 1; await ctx.refresh(); } },
+          ...[['provider', '供应商'], ['series', '系列']].map(([key, label]) => ({ label: `筛选${label}`, run: async ctx => { const value = await ctx.ask(`${label} ID（留空清除）`, { defaultValue: filters[key] || '' }); if (value !== null) { runtime.adminModelFilters = { ...filters, [key]: String(value).trim() }; runtime.adminModelPage = 1; await ctx.refresh(); } } })),
+          { label: '筛选启用状态', run: async ctx => { const value = await ctx.choose('模型启用状态', [{ label: '全部', value: '' }, { label: '启用', value: 'true' }, { label: '停用', value: 'false' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, enabled: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
+          { label: '筛选测试状态', run: async ctx => { const value = await ctx.choose('模型测试状态', [{ label: '全部', value: '' }, { label: '通过', value: 'pass' }, { label: '失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, test: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
+          { label: '清除筛选', run: async ctx => { runtime.adminModelFilters = {}; runtime.adminModelPage = 1; await ctx.refresh(); } },
           { label: '上一页', run: async ctx => { runtime.adminModelPage = Math.max(1, (runtime.adminModelPage || 1) - 1); await ctx.refresh(); } },
           { label: '下一页', run: async ctx => { runtime.adminModelPage = (runtime.adminModelPage || 1) + 1; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
