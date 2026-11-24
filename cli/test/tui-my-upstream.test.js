@@ -35,6 +35,19 @@ test('my upstream provider page exposes web statistics and enabled/disabled filt
   assert.ok(enabled.actions.some(action => action.label === '检测本页供应商'));
 });
 
+test('my upstream provider detail uses readable labels without exposing the API key', async () => {
+  const runtime = makeRuntime({ get: async path => path === '/api/user/my-providers' ? [{ id: 'p1', name: 'Personal', base_url: 'https://p.example', format: 'anthropic', enabled: true, has_api_key: true, model_count: 2, endpoints: [{ url: 'https://secondary.example', label: '备用接口', format: 'openai', enabled: false }] }] : [] });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const data = await page.load();
+  const row = data.sections.find(section => section.title === '供应商').rows[0];
+  let detail = '';
+  await row.run({ choose: async () => 'detail', show: async (_title, body) => { detail = body; } });
+  assert.match(detail, /接口格式：Anthropic Messages 格式/);
+  assert.match(detail, /API Key：已配置（不显示密钥）/);
+  assert.match(detail, /备用接口（openai，已停用）/);
+  assert.doesNotMatch(detail, /api_key/);
+});
+
 test('my provider edit confirms and does not overwrite an absent API key', async () => {
   const calls = [];
   const runtime = makeRuntime({
@@ -136,10 +149,14 @@ test('personal Team model edit sends the complete web form and delete warns abou
   const page = buildPages(runtime).find(item => item.id === 'my-upstream');
   const data = await page.load();
   const row = data.sections.find(section => section.title === '个人 Team 模型').rows[0];
-  const form = async () => ({ upstream_model_id: 'up-1', alias: 'Updated', description: 'desc', series: 'S', enabled: true, input_price_per_1k_tokens: '1.5', output_price_per_1k_tokens: '2.5', cached_output_price_per_1k_tokens: '3.5', reference_input_price_per_1k_tokens: '4', reference_output_price_per_1k_tokens: '5', rate_limit_rpm: '10', rate_limit_tpm: '20', model_multiplier: '1.4', completion_multiplier: '1.3', thinking_model_id: '', non_thinking_model_id: '' });
+  let formFields = [];
+  const form = async (_title, fields) => { formFields = fields; return { upstream_model_id: 'up-1', alias: 'Updated', description: 'desc', series: 'S', enabled: true, input_price_per_1k_tokens: '1.5', output_price_per_1k_tokens: '2.5', cached_output_price_per_1k_tokens: '3.5', reference_input_price_per_1k_tokens: '4', reference_output_price_per_1k_tokens: '5', rate_limit_rpm: '10', rate_limit_tpm: '20', model_multiplier: '1.4', completion_multiplier: '1.3', thinking_model_id: '', non_thinking_model_id: '' }; };
   await row.run({ choose: async () => 'edit', form, confirm: async () => false });
   assert.equal(calls.length, 0);
   await row.run({ choose: async () => 'edit', form, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(formFields.some(field => field.label === '每分钟最大请求数（不限制填 0）'));
+  assert.ok(formFields.some(field => field.label === '思考模式模型 ID（可空）'));
+  assert.ok(formFields.some(field => field.label === '计费倍率'));
   const update = calls.find(call => call.method === 'PUT');
   assert.equal(update.path, '/api/user/models/m1');
   assert.equal(update.body.input_price_per_1k_tokens, 1.5);

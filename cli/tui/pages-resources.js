@@ -9,14 +9,16 @@ const { text, enabledLabel } = require('./pages-common');
 const display = (...values) => values.map(value => String(value || '').trim()).filter(Boolean).join(' · ');
 
 function providerDetail(provider) {
-  const { api_key, api_keys, ark_secret_key, cpa_management_key, ...safe } = provider || {};
-  return {
-    ...safe,
-    api_key: api_key ? '[已配置]' : '',
-    api_keys: Array.isArray(api_keys) ? api_keys.map(entry => ({ ...entry, key: entry.key ? '[已配置]' : '' })) : api_keys,
-    ark_secret_key: ark_secret_key ? '[已配置]' : '',
-    cpa_management_key: cpa_management_key ? '[已配置]' : '',
-  };
+  const item = provider || {};
+  const format = ({ openai: 'OpenAI 兼容格式', anthropic: 'Anthropic Messages 格式', responses: 'Responses 格式', gemini: 'Gemini 格式' })[item.format] || item.format || '未指定';
+  return [
+    `名称：${item.name || '未命名'}`, `状态：${item.enabled === false ? '已停用' : '已启用'}`, `接口格式：${format}`,
+    `Base URL：${item.base_url || '未设置'}`, item.models_url && `模型列表地址：${item.models_url}`,
+    item.model_count !== undefined && `已配置模型：${item.model_count} 个`,
+    item.has_api_key !== undefined && `API Key：${item.has_api_key ? '已配置（不显示密钥）' : '未配置'}`,
+    Array.isArray(item.endpoints) && item.endpoints.length ? `附加接口：${item.endpoints.map(endpoint => `${endpoint.label || endpoint.url}（${endpoint.format || format}，${endpoint.enabled === false ? '已停用' : '已启用'}）`).join('\n  ')}` : '',
+    item.notes && `备注：${item.notes}`, item.id && `内部编号：${item.id}`,
+  ].filter(Boolean).join('\n');
 }
 
 function providersPage(runtime) {
@@ -44,7 +46,7 @@ function providersPage(runtime) {
             ...(data.scope === 'admin' ? [{ label: item.enabled === false ? '启用供应商' : '停用供应商', value: 'toggle' }] : []),
           ];
           const choice = await ctx.choose('供应商操作', actions, { description: `${item.name || item.id}\n${item.base_url || ''}`.trim() });
-          if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, JSON.stringify(providerDetail(item), null, 2));
+          if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, providerDetail(item));
           else if (choice === 'tags') {
             const [allTags, provider] = await Promise.all([runtime.client.get('/api/admin/provider-tags'), runtime.client.get(`/api/admin/providers/${encodeURIComponent(item.id)}`)]);
             const current = new Set((provider.tags || []).map(tag => String(tag.id)));
@@ -103,6 +105,7 @@ function providersPage(runtime) {
 
 function myUpstreamPage(runtime) {
   const updateLabels = { enabled: '启用状态', input_price_per_1k_tokens: '输入价格（每 1,000 个 Token）', output_price_per_1k_tokens: '输出价格（每 1,000 个 Token）', cached_output_price_per_1k_tokens: '缓存输出价格（每 1,000 个 Token）', series: '模型系列', description: '模型说明', alias: '显示名称/别名' };
+  const modelMultiplierLabel = value => `计费倍率 ×${Number(value || 1).toFixed(2)}`;
   const describeUpdates = updates => Object.entries(updates).map(([name, value]) => `${updateLabels[name] || name}：${name === 'enabled' ? (value ? '启用' : '停用') : value}`).join('\n');
   return {
     id: 'my-upstream', label: '我的上游', description: '自有供应商与个人团队模型。',
@@ -172,7 +175,7 @@ function myUpstreamPage(runtime) {
             const field = await ctx.choose('选择供应商模型更新字段', fieldOptions, { description: '可添加多个字段；未选择字段保持不变。' });
             if (!field || field === '__done__') break;
             if (field === 'enabled') { const value = await ctx.choose('设置模型状态', [{ label: '启用', value: true }, { label: '停用', value: false }]); if (value !== null) updates.enabled = value; continue; }
-            const labels = { input_price_per_1k_tokens: '输入价格（每 1K Token）', output_price_per_1k_tokens: '输出价格（每 1K Token）', cached_output_price_per_1k_tokens: '缓存输出价格（每 1K Token）', series: '系列名称', description: '模型说明', alias: '显示名称/别名' };
+            const labels = { input_price_per_1k_tokens: '输入价格（每 1,000 个 Token）', output_price_per_1k_tokens: '输出价格（每 1,000 个 Token）', cached_output_price_per_1k_tokens: '缓存输出价格（每 1,000 个 Token）', series: '系列名称', description: '模型说明', alias: '显示名称/别名' };
             const value = await ctx.ask(labels[field], { description: field.endsWith('_price_per_1k_tokens') ? '请输入大于或等于 0 的数字。' : '留空会清除此字段。' });
             if (value === null) continue;
             if (field.endsWith('_price_per_1k_tokens')) { if (!String(value).trim() || !Number.isFinite(Number(value)) || Number(value) < 0) { await ctx.show('价格无效', '请输入大于或等于 0 的数字。'); continue; } updates[field] = Number(value); }
@@ -213,7 +216,7 @@ function myUpstreamPage(runtime) {
             const enabled = await ctx.choose('模型启用状态', [{ label: '启用', value: true }, { label: '停用', value: false }]);
             if (enabled !== null) updates.enabled = enabled;
           } else {
-            const labels = { series: '系列名称', description: '模型说明', alias: '显示名称/别名', input_price_per_1k_tokens: '输入价格（每 1K Token）', output_price_per_1k_tokens: '输出价格（每 1K Token）' };
+            const labels = { series: '系列名称', description: '模型说明', alias: '显示名称/别名', input_price_per_1k_tokens: '输入价格（每 1,000 个 Token）', output_price_per_1k_tokens: '输出价格（每 1,000 个 Token）' };
             const value = await ctx.ask(labels[field], { description: '留空将清空此字段（价格除外）。' });
             if (value === null) continue;
             if (field.endsWith('_price_per_1k_tokens')) {
@@ -233,14 +236,14 @@ function myUpstreamPage(runtime) {
             { label: '我的供应商', value: `${providers.length} 个` }, { label: '已启用', value: `${providers.filter(item => item.enabled !== false).length} 个` },
             { label: '已配置模型', value: `${providers.reduce((sum, item) => sum + Number(item.model_count || 0), 0)} 个` },
             { label: '连通性已测', value: `${providers.filter(item => Object.hasOwn(runtime.myUpstreamPing || {}, String(item.id))).length}/${providers.length}` },
-          ], rows: visibleProviders.length ? visibleProviders.map(item => ({ label: display(item.name, item.format, item.enabled === false ? '已禁用' : '已启用', `${item.model_count || 0} 个模型`), detail: display(item.id, item.base_url, item.notes), run: async ctx => { const choice = await ctx.choose(`供应商 · ${item.name || item.id}`, [{ label: '查看详情', value: 'detail' }, { label: '管理供应商模型', value: 'models' }, { label: '编辑供应商', value: 'edit' }, { label: '同步模型', value: 'sync' }, { label: '检测连通性', value: 'ping' }, { label: '删除供应商', value: 'delete' }], { description: item.base_url || '' }); if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, JSON.stringify(providerDetail(item), null, 2)); if (choice === 'models') await manageProviderModels(ctx, item); if (choice === 'edit') { const values = await ctx.form('编辑我的上游供应商', [
+          ], rows: visibleProviders.length ? visibleProviders.map(item => ({ label: display(item.name, item.format, item.enabled === false ? '已禁用' : '已启用', `${item.model_count || 0} 个模型`), detail: display(item.id, item.base_url, item.notes), run: async ctx => { const choice = await ctx.choose(`供应商 · ${item.name || item.id}`, [{ label: '查看详情', value: 'detail' }, { label: '管理供应商模型', value: 'models' }, { label: '编辑供应商', value: 'edit' }, { label: '同步模型', value: 'sync' }, { label: '检测连通性', value: 'ping' }, { label: '删除供应商', value: 'delete' }], { description: item.base_url || '' }); if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, providerDetail(item)); if (choice === 'models') await manageProviderModels(ctx, item); if (choice === 'edit') { const values = await ctx.form('编辑我的上游供应商', [
             { name: 'name', label: '供应商名称', value: item.name || '' }, { name: 'base_url', label: 'Base URL', value: item.base_url || '' },
             { name: 'format', label: 'API 格式', value: item.format || 'openai', options: ['openai', 'anthropic', 'responses', 'gemini'] },
             { name: 'notes', label: '备注', value: item.notes || '' }, { name: 'enabled', label: '启用', type: 'boolean', value: item.enabled !== false },
             { name: 'models_url', label: '模型列表 URL（可空）', value: item.models_url || '' }, { name: 'test_user_agent', label: '测试 User-Agent（可空）', value: item.test_user_agent || '' },
             { name: 'forward_headers', label: '转发请求头', type: 'boolean', value: item.forward_headers !== false }, { name: 'api_key', label: 'API Key（留空保持现有）', secret: true },
           ]); if (!values) return; if (!String(values.name || '').trim() || !String(values.base_url || '').trim()) { await ctx.show('供应商信息不完整', '供应商名称和 Base URL 为必填项。'); return; } if (!await ctx.confirm('保存上游供应商', `${values.name}\n${values.base_url}\n${values.enabled ? '启用' : '停用'} · ${values.format}\nAPI Key 留空表示保留现有密钥。`)) return; const body = { name: values.name, base_url: values.base_url, format: values.format, notes: values.notes, enabled: values.enabled, models_url: values.models_url, test_user_agent: values.test_user_agent, forward_headers: values.forward_headers, ...(values.api_key ? { api_key: values.api_key } : {}) }; await runtime.client.put(`/api/user/providers/${encodeURIComponent(item.id)}`, body); ctx.notify('供应商已更新。'); await ctx.refresh(); } if (choice === 'sync') { if (!await ctx.confirm('同步供应商模型', `${item.name || item.id}\n从上游获取模型并导入个人 Team（最多 100 个新模型）。`)) return; const result = await runtime.client.post(`/api/user/providers/${encodeURIComponent(item.id)}/refresh-models`, {}); await ctx.show('模型同步完成', `新导入 ${result.added || 0} 个模型；上游返回 ${result.total || 0} 个模型。`); await ctx.refresh(); } if (choice === 'delete') { if (!await ctx.confirm('删除我的上游供应商', `删除「${item.name || item.id}」及其全部 ${item.model_count || 0} 个模型？此操作不可撤销。`)) return; await runtime.client.delete(`/api/user/providers/${encodeURIComponent(item.id)}`); ctx.notify('供应商及关联模型已删除。'); await ctx.refresh(); } if (choice === 'ping') { const result = await pingProvider(runtime.client, item.id); runtime.myUpstreamPing = { ...(runtime.myUpstreamPing || {}), [String(item.id)]: result }; await ctx.show('连通性检测', result?.ok ? `连接成功 · ${result.latency_ms ?? '—'} ms${result.note ? `\n${result.note}` : ''}` : `连接失败 · ${result?.error || '未知错误'}`); } } })) : [{ label: providersResult.status === 'rejected' ? providersResult.reason.message : '暂无我的上游供应商。' }] },
-          { title: '个人 Team 模型', tab: 'models', description: `${visibleModels.length}/${models.length} 个模型 · 搜索 ${modelQuery || '无'}`, rows: visibleModels.length ? visibleModels.map(item => ({ label: display(item.alias || item.name || item.id, item.upstream_model_id || item.name || item.id, item.provider_name || item.provider, item.series || '—'), detail: display(`倍率 ×${Number(item.model_multiplier || 1).toFixed(2)}`, item.enabled === false ? '停用' : '启用', item.description), run: async ctx => {
+          { title: '个人 Team 模型', tab: 'models', description: `${visibleModels.length}/${models.length} 个模型 · 搜索 ${modelQuery || '无'}`, rows: visibleModels.length ? visibleModels.map(item => ({ label: display(item.alias || item.name || item.id, item.upstream_model_id || item.name || item.id, item.provider_name || item.provider, item.series || '—'), detail: display(modelMultiplierLabel(item.model_multiplier), item.enabled === false ? '已停用' : '已启用', item.description), run: async ctx => {
             const choice = await ctx.choose(`个人 Team 模型 · ${item.alias || item.name || item.id}`, [{ label: '查看详情', value: 'detail' }, { label: '编辑模型', value: 'edit' }, { label: '删除模型', value: 'delete' }]);
             if (choice === 'detail') await ctx.show(`个人 Team 模型 · ${item.alias || item.name || item.id}`, JSON.stringify(item, null, 2));
             if (choice === 'edit') {
@@ -254,14 +257,15 @@ function myUpstreamPage(runtime) {
                 { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格 / 1,000 Token', value: String(item.reference_input_price_per_1k_tokens || 0) },
                 { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格 / 1,000 Token', value: String(item.reference_output_price_per_1k_tokens || 0) },
                 { name: 'rate_limit_rpm', label: '每分钟最大请求数（不限制填 0）', value: String(item.rate_limit_rpm || 0) }, { name: 'rate_limit_tpm', label: '每分钟最大 Token 数（不限制填 0）', value: String(item.rate_limit_tpm || 0) },
-                { name: 'model_multiplier', label: '模型倍率', value: String(item.model_multiplier || 1) }, { name: 'completion_multiplier', label: '补全倍率', value: String(item.completion_multiplier || 1) },
+                { name: 'model_multiplier', label: '计费倍率', value: String(item.model_multiplier || 1) }, { name: 'completion_multiplier', label: '补全倍率', value: String(item.completion_multiplier || 1) },
                 { name: 'thinking_model_id', label: '思考模式模型 ID（可空）', value: item.thinking_model_id || '' }, { name: 'non_thinking_model_id', label: '普通模式模型 ID（可空）', value: item.non_thinking_model_id || '' },
               ]);
               if (!values) return;
               const numeric = ['input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'cached_output_price_per_1k_tokens', 'reference_input_price_per_1k_tokens', 'reference_output_price_per_1k_tokens', 'rate_limit_rpm', 'rate_limit_tpm', 'model_multiplier', 'completion_multiplier'];
               const body = Object.fromEntries(Object.entries(values).map(([name, value]) => [name, numeric.includes(name) ? (Number(value) || 0) : value]));
-              const rates = numeric.slice(0, 5).map(name => `${name}: ${body[name]}`).join(' · ');
-              if (!await ctx.confirm('保存个人模型更改', `${item.alias || item.name || item.id}\n${body.enabled ? '启用' : '停用'} · 系列 ${body.series || '无'} · 倍率 ×${body.model_multiplier}\n价格：${rates}\n停用或改价可能影响 API Key 用户及计费。`)) return;
+              const rateLabels = ['输入价格', '输出价格', '缓存输出价格', '参考输入价格', '参考输出价格'];
+              const rates = numeric.slice(0, 5).map((name, index) => `${rateLabels[index]}：${body[name]} / 1,000 个 Token`).join('\n');
+              if (!await ctx.confirm('保存个人模型更改', `${item.alias || item.name || item.id}\n${body.enabled ? '启用' : '停用'} · 系列 ${body.series || '无'} · ${modelMultiplierLabel(body.model_multiplier)}\n${rates}\n停用或改价可能影响 API Key 用户及计费。`)) return;
               await runtime.client.put(`/api/user/models/${encodeURIComponent(item.id)}`, body);
               ctx.notify('个人模型已更新。'); await ctx.refresh();
             }
