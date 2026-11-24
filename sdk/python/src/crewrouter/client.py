@@ -218,6 +218,31 @@ class UserUsageLogsResponse(TypedDict):
     logs: list[UserUsageLog]
 
 
+class ModelUptimeSummaryItem(TypedDict):
+    uptime_pct: Optional[float]
+    label: str
+    total_success: int
+    total_fail: int
+    spark: list[str]
+
+
+class ModelUptimeDailyResponse(TypedDict):
+    days: int
+    granularity: str
+    items: dict[str, ModelUptimeSummaryItem]
+
+
+class ModelUptimeSlotResponse(TypedDict):
+    days: int
+    hours: int
+    slots: int
+    granularity: str
+    items: dict[str, ModelUptimeSummaryItem]
+
+
+ModelUptimeResponse = Union[ModelUptimeDailyResponse, ModelUptimeSlotResponse]
+
+
 class UserKeyTag(TypedDict):
     id: int
     name: str

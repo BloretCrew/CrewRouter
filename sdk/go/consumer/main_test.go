@@ -111,6 +111,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(codeBalances) != 1 || codeBalances[0].Code != "redeem-1" || codeBalances[0].NetAmount != "2.2727" {
 		t.Fatalf("unexpected code balances payload: %#v", codeBalances)
 	}
+
+	var uptime crewrouter.ModelUptimeResponse
+	if err := json.Unmarshal([]byte(`{"days":1,"hours":24,"slots":96,"granularity":"15m","items":{"m1":{"uptime_pct":null,"label":"No data","total_success":0,"total_fail":0,"spark":["none"]}}}`), &uptime); err != nil {
+		t.Fatalf("decode uptime response: %v", err)
+	}
+	if uptime.Granularity != "15m" || uptime.Hours == nil || *uptime.Hours != 24 || uptime.Items["m1"].UptimePct != nil {
+		t.Fatalf("unexpected uptime payload: %#v", uptime)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

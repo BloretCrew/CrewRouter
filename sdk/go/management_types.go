@@ -223,6 +223,24 @@ type UserKeyTag struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// ModelUptimeSummaryItem is one model's aggregated availability summary.
+type ModelUptimeSummaryItem struct {
+	UptimePct    *float64 `json:"uptime_pct"`
+	Label        string   `json:"label"`
+	TotalSuccess int64    `json:"total_success"`
+	TotalFail    int64    `json:"total_fail"`
+	Spark        []string `json:"spark"`
+}
+
+// ModelUptimeResponse supports daily and 15-minute aggregate variants.
+type ModelUptimeResponse struct {
+	Days        int                               `json:"days"`
+	Hours       *int                              `json:"hours,omitempty"`
+	Slots       *int                              `json:"slots,omitempty"`
+	Granularity string                            `json:"granularity"`
+	Items       map[string]ModelUptimeSummaryItem `json:"items"`
+}
+
 // UserCodeBalanceItem is one refundable redemption-code balance row.
 type UserCodeBalanceItem struct {
 	Amount     any    `json:"amount"`

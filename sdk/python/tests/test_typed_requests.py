@@ -25,6 +25,8 @@ from crewrouter import (
     UserKeyTag,
     UserUsageLog,
     UserUsageLogsResponse,
+    ModelUptimeDailyResponse,
+    ModelUptimeSlotResponse,
     ChatCompletionRequest,
     ChatMessage,
     OpenAIResponsesRequest,
@@ -144,7 +146,11 @@ class TypedRequestTests(unittest.TestCase):
             "code_amount": "3", "net_amount": "2.2727",
         }
         self.assertIsNone(product["description"])
+        uptime_daily: ModelUptimeDailyResponse = {"days": 7, "granularity": "day", "items": {}}
+        uptime_slots: ModelUptimeSlotResponse = {"days": 1, "hours": 24, "slots": 96, "granularity": "15m", "items": {}}
         self.assertEqual(code_balance["net_amount"], "2.2727")
+        self.assertEqual(uptime_daily["granularity"], "day")
+        self.assertEqual(uptime_slots["granularity"], "15m")
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

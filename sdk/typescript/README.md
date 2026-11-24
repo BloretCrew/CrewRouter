@@ -85,6 +85,7 @@ const balance = await client.balance.get(); // UserBalance
 const visibleModels = await client.models.list(); // UserModelListItem[]
 const visibleProviders = await client.providers.list(); // UserProviderListItem[]
 const refundableCodes = await client.codeBalances.list(); // UserCodeBalanceItem[]
+const uptime = await client.modelUptime.get({ days: 7 }); // ModelUptimeResponse; day or 15m granularity
 ```
 
 Every non-session operation is reachable through `call`:

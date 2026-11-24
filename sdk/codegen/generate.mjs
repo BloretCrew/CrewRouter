@@ -512,6 +512,25 @@ function managementSchemas() {
       amount: numberOrString, fee_rate: numberOrString, code: { type: 'string' },
       code_amount: numberOrString, net_amount: numberOrString,
     }, ['amount', 'fee_rate', 'code', 'code_amount', 'net_amount']),
+    ModelUptimeSummaryItem: object({
+      uptime_pct: { type: ['number', 'null'] }, label: { type: 'string' },
+      total_success: { type: 'integer' }, total_fail: { type: 'integer' },
+      spark: { type: 'array', items: { type: 'string', enum: ['none', 'ok', 'degraded', 'outage'] } },
+    }, ['uptime_pct', 'label', 'total_success', 'total_fail', 'spark']),
+    ModelUptimeDailyResponse: object({
+      days: { type: 'integer' }, granularity: { const: 'day' },
+      items: { type: 'object', additionalProperties: { $ref: '#/components/schemas/ModelUptimeSummaryItem' } },
+    }, ['days', 'granularity', 'items']),
+    ModelUptimeSlotResponse: object({
+      days: { const: 1 }, hours: { const: 24 }, slots: { type: 'integer' }, granularity: { const: '15m' },
+      items: { type: 'object', additionalProperties: { $ref: '#/components/schemas/ModelUptimeSummaryItem' } },
+    }, ['days', 'hours', 'slots', 'granularity', 'items']),
+    ModelUptimeResponse: {
+      oneOf: [
+        { $ref: '#/components/schemas/ModelUptimeDailyResponse' },
+        { $ref: '#/components/schemas/ModelUptimeSlotResponse' },
+      ],
+    },
     TeamQuotaRule: object({
       rule_type: { type: 'string' }, duration_hours: { type: 'number' }, current: numberOrString,
     }, ['rule_type']),
@@ -540,6 +559,7 @@ function managementResponseSchema(operationId) {
     'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
     'user.products.list': { type: 'array', items: { $ref: '#/components/schemas/UserProduct' } },
     'user.codeBalances.list': { type: 'array', items: { $ref: '#/components/schemas/UserCodeBalanceItem' } },
+    'user.models.uptime.list': { $ref: '#/components/schemas/ModelUptimeResponse' },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },

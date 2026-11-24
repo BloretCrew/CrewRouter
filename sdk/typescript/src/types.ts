@@ -200,6 +200,30 @@ export interface UserCodeBalanceItem {
   net_amount: number | string;
 }
 
+export interface ModelUptimeSummaryItem {
+  uptime_pct: number | null;
+  label: string;
+  total_success: number;
+  total_fail: number;
+  spark: Array<'none' | 'ok' | 'degraded' | 'outage'>;
+}
+
+export interface ModelUptimeDailyResponse {
+  days: number;
+  granularity: 'day';
+  items: Record<string, ModelUptimeSummaryItem>;
+}
+
+export interface ModelUptimeSlotResponse {
+  days: 1;
+  hours: 24;
+  slots: number;
+  granularity: '15m';
+  items: Record<string, ModelUptimeSummaryItem>;
+}
+
+export type ModelUptimeResponse = ModelUptimeDailyResponse | ModelUptimeSlotResponse;
+
 export interface ApiKeyMember {
   id: number;
   username: string;

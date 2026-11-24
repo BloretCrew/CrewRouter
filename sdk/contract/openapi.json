@@ -1180,6 +1180,110 @@
         ],
         "additionalProperties": true
       },
+      "ModelUptimeSummaryItem": {
+        "type": "object",
+        "properties": {
+          "uptime_pct": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "total_success": {
+            "type": "integer"
+          },
+          "total_fail": {
+            "type": "integer"
+          },
+          "spark": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "none",
+                "ok",
+                "degraded",
+                "outage"
+              ]
+            }
+          }
+        },
+        "required": [
+          "uptime_pct",
+          "label",
+          "total_success",
+          "total_fail",
+          "spark"
+        ],
+        "additionalProperties": true
+      },
+      "ModelUptimeDailyResponse": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "integer"
+          },
+          "granularity": {
+            "const": "day"
+          },
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ModelUptimeSummaryItem"
+            }
+          }
+        },
+        "required": [
+          "days",
+          "granularity",
+          "items"
+        ],
+        "additionalProperties": true
+      },
+      "ModelUptimeSlotResponse": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "const": 1
+          },
+          "hours": {
+            "const": 24
+          },
+          "slots": {
+            "type": "integer"
+          },
+          "granularity": {
+            "const": "15m"
+          },
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ModelUptimeSummaryItem"
+            }
+          }
+        },
+        "required": [
+          "days",
+          "hours",
+          "slots",
+          "granularity",
+          "items"
+        ],
+        "additionalProperties": true
+      },
+      "ModelUptimeResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ModelUptimeDailyResponse"
+          },
+          {
+            "$ref": "#/components/schemas/ModelUptimeSlotResponse"
+          }
+        ]
+      },
       "TeamQuotaRule": {
         "type": "object",
         "properties": {
@@ -17103,8 +17207,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ModelUptimeResponse"
                 }
               }
             }

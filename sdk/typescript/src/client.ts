@@ -22,10 +22,12 @@ import type {
   UserProduct,
   UserCodeBalanceItem,
   UserUsageLogsResponse,
+  ModelUptimeResponse,
   RequestOptions,
   StreamHandle,
   StreamOptions,
   OpenAIResponsesRequest,
+  QueryValue,
 } from './types.js';
 
 type JsonObject = Record<string, unknown>;
@@ -202,6 +204,11 @@ export class CrewRouter {
       this.call<T>('user.currentModel.list', options),
     set: <T = unknown>(body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.currentModel.update', { ...options, body }),
+  };
+
+  readonly modelUptime = {
+    get: <T = ModelUptimeResponse>(query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.models.uptime.list', { ...options, query }),
   };
 
   readonly providers = {
