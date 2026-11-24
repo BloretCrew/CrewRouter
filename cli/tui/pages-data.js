@@ -12,6 +12,7 @@ function usagePage(runtime) {
     label: '用量',
     description: '请求数、Token（模型处理的文本单位）、费用、客户端识别率，以及各模型和来源的使用情况。',
     onTabChange(tab) { runtime.usageTab = tab?.id || 'overview'; },
+    loadOnTabChange: true,
     tabs: [
       { id: 'overview', label: '概览' },
       { id: 'daily', label: '每日' },

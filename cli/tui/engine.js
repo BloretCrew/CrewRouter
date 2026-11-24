@@ -107,6 +107,15 @@ async function runPagedTui({
   let pageTimer = null;
   let refreshInterval = Math.min(Math.max(Number(refreshMs) || 10000, 2000), 60000);
   const state = () => pageStates.get(pages[active].id);
+  function pageIndexesForIds(ids) {
+    return (ids || []).map(id => pages.findIndex(page => page.id === id)).filter(index => index >= 0);
+  }
+  function navigationPageIndexes() {
+    const grouped = Array.isArray(navGroups) ? navGroups.flatMap(group => pageIndexesForIds(group.pages)) : [];
+    const ordered = [...new Set(grouped)];
+    for (let index = 0; index < pages.length; index++) if (!ordered.includes(index)) ordered.push(index);
+    return ordered;
+  }
 
   function currentTab(page = pages[active], st = state()) {
     return Array.isArray(page.tabs) && page.tabs.length ? page.tabs[Math.max(0, Math.min(page.tabs.length - 1, st.tabIndex || 0))] : null;
@@ -131,7 +140,8 @@ async function runPagedTui({
     restoreTab(st, page);
     if (typeof page.onTabChange === 'function') page.onTabChange(currentTab(page, st));
     st.version++;
-    render();
+    if (page.loadOnTabChange === true) void load(active);
+    else render();
   }
   function tabLine(page, st, available) {
     const tabs = page.tabs || [];
@@ -354,7 +364,7 @@ async function runPagedTui({
         ? navGroups : [{ id: 'all', label: '', pages: pages.map(page => page.id) }];
       const entries = [];
       for (const group of groups) {
-        const members = pages.map((page, index) => ({ page, index })).filter(entry => group.pages.includes(entry.page.id));
+        const members = pageIndexesForIds(group.pages).map(index => ({ page: pages[index], index }));
         if (!members.length) continue;
         if (group.label) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
         entries.push(...members.map(entry => ({ type: 'page', ...entry })));
@@ -927,7 +937,10 @@ async function runPagedTui({
       const delta = key.name === 'up' ? -1 : 1;
       if (focus === 'menu') {
         rememberTab(st);
-        active = Math.max(0, Math.min(pages.length - 1, active + delta));
+        const navOrder = navigationPageIndexes();
+        const position = navOrder.indexOf(active);
+        const nextPosition = Math.max(0, Math.min(navOrder.length - 1, (position < 0 ? 0 : position) + delta));
+        active = navOrder[nextPosition] ?? active;
         const next = state();
         restoreTab(next, pages[active]);
         if (!next.data && !next.loading) void load(active);

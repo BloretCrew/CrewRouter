@@ -31,6 +31,44 @@ test('mouse clicks switch pages and activate action rows', { timeout: 15000 }, a
   assert.equal(tty.input.isRaw, false);
 });
 
+test('vertical navigation follows the displayed navigation groups rather than page registration order', { timeout: 15000 }, async () => {
+  const tty = terminal(100, 24);
+  const pages = [
+    page('last', '第三页', async () => ({ sections: [{ title: '页面内容', rows: [{ label: '第三页内容' }] }], actions: [] })),
+    page('first', '第一页', async () => ({ sections: [{ title: '页面内容', rows: [{ label: '第一页内容' }] }], actions: [] })),
+    page('middle', '第二页', async () => ({ sections: [{ title: '页面内容', rows: [{ label: '第二页内容' }] }], actions: [] })),
+  ];
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages, navGroups: [{ id: 'ordered', label: '菜单顺序', pages: ['first', 'middle', 'last'] }], authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('第三页内容'));
+    tty.input.write('\x1b[A');
+    await until(() => tty.screen().includes('第二页内容'));
+    assert.ok(tty.screen().includes('✦ CrewRouter  ·  第二页'));
+    tty.input.write('\x1b[B');
+    await until(() => tty.screen().includes('第三页内容'));
+    assert.ok(tty.screen().includes('✦ CrewRouter  ·  第三页'));
+  } finally { tty.input.write('q'); await task; }
+});
+
+test('pages marked loadOnTabChange reload data for the selected web view', { timeout: 15000 }, async () => {
+  const tty = terminal(120, 24);
+  const calls = [];
+  const tabbed = {
+    id: 'stats', label: '统计信息', loadOnTabChange: true,
+    tabs: [{ id: 'overview', label: '概览' }, { id: 'models', label: '模型' }],
+    tab: 'overview',
+    onTabChange(tab) { this.tab = tab.id; },
+    async load() { calls.push(this.tab); return { sections: [{ title: this.tab === 'models' ? '模型分布' : '统计概览', rows: [] }] }; },
+  };
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages: [tabbed], authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('统计概览'));
+    await clickText(tty, '模型');
+    await until(() => tty.screen().includes('模型分布'));
+    assert.deepEqual(calls, ['overview', 'models']);
+  } finally { tty.input.write('q'); await task; }
+});
+
 test('mouse clicks switch tabs before content hit testing', { timeout: 15000 }, async () => {
   const tty = terminal(120, 24);
   const tabbed = {

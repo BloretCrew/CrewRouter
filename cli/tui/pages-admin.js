@@ -472,6 +472,7 @@ function createAdminPages(runtime) {
     adminOnly({
       id: 'admin-stats', label: '统计信息', description: '管理员全局请求、成本与模型分析。',
       onTabChange(tab) { runtime.adminStatsTab = tab?.id || 'overview'; },
+      loadOnTabChange: true,
       tabs: [
         { id: 'overview', label: '概览' }, { id: 'daily', label: '每日' }, { id: 'models', label: '模型' },
         { id: 'providers', label: '供应商' }, { id: 'sources', label: '客户端' }, { id: 'users', label: '用户' },
