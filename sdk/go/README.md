@@ -95,6 +95,10 @@ balance, err := client.Balance.Get(ctx)
 var balanceSummary crewrouter.UserBalance
 if err := balance.JSON(&balanceSummary); err != nil { panic(err) }
 
+models, err := client.Models.List(ctx)
+var visibleModels []crewrouter.UserModelListItem
+if err := models.JSON(&visibleModels); err != nil { panic(err) }
+
 created, err := client.Keys.Create(ctx, map[string]any{
     "name":        "CI",
     "expiresIn":   720,

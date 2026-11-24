@@ -97,3 +97,16 @@ type BalanceGroup struct {
 	Description string          `json:"description,omitempty"`
 	Rules       []TeamQuotaRule `json:"rules"`
 }
+
+// UserModelListItem is one model returned by GET /api/user/models.
+type UserModelListItem struct {
+	ID                     string  `json:"id"`
+	UpstreamModelID        string  `json:"upstream_model_id"`
+	Name                   string  `json:"name"`
+	Alias                  *string `json:"alias"`
+	Provider               string  `json:"provider"`
+	ProviderName           string  `json:"provider_name"`
+	InputPricePer1KTokens  any     `json:"input_price_per_1k_tokens"`
+	OutputPricePer1KTokens any     `json:"output_price_per_1k_tokens"`
+	OutputKind             string  `json:"output_kind"`
+}

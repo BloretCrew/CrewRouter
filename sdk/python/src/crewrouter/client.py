@@ -76,6 +76,18 @@ class UserBalance(TypedDict):
     group: Optional[dict[str, Any]]
 
 
+class UserModelListItem(TypedDict):
+    id: str
+    upstream_model_id: str
+    name: str
+    alias: Optional[str]
+    provider: str
+    provider_name: str
+    input_price_per_1k_tokens: Optional[Union[float, str]]
+    output_price_per_1k_tokens: Optional[Union[float, str]]
+    output_kind: str
+
+
 class _ChatMessageRequired(TypedDict):
     role: str
 
@@ -428,6 +440,7 @@ class _Models:
         self._client = client
 
     def list(self, **kwargs: Any) -> CrewRouterResponse:
+        """List models visible to the user's enabled Teams."""
         return self._client.call("user.models.list", **kwargs)
 
 

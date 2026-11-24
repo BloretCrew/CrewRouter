@@ -472,6 +472,64 @@
         ],
         "additionalProperties": true
       },
+      "UserModelListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "upstream_model_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "alias": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "provider_name": {
+            "type": "string"
+          },
+          "input_price_per_1k_tokens": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "output_price_per_1k_tokens": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "output_kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "upstream_model_id",
+          "name",
+          "provider",
+          "provider_name",
+          "output_kind"
+        ],
+        "additionalProperties": true
+      },
       "TeamQuotaRule": {
         "type": "object",
         "properties": {
@@ -15975,8 +16033,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserModelListItem"
+                  }
                 }
               }
             }

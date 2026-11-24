@@ -23,6 +23,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if balance.Group != nil || balance.RefundBalance != 8 {
 		t.Fatalf("unexpected balance payload: %#v", balance)
 	}
+
+	var model crewrouter.UserModelListItem
+	if err := json.Unmarshal([]byte(`{"id":"model-1","upstream_model_id":"upstream-1","name":"Model One","alias":null,"provider":"p1","provider_name":"Provider","input_price_per_1k_tokens":"0.01","output_price_per_1k_tokens":0.02,"output_kind":"chat"}`), &model); err != nil {
+		t.Fatalf("decode user model: %v", err)
+	}
+	if model.Alias != nil || model.UpstreamModelID != "upstream-1" {
+		t.Fatalf("unexpected user model payload: %#v", model)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

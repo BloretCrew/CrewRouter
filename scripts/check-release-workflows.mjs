@@ -65,10 +65,16 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const apiKeyList = openapi.paths['/api/user/api-keys']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const usage = openapi.paths['/api/user/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const balance = openapi.paths['/api/user/balance']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const models = openapi.paths['/api/user/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
   if (balance?.$ref !== '#/components/schemas/UserBalance' || !openapi.components.schemas.UserBalance?.properties?.group?.anyOf?.some(item => item.type === 'null')) throw new Error(`${openapiPath} must define nullable balance group responses`);
+  if (models?.type !== 'array' || models.items?.$ref !== '#/components/schemas/UserModelListItem') throw new Error(`${openapiPath} must define visible model list responses`);
+  if (!openapi.components.schemas.UserModelListItem?.properties?.alias?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable visible model aliases`);
+  for (const field of ['upstream_model_id', 'provider_name', 'input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'output_kind']) {
+    if (!openapi.components.schemas.UserModelListItem?.properties?.[field]) throw new Error(`${openapiPath} is missing UserModelListItem.${field}`);
+  }
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {

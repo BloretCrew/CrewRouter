@@ -153,6 +153,18 @@ export interface DailyUsageItem {
   total_requests: number | string;
 }
 
+export interface UserModelListItem {
+  id: string;
+  upstream_model_id: string;
+  name: string;
+  alias: string | null;
+  provider: string;
+  provider_name: string;
+  input_price_per_1k_tokens: number | string | null;
+  output_price_per_1k_tokens: number | string | null;
+  output_kind: string;
+}
+
 export interface TeamQuotaRule {
   rule_type: string;
   limit_value?: number | string;

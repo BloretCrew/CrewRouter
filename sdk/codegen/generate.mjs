@@ -434,6 +434,12 @@ function managementSchemas() {
       date: { type: 'string', format: 'date' }, total_tokens: numberOrString,
       total_cost: numberOrString, total_requests: numberOrString,
     }, ['date', 'total_tokens', 'total_cost', 'total_requests']),
+    UserModelListItem: object({
+      id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
+      alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
+      input_price_per_1k_tokens: numberOrString, output_price_per_1k_tokens: numberOrString,
+      output_kind: { type: 'string' },
+    }, ['id', 'upstream_model_id', 'name', 'provider', 'provider_name', 'output_kind']),
     TeamQuotaRule: object({
       rule_type: { type: 'string' }, duration_hours: { type: 'number' }, current: numberOrString,
     }, ['rule_type']),
@@ -454,6 +460,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
+    'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
   };
   return schemas[operationId] || null;
 }

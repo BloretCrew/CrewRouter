@@ -105,18 +105,25 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { balance: 10, refund_balance: 8, rate_limit_rpm: 60, rate_limit_tpm: 1000, group: null });
       return;
     }
+    if (req.url === '/api/user/models') {
+      json(res, 200, [{ id: 'model-1', upstream_model_id: 'upstream-1', name: 'Model One', alias: null, provider: 'p1', provider_name: 'Provider', input_price_per_1k_tokens: '0.01', output_price_per_1k_tokens: 0.02, output_kind: 'chat' }]);
+      return;
+    }
     json(res, 404, { error: 'not found' });
   });
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
   const keys = await client.keys.list();
   const usage = await client.usage.get();
   const balance = await client.balance.get();
+  const models = await client.models.list();
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
   assert.equal(usage.data[0].total_tokens, '12');
   assert.equal(balance.data.refund_balance, 8);
   assert.equal(balance.data.group, null);
+  assert.equal(models.data[0].alias, null);
+  assert.equal(models.data[0].input_price_per_1k_tokens, '0.01');
 });
 
 test('management errors expose code and permission', async () => {

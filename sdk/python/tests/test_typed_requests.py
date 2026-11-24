@@ -8,6 +8,7 @@ from crewrouter import (
     ApiKeyListItem,
     DailyUsageItem,
     UserBalance,
+    UserModelListItem,
     ChatCompletionRequest,
     ChatMessage,
     OpenAIResponsesRequest,
@@ -40,7 +41,21 @@ class TypedRequestTests(unittest.TestCase):
         }
         self.assertIsNone(key["key_value"])
         self.assertEqual(usage["total_tokens"], "12")
+        model: UserModelListItem = {
+            "id": "model-1",
+            "upstream_model_id": "upstream-1",
+            "name": "Model One",
+            "alias": None,
+            "provider": "p1",
+            "provider_name": "Provider",
+            "input_price_per_1k_tokens": "0.01",
+            "output_price_per_1k_tokens": 0.02,
+            "output_kind": "chat",
+        }
+        self.assertIsNone(key["key_value"])
+        self.assertEqual(usage["total_tokens"], "12")
         self.assertIsNone(balance["group"])
+        self.assertIsNone(model["alias"])
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

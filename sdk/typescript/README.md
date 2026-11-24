@@ -78,6 +78,7 @@ await client.keys.setModels(created.data.id, { models: ['claude-fable-5'] });
 
 const usage = await client.usage.get({ days: 7 }); // DailyUsageItem[]
 const balance = await client.balance.get(); // UserBalance
+const visibleModels = await client.models.list(); // UserModelListItem[]
 ```
 
 Every non-session operation is reachable through `call`:

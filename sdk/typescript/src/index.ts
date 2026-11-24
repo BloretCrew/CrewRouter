@@ -36,6 +36,7 @@ export type {
   DailyUsageItem,
   TeamQuotaRule,
   UserBalance,
+  UserModelListItem,
   ChatCompletionRequest,
   AnthropicMessagesRequest,
   OpenAIResponsesRequest,

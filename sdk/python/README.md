@@ -22,7 +22,7 @@ Requires Python >= 3.9. The only runtime dependency is `httpx`.
 
 ```python
 import os
-from crewrouter import CrewRouter, ApiKeyListItem, DailyUsageItem, UserBalance
+from crewrouter import CrewRouter, ApiKeyListItem, DailyUsageItem, UserBalance, UserModelListItem
 
 client = CrewRouter(
     base_url=os.environ["CREWROUTER_BASE_URL"],
@@ -65,6 +65,8 @@ usage = client.usage.get({"days": 7})
 usage_rows: list[DailyUsageItem] = usage.data
 balance = client.balance.get()
 balance_summary: UserBalance = balance.data
+models = client.models.list()
+model_rows: list[UserModelListItem] = models.data
 
 created = client.keys.create({
     "name": "CI",

@@ -10,6 +10,7 @@ import type {
   CrewRouterResponse,
   DailyUsageItem,
   UserBalance,
+  UserModelListItem,
   RequestOptions,
   StreamHandle,
   StreamOptions,
@@ -169,7 +170,7 @@ export class CrewRouter {
   };
 
   readonly models = {
-    list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+    list: <T = UserModelListItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.models.list', options),
   };
 
