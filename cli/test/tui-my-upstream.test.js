@@ -20,6 +20,21 @@ test('my upstream page mirrors providers/models tabs and Team model columns', as
   assert.deepEqual(calls, ['/api/user/my-providers', '/api/user/my-team-models']);
 });
 
+test('my upstream provider page exposes web statistics and enabled/disabled filters', async () => {
+  const runtime = makeRuntime({ get: async path => path === '/api/user/my-providers' ? [
+    { id: 'p1', name: 'On', enabled: true, model_count: 2 }, { id: 'p2', name: 'Off', enabled: false, model_count: 3 },
+  ] : [] });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const initial = await page.load();
+  const providers = initial.sections.find(section => section.title === '供应商');
+  assert.deepEqual(providers.cards.map(card => card.label), ['我的供应商', '已启用', '已配置模型', '连通性已测']);
+  runtime.myUpstreamProviderStatus = 'enabled';
+  const enabled = await page.load();
+  assert.deepEqual(enabled.sections.find(section => section.title === '供应商').rows.map(row => row.label.split(' · ')[0]), ['On']);
+  assert.ok(enabled.actions.some(action => action.label === '添加供应商'));
+  assert.ok(enabled.actions.some(action => action.label === '检测本页供应商'));
+});
+
 test('my provider edit confirms and does not overwrite an absent API key', async () => {
   const calls = [];
   const runtime = makeRuntime({
@@ -36,6 +51,55 @@ test('my provider edit confirms and does not overwrite an absent API key', async
   assert.equal(calls[0].path, '/api/user/providers/p1');
   assert.equal(calls[0].body.name, 'Renamed');
   assert.equal(Object.hasOwn(calls[0].body, 'api_key'), false);
+});
+
+test('my provider creation confirms and sends only supported input fields', async () => {
+  const calls = [];
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [] : path === '/api/user/providers/lookup-index' ? [{ id: 'preset', name: 'Preset Provider', base_url: 'https://preset.example' }] : [],
+    post: async (path, body) => { calls.push({ path, body }); return { provider_id: 'created-1' }; },
+  });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const data = await page.load();
+  const action = data.actions.find(item => item.label === '添加供应商');
+  const form = async () => ({ name: 'New Provider', base_url: 'https://new.example/v1', format: 'openai', api_key: 'secret-value', models_url: '', notes: '' });
+  await action.run({ choose: async () => '__custom__', form, confirm: async () => false });
+  assert.equal(calls.length, 0);
+  await action.run({ choose: async () => '__custom__', form, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.equal(calls[0].path, '/api/user/providers');
+  assert.deepEqual(calls[0].body, { name: 'New Provider', base_url: 'https://new.example/v1', format: 'openai', api_key: 'secret-value' });
+});
+
+test('provider model manager uses supported batch price endpoint and guards deletion', async () => {
+  const calls = [];
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [{ id: 'p1', name: 'Personal', enabled: true, model_count: 1 }] : path.endsWith('/models') ? [{ id: 'm1', name: 'Model One', enabled: true }] : [],
+    post: async (path, body) => { calls.push({ path, method: 'POST', body }); return { updated: 1, deleted: 1 }; },
+  });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const data = await page.load();
+  const row = data.sections.find(section => section.title === '供应商').rows[0];
+  let choices = ['m1', '__done__', 'edit', 'input_price_per_1k_tokens', '__done__'];
+  await row.run({ choose: async (_title, options) => options.some(option => option.value === 'models') ? 'models' : choices.shift(), ask: async () => '1.25', confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls[0], { path: '/api/user/providers/p1/models/batch-update', method: 'POST', body: { modelIds: ['m1'], updates: { input_price_per_1k_tokens: 1.25 } } });
+  choices = ['m1', '__done__', 'delete'];
+  let warning = '';
+  await row.run({ choose: async (_title, options) => options.some(option => option.value === 'models') ? 'models' : choices.shift(), confirm: async (_title, message) => { warning = message; return false; } });
+  assert.match(warning, /API Key 模型授权/);
+  assert.equal(calls.length, 1);
+});
+
+test('my provider bulk sync calls web refresh endpoint after confirmation', async () => {
+  const posts = [];
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [{ id: 'p1', name: 'Personal', enabled: true, model_count: 2 }] : [],
+    post: async (path, body) => { posts.push({ path, body }); return { added: 2, total: 3 }; },
+  });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const data = await page.load();
+  const choices = ['p1', '__done__', 'sync'];
+  await data.actions.find(action => action.label === '批量管理供应商').run({ choose: async () => choices.shift(), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(posts, [{ path: '/api/user/providers/p1/refresh-models', body: {} }]);
 });
 
 test('my Team model tab clears searches and exposes web-equivalent bulk enable controls', async () => {
