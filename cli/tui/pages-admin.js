@@ -430,8 +430,30 @@ function createAdminPages(runtime) {
         ] };
       },
     }),
+    adminOnly({
+      id: 'admin-policies', label: '策略管理', description: '管理员策略概览和策略列表。',
+      async load(api) {
+        const [overview, health, list] = await Promise.allSettled([
+          api('/api/admin/policies/overview'), api('/api/admin/policies/health'),
+          api('/api/admin/policies', { query: { page: runtime.adminPolicyPage || 1, limit: 30, ...(runtime.adminPolicyFilters || {}) } }),
+        ]);
+        const overviewData = overview.status === 'fulfilled' ? overview.value : {};
+        const healthData = health.status === 'fulfilled' ? health.value : {};
+        const result = list.status === 'fulfilled' ? list.value : {};
+        const items = array(result.items);
+        return { sections: [
+          { title: '策略概览', rows: [{ label: JSON.stringify(overviewData) }, { label: JSON.stringify(healthData) }] },
+          { title: '策略列表', description: `第 ${result.page || runtime.adminPolicyPage || 1} 页 · 共 ${result.total || 0} 条`, rows: items.map(item => ({ label: display(item.name, item.scope_type, item.effect, item.action, item.enabled ? '启用' : '停用'), detail: display(item.description, `优先级 ${item.priority}`, `24小时命中 ${item.hits_24h || 0}`), run: async ctx => { const detail = await api(`/api/admin/policies/${item.id}`); await ctx.show(`策略详情 · ${item.name}`, JSON.stringify(detail, null, 2)); } })) },
+        ], actions: [
+          { label: '搜索策略', run: async ctx => { runtime.adminPolicyFilters = { ...(runtime.adminPolicyFilters || {}), q: String(await ctx.ask('策略名称或说明') || '').trim() }; runtime.adminPolicyPage = 1; await ctx.refresh(); } },
+          { label: '上一页', run: async ctx => { runtime.adminPolicyPage = Math.max(1, (runtime.adminPolicyPage || 1) - 1); await ctx.refresh(); } },
+          { label: '下一页', run: async ctx => { runtime.adminPolicyPage = (runtime.adminPolicyPage || 1) + 1; await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
     {
-      id: 'admin-policies', label: '安全与策略', description: '策略列表、我的生效策略、豁免、拦截与申诉。',
+      id: 'policy-center', label: '安全与策略', description: '生效策略、豁免、拦截与申诉。',
       async load(api) {
         const isAdmin = runtime.client.isAdmin === true;
         const requests = [['我的生效策略', '/api/user/policies/mine'], ['最近拦截', '/api/user/policies/blocks'], ['我的申诉', '/api/user/policy-appeals']];
