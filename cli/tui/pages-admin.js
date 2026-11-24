@@ -1,7 +1,7 @@
 'use strict';
 
 const { text } = require('./pages-common');
-const { formatTime } = require('../lib/format');
+const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 
 function asRows(items, label, detail = () => '') {
   return items.map(item => ({
@@ -446,7 +446,7 @@ function createAdminPages(runtime) {
       tabs: [
         { id: 'overview', label: '概览' }, { id: 'daily', label: '每日' }, { id: 'models', label: '模型' },
         { id: 'providers', label: '供应商' }, { id: 'sources', label: '客户端' }, { id: 'users', label: '用户' },
-        { id: 'teams', label: 'Team' }, { id: 'latency', label: '延迟' },
+        { id: 'teams', label: '团队' }, { id: 'latency', label: '响应速度' },
       ],
       async load(api) {
         const days = runtime.adminStatsDays || 30;
@@ -456,21 +456,37 @@ function createAdminPages(runtime) {
           { label: 'API Key', value: text(data && data.apiKeys, '0') }, { label: '周期', value: `${days} 天` },
         ];
         const daily = array(data && data.daily);
-        const byRows = (items, name, extra = []) => array(items).slice(0, 50).map(item => ({ label: display(name(item), `${Number(item.requests || 0).toLocaleString()} 请求`, `${formatBigNumber(item.tokens)} tokens`, `成本 ${formatCost(item.cost)}`), detail: display(item.cached_tokens && `缓存 ${formatBigNumber(item.cached_tokens)}`, item.avg_latency && `平均 ${Math.round(item.avg_latency)} ms`, ...extra(item)) }));
+        const nameColumns = [
+          { key: 'name', label: '名称', ratio: 0.34 }, { key: 'requests', label: '请求数', ratio: 0.16 },
+          { key: 'tokens', label: 'Token 用量', ratio: 0.18 }, { key: 'cost', label: '费用（积分）', ratio: 0.16 }, { key: 'latency', label: '平均响应时间', ratio: 0.16 },
+        ];
+        const byRows = (items, name) => array(items).slice(0, 50).map(item => {
+          const title = name(item);
+          return { label: title, cells: {
+            name: title, requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`,
+            cost: `${formatCost(item.cost)} 积分`, latency: item.avg_latency ? `${Math.round(item.avg_latency)} 毫秒` : '—',
+          }, detail: item.cached_tokens ? `缓存命中 ${formatBigNumber(item.cached_tokens)} Token` : '' };
+        });
         const tab = runtime.adminStatsTab || 'overview';
         const sections = [];
-        if (tab === 'overview') sections.push({ title: '统计概览', cards: summaryCards, rows: [{ label: '使用页签查看每日趋势、模型、供应商、客户端、用户、Team 与延迟分布。' }] });
-        if (tab === 'daily' || tab === 'overview') sections.push({ title: '每日用量', tab: 'daily', rows: daily.slice(-30).map(item => ({ label: display(item.date, `${Number(item.requests || 0).toLocaleString()} 请求`, `${formatBigNumber(item.tokens)} tokens`, `成本 ${formatCost(item.cost)}`), detail: `${item.prompt_tokens || 0} 输入 / ${item.completion_tokens || 0} 输出 tokens` })) });
-        if (tab === 'models') sections.push({ title: '按模型', rows: byRows(data.byModel, item => item.model_name || item.model_id || '未知模型', () => []) });
-        if (tab === 'providers') sections.push({ title: '按供应商', rows: byRows(data.byProvider, item => item.provider_name || item.provider_id || '未知供应商', () => []) });
-        if (tab === 'sources') sections.push({ title: '按客户端来源', rows: byRows(data.bySource, item => item.request_source || 'unknown', () => []) });
-        if (tab === 'users') sections.push({ title: '按用户', rows: byRows(data.byUser, item => item.user_name || item.username || `用户 ${item.user_id}`, () => []) });
-        if (tab === 'teams') sections.push({ title: '按 Team', rows: byRows(data.byTeam, item => item.team_name || `Team ${item.team_id}`, () => []) });
+        if (tab === 'overview') sections.push({ title: '统计概览', toolbar: true, cards: summaryCards, rows: [{ label: '切换上方页签查看每日、模型、供应商、客户端、用户、团队及响应速度明细。' }] });
+        if (tab === 'daily') sections.push({ title: '每日用量', toolbar: true, tableMinWidth: 118, columns: [
+          { key: 'date', label: '日期', ratio: 0.18 }, { key: 'requests', label: '请求数', ratio: 0.14 }, { key: 'input', label: '输入 Token', ratio: 0.16 },
+          { key: 'output', label: '输出 Token', ratio: 0.16 }, { key: 'tokens', label: '总 Token', ratio: 0.17 }, { key: 'cost', label: '费用（积分）', ratio: 0.19 },
+        ], rows: daily.slice(-30).map(item => ({ label: item.date || '未知日期', cells: {
+          date: item.date || '未知日期', requests: `${Number(item.requests || 0).toLocaleString()} 次`, input: `${formatBigNumber(item.prompt_tokens)} Token`,
+          output: `${formatBigNumber(item.completion_tokens)} Token`, tokens: `${formatBigNumber(item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分`,
+        } })) });
+        if (tab === 'models') sections.push({ title: '按模型', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byModel, item => item.model_name || item.model_id || '未知模型') });
+        if (tab === 'providers') sections.push({ title: '按供应商', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byProvider, item => item.provider_name || item.provider_id || '未知供应商') });
+        if (tab === 'sources') sections.push({ title: '按客户端来源', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.bySource, item => item.request_source || '未知来源') });
+        if (tab === 'users') sections.push({ title: '按用户', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byUser, item => item.user_name || item.username || `用户 ${item.user_id}`) });
+        if (tab === 'teams') sections.push({ title: '按团队', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byTeam, item => item.team_name || `团队 ${item.team_id}`) });
         if (tab === 'latency') {
           const latency = await api('/api/admin/stats/latency', { query: { days, ...(runtime.adminStatsFilters || {}) } });
           const summary = latency.summary || {};
           const percentile = (group, key) => group && group[key] != null ? Math.round(Number(group[key])) : null;
-          sections.push({ title: '响应速度与首字延迟', cards: [
+          sections.push({ title: '响应速度与首字延迟', toolbar: true, cards: [
             { label: '完整响应中位延迟（P50）', value: text(percentile(summary.e2e, 'p50'), '—'), detail: '一半请求不超过此耗时 · 毫秒' },
             { label: '完整响应95%分位延迟（P95）', value: text(percentile(summary.e2e, 'p95'), '—'), detail: '95% 请求不超过此耗时 · 毫秒' },
             { label: '首字延迟95%分位（P95）', value: text(percentile(summary.ttft, 'p95'), '—'), detail: '95% 请求不超过此耗时 · 毫秒' },
@@ -478,7 +494,7 @@ function createAdminPages(runtime) {
           ], rows: array(latency.daily).map(item => ({ label: display(item.date, `${item.requests || 0} 次请求`, `完整响应95%分位 ${percentile(item.e2e, 'p95') ?? '—'} 毫秒`, `首字延迟95%分位 ${percentile(item.ttft, 'p95') ?? '—'} 毫秒`, `输出速度中位数 ${percentile(item.outputTps, 'p50') ?? '—'} Token/秒`) })) });
         }
         return { sections, actions: [
-          ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, tab: 'overview', run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
+          ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
