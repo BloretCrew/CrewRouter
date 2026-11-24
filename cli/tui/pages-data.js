@@ -10,7 +10,7 @@ function usagePage(runtime) {
   return {
     id: 'usage',
     label: '用量',
-    description: '请求、Token、费用与模型/Key 分布。',
+    description: '请求、Token、成本、客户端识别率与模型/来源分布。',
     onTabChange(tab) { runtime.usageTab = tab?.id || 'overview'; },
     tabs: [
       { id: 'overview', label: '概览' },
@@ -36,8 +36,10 @@ function usagePage(runtime) {
         cards: [
           { label: '请求', value: summary.requests.toLocaleString(), detail: '总请求数' },
           { label: 'Token', value: formatBigNumber(summary.tokens), detail: `缓存 ${formatBigNumber(summary.cachedTokens)}` },
-          { label: '费用', value: formatCost(summary.cost), detail: '计费合计' },
+          { label: '成本', value: formatCost(summary.cost), detail: '服务端计费合计' },
           { label: '延迟', value: `${Math.round(summary.avgLatency)} ms`, detail: '平均' },
+          { label: '客户端识别', value: `${summary.identifiedRate.toFixed(1)}%`, detail: `${formatBigNumber(summary.unknownRequests)} 未识别` },
+          { label: '活跃来源', value: summary.activeSources, detail: `${formatBigNumber(summary.knownRequests)} 已识别请求` },
         ],
         rows: [
           { label: `输入 Token：${formatBigNumber(summary.promptTokens)} · 输出 Token：${formatBigNumber(summary.completionTokens)}` },

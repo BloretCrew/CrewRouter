@@ -81,11 +81,15 @@ test('usage analytics helpers pass filters to web-compatible endpoints', async (
 
 test('statsSummary normalizes numeric fields', () => {
   const summary = api.statsSummary({
-    summary: { total_requests: '10', total_tokens: '1000', total_cost: '1.5', avg_latency: '120' },
+    summary: { total_requests: '10', total_tokens: '1000', total_cost: '1.5', avg_latency: '120', known_requests: '8', unknown_requests: '2', identified_rate: '80.5', active_sources: '3' },
     daily: [{ date: 'x' }], byModel: [], byApiKey: [], bySource: [],
   });
   assert.equal(summary.requests, 10);
   assert.equal(summary.tokens, 1000);
   assert.equal(summary.cost, 1.5);
   assert.equal(summary.avgLatency, 120);
+  assert.equal(summary.identifiedRate, 80.5);
+  assert.equal(summary.activeSources, 3);
+  assert.equal(summary.knownRequests, 8);
+  assert.equal(summary.unknownRequests, 2);
 });

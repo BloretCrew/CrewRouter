@@ -166,7 +166,12 @@ function statsSummary(stats) {
     cachedTokens: Number(summary.total_cached_tokens || 0),
     cost: Number(summary.total_cost || 0),
     avgLatency: Number(summary.avg_latency || 0),
+    knownRequests: Number(summary.known_requests || 0),
+    unknownRequests: Number(summary.unknown_requests || 0),
+    identifiedRate: Number(summary.identified_rate || 0),
+    activeSources: Number(summary.active_sources || 0),
     daily: arrayOrEmpty(source.daily),
+
     byModel: arrayOrEmpty(source.byModel),
     byProvider: arrayOrEmpty(source.byProvider),
     byApiKey: arrayOrEmpty(source.byApiKey),
