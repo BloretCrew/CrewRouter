@@ -326,7 +326,7 @@ function createAdminPages(runtime) {
               { label: item.is_starred ? '取消星标' : '加入星标', value: 'star' },
               { label: item.is_hidden ? '显示模型' : '隐藏模型', value: 'hide' },
               { label: assignedIds.has(id) ? '从当前 Key 队列移除' : '加入当前 Key 队列', value: 'bind' },
-            ], { description: `${item.team_name || `Team ${item.team_id}`} · ${item.provider_name || item.provider_name}` });
+            ], { description: `${item.team_name || `Team ${item.team_id}`} · ${item.provider_name || item.provider}` });
             if (!choice) return;
             if (choice === 'star') {
               const starred = item.is_starred !== true;
@@ -340,8 +340,9 @@ function createAdminPages(runtime) {
             }
             if (choice === 'bind') {
               if (!keyId) { await ctx.show('模型绑定', '请先创建 API Key。'); return; }
-              const next = new Set(assignedIds); if (next.has(id)) next.delete(id); else next.add(id);
-              if (!await ctx.confirm(next.has(id) ? '绑定模型' : '解绑模型', `${keys.find(key => String(key.id) === String(keyId))?.name || keyId}\n${item.alias || item.name || id}`)) return;
+              const willBind = !assignedIds.has(id);
+              const next = new Set(assignedIds); if (willBind) next.add(id); else next.delete(id);
+              if (!await ctx.confirm(willBind ? '绑定模型' : '解绑模型', `${keys.find(key => String(key.id) === String(keyId))?.name || keyId}\n${item.alias || item.name || id}`)) return;
               await api(`/api/user/api-keys/${encodeURIComponent(keyId)}/models`, { method: 'PUT', body: { modelIds: [...next] } });
             }
             ctx.notify('模型库设置已更新。'); await ctx.refresh();
@@ -349,7 +350,7 @@ function createAdminPages(runtime) {
         });
         const sections = [
           { title: '模型库概览', cards: [{ label: 'Team', value: teams.length }, { label: '模型', value: library.total_models || 0 }, { label: '系列', value: array(library.available_series).length }, { label: '星标', value: stars.length }] },
-          ...(stars.length ? [{ title: '星标模型', rows: stars.slice(0, 20).map(item => ({ label: display(item.alias || item.name || item.model_id, item.provider_name, item.series), detail: display(item.model_id, item.test_ok === true ? `测试通过 ${item.test_latency_ms || 0} ms` : item.test_error || '') })) }] : []),
+          ...(stars.length ? [{ title: '星标模型', rows: stars.slice(0, 20).map(item => ({ label: display(item.alias || item.name || item.model_id, item.provider_name, item.series), detail: display(item.model_id, item.test_ok === true ? `测试通过 ${item.test_latency_ms || 0} ms` : item.test_error || ''), run: async ctx => { if (!await ctx.confirm('取消模型星标', `${item.alias || item.name || item.model_id}\n${item.provider_name || ''}`)) return; await api('/api/user/model-library/star', { method: 'PUT', body: { teamId: item.team_id, providerId: item.provider, modelId: item.model_id, starred: false } }); ctx.notify('模型星标已取消。'); await ctx.refresh(); } })) }] : []),
           { title: '团队与供应商目录', description: `${providerRows.length} 个供应商 · 选择供应商查看模型`, rows: providerRows.length ? providerRows : [{ label: libraryResult.status === 'rejected' ? libraryResult.reason.message : '暂无可用供应商。' }] },
           ...(selectedProvider ? [{ title: `${selectedProvider.provider_name} · 模型目录`, description: `第 ${searchData.page || runtime.libraryPage || 1} 页 · ${searchData.total || searchedModels.length} 个模型`, rows: modelRows.length ? modelRows : [{ label: '没有符合筛选条件的模型。' }] }] : []),
           ...(libraryResult.status === 'rejected' ? [{ title: '加载失败', rows: [{ label: libraryResult.reason.message || '模型目录不可用' }] }] : []),
