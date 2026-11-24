@@ -129,6 +129,7 @@ async function runPagedTui({
     rememberTab(st, page);
     st.tabIndex = (index + page.tabs.length) % page.tabs.length;
     restoreTab(st, page);
+    if (typeof page.onTabChange === 'function') page.onTabChange(currentTab(page, st));
     st.version++;
     render();
   }

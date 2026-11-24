@@ -1,23 +1,31 @@
 'use strict';
 
-const { getStats, statsSummary, listSessions, getSessionMessages, searchSessions } = require('../lib/api');
+const { getStats, getStatsFilters, getLatencyStats, getMessageStats, getUsageLogs, statsSummary, listSessions, getSessionMessages, searchSessions } = require('../lib/api');
 const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 const { bar, text } = require('./pages-common');
 
 function usagePage(runtime) {
   if (!runtime.usageDays) runtime.usageDays = runtime.cfg.tui ? runtime.cfg.tui.days : 30;
+  if (!runtime.usageTab) runtime.usageTab = 'overview';
   return {
     id: 'usage',
     label: '用量',
     description: '请求、Token、费用与模型/Key 分布。',
+    onTabChange(tab) { runtime.usageTab = tab?.id || 'overview'; },
     tabs: [
       { id: 'overview', label: '概览' },
       { id: 'daily', label: '每日' },
       { id: 'models', label: '模型' },
+      { id: 'providers', label: '供应商' },
       { id: 'keys', label: 'API Key' },
+      { id: 'sources', label: '客户端' },
+      { id: 'latency', label: '延迟' },
+      { id: 'messages', label: '消息分析' },
+      { id: 'logs', label: '调用记录' },
     ],
     async load(api) {
-      const stats = await getStats(runtime.client, runtime.usageDays);
+      const filters = runtime.usageFilters || {};
+      const stats = await getStats(runtime.client, runtime.usageDays, filters);
       const summary = statsSummary(stats);
       const maxDaily = Math.max(...summary.daily.map(row => Number(row.tokens) || 0), 1);
       const maxModel = Math.max(...summary.byModel.map(row => Number(row.tokens) || 0), 1);
@@ -56,22 +64,39 @@ function usagePage(runtime) {
           })),
         });
       }
+      if (summary.byProvider?.length) {
+        sections.push({ title: '按供应商', tab: 'providers', rows: summary.byProvider.slice(0, 30).map(row => ({ label: `${row.provider_name || row.provider_id || '未知'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`, detail: bar(row.tokens, Math.max(...summary.byProvider.map(item => Number(item.tokens) || 0), 1), 26) })) });
+      }
       if (summary.byApiKey.length) {
-        sections.push({
-          title: '按 API Key',
-          tab: 'keys',
-          rows: summary.byApiKey.slice(0, 30).map(row => ({
-            label: `${row.key_name || row.key_prefix || '未知 Key'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`,
-            detail: bar(row.tokens, maxKey, 26),
-          })),
-        });
+        sections.push({ title: '按 API Key', tab: 'keys', rows: summary.byApiKey.slice(0, 30).map(row => ({ label: `${row.key_name || row.key_prefix || '未知 Key'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`, detail: bar(row.tokens, maxKey, 26) })) });
+      }
+      if (summary.bySource?.length) {
+        sections.push({ title: '按客户端', tab: 'sources', rows: summary.bySource.slice(0, 30).map(row => ({ label: `${row.request_source || 'unknown'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`, detail: bar(row.tokens, Math.max(...summary.bySource.map(item => Number(item.tokens) || 0), 1), 26) })) });
+      }
+      if (runtime.usageTab === 'latency') {
+        const latency = await getLatencyStats(runtime.client, { days: runtime.usageDays, ...filters });
+        sections.push({ title: '延迟与吞吐', tab: 'latency', cards: [
+          { label: 'P50', value: text(latency.p50_ms, '—'), detail: '毫秒' }, { label: 'P95', value: text(latency.p95_ms, '—'), detail: '毫秒' },
+          { label: 'P99', value: text(latency.p99_ms, '—'), detail: '毫秒' }, { label: '请求', value: text(latency.total_requests, '0'), detail: '筛选范围' },
+        ], rows: (latency.daily || []).map(row => ({ label: `${row.date} · ${row.requests || 0} 请求 · P95 ${row.p95_ms || 0} ms · ${row.tokens_per_second || 0} tok/s` })) });
+      }
+      if (runtime.usageTab === 'messages') {
+        const messageStats = await getMessageStats(runtime.client, { days: runtime.usageDays, ...filters });
+        sections.push({ title: '消息结构分析', tab: 'messages', cards: Object.entries(messageStats.summary || {}).slice(0, 6).map(([label, value]) => ({ label, value: typeof value === 'object' ? JSON.stringify(value) : text(value) })), rows: Object.entries(messageStats.blocks || {}).map(([name, count]) => ({ label: `${name} · ${count}` })) });
+      }
+      if (runtime.usageTab === 'logs') {
+        const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, pageSize: 20, days: runtime.usageDays, ...filters });
+        const items = Array.isArray(logs.items) ? logs.items : [];
+        sections.push({ title: '调用记录', tab: 'logs', description: `第 ${logs.page || runtime.usageLogPage || 1} 页 · 共 ${logs.total || 0} 条`, rows: items.map(item => ({ label: `${formatTime(item.created_at)} · ${item.model_name || item.model_id || '未知'} · ${item.status_code || item.status || ''}`, detail: `${item.tokens_used || item.tokens || 0} tokens · ${formatCost(item.cost)} · ${item.request_source || ''}`, run: async ctx => await ctx.show('调用记录详情', JSON.stringify(item, null, 2)) })) });
       }
       return {
         sections,
         actions: [
-          { label: '最近 7 天', run: async ctx => { runtime.usageDays = 7; await ctx.refresh(); } },
-          { label: '最近 30 天', run: async ctx => { runtime.usageDays = 30; await ctx.refresh(); } },
-          { label: '最近 90 天', run: async ctx => { runtime.usageDays = 90; await ctx.refresh(); } },
+          { label: '时间范围与筛选', tab: 'overview', run: async ctx => { const [filtersData, currentModel, currentProvider, currentSource] = await Promise.all([getStatsFilters(runtime.client), Promise.resolve(filters.model_id || ''), Promise.resolve(filters.provider_id || ''), Promise.resolve(filters.request_source || '')]); const pick = async (title, values, current) => { const value = await ctx.choose(title, [{ label: '全部', value: '' }, ...values.map(item => ({ label: item.name || item.id, value: item.id }))]); return value === null ? current : value; }; const model_id = await pick('模型筛选', filtersData.models || [], currentModel); const provider_id = await pick('供应商筛选', filtersData.providers || [], currentProvider); const request_source = await pick('客户端筛选', filtersData.sources || [], currentSource); runtime.usageFilters = { ...filters, model_id, provider_id, request_source }; await ctx.refresh(); } },
+          { label: '搜索调用记录', tab: 'logs', run: async ctx => { runtime.usageFilters = { ...filters, q: String(await ctx.ask('搜索模型或用户') || '').trim() }; runtime.usageLogPage = 1; await ctx.refresh(); } },
+          { label: '上一页调用记录', tab: 'logs', run: async ctx => { runtime.usageLogPage = Math.max(1, (runtime.usageLogPage || 1) - 1); await ctx.refresh(); } },
+          { label: '下一页调用记录', tab: 'logs', run: async ctx => { runtime.usageLogPage = (runtime.usageLogPage || 1) + 1; await ctx.refresh(); } },
+          ...[7, 30, 90, 180, 365].map(days => ({ label: `最近 ${days} 天`, tab: 'overview', run: async ctx => { runtime.usageDays = days; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },
         ],
       };

@@ -66,6 +66,19 @@ test('API key lifecycle helpers call the expected endpoints', async () => {
   } finally { await fake.close(); }
 });
 
+test('usage analytics helpers pass filters to web-compatible endpoints', async () => {
+  const calls = [];
+  const client = { get: async (path, options = {}) => { calls.push({ path, options }); return {}; } };
+  await api.getStats(client, 30, { model_id: 'm1', provider_id: 'p1', team_id: 4, request_source: 'codex' });
+  await api.getStatsFilters(client);
+  await api.getLatencyStats(client, { days: 7, request_source: 'codex' });
+  await api.getMessageStats(client, { days: 7, workspace_path: '/repo' });
+  await api.getUsageLogs(client, { page: 2, pageSize: 10, days: 7, request_source: 'codex' });
+  assert.deepEqual(calls.map(call => call.path), ['/api/user/stats', '/api/user/stats/filters', '/api/user/stats/latency', '/api/user/message-stats', '/api/user/usage-logs']);
+  assert.deepEqual(calls[0].options.query, { days: 30, model_id: 'm1', provider_id: 'p1', team_id: 4, request_source: 'codex' });
+  assert.deepEqual(calls.at(-1).options.query, { page: 2, pageSize: 10, days: 7, request_source: 'codex' });
+});
+
 test('statsSummary normalizes numeric fields', () => {
   const summary = api.statsSummary({
     summary: { total_requests: '10', total_tokens: '1000', total_cost: '1.5', avg_latency: '120' },

@@ -17,9 +17,12 @@ async function getInstance(client) { return client.get('/api/instance'); }
 async function getSetupStatus(client) { return client.get('/api/setup/status'); }
 async function getMe(client) { return client.get('/auth/me'); }
 async function getBalance(client) { return client.get('/api/user/balance'); }
-async function getStats(client, days = 30) {
-  return client.get('/api/user/stats', { query: { days } });
+async function getStats(client, days = 30, filters = {}) {
+  return client.get('/api/user/stats', { query: { days, ...filters } });
 }
+async function getStatsFilters(client) { return client.get('/api/user/stats/filters'); }
+async function getLatencyStats(client, query = {}) { return client.get('/api/user/stats/latency', { query }); }
+async function getMessageStats(client, query = {}) { return client.get('/api/user/message-stats', { query }); }
 async function getUsage(client) { return client.get('/api/user/usage'); }
 async function getCodeBalances(client) { return client.get('/api/user/code-balances'); }
 async function getCurrentModel(client) { return client.get('/api/user/current-model'); }
@@ -144,8 +147,8 @@ async function getSessionMessages(client, key, { page = 1, pageSize = 20 } = {})
 async function searchSessions(client, { q, days = 30 } = {}) {
   return client.get('/api/user/sessions/search', { query: { q, days } });
 }
-async function getUsageLogs(client, { page = 1, pageSize = 20 } = {}) {
-  return client.get('/api/user/usage-logs', { query: { page, pageSize } });
+async function getUsageLogs(client, { page = 1, pageSize = 20, ...filters } = {}) {
+  return client.get('/api/user/usage-logs', { query: { page, pageSize, ...filters } });
 }
 
 async function listUsers(client, { search = '', page = 1, limit = 100 } = {}) {
@@ -165,6 +168,7 @@ function statsSummary(stats) {
     avgLatency: Number(summary.avg_latency || 0),
     daily: arrayOrEmpty(source.daily),
     byModel: arrayOrEmpty(source.byModel),
+    byProvider: arrayOrEmpty(source.byProvider),
     byApiKey: arrayOrEmpty(source.byApiKey),
     bySource: arrayOrEmpty(source.bySource),
   };
@@ -177,6 +181,9 @@ module.exports = {
   getMe,
   getBalance,
   getStats,
+  getStatsFilters,
+  getLatencyStats,
+  getMessageStats,
   getUsage,
   getCodeBalances,
   getCurrentModel,
