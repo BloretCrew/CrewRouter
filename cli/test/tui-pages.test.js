@@ -79,16 +79,21 @@ test('model library requires confirmation and sends the ordered key model queue'
   const calls = [];
   const api = async (path, options = {}) => {
     calls.push({ path, options });
-    if (path === '/api/user/model-library') return { models: [{ id: 'm1', name: 'Model One' }] };
+    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 1, visible_model_count: 1, tags: [{ id: 2, name: 'Featured' }] }] }], starred_models: [], available_series: [], total_models: 1 };
     if (path === '/api/user/api-keys') return [{ id: 8, name: 'Main Key' }];
     if (path === '/api/user/provider-tags') return [{ id: 2, name: 'Featured' }];
     if (path.endsWith('/models')) return { models: [{ id: 'm1', name: 'Model One' }], queue: [] };
+    if (path === '/api/user/model-library/search') return { items: [{ id: 'm1', name: 'Model One', provider_name: 'Provider A' }], page: 1, total: 1 };
     return {};
   };
   const data = await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/user/model-library'));
   assert.ok(calls.some(call => call.path === '/api/user/api-keys/8/models'));
-  const row = data.sections.find(section => section.title === '模型目录').rows[0];
+  const provider = data.sections.find(section => section.title === '团队与供应商目录').rows[0];
+  await provider.run({ refresh: async () => {} });
+  const expanded = await page.load(api);
+  assert.ok(calls.some(call => call.path === '/api/user/model-library/search'));
+  const row = expanded.sections.find(section => section.title.includes('模型目录')).rows[0];
   let confirmCount = 0;
   await row.run({ choose: async () => 'toggle', confirm: async () => { confirmCount++; return false; } });
   assert.equal(confirmCount, 1);
