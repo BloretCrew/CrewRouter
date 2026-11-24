@@ -138,8 +138,15 @@ function buildPolicySignals(req) {
   const apiUser = req.apiUser || {};
   const modelCandidates = new Set();
   if (body.model) modelCandidates.add(String(body.model));
+  for (const binding of apiUser.requestModelBindings || []) {
+    if (binding?.requestModelName && binding?.modelId) {
+      modelCandidates.add(String(binding.requestModelName));
+      modelCandidates.add(String(binding.modelId));
+    }
+  }
   for (const id of apiUser.modelQueue || []) if (id) modelCandidates.add(String(id));
   for (const id of Object.values(apiUser.harnessModels || {})) if (id) modelCandidates.add(String(id));
+  for (const binding of apiUser.requestModelBindings || []) if (binding?.modelId) modelCandidates.add(String(binding.modelId));
   if (apiUser.currentModelId) modelCandidates.add(String(apiUser.currentModelId));
   if (apiUser.customModelName) modelCandidates.add(String(apiUser.customModelName));
 
@@ -199,6 +206,7 @@ function buildPolicySignals(req) {
       balance: apiUser.balance ?? null,
       modelQueue: apiUser.modelQueue || [],
       harnessModels: apiUser.harnessModels || {},
+      requestModelBindings: apiUser.requestModelBindings || [],
       currentModelId: apiUser.currentModelId || null,
       customModelName: apiUser.customModelName || null,
       policyBypass: apiUser.policyBypass === true,

@@ -37,6 +37,7 @@ async function policyGate(req, res, next) {
     const configured = new Set([
       ...(signals.actor?.modelQueue || []),
       ...Object.values(signals.actor?.harnessModels || {}),
+      ...(signals.actor?.requestModelBindings || []).map(binding => binding.modelId),
       signals.actor?.currentModelId,
     ].filter(Boolean).map(String));
     if (!configured.has(String(target))) {

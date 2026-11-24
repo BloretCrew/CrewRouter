@@ -437,7 +437,7 @@ async function getAuthorizedModelIds(userId, modelIds) {
 }
 
 async function refreshApiUserModelAuthorization(apiUser) {
-  const [keyResult, queueResult, harnessResult] = await Promise.all([
+  const [keyResult, queueResult, harnessResult, requestModelResult] = await Promise.all([
     pool.query(
       `SELECT ak.current_model_id, ak.fusion_panel_models, ak.fusion_judge_model_id, ak.fusion_outer_model_id,
               ak.enabled, ak.expires_at, ak.signature_enabled, ak.signature_template,
@@ -456,6 +456,13 @@ async function refreshApiUserModelAuthorization(apiUser) {
       `SELECT harness, model_id FROM api_key_harness_models WHERE api_key_id = $1`,
       [apiUser.keyId]
     ),
+    pool.query(
+      `SELECT request_model_name, harness, model_id FROM api_key_request_model_bindings WHERE api_key_id = $1`,
+      [apiUser.keyId]
+    ).catch(error => {
+      if (error.code === '42P01') return { rows: [] };
+      throw error;
+    }),
   ]);
   const key = keyResult.rows[0];
   let lifecycleError;
@@ -472,17 +479,32 @@ async function refreshApiUserModelAuthorization(apiUser) {
   }
   const queue = queueResult.rows.map(row => String(row.model_id || '').trim()).filter(Boolean);
   const currentModelId = key.current_model_id || null;
+  const requestModelBindings = requestModelResult.rows
+    .filter(row => row.request_model_name && row.model_id)
+    .map(row => ({ requestModelName: String(row.request_model_name).trim().toLowerCase(), harness: row.harness || null, modelId: String(row.model_id) }));
   const harnessModels = Object.fromEntries(harnessResult.rows
     .filter(row => row.harness && row.model_id)
     .map(row => [row.harness, row.model_id]));
   const fusionPanelModels = Array.isArray(key.fusion_panel_models) ? key.fusion_panel_models : [];
   const fusionIds = [...fusionPanelModels, key.fusion_judge_model_id, key.fusion_outer_model_id];
   const allConfiguredIds = [...queue, currentModelId, ...Object.values(harnessModels), ...fusionIds].filter(Boolean).map(String);
-  const allowed = await getAuthorizedModelIds(apiUser.userId, allConfiguredIds);
-  apiUser.modelAuthorization = { deniedModelIds: allConfiguredIds.filter(id => !allowed.has(id)) };
+  const keyBoundIds = [...queue, currentModelId, ...Object.values(harnessModels)].filter(Boolean).map(String);
+  const configuredMappingIds = [...new Set(requestModelBindings.map(binding => binding.modelId))];
+  const [allowed, allowedMappingIds] = await Promise.all([
+    getAuthorizedModelIds(apiUser.userId, allConfiguredIds),
+    getAuthorizedModelIds(apiUser.userId, configuredMappingIds),
+  ]);
+  apiUser.modelAuthorization = {
+    deniedModelIds: allConfiguredIds.filter(id => !allowed.has(id)),
+    deniedRequestModelBindings: requestModelBindings
+      .filter(binding => !allowedMappingIds.has(binding.modelId))
+      .map(binding => `${binding.harness || '*'}:${binding.requestModelName}`),
+    keyBoundModelIds: [...new Set(keyBoundIds)],
+  };
   apiUser.currentModelId = currentModelId;
   apiUser.modelQueue = queue;
   apiUser.harnessModels = harnessModels;
+  apiUser.requestModelBindings = requestModelBindings;
   apiUser.fusionPanelModels = fusionPanelModels;
   apiUser.fusionJudgeModelId = key.fusion_judge_model_id || '';
   apiUser.fusionOuterModelId = key.fusion_outer_model_id || '';
@@ -516,8 +538,45 @@ class ApiKeyLifecycleError extends Error {
 function resolveModelQueueForRequest(apiUser, req, metadata = {}) {
   const meta = clientMetaFromReq(req, metadata);
   const requestSource = normalizeRequestSource(meta.requestSource);
+  const requestedModel = String((typeof req?._requestedModel === 'string' ? req._requestedModel : '') || (typeof req?.body?.model === 'string' ? req.body.model : '') || (typeof metadata?.model === 'string' ? metadata.model : '')).trim();
   if (req?.policyDecision?.modelQueueOverride?.length) {
-    return { queue: req.policyDecision.modelQueueOverride, requestSource, harnessOverride: false, policyOverride: true };
+    return { queue: req.policyDecision.modelQueueOverride, requestSource, harnessOverride: false, policyOverride: true, requestedModelName: requestedModel };
+  }
+  const requestModelBindings = Array.isArray(apiUser?.requestModelBindings) ? apiUser.requestModelBindings : [];
+  if (requestedModel && !req?._skipRequestModelMapping) {
+    const normalizedName = requestedModel.toLowerCase();
+    const scopedBinding = isHarnessSource(requestSource)
+      ? requestModelBindings.find(binding => binding.harness === requestSource && binding.requestModelName.toLowerCase() === normalizedName)
+      : null;
+    const generalBinding = requestModelBindings.find(binding => !binding.harness && binding.requestModelName.toLowerCase() === normalizedName);
+    const binding = scopedBinding || generalBinding;
+    if (binding) {
+      const modelId = String(binding.modelId || '').trim();
+      const denied = apiUser?.modelAuthorization?.deniedModelIds || [];
+      const allowed = apiUser?.modelAuthorization?.keyBoundModelIds
+        ? apiUser.modelAuthorization.keyBoundModelIds.map(String)
+        : [
+            ...(Array.isArray(apiUser?.modelQueue) ? apiUser.modelQueue.map(String) : []),
+            ...(apiUser?.currentModelId ? [String(apiUser.currentModelId)] : []),
+            ...Object.values(apiUser?.harnessModels || {}).map(String),
+          ];
+      if (!Array.isArray(apiUser?.modelAuthorization?.keyBoundModelIds)
+          && !(apiUser?.modelAuthorization?.deniedRequestModelBindings || []).includes(`${binding.harness || '*'}:${normalizedName}`)
+          && !denied.includes(modelId)) {
+        allowed.push(modelId);
+      }
+      const requestBindingKey = `${binding.harness || '*'}:${normalizedName}`;
+      const mappingDenied = denied.includes(modelId)
+        || (apiUser?.modelAuthorization?.deniedRequestModelBindings || []).includes(requestBindingKey);
+      return {
+        queue: modelId ? [modelId] : [],
+        requestSource,
+        harnessOverride: false,
+        requestModelOverride: true,
+        requestModelName: requestedModel,
+        mappingDenied: !modelId || mappingDenied || !allowed.includes(modelId),
+      };
+    }
   }
   const harnessMap = apiUser?.harnessModels && typeof apiUser.harnessModels === 'object'
     ? apiUser.harnessModels
@@ -564,11 +623,22 @@ async function loadHarnessModelsForKey(keyId) {
     }
     return map;
   } catch (err) {
-    // 表尚未迁移时静默回退
-    if (err.code !== '42P01') {
-      Logger.warn(`[API密钥验证] 加载 Harness 绑定失败 keyId=${keyId}: ${err.message}`);
-    }
+    if (err.code !== '42P01') Logger.warn(`[API密钥验证] 加载 Harness 绑定失败 keyId=${keyId}: ${err.message}`);
     return {};
+  }
+}
+
+async function loadRequestModelBindingsForKey(keyId) {
+  try {
+    const result = await pool.query(
+      `SELECT request_model_name, harness, model_id FROM api_key_request_model_bindings WHERE api_key_id = $1`,
+      [keyId]
+    );
+    return result.rows.map(row => ({ requestModelName: String(row.request_model_name || '').trim().toLowerCase(), harness: row.harness || null, modelId: String(row.model_id || '') }))
+      .filter(row => row.requestModelName && row.modelId);
+  } catch (err) {
+    if (err.code !== '42P01') Logger.warn(`[API密钥验证] 加载请求模型名绑定失败 keyId=${keyId}: ${err.message}`);
+    return [];
   }
 }
 
@@ -1342,6 +1412,7 @@ async function validateApiKey(req, res, next, boundKey = null) {
     const currentModelId = keyData.current_model_id || null;
     const modelQueue = await loadModelQueueForKey(keyData.id, currentModelId);
     const harnessModels = await loadHarnessModelsForKey(keyData.id);
+    const requestModelBindings = await loadRequestModelBindingsForKey(keyData.id);
 
     // 构建用户信息对象
     const apiUser = {
@@ -1363,6 +1434,7 @@ async function validateApiKey(req, res, next, boundKey = null) {
       currentModelId,
       modelQueue,
       harnessModels,
+      requestModelBindings,
       fusionPanelModels: keyData.fusion_panel_models || [],
       fusionJudgeModelId: keyData.fusion_judge_model_id || '',
       fusionOuterModelId: keyData.fusion_outer_model_id || '',
@@ -3109,6 +3181,7 @@ async function handleChatCompletion(req, res) {
     if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
     if (out?.body !== undefined) req.body = out.body;
   }
+  if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
 
   // 吞图：在转发前剥离客户端图片并注入提示（默认禁用）
   applySwallowImagesIfEnabled(req);
@@ -3133,10 +3206,13 @@ async function handleChatCompletion(req, res) {
     }
   }
 
-  // CrewRouter: 使用 API Key 绑定的有序模型队列，忽略请求中的 model；
-  // 若识别到 harness 且有单独绑定，则优先使用该模型。
+  // CrewRouter: 有请求名映射时按请求名选择；否则使用 Harness / 默认队列。
+  req._requestedModel = req._requestedModel ?? req.body?.model;
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
+  if (resolved.mappingDenied) {
+    return res.status(403).json({ error: { message: `Mapped target for request model '${resolved.requestModelName}' is no longer authorized.`, type: 'permission_error', code: 'model_access_denied', model_ids: modelQueue } });
+  }
   if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
     return res.status(403).json({ error: { message: 'One or more API Key model bindings are no longer authorized.', type: 'permission_error', code: 'model_access_denied', model_ids: req.apiUser.modelAuthorization.deniedModelIds } });
   }
@@ -3882,9 +3958,13 @@ async function handleAnthropicMessage(req, res) {
     return await handleFusionRequest(req, res, 'anthropic');
   }
 
-  // CrewRouter: 使用 API Key 绑定的有序模型队列；harness 单独绑定优先
+  // CrewRouter: 请求名映射按 Harness 专属优先、通用次之；无匹配时沿用原有路由。
+  req._requestedModel = req._requestedModel ?? req.body?.model;
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
+  if (resolved.mappingDenied) {
+    return res.status(403).json({ error: { message: `Mapped target for request model '${resolved.requestModelName}' is no longer authorized.`, type: 'permission_error', code: 'model_access_denied', model_ids: modelQueue } });
+  }
   if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
     return res.status(403).json({ error: { message: 'One or more API Key model bindings are no longer authorized.', type: 'permission_error', code: 'model_access_denied', model_ids: req.apiUser.modelAuthorization.deniedModelIds } });
   }
@@ -5968,6 +6048,7 @@ async function handleResponses(req, res) {
     if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
     if (out?.body !== undefined) req.body = out.body;
   }
+  if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
 
   // 吞图：剥离 input 中的图片并注入提示（默认禁用）；须在转换/透传前执行
   applySwallowImagesIfEnabled(req);
@@ -5991,9 +6072,13 @@ async function handleResponses(req, res) {
     return await handleFusionRequest(req, res, 'openai');
   }
 
-  // CrewRouter: 使用 API Key 绑定的有序模型队列；harness 单独绑定优先
+  // CrewRouter: 使用请求名映射；无匹配时按 Harness 与默认队列回退
+  req._requestedModel = req._requestedModel ?? req.body?.model;
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
+  if (resolved.mappingDenied) {
+    return res.status(403).json({ error: { message: `Mapped target for request model '${resolved.requestModelName}' is no longer authorized.`, type: 'permission_error', code: 'model_access_denied', model_ids: modelQueue } });
+  }
   if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
     return res.status(403).json({ error: { message: 'One or more API Key model bindings are no longer authorized.', type: 'permission_error', code: 'model_access_denied', model_ids: req.apiUser.modelAuthorization.deniedModelIds } });
   }
@@ -7027,8 +7112,19 @@ async function runBridgeModelQueue({
   req, res, sourceDialect, clientDialect, body, stream, clientAlt, clientResponseId,
   requestType, upstreamAction, onSuccess
 }) {
-  const resolved = resolveModelQueueForRequest(req.apiUser, req);
+  const resolved = resolveModelQueueForRequest(req.apiUser, { ...req, body: body || req.body });
   const modelQueue = resolved.queue;
+  if (req.policyDecision?.modelQueueOverride?.length) {
+    const policyAllowed = await getAuthorizedModelIds(req.apiUser.userId, modelQueue);
+    if (modelQueue.some(id => !policyAllowed.has(id))) {
+      sendBridgeError(res, clientDialect, 403, 'One or more policy-selected models are no longer authorized.', { reason: 'PERMISSION_DENIED', code: 'model_access_denied' });
+      return null;
+    }
+  }
+  if (resolved.mappingDenied) {
+    sendBridgeError(res, clientDialect, 403, `Mapped target for request model '${resolved.requestModelName}' is no longer authorized.`, { reason: 'PERMISSION_DENIED', code: 'model_access_denied' });
+    return null;
+  }
   if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
     sendBridgeError(res, clientDialect, 403, 'One or more API Key model bindings are no longer authorized.', {
       reason: 'PERMISSION_DENIED'
@@ -7278,8 +7374,14 @@ function estimateGeminiCount(ir) {
 async function handleGeminiCountTokens(req, res) {
   if (!await refreshApiUserForRequest(req, res)) return;
   try {
-    const resolved = resolveModelQueueForRequest(req.apiUser, req);
+    const resolved = resolveModelQueueForRequest(req.apiUser, { ...req, body: req.body?.generateContentRequest || req.body });
     const queueModelId = resolved.queue[0];
+    if (resolved.mappingDenied) {
+      return googleError.sendGoogleError(res, 403, `Mapped target for request model '${resolved.requestModelName}' is no longer authorized.`, { reason: 'PERMISSION_DENIED' });
+    }
+    if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
+      return googleError.sendGoogleError(res, 403, 'One or more API Key model bindings are no longer authorized.', { reason: 'PERMISSION_DENIED' });
+    }
     if (!queueModelId) {
       return googleError.sendGoogleError(res, 400, 'No model selected. Please select a model from the model library first.', { reason: 'INVALID_ARGUMENT' });
     }

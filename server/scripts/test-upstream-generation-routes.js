@@ -11,7 +11,7 @@ const realUrlValidator = require('../utils/url-validator');
 
 const noop = () => {};
 const asyncNoop = async () => {};
-const state = { queue: ['route-primary'], provider: null, upstreamPort: null };
+const state = { queue: ['route-primary'], requestModelBindings: [], provider: null, upstreamPort: null };
 const intervals = new Set();
 const mocks = new Map();
 const mock = (relative, exports) => mocks.set(path.resolve(__dirname, '..', relative), exports);
@@ -28,6 +28,9 @@ const pool = {
     }
     if (/SELECT DISTINCT p\.format/.test(sql)) return { rows: [{ format: state.provider.format }] };
     if (/FROM api_key_harness_models/.test(sql)) return { rows: [] };
+    if (/FROM api_key_request_model_bindings/.test(sql)) {
+      return { rows: state.requestModelBindings.map(binding => ({ request_model_name: binding.requestModelName, harness: binding.harness, model_id: binding.modelId })) };
+    }
     if (/FROM api_key_models/.test(sql)) return { rows: state.queue.map(model_id => ({ model_id })) };
     if (/SELECT ak\.current_model_id/.test(sql)) {
       assert.deepEqual(values, [1, 1], 'lifecycle lookup requires both synthetic Key and owner');
@@ -211,6 +214,7 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
   const upstreamPort = await listen(upstream);
   state.upstreamPort = upstreamPort;
   state.queue = queue || (fallback ? ['route-primary', 'route-backup'] : ['route-primary']);
+  state.requestModelBindings = [];
   state.provider = { id: 'local-provider', name: 'isolated', enabled: true, format, base_url: `http://127.0.0.1:${upstreamPort}/v1`, api_key: 'local-key-primary', api_keys: fallback ? ['local-key-primary', 'local-key-backup'] : ['local-key-primary'], api_key_select_mode: 'order', proxy_enabled: false, ...provider };
   const requestCloses = [];
   const app = express();
@@ -348,6 +352,14 @@ async function main() {
       assert.equal(JSON.parse(result.text).error.type, 'invalid_request_error', result.text);
     });
   }
+  test('Chat request model mapping overrides the queue and keeps client identity', {}, async f => {
+    state.requestModelBindings = [{ requestModelName: 'fast-chat', harness: null, modelId: 'route-primary' }];
+    const response = await post(f, '/chat/completions', { ...chatBody, model: 'fast-chat' });
+    assert.equal(response.status, 200, response.text);
+    assert.equal(f.received.length, 1);
+    assert.equal(f.received[0].body.model, 'upstream-route-primary');
+    state.requestModelBindings = [];
+  });
   test('Chat to Anthropic preserves tool-result cache blocks', { format: 'anthropic' }, async f => {
     const content = [{ type: 'text', text: 'result', cache_control: { type: 'ephemeral', ttl: '1h' } }];
     const result = await post(f, '/chat/completions', { ...chatBody, messages: [{ role: 'tool', tool_call_id: 'tool-1', content }] });

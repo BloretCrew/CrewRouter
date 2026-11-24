@@ -250,6 +250,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         COALESCE(tag_agg.tags, '[]'::jsonb) AS tags,
         COALESCE(queue_agg.model_queue, '[]'::jsonb) AS model_queue,
         COALESCE(harness_agg.harness_models, '[]'::jsonb) AS harness_models,
+        COALESCE(request_model_agg.request_model_bindings, '[]'::jsonb) AS request_model_bindings,
         jsonb_build_object('id', owner.id, 'username', owner.username, 'email', owner.email) AS owner,
         COALESCE(member_agg.members, '[]'::jsonb) AS members,
         COALESCE(member_agg.member_count, 0) AS member_count,
@@ -308,6 +309,20 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         LEFT JOIN providers hp ON hm.provider = hp.id
         GROUP BY akhm.api_key_id
       ) harness_agg ON harness_agg.api_key_id = ak.id
+      LEFT JOIN (
+        SELECT b.api_key_id,
+               jsonb_agg(jsonb_build_object(
+                 'request_model_name', b.request_model_name,
+                 'harness', b.harness,
+                 'model_id', b.model_id,
+                 'name', bm.name,
+                 'provider_name', bp.name
+               ) ORDER BY b.request_model_name, b.harness NULLS FIRST) AS request_model_bindings
+        FROM api_key_request_model_bindings b
+        LEFT JOIN models bm ON bm.id = b.model_id
+        LEFT JOIN providers bp ON bp.id = bm.provider
+        GROUP BY b.api_key_id
+      ) request_model_agg ON request_model_agg.api_key_id = ak.id
       LEFT JOIN (
         SELECT akt.api_key_id,
                jsonb_agg(jsonb_build_object('id', kt.id, 'name', kt.name, 'color', kt.color) ORDER BY kt.sort_order) AS tags
@@ -863,7 +878,7 @@ router.put('/api-keys/:id/models', requireAuth, auditMiddleware(ACTIONS.API_KEY_
 /** 校验模型是否可被 Key 发起者使用（与默认模型队列一致） */
 async function assertOwnerCanUseModel(modelId, ownerUserId, db = pool) {
   const modelCheck = await db.query(
-    `SELECT m.id, m.name, p.enabled AS provider_enabled, p.name AS provider_name,
+    `SELECT m.id, m.name, m.enabled AS model_enabled, p.enabled AS provider_enabled, p.name AS provider_name,
             EXISTS (
               SELECT 1 FROM team_models tm
               JOIN user_teams ut ON ut.team_id = tm.team_id
@@ -875,6 +890,9 @@ async function assertOwnerCanUseModel(modelId, ownerUserId, db = pool) {
   );
   if (modelCheck.rows.length === 0) {
     return { error: `模型不存在: ${modelId}`, status: 404 };
+  }
+  if (modelCheck.rows[0].model_enabled === false) {
+    return { error: `模型已禁用，无法选择: ${modelId}`, status: 400 };
   }
   if (modelCheck.rows[0].provider_enabled === false) {
     return { error: `该供应商已禁用，无法选择模型: ${modelId}`, status: 400 };
@@ -987,6 +1005,98 @@ router.put('/api-keys/:id/harness-models', requireAuth, auditMiddleware(ACTIONS.
     });
   } catch (error) {
     Logger.error('[更新密钥 Harness 绑定] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 获取 API Key 的请求模型名映射与可用目标模型
+router.get('/api-keys/:id/request-model-bindings', requireAuth, async (req, res) => {
+  try {
+    const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
+    if (!access) return res.status(404).json({ error: '密钥不存在' });
+    const [bindings, teams] = await Promise.all([
+      pool.query(`SELECT b.request_model_name, b.harness, b.model_id, m.name, p.name AS provider_name
+        FROM api_key_request_model_bindings b
+        LEFT JOIN models m ON m.id = b.model_id
+        LEFT JOIN providers p ON p.id = m.provider
+        WHERE b.api_key_id = $1 ORDER BY b.request_model_name, b.harness NULLS FIRST`, [req.params.id]),
+      pool.query('SELECT team_id FROM user_teams WHERE user_id = $1', [access.owner_user_id]),
+    ]);
+    const teamIds = teams.rows.map(row => row.team_id);
+    let models = [];
+    if (teamIds.length) {
+      const modelRows = await pool.query(`SELECT DISTINCT m.id, m.name, m.alias, m.upstream_model_id
+        FROM models m JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
+        WHERE m.enabled = TRUE AND (
+          EXISTS (SELECT 1 FROM api_key_models akm WHERE akm.api_key_id = $1 AND akm.model_id = m.id AND akm.enabled IS DISTINCT FROM FALSE)
+          OR EXISTS (SELECT 1 FROM api_keys ak WHERE ak.id = $1 AND ak.current_model_id = m.id)
+          OR EXISTS (SELECT 1 FROM api_key_harness_models h WHERE h.api_key_id = $1 AND h.model_id = m.id)
+          OR EXISTS (SELECT 1 FROM api_key_request_model_bindings b WHERE b.api_key_id = $1 AND b.model_id = m.id)
+        )
+        ORDER BY m.name`, [req.params.id]);
+      models = modelRows.rows;
+    }
+    res.json({
+      bindings: bindings.rows.map(row => ({ request_model_name: row.request_model_name, harness: row.harness, model_id: row.model_id, name: row.name || row.model_id, provider_name: row.provider_name || '' })),
+      models,
+      available_harnesses: HARNESS_SOURCES.map(harness => ({ id: harness, label: sourceLabel(harness) })),
+    });
+  } catch (error) {
+    Logger.error('[获取请求模型名映射] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 原子替换 API Key 的请求模型名映射列表
+router.put('/api-keys/:id/request-model-bindings', requireAuth, auditMiddleware(ACTIONS.API_KEY_MODELS, {
+  resourceType: 'api_key',
+  resourceIdFrom: req => req.params.id,
+  descriptionFrom: req => `更新 API Key #${req.params.id} 请求模型名映射`,
+  detailsFrom: req => ({ binding_count: Array.isArray(req.body?.bindings) ? req.body.bindings.length : 0 }),
+}), async (req, res) => {
+  try {
+    return await withApiKeyWrite(req, res, {}, async (db, reply, invalidateAfterCommit, access) => {
+      const input = req.body?.bindings;
+      if (!Array.isArray(input) || input.length > 100) {
+        return reply.status(400).json({ error: 'bindings 必须是最多 100 项的数组' });
+      }
+      const normalized = [];
+      const seen = new Set();
+      for (const item of input) {
+        const requestModelName = String(item?.requestModelName ?? item?.request_model_name ?? '').trim();
+        const harnessRaw = String(item?.harness || '').trim().toLowerCase();
+        const harness = harnessRaw || null;
+        const modelId = String(item?.modelId ?? item?.model_id ?? '').trim();
+        if (!requestModelName || requestModelName.length > 255 || /[\\u0000-\\u001f]/.test(requestModelName)) {
+          return reply.status(400).json({ error: '请求模型名不能为空、不可含控制字符且最多 255 字符' });
+        }
+        if (harness && (!isHarnessSource(harness) || harness === 'unknown')) {
+          return reply.status(400).json({ error: `无效的 harness，可选: ${HARNESS_SOURCES.join(', ')}` });
+        }
+        if (!modelId) return reply.status(400).json({ error: `请为请求名 ${requestModelName} 选择目标模型` });
+        const normalizedName = requestModelName.toLowerCase();
+        const unique = `${harness || '*'}:${normalizedName}`;
+        if (seen.has(unique)) return reply.status(400).json({ error: `请求名映射重复: ${requestModelName}` });
+        seen.add(unique);
+        const check = await assertOwnerCanUseModel(modelId, access.owner_user_id, db);
+        if (check.error) return reply.status(check.status).json({ error: check.error });
+        const keyBinding = await db.query(`SELECT 1 FROM api_key_models WHERE api_key_id = $1 AND model_id = $2 AND enabled IS DISTINCT FROM FALSE
+          UNION ALL SELECT 1 FROM api_keys WHERE id = $1 AND current_model_id = $2
+          UNION ALL SELECT 1 FROM api_key_harness_models WHERE api_key_id = $1 AND model_id = $2 LIMIT 1`, [req.params.id, modelId]);
+        if (!keyBinding.rows.length) return reply.status(400).json({ error: `映射目标必须已绑定到该 Key: ${modelId}` });
+        normalized.push({ requestModelName: normalizedName, harness, modelId });
+      }
+      const apiKeyId = Number(req.params.id);
+      await db.query('DELETE FROM api_key_request_model_bindings WHERE api_key_id = $1', [apiKeyId]);
+      for (const binding of normalized) {
+        await db.query(`INSERT INTO api_key_request_model_bindings (api_key_id, request_model_name, harness, model_id, updated_at)
+          VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`, [apiKeyId, binding.requestModelName, binding.harness, binding.modelId]);
+      }
+      invalidateAfterCommit(apiKeyId);
+      return reply.json({ success: true, bindings: normalized });
+    });
+  } catch (error) {
+    Logger.error('[更新请求模型名映射] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
 });

@@ -51,6 +51,19 @@
   padding: 0;
 }
 
+/* ---------- API Key 请求名映射：内容置于晶液纸面，控件复用全局玻璃皮肤 ---------- */
+#modelLibraryPage .ml-request-bindings { display: flex; flex-direction: column; gap: 10px; margin-block-start: 10px; padding: 14px 16px; border-radius: var(--lg-radius-group); background: var(--lg-group-bg); }
+#modelLibraryPage .ml-request-bindings-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; color: var(--lg-fg); font-size: 13px; }
+#modelLibraryPage .ml-request-bindings-heading span, #modelLibraryPage .ml-request-bindings-empty { color: var(--lg-fg-secondary); font-size: 12px; }
+#modelLibraryPage .ml-request-bindings-list { display: flex; flex-direction: column; gap: 6px; }
+#modelLibraryPage .ml-request-binding-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(100px, .8fr) minmax(100px, 1fr) auto; align-items: center; gap: 8px; color: var(--lg-fg); font-size: 12.5px; }
+#modelLibraryPage .ml-request-binding-scope { color: var(--lg-fg-secondary); }
+#modelLibraryPage .ml-request-binding-target { font-weight: 600; }
+#modelLibraryPage .ml-request-binding-form { display: grid; gap: 14px; }
+#modelLibraryPage .ml-request-binding-form label { display: grid; gap: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; }
+#modelLibraryPage .ml-request-binding-form :is(select, input) { inline-size: 100%; min-block-size: var(--lg-control-h); padding-inline: 12px; border: 0; border-radius: var(--lg-radius-field); background: var(--lg-field); color: var(--lg-fg); font: inherit; }
+@media (max-width: 640px) { #modelLibraryPage .ml-request-binding-row { grid-template-columns: minmax(0, 1fr) auto; } #modelLibraryPage .ml-request-binding-scope, #modelLibraryPage .ml-request-binding-target { grid-column: 1; } }
+
 /* ---------- 2. 绑定卡：本页主焦点，真实玻璃 ---------- */
 #modelLibraryPage .model-library-binding-bar {
   position: relative;

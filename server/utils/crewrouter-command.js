@@ -109,6 +109,8 @@ function helpText(topic = '') {
       ['DeepSeek 用 <模型>', 'deepseek use <model>'],
       ['取消 Grok 绑定', 'unbind grok'],
       ['取消 DeepSeek 绑定', 'unbind deepseek'],
+      ['请求名映射 <名称> 用 <已绑定模型>', 'request model mapping <name> use <bound model>'],
+      ['请求名映射 codex <名称> 用 <已绑定模型>', 'request model mapping codex <name> use <bound model>'],
     ],
     开关: [
       ['开启/关闭吞图', 'enable/disable swallow'],
@@ -185,13 +187,21 @@ async function loadKeySnapshot(apiUser) {
      LEFT JOIN models m ON m.id = h.model_id WHERE h.api_key_id = $1 ORDER BY harness`,
     [keyId]
   );
-  return { row, queue: queue.rows, harness: harness.rows };
+  const requestModels = await pool.query(
+    `SELECT request_model_name, harness, model_id, m.name FROM api_key_request_model_bindings b
+     LEFT JOIN models m ON m.id = b.model_id WHERE b.api_key_id = $1 ORDER BY request_model_name, harness NULLS FIRST`,
+    [keyId]
+  );
+  return { row, queue: queue.rows, harness: harness.rows, requestModels: requestModels.rows };
 }
 
 function formatFooter(snap) {
   const r = snap.row || {};
   const harness = (snap.harness || [])
     .map(h => `${sourceLabel(h.harness)} → ${h.name || h.model_id}`)
+    .join('\n              ') || '无';
+  const requestModels = (snap.requestModels || [])
+    .map(item => `${item.request_model_name}${item.harness ? ` [${sourceLabel(item.harness)}]` : ' [所有 Harness]'} → ${item.name || item.model_id}`)
     .join('\n              ') || '无';
   return [
     '当前 Key',
@@ -200,6 +210,7 @@ function formatFooter(snap) {
       ['模型', r.model_name || r.current_model_id || '未绑定'],
       ['开关', `指令 ${flag(r.crewrouter_commands)} · 吞图 ${flag(r.swallow_images)} · 签名 ${flag3(r.signature_enabled)} · Fusion ${flag(r.fusion_enabled !== false)} · 密钥 ${flag(r.enabled !== false)} · 定时 ${flag(r.schedule_enabled)}`],
       ['客户端', harness],
+      ['请求名映射', requestModels],
       ['余额', Number(r.balance || 0).toFixed(4)],
     ]),
   ].join('\n');
@@ -497,6 +508,40 @@ register({
       details: { harness, model_id: chosen.id }, ip: req.ip,
     });
     return composeReply(`已为 ${sourceLabel(harness)} 绑定 ${chosen.name}`, `ID：${chosen.id}`, apiUser);
+  },
+});
+
+register({
+  id: 'request_model_binding',
+  aliases: ['请求名映射', '绑定请求名', 'model mapping'],
+  parse: (rest) => {
+    const text = String(rest || '').trim();
+    const match = text.match(/^(?:(.+?)\s+)?(.+?)\s+(?:映射到|用|->)\s+(.+)$/i);
+    return match ? { harnessText: match[1] || '', requestModelName: match[2].trim(), modelQuery: match[3].trim() } : {};
+  },
+  async run({ req, apiUser, args }) {
+    if (!args.requestModelName || !args.modelQuery) {
+      return composeReply('用法不对', '请使用：@CR 请求名映射 <请求 model 名> 用 <已绑定模型>，或 @CR 请求名映射 codex <请求 model 名> 用 <已绑定模型>', apiUser);
+    }
+    const harness = args.harnessText ? parseHarnessName(args.harnessText) : null;
+    if (args.harnessText && (!harness || harness === 'unknown')) return composeReply('无效客户端', `无法识别：${args.harnessText}`, apiUser);
+    const ownerId = await ownerUserId(apiUser);
+    const hits = await searchModels(args.modelQuery, ownerId);
+    const exact = hits.filter(model => model.id === args.modelQuery || model.name?.toLowerCase() === args.modelQuery.toLowerCase() || model.alias?.toLowerCase() === args.modelQuery.toLowerCase());
+    const chosen = exact.length === 1 ? exact[0] : hits.length === 1 ? hits[0] : null;
+    if (!chosen) return composeReply('未唯一匹配模型', hits.map(model => `· ${model.name} (${model.id})`).join('\n') || '无结果', apiUser);
+    const keyBinding = await pool.query(`SELECT 1 FROM api_key_models WHERE api_key_id = $1 AND model_id = $2 AND enabled IS DISTINCT FROM FALSE
+      UNION ALL SELECT 1 FROM api_keys WHERE id = $1 AND current_model_id = $2
+      UNION ALL SELECT 1 FROM api_key_harness_models WHERE api_key_id = $1 AND model_id = $2 LIMIT 1`, [apiUser.keyId, chosen.id]);
+    if (!keyBinding.rows.length) return composeReply('映射目标未绑定', '请先将目标模型加入该 Key 的默认队列或 Harness 绑定。', apiUser);
+    await pool.query('DELETE FROM api_key_request_model_bindings WHERE api_key_id = $1 AND request_model_name = $2 AND harness IS NOT DISTINCT FROM $3', [apiUser.keyId, args.requestModelName.toLowerCase(), harness]);
+    await pool.query('INSERT INTO api_key_request_model_bindings (api_key_id, request_model_name, harness, model_id, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)', [apiUser.keyId, args.requestModelName.toLowerCase(), harness, chosen.id]);
+    require('../routes/api').invalidateApiKeyCacheByKeyId(apiUser.keyId);
+    await logAction({ userId: apiUser.userId, username: apiUser.username, action: ACTIONS.API_KEY_MODELS,
+      resourceType: 'api_key', resourceId: String(apiUser.keyId),
+      description: `设置请求名映射 ${args.requestModelName} → ${chosen.id}`,
+      details: { request_model_name: args.requestModelName.toLowerCase(), harness, model_id: chosen.id }, ip: req.ip });
+    return composeReply('请求名映射已保存', `${args.requestModelName}${harness ? ` [${sourceLabel(harness)}]` : ' [所有 Harness]'} → ${chosen.name} (${chosen.id})`, apiUser);
   },
 });
 

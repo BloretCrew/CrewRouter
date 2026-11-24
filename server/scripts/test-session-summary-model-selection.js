@@ -35,6 +35,47 @@ assert.deepStrictEqual(
   '没有任何模型绑定时才应返回空队列'
 );
 
+const requestNameBindings = {
+  ...selectedKey,
+  modelQueue: ['model-default', 'model-general', 'model-reasoning', 'model-codex-special'],
+  requestModelBindings: [
+    { requestModelName: 'fast-chat', harness: null, modelId: 'model-general' },
+    { requestModelName: 'fast-chat', harness: 'codex', modelId: 'model-codex-special' },
+    { requestModelName: 'reasoning', harness: null, modelId: 'model-reasoning' },
+  ],
+  modelAuthorization: { deniedModelIds: [], deniedRequestModelBindings: [] },
+};
+assert.deepStrictEqual(
+  resolveModelQueueForRequest(requestNameBindings, { headers: { 'x-crewrouter-client': 'codex' }, body: { model: 'FAST-CHAT' } }),
+  { queue: ['model-codex-special'], requestSource: 'codex', harnessOverride: false, requestModelOverride: true, requestModelName: 'FAST-CHAT', mappingDenied: false },
+  'Harness 专属请求名映射应覆盖通用映射且名称比较不区分大小写'
+);
+assert.deepStrictEqual(
+  resolveModelQueueForRequest(requestNameBindings, { headers: { 'x-crewrouter-client': 'claude_code' }, body: { model: 'fast-chat' } }),
+  { queue: ['model-general'], requestSource: 'claude_code', harnessOverride: false, requestModelOverride: true, requestModelName: 'fast-chat', mappingDenied: false },
+  '通用映射应适用于未设置专属映射的 Harness'
+);
+assert.deepStrictEqual(
+  resolveModelQueueForRequest({ ...requestNameBindings, modelQueue: ['model-default'] }, { headers: {}, body: { model: 'unmapped-name' } }),
+  { queue: ['model-default'], requestSource: 'unknown', harnessOverride: false },
+  '未配置请求名映射时应保持旧默认队列回退'
+);
+assert.deepStrictEqual(
+  resolveModelQueueForRequest({ ...requestNameBindings, harnessModels: { codex: 'model-harness' } }, { headers: { 'x-crewrouter-client': 'codex' }, body: { model: 'unmapped-name' } }),
+  { queue: ['model-harness'], requestSource: 'codex', harnessOverride: true },
+  '未映射请求名应继续使用 Harness 默认绑定'
+);
+assert.deepStrictEqual(
+  resolveModelQueueForRequest(requestNameBindings, { headers: { 'x-crewrouter-client': 'codex' }, body: { model: 'fast-chat' }, policyDecision: { modelQueueOverride: ['model-policy'] } }),
+  { queue: ['model-policy'], requestSource: 'codex', harnessOverride: false, policyOverride: true, requestedModelName: 'fast-chat' },
+  '策略覆盖必须仍高于请求名和 Harness 绑定'
+);
+assert.equal(
+  resolveModelQueueForRequest({ ...requestNameBindings, modelAuthorization: { deniedModelIds: [], deniedRequestModelBindings: ['codex:fast-chat'] } }, { headers: { 'x-crewrouter-client': 'codex' }, body: { model: 'fast-chat' } }).mappingDenied,
+  true,
+  '已配置映射目标失去授权时必须标记拒绝而不是回退'
+);
+
 assert.strictEqual(
   resolveSummaryApiKeyId([
     { api_key_id: 700, created_at: '2026-09-02T10:00:00Z' },

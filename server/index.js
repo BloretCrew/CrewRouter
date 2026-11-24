@@ -1346,6 +1346,31 @@ async function ensureApiKeyModelsTable() {
   }
 }
 
+// ========== 自动迁移：API Key 按请求模型名绑定模型 ==========
+async function ensureApiKeyRequestModelBindingsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS api_key_request_model_bindings (
+        id SERIAL PRIMARY KEY,
+        api_key_id INTEGER NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+        request_model_name VARCHAR(255) NOT NULL,
+        harness VARCHAR(32),
+        model_id VARCHAR(100) NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_akrm_general_unique ON api_key_request_model_bindings(api_key_id, request_model_name) WHERE harness IS NULL`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_akrm_harness_unique ON api_key_request_model_bindings(api_key_id, harness, request_model_name) WHERE harness IS NOT NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_akrm_api_key ON api_key_request_model_bindings(api_key_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_akrm_model ON api_key_request_model_bindings(model_id)`);
+    Logger.info('[迁移] 表 api_key_request_model_bindings 已就绪');
+  } catch (err) {
+    Logger.error(`[迁移] API Key 请求模型名绑定迁移跳过: ${err.message}`);
+    throw err;
+  }
+}
+
 // ========== 自动迁移：API Key 按 Harness 单独绑定模型 ==========
 async function ensureApiKeyHarnessModelsTable() {
   try {
@@ -3073,6 +3098,7 @@ async function runPendingMigrations() {
     ensureUserModelLibraryStarredTables,
     ensureApiKeyModelsTable,
     ensureApiKeyHarnessModelsTable,
+    ensureApiKeyRequestModelBindingsTable,
     ensureApiKeyMembersTable,
     ensureOperationLogsTable,
     async function ensureApiKeyGroupsColumn() {

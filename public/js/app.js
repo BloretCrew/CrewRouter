@@ -13550,6 +13550,15 @@ ${extractorBody}
       || '';
 
     const harnessList = Array.isArray(key.harness_models) ? key.harness_models : [];
+    const requestBindings = Array.isArray(key.request_model_bindings) ? key.request_model_bindings : [];
+    const requestBindingPanel = `<section class="ml-request-bindings" aria-label="${escapeHtml(t('请求模型名映射'))}">
+      <div class="ml-request-bindings-heading"><strong>${escapeHtml(t('请求模型名映射'))}</strong><span>${escapeHtml(t('可按所有 Harness 通用，或为指定 Harness 单独设置'))}</span></div>
+      <div class="ml-request-bindings-list">${requestBindings.map(binding => {
+        const source = binding.harness ? this._usageRequestSourceMeta(binding.harness).label : t('所有 Harness');
+        return `<div class="ml-request-binding-row"><span class="ml-request-binding-name">${escapeHtml(binding.request_model_name)}</span><span class="ml-request-binding-scope">${escapeHtml(source)}</span><span class="ml-request-binding-target">${escapeHtml(binding.name || binding.model_id)}</span><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.removeLibraryRequestModelBinding('${this._jsString(binding.request_model_name)}','${this._jsString(binding.harness || '')}')">${escapeHtml(t('移除'))}</button></div>`;
+      }).join('') || `<span class="ml-request-bindings-empty">${escapeHtml(t('尚未配置请求名映射'))}</span>`}</div>
+      <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.openLibraryRequestModelBindingDialog()">${escapeHtml(t('添加映射'))}</button>
+    </section>`;
     const harnessChips = harnessList.length
       ? `<div class="binding-harness-chips">${harnessList.map(h => {
           const meta = this._usageRequestSourceMeta(h.harness);
@@ -13576,6 +13585,7 @@ ${extractorBody}
           </div>
           ${keySwitchRow}
           ${harnessChips}
+          ${requestBindingPanel}
           <div class="binding-hint">在下方列表中点击一个模型即可绑定 · 再次点击 Key 可打开工具菜单</div>
         </div>`);
       this._renderLibraryKeySelector();
@@ -13604,6 +13614,7 @@ ${extractorBody}
         ${uptimeHtml}
         ${keySwitchRow}
         ${harnessChips}
+        ${requestBindingPanel}
       </div>`);
 
     this._renderLibraryKeySelector();
@@ -14354,6 +14365,64 @@ ${extractorBody}
       console.error(t('[模型库] 设置模型异常:'), error);
       this.showToast(t('设置失败'), 'error');
     }
+  }
+
+  async openLibraryRequestModelBindingDialog() {
+    const keyId = this._librarySelectedKeyId;
+    if (!keyId) return;
+    try {
+      const response = await fetch(`/api/user/api-keys/${keyId}/request-model-bindings`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || t('加载失败'));
+      const key = this._libraryKeys.find(item => String(item.id) === String(keyId));
+      const currentBindings = key?.request_model_bindings || [];
+      const harnessOptions = (data.available_harnesses || []).map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join('');
+      const modelOptions = (data.models || []).map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} · ${escapeHtml(item.id)}</option>`).join('');
+      const dialog = Dialog.showModal({
+        title: t('添加请求模型名映射'),
+        content: `<div class="ml-request-binding-form lg-scope">
+          <label>${escapeHtml(t('作用范围'))}<select id="mlRequestBindingHarness"><option value="">${escapeHtml(t('所有 Harness'))}</option>${harnessOptions}</select></label>
+          <label>${escapeHtml(t('请求 model 名称'))}<input id="mlRequestBindingName" list="mlRequestBindingNames" maxlength="255" placeholder="例如 fast-chat" autocomplete="off"><datalist id="mlRequestBindingNames">${(data.models || []).flatMap(item => [item.id, item.name, item.alias, item.upstream_model_id].filter(Boolean)).filter((value, index, values) => values.indexOf(value) === index).map(value => `<option value="${escapeHtml(value)}"></option>`).join('')}</datalist></label>
+          <label>${escapeHtml(t('映射目标模型'))}<select id="mlRequestBindingTarget"><option value="">${escapeHtml(t('选择目标模型'))}</option>${modelOptions}</select></label>
+        </div>`,
+        buttons: [
+          { label: t('取消'), variant: 'secondary' },
+          { label: t('保存映射'), variant: 'primary', onClick: async () => {
+            const name = document.getElementById('mlRequestBindingName')?.value?.trim();
+            const harness = document.getElementById('mlRequestBindingHarness')?.value || null;
+            const modelId = document.getElementById('mlRequestBindingTarget')?.value;
+            if (!name || !modelId) { this.showToast(t('请填写请求名并选择目标模型'), 'error'); return false; }
+            const bindings = [...currentBindings.filter(item => !(item.request_model_name.toLowerCase() === name.toLowerCase() && (item.harness || null) === harness)), { request_model_name: name, harness, model_id: modelId }];
+            const save = await fetch(`/api/user/api-keys/${keyId}/request-model-bindings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindings }) });
+            const result = await save.json().catch(() => ({}));
+            if (!save.ok) { this.showToast(result.error || t('保存失败'), 'error'); return false; }
+            if (key) key.request_model_bindings = result.bindings.map(binding => ({ request_model_name: binding.requestModelName, harness: binding.harness || null, model_id: binding.modelId, name: (data.models || []).find(item => item.id === binding.modelId)?.name || binding.modelId }));
+            this._updateLibraryBindingBar();
+            this.showToast(t('请求模型名映射已保存'), 'success');
+            return true;
+          } }
+        ]
+      });
+      dialog?.element?.classList?.add('lg-scope');
+    } catch (error) {
+      this.showToast(error.message || t('加载映射配置失败'), 'error');
+    }
+  }
+
+  async removeLibraryRequestModelBinding(requestModelName, harness) {
+    const keyId = this._librarySelectedKeyId;
+    const key = this._libraryKeys.find(item => String(item.id) === String(keyId));
+    if (!key) return;
+    const bindings = (key.request_model_bindings || []).filter(item => !(item.request_model_name === requestModelName && (item.harness || '') === (harness || '')))
+      .map(item => ({ request_model_name: item.request_model_name, harness: item.harness || null, model_id: item.model_id }));
+    try {
+      const response = await fetch(`/api/user/api-keys/${keyId}/request-model-bindings`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindings }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || t('移除失败'));
+      key.request_model_bindings = bindings;
+      this._updateLibraryBindingBar();
+      this.showToast(t('映射已移除'), 'success');
+    } catch (error) { this.showToast(error.message || t('移除失败'), 'error'); }
   }
 
   async applyHarnessModelToKey(keyId, harnessId, modelId) {
