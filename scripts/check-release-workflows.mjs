@@ -74,7 +74,10 @@ const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {
   if (!embeddedSdkDocs.includes(required)) throw new Error(`Embedded SDK release boundary omits ${required}`);
 }
+const sdkOverview = await readFile('docs/sdk/README.md', 'utf8');
+if (!sdkOverview.includes('Limited preview only; not part of the client SDK stable-release commitment')) throw new Error('SDK overview must keep embedded server SDK outside the stable client commitment');
 const sdkVersioning = await readFile('docs/sdk/versioning.md', 'utf8');
+if (!sdkVersioning.includes('limited preview; excluded from client SDK stable commitment')) throw new Error('SDK version table must keep embedded server SDK in limited preview');
 for (const required of ['1.0', 'contractVersion', 'Deprecation', 'support matrix']) {
   if (!sdkVersioning.includes(required)) throw new Error(`SDK versioning policy omits ${required}`);
 }
