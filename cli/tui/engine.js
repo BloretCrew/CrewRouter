@@ -77,6 +77,7 @@ async function runPagedTui({
   refreshMs = 10000,
   headerRight = null,
   sidebarFooter = null,
+  navGroups = null,
 } = {}) {
   if (!input.isTTY || !output.isTTY || typeof input.setRawMode !== 'function') throw new Error('TUI 需要交互式终端。');
   if (typeof api !== 'function' || !Array.isArray(pages) || !pages.length) throw new Error('页面或 API 未配置。');
@@ -298,16 +299,33 @@ async function runPagedTui({
     function sidebarText(lineIndex) {
       if (!side) return '';
       if (lineIndex === 0) return '  ✦ CrewRouter';
-      if (lineIndex >= 2 && lineIndex - 2 < pages.length) {
-        const index = lineIndex - 2;
-        return `${index === active ? '›' : ' '} ${pageLabelAt(index)}`;
+      const navLines = sidebarLines();
+      const entry = navLines[lineIndex - 2];
+      if (entry) {
+        if (entry.type === 'group') return `  ${entry.label}`;
+        return `${entry.index === active ? '›' : ' '} ${entry.page.label}`;
       }
       const footer = typeof sidebarFooter === 'function' ? sidebarFooter() : null;
       if (lineIndex === height - 2) return `  ${footer && footer[0] ? footer[0] : 'local'}`;
       if (lineIndex === height - 1) return `  ${footer && footer[1] ? footer[1] : (authenticated ? '已连接' : '未登录')}`;
       return '';
     }
-    function pageLabelAt(index) { return pages[index] ? pages[index].label : ''; }
+    function sidebarLines() {
+      const groups = Array.isArray(navGroups) && navGroups.length
+        ? navGroups : [{ id: 'all', label: '', pages: pages.map(page => page.id) }];
+      const entries = [];
+      for (const group of groups) {
+        const members = pages.map((page, index) => ({ page, index })).filter(entry => group.pages.includes(entry.page.id));
+        if (!members.length) continue;
+        if (group.label) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
+        entries.push(...members.map(entry => ({ type: 'page', ...entry })));
+      }
+      const activeEntry = entries.findIndex(entry => entry.type === 'page' && entry.index === active);
+      const room = Math.max(1, height - 6);
+      let start = Math.max(0, activeEntry - room + 1);
+      if (activeEntry >= 0 && start > 0 && entries[start - 1]?.type === 'group') start--;
+      return entries.slice(start, start + room);
+    }
 
     const header = headerChunks(innerW, page);
     const headerSpans = paintSpans(header.spans, header.leftW, ui, 'bg');
@@ -322,24 +340,26 @@ async function runPagedTui({
     }
     const leftPad = ui(' '.repeat(padding), 'fg', 'bg');
     if (side) {
-      for (let index = 0; index < pages.length; index++) {
-        const lineIndex = 2 + index;
-        if (lineIndex < height - 2) hit.rows.push({ y: lineIndex + 1, type: 'page', index });
-      }
+      const nav = sidebarLines();
+      nav.forEach((entry, offset) => {
+        const lineIndex = 2 + offset;
+        if (lineIndex < height - 2 && entry.type === 'page') hit.rows.push({ y: lineIndex + 1, type: 'page', index: entry.index });
+      });
     }
     put(0, sidebarText(0), leftPad + headerLine + leftPad);
     put(1, sidebarText(1), leftPad + ui('─'.repeat(innerW), 'line', 'bg') + leftPad);
 
     let contentStart = 2;
     if (compactMenu) {
+      const nav = sidebarLines();
       for (let i = contentStart; i < height - 2; i++) {
-        const index = i - contentStart;
-        const menuPage = pages[index];
-        const selected = index === active;
-        const label = menuPage ? `${selected ? '›' : ' '} ${menuPage.label}` : '';
+        const entry = nav[i - contentStart];
+        const menuPage = entry && entry.type === 'page' ? entry.page : null;
+        const selected = Boolean(entry && entry.type === 'page' && entry.index === active);
+        const label = !entry ? '' : entry.type === 'group' ? `── ${entry.label} ──` : `${selected ? '›' : ' '} ${menuPage.label}`;
         const textLine = pad(label, innerW);
-        put(i, sidebarText(i), leftPad + ui(textLine, selected ? 'rose' : 'dim', selected ? 'select' : 'bg', selected) + leftPad);
-        if (menuPage) hit.rows.push({ y: i + 1, type: 'page', index });
+        put(i, sidebarText(i), leftPad + ui(textLine, selected ? 'rose' : entry?.type === 'group' ? 'sage' : 'dim', selected ? 'select' : 'bg', selected) + leftPad);
+        if (menuPage) hit.rows.push({ y: i + 1, type: 'page', index: entry.index });
       }
     } else {
       const tabs = tabLine(page, st, innerW);
