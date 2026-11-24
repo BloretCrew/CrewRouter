@@ -186,7 +186,12 @@ function keysPage(runtime) {
     label: 'API Key',
     description: '管理 API Key；原始 Key 只在创建时显示一次。',
     async load() {
-      const keys = await listApiKeys(runtime.client);
+      const [keysResult, authorizationsResult] = await Promise.allSettled([
+        listApiKeys(runtime.client), runtime.client.get('/oauth/authorizations'),
+      ]);
+      if (keysResult.status === 'rejected') throw keysResult.reason;
+      const keys = keysResult.value;
+      const authorizations = authorizationsResult.status === 'fulfilled' && Array.isArray(authorizationsResult.value?.authorizations) ? authorizationsResult.value.authorizations : [];
       const rows = keys.map(key => ({
         label: `${key.name || '未命名'} · ${key.key_prefix || ''} · ${enabledLabel(key.enabled)} · ${key.current_model_name || key.current_model_id || '未绑定模型'}`,
         detail: `${Number(key.total_requests || 0).toLocaleString()} 请求 · ${formatBigNumber(key.total_tokens)} tokens · ${formatCost(key.total_cost)} · 最后使用 ${formatTime(key.last_used_at)}`,
@@ -230,6 +235,10 @@ function keysPage(runtime) {
       }));
       return {
         sections: [{
+          title: 'OAuth 授权',
+          description: authorizations.length ? `${authorizations.length} 个客户端具有活跃授权。` : (authorizationsResult.status === 'rejected' ? '当前会话无法读取 OAuth 授权列表。' : '暂无活跃授权。'),
+          rows: authorizations.map(auth => ({ label: `${auth.client_name || auth.name || 'OAuth 客户端'} · ${auth.client_id || ''}`, detail: `授权时间 ${formatTime(auth.created_at || auth.authorized_at)} · 范围 ${(auth.scopes || []).join(', ') || '默认'}`, run: async ctx => { if (!await ctx.confirm('吊销 OAuth 授权', `${auth.client_name || auth.name || auth.client_id}\n吊销后该客户端的所有访问令牌立即失效。`)) return; await runtime.client.post('/oauth/authorizations/revoke', { id: Number(auth.id) }); ctx.notify('OAuth 授权已吊销。'); await ctx.refresh(); } })),
+        }, {
           title: 'API Key',
           description: '只能查看自己的 Key；共享 Key 的原始值受权限限制。',
           cards: [
