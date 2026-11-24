@@ -32,6 +32,7 @@ for (const event of ['push', 'pull_request']) {
   for (const required of ['cli/**', 'CrewRouter-Desktop/package.json', 'server/index.js', 'server/routes/mount-loader.js']) if (!paths.includes(required)) throw new Error(`SDK CI ${event} path filter omits ${required}`);
 }
 if (!sdkWorkflow.jobs.contract.steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('SDK CI contract job must run cross-language conformance');
+if (!sdkWorkflow.jobs.contract.steps.some(step => step.run === 'node server/scripts/test-upstream-generation-routes.js')) throw new Error('SDK CI contract job must run the SDK-to-isolated-gateway integration suite');
 if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run?.includes('npm run sdk:conformance'))) throw new Error('Node SDK CI must run shared conformance and package checks');
 const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install isolated PostgreSQL test runtime');
 if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');

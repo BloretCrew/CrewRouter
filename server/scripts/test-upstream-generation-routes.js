@@ -3,6 +3,7 @@
 // Run directly with Node; no production database, credentials, or upstreams are used.
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const { CrewRouter } = require('../../sdk/typescript/dist/esm/index.js');
 const path = require('node:path');
 const Module = require('node:module');
 const express = require('express');
@@ -240,6 +241,7 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
   const port = await listen(gateway);
   return {
     port, received, requestCloses,
+    client: new CrewRouter({ baseUrl: `http://127.0.0.1:${port}`, apiKey: 'isolated-client', maxRetries: 0 }),
     async close() {
       for (const timer of timers) { clearTimeout(timer); clearInterval(timer); }
       for (const socket of sockets) socket.destroy();
@@ -289,11 +291,22 @@ async function main() {
   const test = (name, options, run) => tests.push({ name, options, run });
   for (const stream of [false, true]) {
     for (const cacheKey of ['stable-cache-key', '', undefined]) {
-      test(`Chat prompt_cache_key ${cacheKey === undefined ? 'absent' : JSON.stringify(cacheKey)} stream=${stream}`, {}, async f => {
+      test(`SDK chat ${cacheKey === undefined ? 'without' : 'with'} cache key stream=${stream}`, {}, async f => {
         const body = { ...chatBody, stream };
         if (cacheKey !== undefined) body.prompt_cache_key = cacheKey;
-        const result = await post(f, '/chat/completions', body);
-        assert.equal(result.status, 200, result.text);
+        if (stream) {
+          const handle = f.client.gateway.chat.completions.stream(body);
+          const response = await handle.response;
+          assert.equal(response.status, 200);
+          const events = [];
+          for await (const event of handle) events.push(event);
+          assert.ok(events.some(event => event.data.includes('local-text')));
+          assert.equal(events.at(-1).data, '[DONE]');
+        } else {
+          const response = await f.client.gateway.chat.completions.create(body);
+          assert.equal(response.status, 200);
+          assert.equal(response.data.choices[0].message.content, 'local-text');
+        }
         assert.equal(f.received.length, 1);
         assert.equal(f.received[0].path, '/v1/chat/completions');
         assert.equal(f.received[0].body.prompt_cache_key, cacheKey);

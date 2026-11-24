@@ -59,6 +59,8 @@ jobs:
       - run: npm ci
       - run: npm run sdk:check
       - run: npm run sdk:conformance
+      - run: npm --prefix sdk/typescript run build
+      - run: node server/scripts/test-upstream-generation-routes.js
       - run: node server/scripts/test-console-route-auth-coverage.js
       - run: npm run test:embedded-sdk
       - run: npm run docs:check
