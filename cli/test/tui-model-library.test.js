@@ -27,9 +27,11 @@ test('user model library renders teams, provider summaries, stars and searchable
   const starRow = initial.sections.find(section => section.title === '已收藏模型').rows[0];
   assert.ok(starRow.detail.length < 140, 'long upstream errors must not expand the list row');
   assert.deepEqual(initial.sections[0].cards.map(card => card.label), ['所属团队', '可用模型', '模型系列', '已收藏模型']);
-  const providerRow = initial.sections.find(section => section.title === '团队与供应商目录').rows[0];
-  assert.match(providerRow.label, /Team A.*Provider A.*3\/4 模型/);
-  await providerRow.run({ refresh: async () => {} });
+  const providerSection = initial.sections.find(section => section.title === '团队与供应商目录');
+  assert.equal(providerSection.cards.length, 1, 'team provider directory uses the responsive card grid');
+  assert.equal(providerSection.cards[0].label, 'Provider A');
+  assert.match(providerSection.cards[0].detail, /Team A.*测试通过/);
+  await initial.actions.find(action => action.label === '选择供应商展开模型').run({ choose: async () => 0, refresh: async () => {} });
   const expanded = await page.load(api);
   assert.ok(expanded.sections.some(section => section.title.includes('模型目录')));
   runtime.librarySort = 'test_tps_desc';
@@ -41,9 +43,8 @@ test('user model library renders teams, provider summaries, stars and searchable
   assert.ok(modelRow.detail.includes('测试通过'));
   const actions = [];
   const liveApi = async (path, options = {}) => { actions.push({ path, options }); if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 1, visible_model_count: 1 }] }], starred_models: [], available_series: [], total_models: 1 }; if (path === '/api/user/api-keys') return [{ id: 8, name: 'Main Key' }]; if (path === '/api/user/provider-tags') return []; if (path.endsWith('/models')) return { queue: [] }; if (path === '/api/user/model-library/search') return { page: 1, total: 1, items: [{ id: 'm1', name: 'Model One', provider: 'p1', team_id: 2, team_name: 'Team A', is_starred: false, is_hidden: false }] }; return {}; };
+  runtime.libraryProvider = { team_id: 2, provider_id: 'p1', provider_name: 'Provider A' };
   const refreshed = await page.load(liveApi);
-  const providerAction = refreshed.sections.find(section => section.title === '团队与供应商目录').rows[0];
-  await providerAction.run({ refresh: async () => {} });
   const ready = await page.load(liveApi);
   const readyRow = ready.sections.find(section => section.title.includes('模型目录')).rows[0];
   await readyRow.run({ choose: async () => 'star', confirm: async () => false });

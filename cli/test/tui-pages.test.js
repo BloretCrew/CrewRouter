@@ -89,8 +89,8 @@ test('model library requires confirmation and sends the ordered key model queue'
   const data = await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/user/model-library'));
   assert.ok(calls.some(call => call.path === '/api/user/api-keys/8/models'));
-  const provider = data.sections.find(section => section.title === '团队与供应商目录').rows[0];
-  await provider.run({ refresh: async () => {} });
+  const providerAction = data.actions.find(action => action.label === '选择供应商展开模型');
+  await providerAction.run({ choose: async () => 0, refresh: async () => {} });
   const expanded = await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/user/model-library/search'));
   const row = expanded.sections.find(section => section.title.includes('模型目录')).rows[0];
