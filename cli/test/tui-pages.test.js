@@ -118,9 +118,23 @@ test('error log filters use the actual admin API parameter names', async () => {
 test('project date query sends the web API range parameters', async () => {
   const page = buildPages(runtime(false)).find(item => item.id === 'projects');
   const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); return { projects: [] }; };
+  const api = async (path, options = {}) => { calls.push({ path, options }); return { summary: { projects: 1, active_days: 2, requests: 3, tokens: 100 }, projects: [{ workspace_path: '/work/Example', requests: 3, tokens: 100, active_days: 2, cost: 1.25, sources: { codex: 3 } }], daily: [{ date: '2026-11-07', requests: 3, projects: 1 }] }; };
   const actions = (await page.load(api)).actions;
   const form = async (_title, fields) => Object.fromEntries(fields.map(field => [field.name, field.name === 'start' ? '2026-11-01' : '2026-11-07']));
   await actions.find(action => action.label === '自定义日期范围').run({ form, notify() {} });
   assert.deepEqual(calls.at(-1).options.query, { start: '2026-11-01', end: '2026-11-07' });
+  const data = await page.load(api);
+  const projectSection = data.sections.find(section => section.title === '项目工作台');
+  assert.deepEqual(projectSection.columns.map(column => column.label), ['工作区', '请求数', 'Token 用量', '活跃天数', '费用（积分）']);
+  assert.equal(projectSection.rows[0].cells.tokens, '100 Token');
+});
+
+test('leaderboard presents token, request, points, cache and balance fields as web columns', async () => {
+  const page = buildPages(runtime(false)).find(item => item.id === 'leaderboard');
+  const data = await page.load(async () => ({ leaderboard: [{ username: 'alice', totalRequests: 12, totalTokens: 2400, totalPoints: 3.25, cacheHitRate: 20, balance: 9.5 }] }));
+  const section = data.sections[0];
+  assert.deepEqual(section.columns.map(column => column.label), ['排名', '用户', '请求次数', 'Token 用量', '消费积分', '缓存命中率', '余额积分']);
+  assert.equal(section.rows[0].cells.tokens, '2.4K Token');
+  assert.equal(section.rows[0].cells.balance, '9.50 积分');
+  assert.ok(data.actions.some(action => action.label === '最近 30 天' && action.toolbar));
 });

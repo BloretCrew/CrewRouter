@@ -56,7 +56,7 @@ function createAdminPages(runtime) {
       },
     },
     {
-      id: 'projects', label: '项目工作', description: '按项目查看 AI 工作活动、活跃天数和 Token 投入。',
+      id: 'projects', label: '项目工作', description: '按工作区查看 AI 请求次数、Token 用量和费用。',
       async load(api) {
         const days = runtime.projectDays || 30;
         const source = runtime.projectSource || '';
@@ -66,12 +66,18 @@ function createAdminPages(runtime) {
         return { sections: [
           { title: '项目工作摘要', cards: [
             { label: '活跃项目', value: text(summary.projects, '0') }, { label: '活跃天数', value: text(summary.active_days, '0') },
-            { label: 'AI 请求', value: text(summary.requests, '0') }, { label: 'Token', value: text(summary.tokens, '0') },
+            { label: 'AI 请求次数', value: text(summary.requests, '0') }, { label: 'Token 用量', value: formatBigNumber(summary.tokens) },
             { label: '最近活动', value: summary.last_activity ? formatTime(summary.last_activity) : '—' },
           ], rows: summary.analysis_status ? [{ label: `待整理请求：${summary.analysis_status.pending_requests || 0}` }] : [] },
-          { title: '最近活跃项目', rows: projects.slice(0, 4).map((item, index) => ({ label: display(`#${index + 1}`, item.workspace_path), detail: display(`${item.requests || 0} 请求`, `${item.tokens || 0} tokens`, item.last_activity && formatTime(item.last_activity)) })) },
-          { title: '项目工作台', rows: projects.length ? projects.map(item => ({ label: item.workspace_path || '未知工作区', detail: display(`${item.requests || 0} 请求`, `${item.tokens || 0} tokens`, `${item.active_days || 0} 活跃天`, `积分 ${item.cost || 0}`, Object.keys(item.sources || {}).join(', ')) })) : [{ label: '暂无项目活动。' }] },
-          { title: '每日活动', rows: array(data.daily).slice(-30).map(item => ({ label: display(item.date, `${item.requests || 0} 请求`, `${item.projects || 0} 项目`) })) },
+          { title: '最近活跃项目', rows: projects.slice(0, 4).map((item, index) => ({ label: display(`#${index + 1}`, item.workspace_path), detail: display(`${Number(item.requests || 0).toLocaleString()} 次请求`, `${formatBigNumber(item.tokens)} Token`, item.last_activity && formatTime(item.last_activity)) })) },
+          { title: '项目工作台', tableMinWidth: 118, columns: [
+            { key: 'workspace', label: '工作区', ratio: 0.38 }, { key: 'requests', label: '请求数', ratio: 0.15 }, { key: 'tokens', label: 'Token 用量', ratio: 0.16 },
+            { key: 'active_days', label: '活跃天数', ratio: 0.13 }, { key: 'cost', label: '费用（积分）', ratio: 0.18 },
+          ], rows: projects.length ? projects.map(item => ({ label: item.workspace_path || '未知工作区', cells: {
+            workspace: item.workspace_path || '未知工作区', requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`,
+            active_days: `${Number(item.active_days || 0)} 天`, cost: `${formatCost(item.cost)} 积分`,
+          }, detail: Object.keys(item.sources || {}).length ? `客户端：${Object.keys(item.sources).join('、')}` : '' })) : [{ label: '暂无项目活动。' }] },
+          { title: '每日活动', tableMinWidth: 84, columns: [{ key: 'date', label: '日期', ratio: 0.45 }, { key: 'requests', label: '请求数', ratio: 0.3 }, { key: 'projects', label: '活跃项目数', ratio: 0.25 }], rows: array(data.daily).slice(-30).map(item => ({ label: item.date || '未知日期', cells: { date: item.date || '未知日期', requests: `${Number(item.requests || 0).toLocaleString()} 次`, projects: `${Number(item.projects || 0)} 个` } })) },
         ], actions: [
           ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, run: async ctx => { runtime.projectDays = value; await ctx.refresh(); } })),
           ...['', 'claude_code', 'codex', 'opencode', 'grok', 'qwen_code'].map(value => ({ label: value ? `客户端：${value}` : '全部客户端', run: async ctx => { runtime.projectSource = value; await ctx.refresh(); } })),
@@ -87,9 +93,15 @@ function createAdminPages(runtime) {
         const sort = runtime.leaderboardSort || 'tokens';
         const data = await api('/api/user/leaderboard', { query: { days, sort } });
         const items = array(data && data.leaderboard);
-        return { sections: [{ title: '排行榜', description: `最近 ${days} 天 · 按 ${sort} 排序`, rows: items.length ? items.map((item, index) => ({ label: display(`#${index + 1}`, item.username, `${Number(item.totalRequests || 0).toLocaleString()} 请求`, `${item.totalTokens || 0} tokens`), detail: display(`${Number(item.totalPoints || 0).toFixed(2)} 积分`, `${item.cacheHitRate || 0}% 缓存命中`, `余额 ${item.balance || 0}`) })) : [{ label: '暂无排行数据。' }] }], actions: [
-          ...[7, 30, 90, 365].map(value => ({ label: `最近 ${value} 天`, run: async ctx => { runtime.leaderboardDays = value; await ctx.refresh(); } })),
-          ...[['tokens', '按 Token 排序'], ['requests', '按请求排序'], ['points', '按积分排序'], ['cache', '按缓存命中率排序'], ['balance', '按余额排序']].map(([value, label]) => ({ label, run: async ctx => { runtime.leaderboardSort = value; await ctx.refresh(); } })),
+        return { sections: [{ title: '排行榜', toolbar: true, tableMinWidth: 114, columns: [
+          { key: 'rank', label: '排名', ratio: 0.1 }, { key: 'username', label: '用户', ratio: 0.21 }, { key: 'requests', label: '请求次数', ratio: 0.16 },
+          { key: 'tokens', label: 'Token 用量', ratio: 0.18 }, { key: 'points', label: '消费积分', ratio: 0.14 }, { key: 'cache', label: '缓存命中率', ratio: 0.11 }, { key: 'balance', label: '余额积分', ratio: 0.1 },
+        ], description: `最近 ${days} 天 · 按 ${sort === 'tokens' ? 'Token 用量' : sort === 'requests' ? '请求次数' : sort === 'points' ? '消费积分' : sort === 'cache' ? '缓存命中率' : '余额积分'} 排序`, rows: items.length ? items.map((item, index) => ({ label: item.username || '未知用户', cells: {
+          rank: `#${index + 1}`, username: item.username || '未知用户', requests: `${Number(item.totalRequests || 0).toLocaleString()} 次`,
+          tokens: `${formatBigNumber(item.totalTokens)} Token`, points: `${Number(item.totalPoints || 0).toFixed(2)} 积分`, cache: `${item.cacheHitRate || 0}%`, balance: `${Number(item.balance || 0).toFixed(2)} 积分`,
+        } })) : [{ label: '暂无排行数据。' }] }], actions: [
+          ...[7, 30, 90, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.leaderboardDays = value; await ctx.refresh(); } })),
+          ...[['tokens', '按 Token 用量排序'], ['requests', '按请求次数排序'], ['points', '按消费积分排序'], ['cache', '按缓存命中率排序'], ['balance', '按余额积分排序']].map(([value, label]) => ({ label, toolbar: true, run: async ctx => { runtime.leaderboardSort = value; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
