@@ -318,12 +318,16 @@ function createAdminPages(runtime) {
       async load(api) {
         const teams = itemsOf(await api('/api/admin/teams'));
         const sections = await Promise.all(teams.map(async team => {
-          const [members, rules] = await Promise.allSettled([
+          const [members, rules, models] = await Promise.allSettled([
             api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`),
             api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules`),
+            api(`/api/admin/teams/${encodeURIComponent(team.id)}/models`),
           ]);
           const memberItems = members.status === 'fulfilled' ? itemsOf(members.value) : [];
           const ruleItems = rules.status === 'fulfilled' ? itemsOf(rules.value) : [];
+          const modelItems = models.status === 'fulfilled' ? itemsOf(models.value) : [];
+          const modelSearch = String(runtime[`team_${team.id}_modelSearch`] || '').toLowerCase();
+          const visibleModels = modelItems.filter(model => !modelSearch || [model.name, model.model_id, model.provider_name, model.provider, model.series].some(value => String(value || '').toLowerCase().includes(modelSearch)));
           return {
             title: `${team.name} · Team #${team.id}`,
             description: display(team.is_default && '默认 Team', team.is_frontier && '前沿 Team', `${team.member_count || memberItems.length} 成员`, team.description),
@@ -334,8 +338,10 @@ function createAdminPages(runtime) {
                 ctx.notify('成员已移出 Team。'); await ctx.refresh();
               } })),
               ...ruleItems.map(rule => ({ label: `限额 · ${rule.rule_type} ${rule.rule_value} / ${rule.duration_hours} 小时`, detail: rule.description || rule.id, run: async ctx => { if (!await ctx.confirm('删除限额规则', `${team.name} · ${rule.rule_type} ${rule.rule_value}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules/${encodeURIComponent(rule.id)}`, { method: 'DELETE' }); await ctx.refresh(); } })),
+              ...visibleModels.map(model => ({ label: `模型 · ${model.name || model.model_id} · ${model.enabled ? '已启用' : '未授权'}`, detail: display(model.provider_name || model.provider, model.series, model.test_ok === true ? `测试 ${model.test_latency_ms || 0} ms` : model.test_error || ''), run: async ctx => { const enabled = model.enabled !== true; const impact = enabled ? '授权此模型给 Team 成员使用。' : '禁用后，若该成员的 API Key 没有其他 Team 提供此模型，服务端可能清除该 Key 的当前模型绑定。'; if (!await ctx.confirm(enabled ? '启用 Team 模型' : '禁用 Team 模型', `${team.name}\n${model.name || model.model_id}\n${impact}`)) return; const result = await api(`/api/admin/teams/${encodeURIComponent(team.id)}/models/${encodeURIComponent(model.model_id)}`, { method: 'PUT', body: { enabled } }); if (!enabled && result.cleared_keys) ctx.notify(`已禁用；清除了 ${result.cleared_keys} 个 API Key 的当前模型绑定。`); else ctx.notify(`Team 模型已${enabled ? '启用' : '禁用'}。`); await ctx.refresh(); } })),
             ],
             actions: [
+              { label: `搜索 ${team.name} 模型`, run: async ctx => { runtime[`team_${team.id}_modelSearch`] = String(await ctx.ask('模型名称、ID 或供应商') || '').trim(); await ctx.refresh(); } },
               { label: `编辑 ${team.name}`, run: async ctx => { const values = await ctx.form('编辑 Team', [{ name: 'name', label: '名称', value: team.name }, { name: 'description', label: '说明', value: team.description || '' }, { name: 'is_default', label: '默认 Team', type: 'boolean', value: team.is_default === true }, { name: 'is_frontier', label: '前沿 Team', type: 'boolean', value: team.is_frontier === true }]); if (!values) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: 'PUT', body: values }); ctx.notify('Team 已更新。'); await ctx.refresh(); } },
               { label: `添加成员到 ${team.name}`, run: async ctx => { const input = await ctx.ask('用户 ID（多个以逗号分隔）'); if (!input) return; const userIds = String(input).split(',').map(value => Number(value.trim())).filter(Number.isInteger); if (!userIds.length || !await ctx.confirm('添加 Team 成员', `Team：${team.name}\n用户 ID：${userIds.join(', ')}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, { method: 'POST', body: { userIds } }); ctx.notify('成员已添加。'); await ctx.refresh(); } },
               { label: `新增 ${team.name} 限额规则`, run: async ctx => { const values = await ctx.form('新增 Team 限额规则', [{ name: 'rule_type', label: '类型', value: 'requests', options: ['requests', 'tokens'] }, { name: 'rule_value', label: '限额值' }, { name: 'duration_hours', label: '时间窗口小时数', value: '24' }, { name: 'description', label: '说明' }]); if (!values) return; if (!await ctx.confirm('添加 Team 限额', `${team.name}\n${values.rule_type} ${values.rule_value} / ${values.duration_hours} 小时`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules`, { method: 'POST', body: { ...values, rule_value: Number(values.rule_value), duration_hours: Number(values.duration_hours) } }); await ctx.refresh(); } },
