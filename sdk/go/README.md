@@ -103,6 +103,10 @@ providers, err := client.Providers.List(ctx)
 var visibleProviders []crewrouter.UserProviderListItem
 if err := providers.JSON(&visibleProviders); err != nil { panic(err) }
 
+membership, err := client.Call(ctx, "user.apiKeys.byId.members.list", crewrouter.CallOptions{PathParams: map[string]any{"id": id}})
+var memberList crewrouter.ApiKeyMembersResponse
+if err := membership.JSON(&memberList); err != nil { panic(err) }
+
 created, err := client.Keys.Create(ctx, map[string]any{
     "name":        "CI",
     "expiresIn":   720,

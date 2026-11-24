@@ -108,6 +108,20 @@ type BalanceGroup struct {
 	Rules       []TeamQuotaRule `json:"rules"`
 }
 
+// ApiKeyMember is one member of a Co-Key.
+type ApiKeyMember struct {
+	ID        int64  `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	CreatedAt string `json:"created_at"`
+}
+
+// ApiKeyMembersResponse is returned by GET /api/user/api-keys/:id/members.
+type ApiKeyMembersResponse struct {
+	IsOwner bool           `json:"is_owner"`
+	Members []ApiKeyMember `json:"members"`
+}
+
 // UserKeyTag is one API Key tag returned by the user key-tags routes.
 type UserKeyTag struct {
 	ID        int64  `json:"id"`

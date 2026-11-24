@@ -47,6 +47,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if tag.ID != 3 || tag.SortOrder != 1 {
 		t.Fatalf("unexpected user key tag payload: %#v", tag)
 	}
+
+	var members crewrouter.ApiKeyMembersResponse
+	if err := json.Unmarshal([]byte(`{"is_owner":true,"members":[{"id":9,"username":"member","email":"member@example.test","created_at":"2026-01-01T00:00:00.000Z"}]}`), &members); err != nil {
+		t.Fatalf("decode API key members: %v", err)
+	}
+	if !members.IsOwner || len(members.Members) != 1 || members.Members[0].Username != "member" {
+		t.Fatalf("unexpected API key members payload: %#v", members)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

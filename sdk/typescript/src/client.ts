@@ -5,6 +5,7 @@ import type {
   AnthropicMessagesRequest,
   ApiKeyDailyUsageItem,
   ApiKeyListItem,
+  ApiKeyMembersResponse,
   CallOptions,
   ChatCompletionRequest,
   CrewRouterOptions,
@@ -162,6 +163,8 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.config.list', mergePathParams(options, { id })),
     getUsage: <T = ApiKeyDailyUsageItem[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.usage.list', mergePathParams(options, { id })),
+    getMembers: <T = ApiKeyMembersResponse>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.members.list', mergePathParams(options, { id })),
   };
 
   readonly usage = {

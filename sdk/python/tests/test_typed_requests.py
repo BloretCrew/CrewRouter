@@ -7,6 +7,7 @@ from crewrouter import (
     AnthropicMessagesRequest,
     ApiKeyListItem,
     ApiKeyDailyUsageItem,
+    ApiKeyMembersResponse,
     DailyUsageItem,
     UserBalance,
     UserModelListItem,
@@ -82,7 +83,12 @@ class TypedRequestTests(unittest.TestCase):
             "created_at": "2026-01-01T00:00:00.000Z",
         }
         self.assertIsNone(key_usage["model_name"])
+        members: ApiKeyMembersResponse = {
+            "is_owner": True,
+            "members": [{"id": 9, "username": "member", "email": "member@example.test", "created_at": "2026-01-01T00:00:00.000Z"}],
+        }
         self.assertEqual(key_tag["sort_order"], 1)
+        self.assertEqual(members["members"][0]["username"], "member")
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

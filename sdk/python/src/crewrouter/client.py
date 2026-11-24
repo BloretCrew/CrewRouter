@@ -92,6 +92,18 @@ class UserProviderListItem(TypedDict):
     created_by: Optional[int]
 
 
+class ApiKeyMember(TypedDict):
+    id: int
+    username: str
+    email: str
+    created_at: str
+
+
+class ApiKeyMembersResponse(TypedDict):
+    is_owner: bool
+    members: list[ApiKeyMember]
+
+
 class UserKeyTag(TypedDict):
     id: int
     name: str

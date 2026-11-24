@@ -442,6 +442,14 @@ function managementSchemas() {
       id: { type: 'integer' }, name: { type: 'string' }, color: { type: 'string' },
       sort_order: { type: 'integer' }, created_at: { type: 'string', format: 'date-time' },
     }, ['id', 'name', 'color', 'sort_order', 'created_at']),
+    ApiKeyMember: object({
+      id: { type: 'integer' }, username: { type: 'string' }, email: { type: 'string' },
+      created_at: { type: 'string', format: 'date-time' },
+    }, ['id', 'username', 'email', 'created_at']),
+    ApiKeyMembersResponse: object({
+      is_owner: { type: 'boolean' },
+      members: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyMember' } },
+    }, ['is_owner', 'members']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -483,6 +491,7 @@ function managementResponseSchema(operationId) {
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },
+    'user.apiKeys.byId.members.list': { $ref: '#/components/schemas/ApiKeyMembersResponse' },
   };
   return schemas[operationId] || null;
 }

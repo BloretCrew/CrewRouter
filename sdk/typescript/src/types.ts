@@ -160,6 +160,18 @@ export interface UserProviderListItem {
   created_by: number | null;
 }
 
+export interface ApiKeyMember {
+  id: number;
+  username: string;
+  email: string;
+  created_at: string;
+}
+
+export interface ApiKeyMembersResponse {
+  is_owner: boolean;
+  members: ApiKeyMember[];
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;

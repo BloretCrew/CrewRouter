@@ -34,6 +34,8 @@ export type {
   ApiKeyModelQueueItem,
   ApiKeyListItem,
   ApiKeyDailyUsageItem,
+  ApiKeyMember,
+  ApiKeyMembersResponse,
   UserKeyTag,
   DailyUsageItem,
   TeamQuotaRule,

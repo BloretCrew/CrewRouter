@@ -135,15 +135,18 @@
             "type": "string"
           },
           "email": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
           "id",
-          "username"
+          "username",
+          "email",
+          "created_at"
         ],
         "additionalProperties": true
       },
@@ -554,6 +557,25 @@
           "color",
           "sort_order",
           "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyMembersResponse": {
+        "type": "object",
+        "properties": {
+          "is_owner": {
+            "type": "boolean"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyMember"
+            }
+          }
+        },
+        "required": [
+          "is_owner",
+          "members"
         ],
         "additionalProperties": true
       },
@@ -13618,8 +13640,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyMembersResponse"
                 }
               }
             }
