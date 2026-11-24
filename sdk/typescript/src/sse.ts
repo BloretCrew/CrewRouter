@@ -122,9 +122,7 @@ export async function* parseSSE(
       };
     }
   } finally {
-    if (!terminated) {
-      await reader.cancel().catch(() => {});
-    }
+    await reader.cancel().catch(() => {});
     reader.releaseLock();
   }
 }
