@@ -30,7 +30,16 @@ function providersPage(runtime) {
     async load(api) {
       const data = await listProviders(runtime.client);
       const stats = data.stats || {};
-      const rows = data.items.map(item => ({
+      const query = String(runtime.providerSearch || '').toLowerCase();
+      const scope = runtime.providerScope || 'all';
+      const enabledFilter = runtime.providerEnabled || 'all';
+      const visibleItems = data.items.filter(item => {
+        const matchQuery = !query || [item.name, item.id, item.base_url, item.format].some(value => String(value || '').toLowerCase().includes(query));
+        const matchScope = scope === 'all' || (scope === 'global' ? item.created_by == null : item.created_by != null);
+        const matchEnabled = enabledFilter === 'all' || (enabledFilter === 'enabled' ? item.enabled !== false : item.enabled === false);
+        return matchQuery && matchScope && matchEnabled;
+      });
+      const rows = visibleItems.map(item => ({
         label: `${item.name || item.id} · ${item.format || 'unknown'} · ${enabledLabel(item.enabled)}${item.has_api_key === true ? ' · Key 已配置' : ''}`,
         detail: `${item.id}${item.base_url ? ` · ${item.base_url}` : ''}${Array.isArray(item.tags) && item.tags.length ? ` · 标签 ${item.tags.map(tag => tag.name).join('/')}` : ''}`,
         run: async ctx => {
@@ -59,7 +68,7 @@ function providersPage(runtime) {
       return {
         sections: [{
           title: '供应商',
-          description: data.scope === 'admin' ? '管理员视图，包含全局与用户供应商。' : '当前账号可见的供应商。',
+          description: `${data.scope === 'admin' ? '管理员视图，包含全局与用户供应商。' : '当前账号可见的供应商。'} · ${visibleItems.length}/${data.total} 项${query ? ` · 搜索 ${query}` : ''}`,
           cards: data.scope === 'admin' ? [
             { label: '总数', value: text(stats.total, data.total), detail: '全部供应商' },
             { label: '启用', value: text(stats.enabledCount), detail: '当前启用' },
@@ -68,7 +77,15 @@ function providersPage(runtime) {
           ] : [{ label: '可见', value: data.total, detail: '当前账号' }],
           rows: rows.length ? rows : [{ label: '暂无供应商。' }],
         }],
-        actions: [{ label: '刷新', run: ctx => ctx.refresh() }],
+        actions: [
+          { label: '搜索供应商', run: async ctx => { runtime.providerSearch = String(await ctx.ask('供应商名称、ID 或地址', { defaultValue: runtime.providerSearch || '' }) || '').trim(); await ctx.refresh(); } },
+          ...(data.scope === 'admin' ? [
+            ...[['all', '全部供应商'], ['global', '全局供应商'], ['user', '用户供应商']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerScope = value; await ctx.refresh(); } })),
+            ...[['all', '全部状态'], ['enabled', '仅启用'], ['disabled', '仅停用']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerEnabled = value; await ctx.refresh(); } })),
+          ] : []),
+          { label: '清除筛选', run: async ctx => { runtime.providerSearch = ''; runtime.providerScope = 'all'; runtime.providerEnabled = 'all'; await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ],
       };
     },
   };
