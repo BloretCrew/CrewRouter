@@ -71,6 +71,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if schedule.ScheduleOnTime != nil || len(schedule.ScheduleDays) != 7 {
 		t.Fatalf("unexpected schedule payload: %#v", schedule)
 	}
+
+	var current crewrouter.CurrentModelResponse
+	if err := json.Unmarshal([]byte(`{"currentModel":null}`), &current); err != nil {
+		t.Fatalf("decode current model: %v", err)
+	}
+	if current.CurrentModel != nil {
+		t.Fatalf("expected no current model, got %#v", current.CurrentModel)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

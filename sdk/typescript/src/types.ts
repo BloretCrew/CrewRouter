@@ -184,6 +184,18 @@ export interface ApiKeySchedule {
   schedule_timezone: string;
 }
 
+export interface CurrentModel {
+  id: string;
+  name: string;
+  provider: string;
+  series?: string | null;
+  description?: string | null;
+}
+
+export interface CurrentModelResponse {
+  currentModel: CurrentModel | null;
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;

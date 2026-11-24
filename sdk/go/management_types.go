@@ -116,6 +116,20 @@ type ApiKeyMember struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// CurrentModel is the selected model summary returned by the current-model API.
+type CurrentModel struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Provider    string  `json:"provider"`
+	Series      *string `json:"series"`
+	Description *string `json:"description"`
+}
+
+// CurrentModelResponse wraps the selected model, which can be null.
+type CurrentModelResponse struct {
+	CurrentModel *CurrentModel `json:"currentModel"`
+}
+
 // ApiKeySchedule is returned by GET /api/user/api-keys/:id/schedule.
 type ApiKeySchedule struct {
 	ScheduleEnabled  bool    `json:"schedule_enabled"`

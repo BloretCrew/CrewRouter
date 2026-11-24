@@ -12,6 +12,7 @@ import type {
   ChatCompletionRequest,
   CrewRouterOptions,
   CrewRouterResponse,
+  CurrentModelResponse,
   DailyUsageItem,
   UserBalance,
   UserKeyTag,
@@ -188,6 +189,13 @@ export class CrewRouter {
   readonly models = {
     list: <T = UserModelListItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.models.list', options),
+  };
+
+  readonly currentModel = {
+    get: <T = CurrentModelResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.currentModel.list', options),
+    set: <T = unknown>(body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.currentModel.update', { ...options, body }),
   };
 
   readonly providers = {

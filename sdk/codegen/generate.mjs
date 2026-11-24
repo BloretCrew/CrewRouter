@@ -456,6 +456,13 @@ function managementSchemas() {
       schedule_off_time: nullableString, schedule_days: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 } },
       schedule_timezone: { type: 'string' },
     }, ['schedule_enabled', 'schedule_on_time', 'schedule_off_time', 'schedule_days', 'schedule_timezone']),
+    CurrentModel: object({
+      id: { type: 'string' }, name: { type: 'string' }, provider: { type: 'string' },
+      series: nullableString, description: nullableString,
+    }, ['id', 'name', 'provider']),
+    CurrentModelResponse: object({
+      currentModel: { anyOf: [{ $ref: '#/components/schemas/CurrentModel' }, { type: 'null' }] },
+    }, ['currentModel']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -501,6 +508,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.quotaWarning.list': { $ref: '#/components/schemas/ApiKeyQuotaWarning' },
     'user.apiKeys.byId.quotaWarning.update': { $ref: '#/components/schemas/ApiKeyQuotaWarning' },
     'user.apiKeys.byId.schedule.list': { $ref: '#/components/schemas/ApiKeySchedule' },
+    'user.currentModel.list': { $ref: '#/components/schemas/CurrentModelResponse' },
   };
   return schemas[operationId] || null;
 }

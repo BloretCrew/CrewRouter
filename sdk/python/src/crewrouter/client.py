@@ -116,6 +116,18 @@ class ApiKeySchedule(TypedDict):
     schedule_timezone: str
 
 
+class UserCurrentModel(TypedDict, total=False):
+    id: str
+    name: str
+    provider: str
+    series: Optional[str]
+    description: Optional[str]
+
+
+class CurrentModelResponse(TypedDict):
+    currentModel: Optional[UserCurrentModel]
+
+
 class UserKeyTag(TypedDict):
     id: int
     name: str

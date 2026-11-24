@@ -38,6 +38,8 @@ export type {
   ApiKeyMembersResponse,
   ApiKeyQuotaWarning,
   ApiKeySchedule,
+  CurrentModel,
+  CurrentModelResponse,
   UserKeyTag,
   DailyUsageItem,
   TeamQuotaRule,

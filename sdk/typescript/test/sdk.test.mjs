@@ -133,6 +133,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: [0, 1, 2, 3, 4, 5, 6], schedule_timezone: 'Asia/Shanghai' });
       return;
     }
+    if (req.url === '/api/user/current-model') {
+      json(res, 200, { currentModel: null });
+      return;
+    }
     json(res, 404, { error: 'not found' });
   });
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
@@ -146,6 +150,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const members = await client.keys.getMembers(7);
   const quotaWarning = await client.keys.getQuotaWarning(7);
   const schedule = await client.keys.getSchedule(7);
+  const currentModel = await client.currentModel.get();
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -163,6 +168,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(quotaWarning.data.quota_warning_enabled, true);
   assert.equal(schedule.data.schedule_on_time, null);
   assert.deepEqual(schedule.data.schedule_days, [0, 1, 2, 3, 4, 5, 6]);
+  assert.equal(currentModel.data.currentModel, null);
 });
 
 test('management errors expose code and permission', async () => {

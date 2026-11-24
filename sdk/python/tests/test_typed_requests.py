@@ -10,6 +10,8 @@ from crewrouter import (
     ApiKeyMembersResponse,
     ApiKeyQuotaWarning,
     ApiKeySchedule,
+    CurrentModelResponse,
+    UserCurrentModel,
     DailyUsageItem,
     UserBalance,
     UserModelListItem,
@@ -100,7 +102,11 @@ class TypedRequestTests(unittest.TestCase):
         }
         self.assertEqual(members["members"][0]["username"], "member")
         self.assertTrue(quota_warning["quota_warning_enabled"])
+        current_model: CurrentModelResponse = {"currentModel": None}
+        selected_model: UserCurrentModel = {"id": "m1", "name": "Model", "provider": "p1"}
         self.assertIsNone(schedule["schedule_on_time"])
+        self.assertIsNone(current_model["currentModel"])
+        self.assertEqual(selected_model["id"], "m1")
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

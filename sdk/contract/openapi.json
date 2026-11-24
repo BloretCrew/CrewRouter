@@ -628,6 +628,57 @@
         ],
         "additionalProperties": true
       },
+      "CurrentModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider"
+        ],
+        "additionalProperties": true
+      },
+      "CurrentModelResponse": {
+        "type": "object",
+        "properties": {
+          "currentModel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "currentModel"
+        ],
+        "additionalProperties": true
+      },
       "UserModelListItem": {
         "type": "object",
         "properties": {
@@ -14750,8 +14801,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/CurrentModelResponse"
                 }
               }
             }
