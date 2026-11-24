@@ -11,20 +11,27 @@ const realUrlValidator = require('../utils/url-validator');
 
 const noop = () => {};
 const asyncNoop = async () => {};
-const state = { queue: ['route-primary'], requestModelBindings: [], provider: null, upstreamPort: null };
+const state = { queue: ['route-primary'], authorizedModels: ['route-primary', 'route-alpha', 'route-beta'], requestModelBindings: [], provider: null, upstreamPort: null };
 const intervals = new Set();
 const mocks = new Map();
 const mock = (relative, exports) => mocks.set(path.resolve(__dirname, '..', relative), exports);
 const logger = { info: noop, warn: noop, error: noop, debug: noop, stream: noop };
 const pool = {
   async query(sql, values = []) {
-    if (/SELECT DISTINCT m\.id/.test(sql)) {
+    if (/SELECT m\.id FROM models m[\s\S]*WHERE m\.id = \$1 AND m\.enabled = TRUE LIMIT 1/.test(sql)) {
+      assert.equal(values[1], 1, 'request mapping authorization belongs to the synthetic Key owner');
+      return { rows: state.authorizedModels.includes(values[0]) ? [{ id: values[0] }] : [] };
+    }
+    if (/SELECT \* FROM models WHERE id = \$1 AND enabled = TRUE/.test(sql)) {
+      return { rows: state.authorizedModels.includes(values[0]) ? [{ id: values[0], enabled: true, provider: 'local-provider', upstream_model_id: `upstream-${values[0]}` }] : [] };
+    }
+    if (/SELECT DISTINCT m\.id[\s\S]*WHERE m\.id = ANY\(\$1::text\[\]\)/.test(sql)) {
       assert.equal(values[1], 1, 'model authorization belongs to the synthetic Key owner');
-      return { rows: state.queue.filter(id => values[0].includes(id)).map(id => ({ id })) };
+      return { rows: state.authorizedModels.filter(id => values[0].includes(id)).map(id => ({ id })) };
     }
     if (/SELECT m\.id FROM models m/.test(sql)) {
       assert.equal(values[1], 1, 'the final resolved model is checked for the same owner');
-      return { rows: state.queue.includes(values[0]) ? [{ id: values[0] }] : [] };
+      return { rows: state.authorizedModels.includes(values[0]) ? [{ id: values[0] }] : [] };
     }
     if (/SELECT DISTINCT p\.format/.test(sql)) return { rows: [{ format: state.provider.format }] };
     if (/FROM api_key_harness_models/.test(sql)) return { rows: [] };
@@ -39,7 +46,7 @@ const pool = {
       return { rows: [{ current_model_id: state.queue[0], enabled: true, expires_at: null }] };
     }
     if (/SELECT \* FROM models WHERE id/.test(sql)) {
-      return { rows: state.queue.includes(values[0]) ? [{ id: values[0], upstream_model_id: `upstream-${values[0]}`, provider: 'local-provider', enabled: true }] : [] };
+      return { rows: state.authorizedModels.includes(values[0]) ? [{ id: values[0], upstream_model_id: `upstream-${values[0]}`, provider: 'local-provider', enabled: true }] : [] };
     }
     if (/SELECT \* FROM providers WHERE id/.test(sql)) return { rows: [{ ...state.provider }] };
     if (/FROM settings/.test(sql)) return { rows: [] };
@@ -214,6 +221,7 @@ async function fixture(router, { format = 'openai', mode = 'success', fallback =
   const upstreamPort = await listen(upstream);
   state.upstreamPort = upstreamPort;
   state.queue = queue || (fallback ? ['route-primary', 'route-backup'] : ['route-primary']);
+  state.authorizedModels = [...new Set([...state.queue, 'route-primary', 'route-alpha', 'route-beta'])];
   state.requestModelBindings = [];
   state.provider = { id: 'local-provider', name: 'isolated', enabled: true, format, base_url: `http://127.0.0.1:${upstreamPort}/v1`, api_key: 'local-key-primary', api_keys: fallback ? ['local-key-primary', 'local-key-backup'] : ['local-key-primary'], api_key_select_mode: 'order', proxy_enabled: false, ...provider };
   const requestCloses = [];
@@ -352,12 +360,16 @@ async function main() {
       assert.equal(JSON.parse(result.text).error.type, 'invalid_request_error', result.text);
     });
   }
-  test('Chat request model mapping overrides the queue and keeps client identity', {}, async f => {
-    state.requestModelBindings = [{ requestModelName: 'fast-chat', harness: null, modelId: 'route-primary' }];
-    const response = await post(f, '/chat/completions', { ...chatBody, model: 'fast-chat' });
-    assert.equal(response.status, 200, response.text);
-    assert.equal(f.received.length, 1);
-    assert.equal(f.received[0].body.model, 'upstream-route-primary');
+  test('Chat maps two request names to two models outside the Key default queue', {}, async f => {
+    state.requestModelBindings = [
+      { requestModelName: 'fast-chat', harness: null, modelId: 'route-alpha' },
+      { requestModelName: 'reasoning-chat', harness: null, modelId: 'route-beta' },
+    ];
+    const fast = await post(f, '/chat/completions', { ...chatBody, model: 'fast-chat' });
+    const reasoning = await post(f, '/chat/completions', { ...chatBody, model: 'reasoning-chat' });
+    assert.equal(fast.status, 200, fast.text);
+    assert.equal(reasoning.status, 200, reasoning.text);
+    assert.deepEqual(f.received.map(item => item.body.model), ['upstream-route-alpha', 'upstream-route-beta']);
     state.requestModelBindings = [];
   });
   test('Chat to Anthropic preserves tool-result cache blocks', { format: 'anthropic' }, async f => {

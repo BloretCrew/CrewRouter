@@ -1014,28 +1014,24 @@ router.get('/api-keys/:id/request-model-bindings', requireAuth, async (req, res)
   try {
     const access = await getApiKeyAccess(pool, req.params.id, req.authUser.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
-    const [bindings, teams] = await Promise.all([
+    const [bindings, modelRows] = await Promise.all([
       pool.query(`SELECT b.request_model_name, b.harness, b.model_id, m.name, p.name AS provider_name
         FROM api_key_request_model_bindings b
         LEFT JOIN models m ON m.id = b.model_id
         LEFT JOIN providers p ON p.id = m.provider
         WHERE b.api_key_id = $1 ORDER BY b.request_model_name, b.harness NULLS FIRST`, [req.params.id]),
-      pool.query('SELECT team_id FROM user_teams WHERE user_id = $1', [access.owner_user_id]),
+      pool.query(`SELECT DISTINCT m.id, m.name, m.alias, m.upstream_model_id
+        FROM models m
+        JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
+        JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
+        JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $1
+        WHERE m.enabled = TRUE
+          AND m.id <> 'fusion'
+          AND LOWER(COALESCE(m.alias, '')) NOT LIKE 'fusion:%'
+          AND LOWER(COALESCE(m.alias, '')) NOT LIKE 'fusion/%'
+        ORDER BY m.name`, [access.owner_user_id]),
     ]);
-    const teamIds = teams.rows.map(row => row.team_id);
-    let models = [];
-    if (teamIds.length) {
-      const modelRows = await pool.query(`SELECT DISTINCT m.id, m.name, m.alias, m.upstream_model_id
-        FROM models m JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
-        WHERE m.enabled = TRUE AND (
-          EXISTS (SELECT 1 FROM api_key_models akm WHERE akm.api_key_id = $1 AND akm.model_id = m.id AND akm.enabled IS DISTINCT FROM FALSE)
-          OR EXISTS (SELECT 1 FROM api_keys ak WHERE ak.id = $1 AND ak.current_model_id = m.id)
-          OR EXISTS (SELECT 1 FROM api_key_harness_models h WHERE h.api_key_id = $1 AND h.model_id = m.id)
-          OR EXISTS (SELECT 1 FROM api_key_request_model_bindings b WHERE b.api_key_id = $1 AND b.model_id = m.id)
-        )
-        ORDER BY m.name`, [req.params.id]);
-      models = modelRows.rows;
-    }
+    const models = modelRows.rows;
     res.json({
       bindings: bindings.rows.map(row => ({ request_model_name: row.request_model_name, harness: row.harness, model_id: row.model_id, name: row.name || row.model_id, provider_name: row.provider_name || '' })),
       models,
@@ -1080,10 +1076,9 @@ router.put('/api-keys/:id/request-model-bindings', requireAuth, auditMiddleware(
         seen.add(unique);
         const check = await assertOwnerCanUseModel(modelId, access.owner_user_id, db);
         if (check.error) return reply.status(check.status).json({ error: check.error });
-        const keyBinding = await db.query(`SELECT 1 FROM api_key_models WHERE api_key_id = $1 AND model_id = $2 AND enabled IS DISTINCT FROM FALSE
-          UNION ALL SELECT 1 FROM api_keys WHERE id = $1 AND current_model_id = $2
-          UNION ALL SELECT 1 FROM api_key_harness_models WHERE api_key_id = $1 AND model_id = $2 LIMIT 1`, [req.params.id, modelId]);
-        if (!keyBinding.rows.length) return reply.status(400).json({ error: `映射目标必须已绑定到该 Key: ${modelId}` });
+        if (/^(?:fusion|fusion[:/])/i.test(normalizedName)) {
+          return reply.status(400).json({ error: `请求名为 ${requestModelName}，与保留的 Fusion 路由名称冲突` });
+        }
         normalized.push({ requestModelName: normalizedName, harness, modelId });
       }
       const apiKeyId = Number(req.params.id);

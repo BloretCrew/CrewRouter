@@ -56,7 +56,7 @@
 #modelLibraryPage .ml-request-bindings-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; color: var(--lg-fg); font-size: 13px; }
 #modelLibraryPage .ml-request-bindings-heading span, #modelLibraryPage .ml-request-bindings-empty { color: var(--lg-fg-secondary); font-size: 12px; }
 #modelLibraryPage .ml-request-bindings-list { display: flex; flex-direction: column; gap: 6px; }
-#modelLibraryPage .ml-request-binding-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(100px, .8fr) minmax(100px, 1fr) auto; align-items: center; gap: 8px; color: var(--lg-fg); font-size: 12.5px; }
+#modelLibraryPage .ml-request-binding-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(100px, .8fr) minmax(100px, 1fr) auto auto; align-items: center; gap: 8px; color: var(--lg-fg); font-size: 12.5px; }
 #modelLibraryPage .ml-request-binding-scope { color: var(--lg-fg-secondary); }
 #modelLibraryPage .ml-request-binding-target { font-weight: 600; }
 #modelLibraryPage .ml-request-binding-form { display: grid; gap: 14px; }

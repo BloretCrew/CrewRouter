@@ -488,18 +488,20 @@ async function refreshApiUserModelAuthorization(apiUser) {
   const fusionPanelModels = Array.isArray(key.fusion_panel_models) ? key.fusion_panel_models : [];
   const fusionIds = [...fusionPanelModels, key.fusion_judge_model_id, key.fusion_outer_model_id];
   const allConfiguredIds = [...queue, currentModelId, ...Object.values(harnessModels), ...fusionIds].filter(Boolean).map(String);
-  const keyBoundIds = [...queue, currentModelId, ...Object.values(harnessModels)].filter(Boolean).map(String);
   const configuredMappingIds = [...new Set(requestModelBindings.map(binding => binding.modelId))];
-  const [allowed, allowedMappingIds] = await Promise.all([
+  const [allowed, allowedMappingIds, requestModelConfigs] = await Promise.all([
     getAuthorizedModelIds(apiUser.userId, allConfiguredIds),
     getAuthorizedModelIds(apiUser.userId, configuredMappingIds),
+    Promise.all(configuredMappingIds.map(async id => [id, await require('../utils/resolved-model-access').resolveAuthorizedModelConfig(pool, apiUser.userId, id)])),
   ]);
+  const requestModelConfigById = new Map(requestModelConfigs);
   apiUser.modelAuthorization = {
     deniedModelIds: allConfiguredIds.filter(id => !allowed.has(id)),
     deniedRequestModelBindings: requestModelBindings
       .filter(binding => !allowedMappingIds.has(binding.modelId))
-      .map(binding => `${binding.harness || '*'}:${binding.requestModelName}`),
-    keyBoundModelIds: [...new Set(keyBoundIds)],
+      .map(binding => JSON.stringify([binding.harness || null, binding.requestModelName])),
+    requestModelIds: [...allowedMappingIds],
+    requestModelConfigs: [...requestModelConfigById.entries()],
   };
   apiUser.currentModelId = currentModelId;
   apiUser.modelQueue = queue;
@@ -553,28 +555,22 @@ function resolveModelQueueForRequest(apiUser, req, metadata = {}) {
     if (binding) {
       const modelId = String(binding.modelId || '').trim();
       const denied = apiUser?.modelAuthorization?.deniedModelIds || [];
-      const allowed = apiUser?.modelAuthorization?.keyBoundModelIds
-        ? apiUser.modelAuthorization.keyBoundModelIds.map(String)
-        : [
-            ...(Array.isArray(apiUser?.modelQueue) ? apiUser.modelQueue.map(String) : []),
-            ...(apiUser?.currentModelId ? [String(apiUser.currentModelId)] : []),
-            ...Object.values(apiUser?.harnessModels || {}).map(String),
-          ];
-      if (!Array.isArray(apiUser?.modelAuthorization?.keyBoundModelIds)
-          && !(apiUser?.modelAuthorization?.deniedRequestModelBindings || []).includes(`${binding.harness || '*'}:${normalizedName}`)
-          && !denied.includes(modelId)) {
-        allowed.push(modelId);
-      }
-      const requestBindingKey = `${binding.harness || '*'}:${normalizedName}`;
-      const mappingDenied = denied.includes(modelId)
-        || (apiUser?.modelAuthorization?.deniedRequestModelBindings || []).includes(requestBindingKey);
+      const allowed = [
+        ...(Array.isArray(apiUser?.modelQueue) ? apiUser.modelQueue.map(String) : []),
+        ...(apiUser?.currentModelId ? [String(apiUser.currentModelId)] : []),
+        ...Object.values(apiUser?.harnessModels || {}).map(String),
+        ...(apiUser?.modelAuthorization?.requestModelIds || []).map(String),
+      ];
+      const requestBindingKey = JSON.stringify([binding.harness || null, normalizedName]);
+      const mappingDenied = (apiUser?.modelAuthorization?.deniedRequestModelBindings || []).includes(requestBindingKey);
+      const requestModelConfig = new Map(apiUser?.modelAuthorization?.requestModelConfigs || []).get(modelId);
       return {
         queue: modelId ? [modelId] : [],
         requestSource,
         harnessOverride: false,
         requestModelOverride: true,
         requestModelName: requestedModel,
-        mappingDenied: !modelId || mappingDenied || !allowed.includes(modelId),
+        mappingDenied: !modelId || mappingDenied || !requestModelConfig || !allowed.includes(modelId),
       };
     }
   }
