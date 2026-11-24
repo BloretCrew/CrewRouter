@@ -68,6 +68,9 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const models = openapi.paths['/api/user/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const providers = openapi.paths['/api/user/providers']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyUsage = openapi.paths['/api/user/api-keys/{id}/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const keyTags = openapi.paths['/api/user/key-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const keyTagCreate = openapi.paths['/api/user/key-tags']?.post?.responses?.[201]?.content?.['application/json']?.schema;
+  const keyTagUpdate = openapi.paths['/api/user/key-tags/{id}']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
@@ -84,6 +87,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
     if (!openapi.components.schemas.ApiKeyDailyUsageItem?.properties?.[field]) throw new Error(`${openapiPath} is missing ApiKeyDailyUsageItem.${field}`);
   }
   if (!openapi.components.schemas.ApiKeyDailyUsageItem?.properties?.model_name?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable per-key usage model names`);
+  if (keyTags?.type !== 'array' || keyTags.items?.$ref !== '#/components/schemas/UserKeyTag') throw new Error(`${openapiPath} must define user key-tag list responses`);
+  if (keyTagCreate?.$ref !== '#/components/schemas/UserKeyTag' || keyTagUpdate?.$ref !== '#/components/schemas/UserKeyTag') throw new Error(`${openapiPath} must define key-tag create/update responses`);
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {

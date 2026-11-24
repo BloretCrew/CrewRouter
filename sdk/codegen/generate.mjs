@@ -438,6 +438,10 @@ function managementSchemas() {
       date: { type: 'string', format: 'date' }, model_id: { type: 'string' },
       model_name: nullableString, tokens: numberOrString, cost: numberOrString, requests: numberOrString,
     }, ['date', 'model_id', 'tokens', 'cost', 'requests']),
+    UserKeyTag: object({
+      id: { type: 'integer' }, name: { type: 'string' }, color: { type: 'string' },
+      sort_order: { type: 'integer' }, created_at: { type: 'string', format: 'date-time' },
+    }, ['id', 'name', 'color', 'sort_order', 'created_at']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -464,6 +468,10 @@ function managementSchemas() {
   };
 }
 
+function managementSuccessStatus(operationId) {
+  return operationId === 'user.keyTags.create' ? 201 : 200;
+}
+
 function managementResponseSchema(operationId) {
   const schemas = {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
@@ -472,6 +480,9 @@ function managementResponseSchema(operationId) {
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
     'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
+    'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
+    'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
+    'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },
   };
   return schemas[operationId] || null;
 }
@@ -542,6 +553,7 @@ function buildOpenApi(operations) {
       required: true,
       schema: { type: 'string' },
     }));
+    const successStatus = managementSuccessStatus(op.operationId);
     const operation = {
       operationId: op.operationId,
       summary: `${op.method} ${op.path}`,
@@ -549,7 +561,7 @@ function buildOpenApi(operations) {
       security: op.authModes.includes('oauth') ? [{ oauthBearer: [] }] : op.authModes.includes('api_key') ? [{ bearerApiKey: [] }] : [],
       parameters,
       responses: {
-        200: {
+        [successStatus]: {
           description: 'Successful response',
           content: op.streaming
             ? { 'text/event-stream': { schema: { type: 'string' } } }

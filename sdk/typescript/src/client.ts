@@ -11,6 +11,7 @@ import type {
   CrewRouterResponse,
   DailyUsageItem,
   UserBalance,
+  UserKeyTag,
   UserModelListItem,
   UserProviderListItem,
   RequestOptions,
@@ -181,6 +182,15 @@ export class CrewRouter {
   readonly providers = {
     list: <T = UserProviderListItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.providers.list', options),
+  };
+
+  readonly keyTags = {
+    list: <T = UserKeyTag[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.keyTags.list', options),
+    create: <T = UserKeyTag>(body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.keyTags.create', { ...options, body }),
+    update: <T = UserKeyTag>(id: string | number, body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.keyTags.byId.update', mergePathParams({ ...options, body }, { id })),
   };
 
   readonly admin = {

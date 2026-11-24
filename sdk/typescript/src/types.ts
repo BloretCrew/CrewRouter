@@ -160,6 +160,14 @@ export interface UserProviderListItem {
   created_by: number | null;
 }
 
+export interface UserKeyTag {
+  id: number;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface ApiKeyDailyUsageItem {
   date: string;
   model_id: string;

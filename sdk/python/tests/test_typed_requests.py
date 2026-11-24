@@ -11,6 +11,7 @@ from crewrouter import (
     UserBalance,
     UserModelListItem,
     UserProviderListItem,
+    UserKeyTag,
     ChatCompletionRequest,
     ChatMessage,
     OpenAIResponsesRequest,
@@ -73,7 +74,15 @@ class TypedRequestTests(unittest.TestCase):
         }
         self.assertIsNone(model["alias"])
         self.assertIsNone(provider["created_by"])
+        key_tag: UserKeyTag = {
+            "id": 3,
+            "name": "prod",
+            "color": "#00aa00",
+            "sort_order": 1,
+            "created_at": "2026-01-01T00:00:00.000Z",
+        }
         self.assertIsNone(key_usage["model_name"])
+        self.assertEqual(key_tag["sort_order"], 1)
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

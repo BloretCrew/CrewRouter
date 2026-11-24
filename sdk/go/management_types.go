@@ -108,6 +108,15 @@ type BalanceGroup struct {
 	Rules       []TeamQuotaRule `json:"rules"`
 }
 
+// UserKeyTag is one API Key tag returned by the user key-tags routes.
+type UserKeyTag struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Color     string `json:"color"`
+	SortOrder int    `json:"sort_order"`
+	CreatedAt string `json:"created_at"`
+}
+
 // UserProviderListItem is one user-visible provider returned by GET /api/user/providers.
 type UserProviderListItem struct {
 	ID        string `json:"id"`

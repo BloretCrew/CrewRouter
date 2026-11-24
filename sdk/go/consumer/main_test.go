@@ -39,6 +39,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if provider.CreatedBy != nil || provider.Format != "openai" {
 		t.Fatalf("unexpected provider payload: %#v", provider)
 	}
+
+	var tag crewrouter.UserKeyTag
+	if err := json.Unmarshal([]byte(`{"id":3,"name":"prod","color":"#00aa00","sort_order":1,"created_at":"2026-01-01T00:00:00.000Z"}`), &tag); err != nil {
+		t.Fatalf("decode user key tag: %v", err)
+	}
+	if tag.ID != 3 || tag.SortOrder != 1 {
+		t.Fatalf("unexpected user key tag payload: %#v", tag)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

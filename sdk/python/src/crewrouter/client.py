@@ -92,6 +92,14 @@ class UserProviderListItem(TypedDict):
     created_by: Optional[int]
 
 
+class UserKeyTag(TypedDict):
+    id: int
+    name: str
+    color: str
+    sort_order: int
+    created_at: str
+
+
 class UserModelListItem(TypedDict):
     id: str
     upstream_model_id: str
