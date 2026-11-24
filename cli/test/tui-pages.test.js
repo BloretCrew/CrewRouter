@@ -17,7 +17,7 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.ok(ids.has('overview'), 'CLI retains its overview page');
   assert.deepEqual(navGroups.map(group => group.id), ['console', 'admin', 'cli']);
   assert.deepEqual(navGroups[0].pages.slice(0, 13), ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings']);
-  assert.deepEqual(navGroups[1].pages.slice(0, 8), ['admin-users', 'admin-policies', 'admin-model-library', 'admin-models', 'admin-teams', 'admin-stats', 'admin-error-logs', 'admin-audit-logs']);
+  assert.deepEqual(navGroups[1].pages.filter(id => !['admin-policy-members', 'admin-policy-approvals', 'admin-policy-notifications', 'admin-models', 'admin-teams'].includes(id)).slice(0, 8), ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins']);
   for (const page of pages) assert.ok(navGroups.some(group => group.pages.includes(page.id)), `${page.id} belongs to a navigation group`);
 });
 

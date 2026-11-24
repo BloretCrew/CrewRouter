@@ -431,6 +431,102 @@ function createAdminPages(runtime) {
       },
     }),
     adminOnly({
+      id: 'admin-policy-members', label: '策略成员', description: '搜索成员、查看状态并管理暂停/豁免。',
+      async load(api) {
+        const query = runtime.policyMemberQuery || '';
+        const status = runtime.policyMemberStatus || '';
+        const page = runtime.policyMemberPage || 1;
+        const data = await api('/api/admin/policy-members', { query: { q: query, status, page, limit: 50 } });
+        const members = array(data && data.items);
+        return { sections: [{ title: '策略成员', description: `第 ${data.page || page} 页 · 共 ${data.total || members.length} 位成员 · ${status || '全部状态'}`, rows: members.map(member => {
+          const suspended = Boolean(member.suspended_at && (!member.suspended_until || new Date(member.suspended_until) > new Date()));
+          return { label: display(member.username, member.email, member.team_name, suspended ? '暂停中' : '正常', member.policy_bypass ? '豁免' : ''), detail: display(`角色 ${member.team_role || 'member'}`, `${member.policy_count || 0} 条成员策略`, `${member.hits_24h || 0} 次/24h 命中`, member.suspended_until && `暂停至 ${formatTime(member.suspended_until)}`), run: async ctx => {
+            const choice = await ctx.choose(`成员 · ${member.username}`, [
+              { label: '查看详情', value: 'detail' },
+              ...(member.team_id ? [{ label: '修改 Team 角色', value: 'role' }] : []),
+              { label: suspended ? '恢复成员' : '暂停成员', value: 'suspension' },
+              { label: member.policy_bypass ? '关闭策略豁免' : '开启策略豁免', value: 'bypass' },
+              { label: '查看生效策略', value: 'effective' },
+            ]);
+            if (choice === 'detail') await ctx.show(`成员 · ${member.username}`, JSON.stringify(member, null, 2));
+            if (choice === 'role') {
+              const role = await ctx.choose('Team 角色', ['owner', 'admin', 'member', 'viewer'].map(value => ({ label: value, value })));
+              if (!role || !await ctx.confirm('更新成员角色', `${member.username}\n${member.team_name}: ${role}`)) return;
+              await api(`/api/admin/policy-members/${member.id}/role`, { method: 'POST', body: { team_id: member.team_id, role } });
+              ctx.notify('Team 角色已更新。'); await ctx.refresh();
+            }
+            if (choice === 'suspension' && suspended) {
+              if (!await ctx.confirm('恢复成员', `恢复 ${member.username} 的访问权限？`)) return;
+              await api(`/api/admin/policy-members/${member.id}/resume`, { method: 'POST', body: {} }); ctx.notify('成员已恢复。'); await ctx.refresh();
+            } else if (choice === 'suspension') {
+              const values = await ctx.form('暂停成员', [{ name: 'duration_seconds', label: '暂停秒数（≥60，留空永久）' }, { name: 'reason', label: '暂停原因' }, { name: 'scope', label: '范围', value: 'all', options: ['all', 'api'] }]);
+              if (!values || !await ctx.confirm('确认暂停成员', `${member.username}\n范围 ${values.scope}\n时长 ${values.duration_seconds || '永久'}\n原因 ${values.reason || '未填写'}`)) return;
+              await api(`/api/admin/policy-members/${member.id}/suspend`, { method: 'POST', body: { ...(values.duration_seconds ? { duration_seconds: Number(values.duration_seconds) } : {}), reason: values.reason || '', scope: values.scope } }); ctx.notify('成员已暂停。'); await ctx.refresh();
+            }
+            if (choice === 'bypass') {
+              const enabled = !member.policy_bypass;
+              if (!await ctx.confirm(enabled ? '开启策略豁免' : '关闭策略豁免', `${member.username}\n${enabled ? '该成员将绕过策略检查。' : '策略检查将恢复。'}`)) return;
+              await api(`/api/admin/policy-members/${member.id}/bypass`, { method: 'POST', body: { enabled } }); ctx.notify(enabled ? '策略豁免已开启。' : '策略豁免已关闭。'); await ctx.refresh();
+            }
+            if (choice === 'effective') { const result = await api('/api/admin/policies/effective', { query: { user_id: member.id } }); await ctx.show(`生效策略 · ${member.username}`, JSON.stringify(result, null, 2)); }
+          } };
+        }) }], actions: [
+          { label: '搜索成员', run: async ctx => { runtime.policyMemberQuery = String(await ctx.ask('用户名或邮箱', { defaultValue: query }) || '').trim(); runtime.policyMemberPage = 1; await ctx.refresh(); } },
+          ...[['', '全部状态'], ['active', '正常成员'], ['suspended', '暂停成员']].map(([value, label]) => ({ label, run: async ctx => { runtime.policyMemberStatus = value; runtime.policyMemberPage = 1; await ctx.refresh(); } })),
+          { label: '上一页', run: async ctx => { runtime.policyMemberPage = Math.max(1, page - 1); await ctx.refresh(); } },
+          { label: '下一页', run: async ctx => { runtime.policyMemberPage = page + 1; await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
+      id: 'admin-policy-notifications', label: '策略通知', description: '全局通知渠道和策略告警规则。测试渠道会向配置的外部目标发送通知。',
+      async load(api) {
+        if (runtime.client.isAdmin !== true) return { sections: [{ title: '策略通知', rows: [{ label: '仅全局管理员可管理通知渠道与告警规则。' }] }], actions: [] };
+        const [channelsResult, rulesResult, analyticsResult] = await Promise.allSettled([
+          api('/api/admin/policy-channels'), api('/api/admin/policy-alert-rules'), api('/api/admin/policies/analytics', { query: { range: '7d', group_by: 'policy' } }),
+        ]);
+        const channels = channelsResult.status === 'fulfilled' ? array(channelsResult.value) : [];
+        const rules = rulesResult.status === 'fulfilled' ? array(rulesResult.value) : [];
+        const analytics = analyticsResult.status === 'fulfilled' ? analyticsResult.value : {};
+        return { sections: [
+          { title: '7 日策略分析', rows: [{ label: JSON.stringify(analytics.totals || {}) }, ...array(analytics.rows).slice(0, 10).map(item => ({ label: display(item.policy_name || item.group, `${item.hits || 0} 次命中`) }))] },
+          { title: '通知渠道', rows: channels.length ? channels.map(channel => ({ label: display(channel.name, channel.type, channel.min_severity, channel.enabled ? '启用' : '停用'), run: async ctx => {
+            const choice = await ctx.choose(`通知渠道 · ${channel.name}`, [{ label: '查看详情', value: 'detail' }, { label: '测试渠道（会发送外部通知）', value: 'test' }, { label: '删除渠道', value: 'delete' }]);
+            if (choice === 'detail') await ctx.show(`通知渠道 · ${channel.name}`, JSON.stringify(channel, null, 2));
+            if (choice === 'test') { if (!await ctx.confirm('发送测试通知', `将向已配置的 ${channel.type} 目标发送测试通知。继续？`)) return; const result = await api(`/api/admin/policy-channels/${channel.id}/test`, { method: 'POST', body: {} }); await ctx.show('渠道测试结果', JSON.stringify(result, null, 2)); }
+            if (choice === 'delete') { if (!await ctx.confirm('删除通知渠道', `删除「${channel.name}」？关联规则可能失去该渠道。`)) return; await api(`/api/admin/policy-channels/${channel.id}`, { method: 'DELETE' }); await ctx.refresh(); }
+          } })) : [{ label: channelsResult.status === 'rejected' ? channelsResult.reason.message : '暂无通知渠道。' }] },
+          { title: '告警规则', rows: rules.length ? rules.map(rule => ({ label: display(rule.name, rule.event_type, rule.severity, rule.enabled ? '启用' : '停用'), detail: display(`渠道 ${array(rule.channel_ids).join(', ') || '无'}`, `静默 ${rule.silence_window_seconds || 0}s`) })) : [{ label: rulesResult.status === 'rejected' ? rulesResult.reason.message : '暂无告警规则。' }] },
+        ], actions: [
+          { label: '新建通知渠道', run: async ctx => { const values = await ctx.form('新建通知渠道', [
+            { name: 'name', label: '名称' }, { name: 'type', label: '类型', value: 'webhook', options: ['webhook', 'feishu', 'wecom', 'dingtalk', 'slack', 'telegram', 'email', 'bark', 'syslog', 'otlp'] },
+            { name: 'min_severity', label: '最低级别', value: 'warning', options: ['info', 'warning', 'critical'] }, { name: 'url', label: 'Webhook / 机器人 URL', secret: true }, { name: 'secret', label: 'Secret / Token（可空）', secret: true },
+            { name: 'to', label: '邮件收件人（email 类型）' }, { name: 'chat_id', label: 'Telegram chat_id' }, { name: 'host', label: 'Syslog host' }, { name: 'port', label: 'Syslog 端口', value: '514' },
+          ]); if (!values || !String(values.name || '').trim()) return; const config = {}; for (const key of ['url', 'secret', 'to', 'chat_id']) if (values[key]) config[key] = values[key]; if (values.host) { config.host = values.host; config.port = Number(values.port) || 514; } if (!await ctx.confirm('创建通知渠道', `${values.name} · ${values.type} · ${values.min_severity}\nSecret 不会回显；URL 需通过服务端 SSRF 校验。`)) return; await api('/api/admin/policy-channels', { method: 'POST', body: { name: values.name, type: values.type, min_severity: values.min_severity, config } }); ctx.notify('通知渠道已创建。'); await ctx.refresh(); } },
+          { label: '新建告警规则', run: async ctx => { const values = await ctx.form('新建告警规则', [{ name: 'name', label: '名称', value: '策略告警' }, { name: 'event_type', label: '事件', value: 'hit', options: ['hit', 'block', 'suspend', 'approval', 'appeal', '*'] }, { name: 'severity', label: '级别', value: 'warning', options: ['info', 'warning', 'critical'] }, { name: 'silence_window_seconds', label: '静默秒数', value: '300' }, { name: 'channel_ids', label: `渠道 ID（逗号分隔，可选：${channels.map(channel => `${channel.id}=${channel.name}`).join(', ')}）` }]); if (!values) return; const channelIds = String(values.channel_ids || '').split(',').map(value => Number(value.trim())).filter(Number.isInteger); if (!await ctx.confirm('创建告警规则', `${values.name}\n事件 ${values.event_type} · ${values.severity}\n渠道 ${channelIds.join(', ') || '无'}`)) return; await api('/api/admin/policy-alert-rules', { method: 'POST', body: { name: values.name, event_type: values.event_type, severity: values.severity, silence_window_seconds: Number(values.silence_window_seconds) || 300, channel_ids: channelIds } }); await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
+      id: 'admin-policy-approvals', label: '策略审批', description: '处理待审批的策略请求。',
+      async load(api) {
+        const data = await api('/api/admin/policy-approvals', { query: { page: 1, limit: 100, status: runtime.approvalStatus || 'pending' } });
+        const items = array(data && data.items);
+        return { sections: [{ title: '审批中心', description: `${items.length} 条 · ${runtime.approvalStatus || '全部状态'}`, rows: items.map(item => ({ label: display(item.kind === 'request' ? '运行时放行' : '策略变更', item.policy_name || item.policy_id, item.requested_by_name, item.status), detail: display(item.preview && JSON.stringify(item.preview), formatTime(item.created_at)), run: async ctx => {
+          const decision = await ctx.choose(`审批 · #${item.id}`, [{ label: '查看详情', value: 'detail' }, ...(item.status === 'pending' ? [{ label: '通过', value: 'approve' }, { label: '驳回', value: 'reject' }] : [])]);
+          if (decision === 'detail') { await ctx.show('审批详情', JSON.stringify(item, null, 2)); return; }
+          if (!decision || !await ctx.confirm(decision === 'approve' ? '通过审批' : '驳回审批', `${item.policy_name || item.kind}\n申请人 ${item.requested_by_name || '未知'}\n${JSON.stringify(item.preview || {})}`)) return;
+          const note = await ctx.ask('审批备注（可留空）');
+          await api(`/api/admin/policy-approvals/${item.id}/decide`, { method: 'POST', body: { decision, note: note || '' } }); ctx.notify(decision === 'approve' ? '审批已通过。' : '审批已驳回。'); await ctx.refresh();
+        } })) }], actions: [
+          ...[['pending', '待审批'], ['', '全部审批']].map(([value, label]) => ({ label, run: async ctx => { runtime.approvalStatus = value; await ctx.refresh(); } })),
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
       id: 'admin-policies', label: '策略管理', description: '管理员策略概览和策略列表。',
       async load(api) {
         const [overview, health, list] = await Promise.allSettled([
