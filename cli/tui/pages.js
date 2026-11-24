@@ -42,6 +42,7 @@ const WEB_PAGE_MAP = Object.freeze([
   { area: 'admin', web: 'adminStats', cli: 'admin-stats' },
   { area: 'admin', web: 'adminTeams', cli: 'admin-teams' },
   { area: 'admin', web: 'adminPlugins', cli: 'admin-plugins' },
+  { area: 'admin', web: 'oauthClients', cli: 'admin-oauth-clients', kind: 'settings-category' },
   { area: 'admin', web: 'popupNotices', cli: 'admin-popups', kind: 'settings-category' },
   { area: 'admin', web: 'dataRetention', cli: 'admin-retention', kind: 'settings-category' },
   { area: 'admin', web: 'adminSettings', cli: 'admin-settings' }
@@ -83,6 +84,7 @@ function buildPages(runtime) {
     adminById.get('admin-prompts'),
     adminById.get('admin-plugins'),
     adminById.get('admin-settings'),
+    adminById.get('admin-oauth-clients'),
     adminById.get('admin-popups'),
     adminById.get('admin-retention'),
     modelsPage(runtime),
@@ -95,7 +97,7 @@ function buildPages(runtime) {
 
 const navGroups = [
   { id: 'console', label: '控制台', pages: ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings'] },
-  { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-policy-settings', 'admin-policy-members', 'admin-policy-approvals', 'admin-policy-clients', 'admin-policy-notifications', 'admin-model-library', 'admin-models', 'admin-teams', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings', 'admin-popups', 'admin-retention'] },
+  { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-policy-settings', 'admin-policy-members', 'admin-policy-approvals', 'admin-policy-clients', 'admin-policy-notifications', 'admin-model-library', 'admin-models', 'admin-teams', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings', 'admin-oauth-clients', 'admin-popups', 'admin-retention'] },
   { id: 'tools', label: '终端工具与设置子页', pages: ['provider-tags', 'models', 'account', 'overview', 'security-settings'] },
   { id: 'cli', label: 'CLI 服务', pages: ['service'] },
 ];

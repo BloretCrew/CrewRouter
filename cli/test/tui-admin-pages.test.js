@@ -29,6 +29,16 @@ test('admin error logs pass user/model/provider/status/date filters to API', asy
   assert.ok(data.actions.some(action => action.label === '筛选供应商'));
 });
 
+test('OAuth clients list is read-only and displays only a redacted secret hint', async () => {
+  const calls = [];
+  const api = async (path, options = {}) => { calls.push({ path, options }); return { clients: [{ client_id: 'client-1', name: 'Desktop', type: 'confidential', enabled: true, scopes: ['profile'], redirect_uris: ['https://app.example/callback'], has_secret: true, secret_hint: 'abc123', secret_hash: 'must-not-appear', editable: true, builtin: false }], scopes: [{ scope: 'profile', description: 'Profile access' }] }; };
+  const data = await pageById('admin-oauth-clients').load(api);
+  assert.equal(calls[0].path, '/api/admin/oauth-clients');
+  assert.ok(data.sections[0].rows[0].label.includes('Desktop'));
+  assert.ok(!JSON.stringify(data.sections).includes('must-not-appear'));
+  assert.ok(!data.actions.some(action => /创建|轮换|删除|启用|停用/.test(action.label)));
+});
+
 test('admin popup notices are read-only and route to the actual list endpoint', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [{ id: 2, title: 'Maintenance', body: 'Service notice', closeText: 'OK', enabled: true, seenCount: 5, createdAt: '2026-11-01' }] }; };

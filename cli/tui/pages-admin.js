@@ -427,6 +427,17 @@ function createAdminPages(runtime) {
       },
     },
     adminOnly({
+      id: 'admin-oauth-clients', label: 'OAuth 客户端', description: '管理客户端只读目录。Secret 不回显；创建、轮换和删除请在网页端完成。',
+      async load(api) {
+        const payload = await api('/api/admin/oauth-clients');
+        const clients = array(payload && payload.clients);
+        return { sections: [
+          { title: 'OAuth 客户端', description: `${clients.length} 个客户端 · ${array(payload && payload.scopes).length} 种可分配 scope`, rows: clients.map(client => ({ label: display(client.name, client.client_id, client.type === 'confidential' ? 'Confidential' : 'Public', client.enabled ? '启用' : '停用'), detail: display(`Scopes：${array(client.scopes).join(', ') || '默认'}`, `重定向 URI：${array(client.redirect_uris).join(', ') || '无'}`, client.has_secret ? `Secret 已配置 (${client.secret_hint || '隐藏'})` : '无 Secret', client.builtin ? '内置' : '自定义'), run: async ctx => await ctx.show(`OAuth 客户端 · ${client.name}`, JSON.stringify(client, null, 2)) })) },
+          { title: '可分配权限', rows: array(payload && payload.scopes).map(scope => ({ label: scope.scope, detail: scope.description })) },
+        ], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+      },
+    }),
+    adminOnly({
       id: 'admin-popups', label: '弹窗通知', description: '已发布弹窗的只读状态与内容。TUI 不会修改或重置用户已读状态。',
       async load(api) {
         const data = await api('/api/admin/popup-notices');
