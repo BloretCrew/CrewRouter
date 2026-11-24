@@ -186,11 +186,14 @@ function keysPage(runtime) {
     label: 'API Key',
     description: '管理 API Key；原始 Key 只在创建时显示一次。',
     async load() {
-      const [keysResult, authorizationsResult] = await Promise.allSettled([
-        listApiKeys(runtime.client), runtime.client.get('/oauth/authorizations'),
+      const [keysResult, authorizationsResult, tagsResult] = await Promise.allSettled([
+        listApiKeys(runtime.client), runtime.client.get('/oauth/authorizations'), runtime.client.get('/api/user/key-tags'),
       ]);
       if (keysResult.status === 'rejected') throw keysResult.reason;
-      const keys = keysResult.value;
+      const allKeys = keysResult.value;
+      const tags = tagsResult.status === 'fulfilled' ? (Array.isArray(tagsResult.value) ? tagsResult.value : []) : [];
+      const activeTag = runtime.apiKeyTagFilter || '';
+      const keys = allKeys.filter(key => !activeTag || (Array.isArray(key.tags) && key.tags.some(tag => String(tag.id) === String(activeTag))));
       const authorizations = authorizationsResult.status === 'fulfilled' && Array.isArray(authorizationsResult.value?.authorizations) ? authorizationsResult.value.authorizations : [];
       const rows = keys.map(key => ({
         label: `${key.name || '未命名'} · ${key.key_prefix || ''} · ${enabledLabel(key.enabled)} · ${key.current_model_name || key.current_model_id || '未绑定模型'}`,
@@ -198,6 +201,7 @@ function keysPage(runtime) {
         run: async ctx => {
           const actions = [
             { label: '查看详情', value: 'detail' },
+            ...(key.is_owner === true ? [{ label: '设置标签', value: 'tags' }] : []),
             { label: '查看 Claude Code 配置', value: 'config' },
             { label: key.enabled === false ? '启用 Key' : '停用 Key', value: 'toggle' },
             { label: '重命名', value: 'rename' },
@@ -205,11 +209,20 @@ function keysPage(runtime) {
           ];
           const choice = await ctx.choose('API Key 操作', actions, { description: key.name || key.key_prefix || `Key ${key.id}` });
           if (choice === 'detail') await ctx.show(`API Key · ${key.name || key.id}`, JSON.stringify({
-            id: key.id, name: key.name, prefix: key.key_prefix, enabled: key.enabled,
+            id: key.id, name: key.name, prefix: key.key_prefix, enabled: key.enabled, tags: key.tags,
             current_model: key.current_model_name || key.current_model_id, permissions: key.permissions,
             total_requests: key.total_requests, total_tokens: key.total_tokens, total_cost: key.total_cost,
             created_at: key.created_at, last_used_at: key.last_used_at, expires_at: key.expires_at,
           }, null, 2));
+          else if (choice === 'tags') {
+            const current = new Set((key.tags || []).map(tag => Number(tag.id)));
+            const value = await ctx.ask('标签 ID（逗号分隔；清空表示移除所有标签）', { defaultValue: [...current].join(','), description: tags.map(tag => `${tag.id}: ${tag.name}`).join(' · ') || '暂无标签，可从页面操作创建。' });
+            if (value === null) return;
+            const tagIds = String(value).split(',').map(item => item.trim()).filter(Boolean).map(Number).filter(id => Number.isInteger(id) && id > 0);
+            if (!await ctx.confirm('保存 API Key 标签', `${key.name || key.key_prefix}\n标签 ID：${tagIds.join(', ') || '无'}`)) return;
+            await runtime.client.put(`/api/user/api-keys/${encodeURIComponent(key.id)}/tags`, { tagIds });
+            ctx.notify('API Key 标签已更新。'); await ctx.refresh();
+          }
           else if (choice === 'config') {
             const config = await getApiKeyConfig(runtime.client, key.id);
             await ctx.show('Claude Code 配置', JSON.stringify(config, null, 2));
@@ -240,15 +253,18 @@ function keysPage(runtime) {
           rows: authorizations.map(auth => ({ label: `${auth.client_name || auth.name || 'OAuth 客户端'} · ${auth.client_id || ''}`, detail: `授权时间 ${formatTime(auth.created_at || auth.authorized_at)} · 范围 ${(auth.scopes || []).join(', ') || '默认'}`, run: async ctx => { if (!await ctx.confirm('吊销 OAuth 授权', `${auth.client_name || auth.name || auth.client_id}\n吊销后该客户端的所有访问令牌立即失效。`)) return; await runtime.client.post('/oauth/authorizations/revoke', { id: Number(auth.id) }); ctx.notify('OAuth 授权已吊销。'); await ctx.refresh(); } })),
         }, {
           title: 'API Key',
-          description: '只能查看自己的 Key；共享 Key 的原始值受权限限制。',
+          description: `只能查看当前账号可见 Key；共享 Key 的原始值受权限限制。显示 ${keys.length}/${allKeys.length}${activeTag ? ` · 标签 ${tags.find(tag => String(tag.id) === String(activeTag))?.name || activeTag}` : ''}`,
           cards: [
-            { label: '总数', value: keys.length, detail: '当前账号可见' },
+            { label: '总数', value: allKeys.length, detail: '当前账号可见' },
+            { label: '显示', value: keys.length, detail: '当前筛选' },
             { label: '启用', value: keys.filter(key => key.enabled !== false).length, detail: '可用 Key' },
             { label: '停用', value: keys.filter(key => key.enabled === false).length, detail: '不可调用' },
           ],
           rows: rows.length ? rows : [{ label: '暂无 API Key。' }],
         }],
         actions: [
+          ...[['', '全部标签'], ...tags.map(tag => [String(tag.id), `标签：${tag.name}`])].map(([value, label]) => ({ label, run: async ctx => { runtime.apiKeyTagFilter = value; await ctx.refresh(); } })),
+          { label: '新建/编辑 Key 标签', run: async ctx => { const choice = await ctx.choose('API Key 标签管理', [{ label: '新建标签', value: 'create' }, ...tags.map(tag => ({ label: `编辑 ${tag.name}`, value: `edit:${tag.id}` })), ...tags.map(tag => ({ label: `删除 ${tag.name}`, value: `delete:${tag.id}` }))]); if (!choice) return; if (choice === 'create') { const values = await ctx.form('新建 Key 标签', [{ name: 'name', label: '名称' }, { name: 'color', label: '颜色', value: '#3b82f6' }]); if (!values || !String(values.name || '').trim()) return; await runtime.client.post('/api/user/key-tags', values); ctx.notify('标签已创建。'); await ctx.refresh(); return; } const [action, id] = choice.split(':'); const tag = tags.find(item => String(item.id) === id); if (action === 'edit') { const values = await ctx.form('编辑 Key 标签', [{ name: 'name', label: '名称', value: tag.name }, { name: 'color', label: '颜色', value: tag.color || '#3b82f6' }]); if (!values) return; await runtime.client.put(`/api/user/key-tags/${id}`, values); ctx.notify('标签已更新。'); await ctx.refresh(); } if (action === 'delete') { if (!await ctx.confirm('删除 Key 标签', `删除「${tag.name}」？关联的 Key 标签会一起移除。`)) return; await runtime.client.delete(`/api/user/key-tags/${id}`); ctx.notify('标签已删除。'); runtime.apiKeyTagFilter = ''; await ctx.refresh(); } } },
           { label: '新建 API Key', run: async ctx => {
             const values = await ctx.form('新建 API Key', [
               { name: 'name', label: '名称', value: 'CrewRouter CLI' },
