@@ -83,7 +83,7 @@ test('model library requires confirmation and sends the ordered key model queue'
     if (path === '/api/user/api-keys') return [{ id: 8, name: 'Main Key' }];
     if (path === '/api/user/provider-tags') return [{ id: 2, name: 'Featured' }];
     if (path.endsWith('/models')) return { models: [{ id: 'm1', name: 'Model One' }], queue: [] };
-    if (path === '/api/user/model-library/search') return { items: [{ id: 'm1', name: 'Model One', provider_name: 'Provider A' }], page: 1, total: 1 };
+    if (path === '/api/user/team/2/provider/p1/models') return { models: [{ model_id: 'm1', name: 'Model One', provider: 'p1', provider_name: 'Provider A', team_id: 2 }], pagination: { page: 1, total: 1, limit: 30, total_pages: 1, has_prev: false, has_next: false } };
     return {};
   };
   const data = await page.load(api);
@@ -92,7 +92,7 @@ test('model library requires confirmation and sends the ordered key model queue'
   const providerAction = data.actions.find(action => action.label === '选择供应商展开模型');
   await providerAction.run({ choose: async () => 0, refresh: async () => {} });
   const expanded = await page.load(api);
-  assert.ok(calls.some(call => call.path === '/api/user/model-library/search'));
+  assert.ok(calls.some(call => call.path === '/api/user/team/2/provider/p1/models'));
   const row = expanded.sections.find(section => section.title.includes('模型目录')).rows[0];
   let confirmCount = 0;
   await row.run({ choose: async () => 'bind', confirm: async () => { confirmCount++; return false; }, notify() {}, refresh: async () => {} });

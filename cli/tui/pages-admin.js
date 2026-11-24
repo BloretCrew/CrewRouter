@@ -30,6 +30,7 @@ function collectionPage({ id, label, description, path, pick, map, actions = [] 
 }
 
 const array = value => Array.isArray(value) ? value : [];
+const modelMultiplierLabel = value => `计费倍率 ×${Number(value || 1).toFixed(2)}`;
 const itemsOf = payload => Array.isArray(payload) ? payload : array(payload && (payload.items || payload.records || payload.data));
 const display = (...values) => values.map(value => String(value || '').trim()).filter(Boolean).join(' · ');
 
@@ -317,12 +318,11 @@ function createAdminPages(runtime) {
         let searchData = null;
         let searchedModels = [];
         if (selectedProvider) {
-          searchData = await api('/api/user/model-library/search', { query: {
-            page: runtime.libraryPage || 1, limit: 30, q: runtime.librarySearch || '',
-            provider: selectedProvider.provider_id || 'all', series: runtime.librarySeries || 'all',
-            test: runtime.libraryTest || 'all', tag: runtime.libraryTag || 'all', sort: runtime.librarySort || 'default',
+          searchData = await api(`/api/user/team/${encodeURIComponent(selectedProvider.team_id)}/provider/${encodeURIComponent(selectedProvider.provider_id)}/models`, { query: {
+            page: runtime.libraryPage || 1, limit: 30, search: runtime.librarySearch || '',
+            series: runtime.librarySeries || 'all', test: runtime.libraryTest || 'all', sort: runtime.librarySort || 'default',
           } });
-          searchedModels = array(searchData.items);
+          searchedModels = array(searchData.models || searchData.items);
         }
         const providerEntries = [];
         for (const team of teams) for (const provider of array(team.providers)) {
@@ -342,14 +342,25 @@ function createAdminPages(runtime) {
           const testLabel = item.test_ok === true ? `测试通过 · ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? `测试失败 · ${shortError(item.test_error)}` : '尚未测试';
           const name = item.alias || item.name || id;
           const assigned = assignedIds.has(id);
-          const stateLabel = [testLabel, item.is_starred ? '已收藏' : '', item.is_hidden ? '已隐藏' : ''].filter(Boolean).join(' · ');
-          return { label: name, cells: { name, model_id: id, provider: item.provider_name || item.provider || '—', series: item.series || '—', input_price: `${item.input_price_per_1k_tokens ?? '—'} 积分/1,000 Token`, output_price: `${item.output_price_per_1k_tokens ?? '—'} 积分/1,000 Token`, test: stateLabel, queue: assigned ? '已加入当前 Key 队列' : '未加入', actions: 'Enter 管理' }, detail: display(item.description, array(item.tags).map(tag => tag.name).join('、'), testLabel), run: async ctx => {
-            const choice = await ctx.choose(`模型 · ${item.alias || item.name || id}`, [
+          const stateLabel = [item.test_ok === true ? `通过 ${item.test_latency_ms || 0}毫秒` : item.test_ok === false ? '测试失败' : '未测试', item.is_starred ? '已收藏' : '', item.is_hidden ? '已隐藏' : ''].filter(Boolean).join(' · ');
+          return { label: name, cells: { name, provider: item.provider_name || item.provider || '—', series: item.series || '—', multiplier: modelMultiplierLabel(item.model_multiplier), input_price: `${item.input_price_per_1k_tokens ?? '—'} 积分/千Token`, output_price: `${item.output_price_per_1k_tokens ?? '—'} 积分/千Token`, test: stateLabel, queue: assigned ? '已加入' : '未加入', actions: 'Enter 管理' }, detail: display(`上游模型 ID：${item.upstream_model_id || item.name || id}`, `输入 ${item.input_price_per_1k_tokens ?? '—'} 积分/千Token`, `输出 ${item.output_price_per_1k_tokens ?? '—'} 积分/千Token`, item.description, array(item.tags).map(tag => tag.name).join('、')), run: async ctx => {
+            const choice = await ctx.choose(`模型 · ${name}`, [
+              { label: '查看详情', value: 'detail' },
               { label: item.is_starred ? '取消星标' : '加入星标', value: 'star' },
               { label: item.is_hidden ? '显示模型' : '隐藏模型', value: 'hide' },
               { label: assignedIds.has(id) ? '从当前 Key 队列移除' : '加入当前 Key 队列', value: 'bind' },
             ], { description: `${item.team_name || `Team ${item.team_id}`} · ${item.provider_name || item.provider}` });
             if (!choice) return;
+            if (choice === 'detail') {
+              const details = [
+                `名称：${name}`, `内部模型 ID：${id}`, `上游模型 ID：${item.upstream_model_id || item.name || id}`,
+                `供应商：${item.provider_name || item.provider || '未知'}`, `模型系列：${item.series || '无'}`,
+                `输入价格：${item.input_price_per_1k_tokens ?? '—'} 积分/千Token`, `输出价格：${item.output_price_per_1k_tokens ?? '—'} 积分/千Token`,
+                `测试状态：${testLabel}`, `Key 队列：${assigned ? '已加入当前 Key' : '未加入当前 Key'}`,
+                item.test_error && `测试失败原因：${shortError(item.test_error, 500)}`, item.description && `说明：${item.description}`,
+              ].filter(Boolean).join('\n');
+              await ctx.show(`模型详情 · ${name}`, details);
+            }
             if (choice === 'star') {
               const starred = item.is_starred !== true;
               if (!await ctx.confirm(starred ? '星标模型' : '取消模型星标', `${item.team_name || `Team ${item.team_id}`} · ${item.alias || item.name || id}`)) return;
@@ -374,27 +385,26 @@ function createAdminPages(runtime) {
           { title: '模型库概览', cards: [{ label: '所属团队', value: `${teams.length} 个` }, { label: '可用模型', value: `${library.total_models || 0} 个` }, { label: '模型系列', value: `${array(library.available_series).length} 个` }, { label: '已收藏模型', value: `${stars.length} 个` }] },
           ...(stars.length ? [{ title: '已收藏模型', rows: stars.slice(0, 20).map(item => ({ label: display(item.alias || item.name || item.model_id, item.provider_name, item.series), detail: display(item.is_hidden ? '已隐藏' : '可用', item.test_ok === true ? `测试通过 · ${item.test_latency_ms || 0} ms` : item.test_ok === false ? `测试失败 · ${shortError(item.test_error)}` : '尚未测试'), run: async ctx => { const detail = { ...item, test_error: shortError(item.test_error, 500) }; const choice = await ctx.choose(`收藏模型 · ${item.alias || item.name || item.model_id}`, [{ label: '查看详情', value: 'detail' }, { label: '取消收藏', value: 'unstar' }]); if (choice === 'detail') await ctx.show(`模型详情 · ${item.alias || item.name || item.model_id}`, JSON.stringify(detail, null, 2)); if (choice === 'unstar') { if (!await ctx.confirm('取消模型收藏', `${item.alias || item.name || item.model_id}\n${item.provider_name || ''}`)) return; await api('/api/user/model-library/star', { method: 'PUT', body: { teamId: item.team_id, providerId: item.provider, modelId: item.model_id, starred: false } }); ctx.notify('模型收藏已取消。'); await ctx.refresh(); } } })) }] : []),
           { title: '团队与供应商目录', description: `${providerCards.length} 个供应商 · 网格布局随终端宽度调整；使用“选择供应商”展开模型`, cards: providerCards, rows: providerCards.length ? [] : [{ label: libraryResult.status === 'rejected' ? libraryResult.reason.message : '暂无可用供应商。' }] },
-          ...(selectedProvider ? [{ title: `${selectedProvider.provider_name} · 模型目录`, tableMinWidth: 124, columns: [
-            { key: 'name', label: '模型名称', ratio: 0.16 }, { key: 'model_id', label: '模型 ID', ratio: 0.15 }, { key: 'provider', label: '供应商', ratio: 0.1 },
-            { key: 'series', label: '系列', ratio: 0.08 }, { key: 'input_price', label: '输入价格', ratio: 0.12 }, { key: 'output_price', label: '输出价格', ratio: 0.12 },
-            { key: 'test', label: '接口测试', ratio: 0.12 }, { key: 'queue', label: '当前 Key 队列', ratio: 0.09 }, { key: 'actions', label: '操作', ratio: 0.06 },
-          ], description: `第 ${searchData.page || runtime.libraryPage || 1} 页 · 共 ${searchData.total || searchedModels.length} 个模型`, rows: modelRows.length ? modelRows : [{ label: '没有符合筛选条件的模型。' }] }] : []),
+          ...(selectedProvider ? [{ title: `${selectedProvider.provider_name} · 模型目录`, tableMinWidth: 150, columns: [
+            { key: 'name', label: '模型名称', ratio: 0.25 }, { key: 'provider', label: '供应商', ratio: 0.2 }, { key: 'series', label: '系列', ratio: 0.12 },
+            { key: 'multiplier', label: '计费倍率', ratio: 0.15 }, { key: 'test', label: '接口测试', ratio: 0.12 }, { key: 'queue', label: 'Key 队列', ratio: 0.08 }, { key: 'actions', label: '操作', ratio: 0.08 },
+          ], description: `第 ${searchData.pagination?.page || runtime.libraryPage || 1}/${searchData.pagination?.total_pages || 1} 页 · 共 ${searchData.pagination?.total ?? searchData.total ?? searchedModels.length} 个模型`, rows: modelRows.length ? modelRows : [{ label: '没有符合筛选条件的模型。' }] }] : []),
           ...(libraryResult.status === 'rejected' ? [{ title: '加载失败', rows: [{ label: libraryResult.reason.message || '模型目录不可用' }] }] : []),
         ];
-        return { sections, actions: [
-          ...(providerEntries.length ? [{ label: '选择供应商展开模型', run: async ctx => { const choice = await ctx.choose('选择 Team 供应商', providerEntries.map(({ team, provider }, index) => ({ label: `${team.team_name} · ${provider.provider_name} · ${provider.visible_model_count || 0}/${provider.model_count || 0} 个模型`, value: index }))); if (choice === null) return; const entry = providerEntries[choice]; runtime.libraryProvider = { team_id: entry.team.team_id, provider_id: entry.provider.provider_id, provider_name: entry.provider.provider_name }; runtime.libraryPage = 1; await ctx.refresh(); } }] : []),
-          { label: '搜索模型/供应商', run: async ctx => { runtime.librarySearch = String(await ctx.ask('搜索模型、供应商或上游 ID', { defaultValue: runtime.librarySearch || '' }) || '').trim(); runtime.libraryPage = 1; await ctx.refresh(); } },
+        return { pageToolbar: true, sections, actions: [
+          ...(providerEntries.length ? [{ label: '选择供应商展开模型', toolbar: 'page', run: async ctx => { const choice = await ctx.choose('选择 Team 供应商', providerEntries.map(({ team, provider }, index) => ({ label: `${team.team_name} · ${provider.provider_name} · ${provider.visible_model_count || 0}/${provider.model_count || 0} 个模型`, value: index }))); if (choice === null) return; const entry = providerEntries[choice]; runtime.libraryProvider = { team_id: entry.team.team_id, provider_id: entry.provider.provider_id, provider_name: entry.provider.provider_name }; runtime.libraryPage = 1; await ctx.refresh(); } }] : []),
+          { label: '搜索模型/供应商', toolbar: 'page', run: async ctx => { runtime.librarySearch = String(await ctx.ask('搜索模型、供应商或上游 ID', { defaultValue: runtime.librarySearch || '' }) || '').trim(); runtime.libraryPage = 1; await ctx.refresh(); } },
           ...(selectedProvider ? [
-            { label: '筛选模型系列', run: async ctx => { const value = await ctx.choose('模型系列', [{ label: '全部', value: 'all' }, ...array(library.available_series).map(series => ({ label: series, value: series }))]); if (value !== null) { runtime.librarySeries = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
-            { label: '筛选测试状态', run: async ctx => { const value = await ctx.choose('测试状态', [{ label: '全部', value: 'all' }, { label: '通过', value: 'pass' }, { label: '失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.libraryTest = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
-            { label: '排序模型结果', run: async ctx => { const value = await ctx.choose('模型排序', [{ label: '默认', value: 'default' }, { label: '价格升序', value: 'price_asc' }, { label: '价格降序', value: 'price_desc' }, { label: '名称升序', value: 'name_asc' }, { label: '名称降序', value: 'name_desc' }, { label: '测试延迟升序', value: 'test_latency_asc' }, { label: '测试延迟降序', value: 'test_latency_desc' }, { label: '测试速度降序', value: 'test_tps_desc' }]); if (value !== null) { runtime.librarySort = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
-            { label: '搜索结果上一页', run: async ctx => { runtime.libraryPage = Math.max(1, (runtime.libraryPage || 1) - 1); await ctx.refresh(); } },
-            { label: '搜索结果下一页', run: async ctx => { runtime.libraryPage = (runtime.libraryPage || 1) + 1; await ctx.refresh(); } },
-            { label: '返回团队供应商', run: async ctx => { runtime.libraryProvider = null; await ctx.refresh(); } },
+            { label: '筛选模型系列', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型系列', [{ label: '全部', value: 'all' }, ...array(library.available_series).map(series => ({ label: series, value: series }))]); if (value !== null) { runtime.librarySeries = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
+            { label: '筛选测试状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('测试状态', [{ label: '全部', value: 'all' }, { label: '通过', value: 'pass' }, { label: '失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.libraryTest = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
+            { label: '排序模型结果', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型排序', [{ label: '默认', value: 'default' }, { label: '价格升序', value: 'price_asc' }, { label: '价格降序', value: 'price_desc' }, { label: '名称升序', value: 'name_asc' }, { label: '名称降序', value: 'name_desc' }, { label: '测试延迟升序', value: 'test_latency_asc' }, { label: '测试延迟降序', value: 'test_latency_desc' }, { label: '测试速度降序', value: 'test_tps_desc' }]); if (value !== null) { runtime.librarySort = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
+            { label: '搜索结果上一页', toolbar: 'page', disabled: searchData?.pagination ? !searchData.pagination.has_prev : (runtime.libraryPage || 1) <= 1, run: async ctx => { runtime.libraryPage = Math.max(1, (runtime.libraryPage || 1) - 1); await ctx.refresh(); } },
+            { label: '搜索结果下一页', toolbar: 'page', disabled: searchData?.pagination ? !searchData.pagination.has_next : searchedModels.length < 30, run: async ctx => { runtime.libraryPage = (runtime.libraryPage || 1) + 1; await ctx.refresh(); } },
+            { label: '返回团队供应商', toolbar: 'page', run: async ctx => { runtime.libraryProvider = null; await ctx.refresh(); } },
           ] : []),
-          { label: '选择 API Key', run: async ctx => { if (!keys.length) { await ctx.show('选择 API Key', '当前账户还没有 API Key。'); return; } const choice = await ctx.choose('选择 API Key', keys.map(key => ({ label: `${key.name || key.key_prefix || key.id} · ${key.current_model_name || key.current_model_id || '未绑定'}`, value: key.id }))); if (choice !== null) { runtime.libraryKeyId = choice; await ctx.refresh(); } } },
-          ...tags.map(tag => ({ label: `标签：${tag.name}`, run: async ctx => { runtime.libraryTag = String(tag.id); await ctx.refresh(); } })),
-          { label: '清除标签筛选', run: async ctx => { runtime.libraryTag = 'all'; await ctx.refresh(); } },
+          { label: '选择 API Key', toolbar: 'page', run: async ctx => { if (!keys.length) { await ctx.show('选择 API Key', '当前账户还没有 API Key。'); return; } const choice = await ctx.choose('选择 API Key', keys.map(key => ({ label: `${key.name || key.key_prefix || key.id} · ${key.current_model_name || key.current_model_id || '未绑定'}`, value: key.id }))); if (choice !== null) { runtime.libraryKeyId = choice; await ctx.refresh(); } } },
+          ...tags.map(tag => ({ label: `标签：${tag.name}`, toolbar: 'page', run: async ctx => { runtime.libraryTag = String(tag.id); await ctx.refresh(); } })),
+          { label: '清除标签筛选', toolbar: 'page', run: async ctx => { runtime.libraryTag = 'all'; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },

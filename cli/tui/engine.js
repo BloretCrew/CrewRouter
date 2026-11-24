@@ -166,8 +166,13 @@ async function runPagedTui({
     if (data) {
       const sections = (Array.isArray(data.sections) ? data.sections : []).filter(section => !tab || !section.tab || section.tab === tab.id);
       const actions = (Array.isArray(data.actions) ? data.actions : []).filter(action => !tab || !action.tab || action.tab === tab.id);
+      const pageToolbarActions = actions.filter(action => action.toolbar === 'page');
       const toolbarActions = actions.filter(action => action.toolbar === true);
-      const footerActions = actions.filter(action => action.toolbar !== true);
+      const footerActions = actions.filter(action => action.toolbar !== true && action.toolbar !== 'page');
+      if (data.pageToolbar === true && pageToolbarActions.length) {
+        addSpans([{ text: '▸ ', fg: 'rose' }, { text: '筛选与操作', fg: 'dim', bold: true }], 'heading', null, 0);
+        for (const action of pageToolbarActions) add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
+      }
       let first = true;
       for (const section of sections) {
         if (!first) add('', 'text', null, 0);
