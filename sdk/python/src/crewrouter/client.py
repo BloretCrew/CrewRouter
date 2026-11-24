@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence, TypedDict, Union
 from urllib.parse import quote
 
 import httpx
@@ -12,6 +12,50 @@ from .errors import CrewRouterError
 from .generated.operations import CONTRACT_VERSION, OPERATIONS
 
 _PATH_PARAM = re.compile(r":([A-Za-z0-9_]+)")
+
+
+class _ChatMessageRequired(TypedDict):
+    role: str
+
+
+class ChatMessage(_ChatMessageRequired, total=False):
+    content: Any
+    name: str
+    tool_call_id: str
+
+
+class _ChatCompletionRequired(TypedDict):
+    messages: list[ChatMessage]
+
+
+class ChatCompletionRequest(_ChatCompletionRequired, total=False):
+    model: str
+    stream: bool
+    temperature: float
+    max_tokens: int
+
+
+class _AnthropicMessagesRequired(TypedDict):
+    max_tokens: int
+    messages: list[ChatMessage]
+
+
+class AnthropicMessagesRequest(_AnthropicMessagesRequired, total=False):
+    model: str
+    stream: bool
+    system: str
+    temperature: float
+
+
+class _OpenAIResponsesRequired(TypedDict):
+    input: Union[str, list[dict[str, Any]]]
+
+
+class OpenAIResponsesRequest(_OpenAIResponsesRequired, total=False):
+    model: str
+    stream: bool
+    instructions: str
+    temperature: float
 
 
 def _operation(operation_id: str) -> dict[str, Any]:
@@ -234,7 +278,11 @@ class _Completions:
         self._client = client
         self._path = path
 
-    def create(self, body: Mapping[str, Any], **kwargs: Any) -> CrewRouterResponse:
+    def create(
+        self,
+        body: Union[ChatCompletionRequest, AnthropicMessagesRequest, OpenAIResponsesRequest],
+        **kwargs: Any,
+    ) -> CrewRouterResponse:
         operation_id = {
             "/v1/chat/completions": "gateway.chat.completions.create",
             "/v1/messages": "gateway.messages.create",
@@ -242,7 +290,7 @@ class _Completions:
         }[self._path]
         return self._client.call(operation_id, body=body, **kwargs)
 
-    def stream(self, body: Mapping[str, Any], *, idle_timeout: Optional[float] = None, headers: Optional[Mapping[str, str]] = None) -> Stream:
+    def stream(self, body: Union[ChatCompletionRequest, AnthropicMessagesRequest, OpenAIResponsesRequest], *, idle_timeout: Optional[float] = None, headers: Optional[Mapping[str, str]] = None) -> Stream:
         return self._client.http.stream("POST", self._path, body=body, idle_timeout=idle_timeout, headers=headers)
 
 
@@ -377,7 +425,11 @@ class _AsyncCompletions:
         self._client = client
         self._path = path
 
-    async def create(self, body: Mapping[str, Any], **kwargs: Any) -> CrewRouterResponse:
+    async def create(
+        self,
+        body: Union[ChatCompletionRequest, AnthropicMessagesRequest, OpenAIResponsesRequest],
+        **kwargs: Any,
+    ) -> CrewRouterResponse:
         operation_id = {
             "/v1/chat/completions": "gateway.chat.completions.create",
             "/v1/messages": "gateway.messages.create",
@@ -385,7 +437,7 @@ class _AsyncCompletions:
         }[self._path]
         return await self._client.call(operation_id, body=body, **kwargs)
 
-    def stream(self, body: Mapping[str, Any], *, idle_timeout: Optional[float] = None, headers: Optional[Mapping[str, str]] = None) -> AsyncStreamRequest:
+    def stream(self, body: Union[ChatCompletionRequest, AnthropicMessagesRequest, OpenAIResponsesRequest], *, idle_timeout: Optional[float] = None, headers: Optional[Mapping[str, str]] = None) -> AsyncStreamRequest:
         return AsyncStreamRequest(
             self._client.http.stream(
                 "POST",

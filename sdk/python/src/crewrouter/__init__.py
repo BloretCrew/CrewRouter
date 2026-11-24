@@ -6,7 +6,14 @@ compatible gateway and management API.
 
 from ._http import CrewRouterResponse
 from ._sse import AsyncStream, AsyncStreamRequest, Stream, StreamEvent
-from .client import AsyncCrewRouter, CrewRouter
+from .client import (
+    AnthropicMessagesRequest,
+    AsyncCrewRouter,
+    ChatCompletionRequest,
+    ChatMessage,
+    CrewRouter,
+    OpenAIResponsesRequest,
+)
 from .errors import (
     CrewRouterAbortError,
     CrewRouterAuthenticationError,
@@ -28,6 +35,10 @@ __version__ = "27.0.0b1"
 __all__ = [
     "CrewRouter",
     "AsyncCrewRouter",
+    "ChatMessage",
+    "ChatCompletionRequest",
+    "AnthropicMessagesRequest",
+    "OpenAIResponsesRequest",
     "CrewRouterResponse",
     "Stream",
     "AsyncStream",

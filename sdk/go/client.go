@@ -168,33 +168,33 @@ type ChatResource struct{ Completions *ChatCompletionsResource }
 // ChatCompletionsResource calls /v1/chat/completions.
 type ChatCompletionsResource struct{ client *Client }
 
-func (r *ChatCompletionsResource) Create(ctx context.Context, body any, opts ...CallOptions) (*Response, error) {
+func (r *ChatCompletionsResource) Create(ctx context.Context, body ChatCompletionRequest, opts ...CallOptions) (*Response, error) {
 	return r.client.Call(ctx, "gateway.chat.completions.create", withBody(opts, body))
 }
 
-func (r *ChatCompletionsResource) Stream(ctx context.Context, body any, opts ...StreamOptions) (*Stream, error) {
+func (r *ChatCompletionsResource) Stream(ctx context.Context, body ChatCompletionRequest, opts ...StreamOptions) (*Stream, error) {
 	return r.client.Stream(ctx, http.MethodPost, "/v1/chat/completions", body, firstStreamOptions(opts))
 }
 
 // MessagesResource calls /v1/messages.
 type MessagesResource struct{ client *Client }
 
-func (r *MessagesResource) Create(ctx context.Context, body any, opts ...CallOptions) (*Response, error) {
+func (r *MessagesResource) Create(ctx context.Context, body AnthropicMessagesRequest, opts ...CallOptions) (*Response, error) {
 	return r.client.Call(ctx, "gateway.messages.create", withBody(opts, body))
 }
 
-func (r *MessagesResource) Stream(ctx context.Context, body any, opts ...StreamOptions) (*Stream, error) {
+func (r *MessagesResource) Stream(ctx context.Context, body AnthropicMessagesRequest, opts ...StreamOptions) (*Stream, error) {
 	return r.client.Stream(ctx, http.MethodPost, "/v1/messages", body, firstStreamOptions(opts))
 }
 
 // ResponsesResource calls /v1/responses.
 type ResponsesResource struct{ client *Client }
 
-func (r *ResponsesResource) Create(ctx context.Context, body any, opts ...CallOptions) (*Response, error) {
+func (r *ResponsesResource) Create(ctx context.Context, body OpenAIResponsesRequest, opts ...CallOptions) (*Response, error) {
 	return r.client.Call(ctx, "gateway.responses.create", withBody(opts, body))
 }
 
-func (r *ResponsesResource) Stream(ctx context.Context, body any, opts ...StreamOptions) (*Stream, error) {
+func (r *ResponsesResource) Stream(ctx context.Context, body OpenAIResponsesRequest, opts ...StreamOptions) (*Stream, error) {
 	return r.client.Stream(ctx, http.MethodPost, "/v1/responses", body, firstStreamOptions(opts))
 }
 

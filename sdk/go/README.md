@@ -40,9 +40,9 @@ func main() {
         panic(err)
     }
 
-    response, err := client.Gateway.Chat.Completions.Create(context.Background(), map[string]any{
-        "model":    "claude-fable-5", // accepted for compatibility; routing uses the key binding
-        "messages": []any{map[string]any{"role": "user", "content": "Hello!"}},
+    response, err := client.Gateway.Chat.Completions.Create(context.Background(), crewrouter.ChatCompletionRequest{
+        Model: "claude-fable-5", // accepted for compatibility; routing uses the key binding
+        Messages: []crewrouter.ChatMessage{{Role: "user", Content: "Hello!"}},
     })
     if err != nil {
         panic(err)
@@ -54,8 +54,8 @@ func main() {
 ## Streaming
 
 ```go
-stream, err := client.Gateway.Chat.Completions.Stream(ctx, map[string]any{
-    "messages": []any{map[string]any{"role": "user", "content": "Write a haiku"}},
+stream, err := client.Gateway.Chat.Completions.Stream(ctx, crewrouter.ChatCompletionRequest{
+    Messages: []crewrouter.ChatMessage{{Role: "user", Content: "Write a haiku"}},
 })
 if err != nil {
     panic(err)

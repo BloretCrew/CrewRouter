@@ -45,6 +45,9 @@ if (!npmPublishStep?.run?.includes('npm publish candidates/bloret-crew-crewroute
 if (!npmPublishStep.run.includes('@bloret-crew/crewrouter-sdk @bloret-crew/crewrouter')) throw new Error('npm publish must target the scoped package names');
 if (!npmPublishStep.run.includes('doc.versions')) throw new Error('npm publish must check the target version is still unpublished');
 if (!sdkWorkflow.jobs['node-sdk'].steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('Node SDK CI must run shared fixtures and the package inspection');
+for (const required of ['python -m build --wheel --sdist sdk/python', 'python -m pip install --no-deps sdk/python/dist/*.whl']) {
+  if (!sdkWorkflow.jobs['python-sdk'].steps.some(step => step.run === required)) throw new Error(`Python SDK CI omits package artifact validation: ${required}`);
+}
 const npmNameGate = beta.jobs.gate.steps.find(step => step.name === 'Verify npm beta names are unclaimed');
 if (!npmNameGate?.run?.includes('doc.versions')) throw new Error('npm name gate must allow already-owned packages when the target version is new');
 if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop,npm-beta-candidate') throw new Error('GitHub release must wait for all release and candidate build gates');

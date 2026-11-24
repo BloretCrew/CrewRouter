@@ -45,6 +45,27 @@ func testClient(t *testing.T, handler http.HandlerFunc, options Options) (*Clien
 	return client, requests, server
 }
 
+func TestTypedGatewayRequestsMarshalExtraFields(t *testing.T) {
+	client, requests, _ := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{}`))
+	}, Options{APIKey: "sk-test"})
+
+	_, err := client.Gateway.Chat.Completions.Create(context.Background(), ChatCompletionRequest{
+		Messages: []ChatMessage{{Role: "user", Content: "hi"}},
+		Extra:    map[string]any{"tools": []any{map[string]any{"type": "function"}}},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte((*requests)[0].Body), &payload); err != nil {
+		t.Fatalf("request body is invalid JSON: %v", err)
+	}
+	if payload["tools"] == nil || payload["messages"] == nil {
+		t.Fatalf("typed and extra fields were not both encoded: %#v", payload)
+	}
+}
+
 func TestGatewayChatSendsAuthAndJSON(t *testing.T) {
 	client, requests, _ := testClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -53,9 +74,9 @@ func TestGatewayChatSendsAuthAndJSON(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":"chatcmpl-1","choices":[]}`))
 	}, Options{APIKey: "sk-test"})
 
-	response, err := client.Gateway.Chat.Completions.Create(context.Background(), map[string]any{
-		"model":    "claude-fable-5",
-		"messages": []any{map[string]any{"role": "user", "content": "hi"}},
+	response, err := client.Gateway.Chat.Completions.Create(context.Background(), ChatCompletionRequest{
+		Model:    "claude-fable-5",
+		Messages: []ChatMessage{{Role: "user", Content: "hi"}},
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -162,7 +183,7 @@ func TestStreamParsesEventsAndDone(t *testing.T) {
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 	}, Options{APIKey: "sk-test"})
 
-	stream, err := client.Gateway.Chat.Completions.Stream(context.Background(), map[string]any{"messages": []any{}})
+	stream, err := client.Gateway.Chat.Completions.Stream(context.Background(), ChatCompletionRequest{Messages: []ChatMessage{}})
 	if err != nil {
 		t.Fatalf("Stream() error = %v", err)
 	}
@@ -239,7 +260,7 @@ func TestGetRetries429AndPostDoesNotByDefault(t *testing.T) {
 		_, _ = w.Write([]byte(`{"error":"slow down"}`))
 	}, Options{APIKey: "sk-test", MaxRetries: 2})
 
-	_, err := client.Gateway.Chat.Completions.Create(context.Background(), map[string]any{"messages": []any{}})
+	_, err := client.Gateway.Chat.Completions.Create(context.Background(), ChatCompletionRequest{Messages: []ChatMessage{}})
 	var apiErr *APIError
 	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusTooManyRequests {
 		t.Fatalf("POST error = %v", err)
