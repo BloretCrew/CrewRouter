@@ -406,9 +406,20 @@ function keysPage(runtime) {
         return matchTag && matchSearch;
       });
       const authorizations = authorizationsResult.status === 'fulfilled' && Array.isArray(authorizationsResult.value?.authorizations) ? authorizationsResult.value.authorizations : [];
-      const rows = keys.map(key => ({
-        label: `${key.name || '未命名'} · ${key.key_prefix || ''} · ${enabledLabel(key.enabled)} · ${key.current_model_name || key.current_model_id || '未绑定模型'}`,
-        detail: `${Number(key.total_requests || 0).toLocaleString()} 请求 · ${formatBigNumber(key.total_tokens)} tokens · ${formatCost(key.total_cost)} · 最后使用 ${formatTime(key.last_used_at)}`,
+      const rows = keys.map(key => {
+        const expired = key.expires_at && new Date(key.expires_at).getTime() <= Date.now();
+        const daysLeft = key.expires_at ? Math.ceil((new Date(key.expires_at).getTime() - Date.now()) / 86400000) : null;
+        const status = key.enabled === false ? '已停用' : expired ? '已过期' : daysLeft !== null && daysLeft <= 7 ? `${Math.max(daysLeft, 0)} 天后过期` : '有效';
+        return {
+        label: key.name || '未命名',
+        cells: {
+          name: key.name || '未命名', masked_key: key.key_prefix ? `${key.key_prefix}••••` : (key.is_owner === false ? '仅创建者可查看' : '未返回密钥前缀'),
+          status, model: key.current_model_name || key.current_model_id || '未绑定模型',
+          requests: `${Number(key.total_requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(key.total_tokens)} Token`,
+          points: `${formatCost(key.total_cost)} 积分`, expires: key.expires_at ? formatTime(key.expires_at) : '永不过期',
+          actions: key.is_owner === true ? 'Enter 管理' : 'Enter 查看',
+        },
+        detail: `创建于 ${formatTime(key.created_at)} · 最后使用 ${formatTime(key.last_used_at)}${Array.isArray(key.tags) && key.tags.length ? ` · 标签 ${key.tags.map(tag => tag.name).join('、')}` : ''}`,
         run: async ctx => {
           const actions = [
             { label: '查看详情', value: 'detail' },
@@ -456,7 +467,8 @@ function keysPage(runtime) {
             await ctx.refresh();
           }
         },
-      }));
+      };
+      });
       const totalRequests = allKeys.reduce((sum, key) => sum + Number(key.total_requests || 0), 0);
       const totalTokens = allKeys.reduce((sum, key) => sum + Number(key.total_tokens || 0), 0);
       const totalCost = allKeys.reduce((sum, key) => sum + Number(key.total_cost || 0), 0);
@@ -471,6 +483,13 @@ function keysPage(runtime) {
           { title: '标签筛选', rows: tagRows },
           {
             title: 'API Key',
+            toolbar: true,
+            tableMinWidth: 128,
+            columns: [
+              { key: 'name', label: '名称', ratio: 0.12 }, { key: 'masked_key', label: 'Key 掩码', ratio: 0.13 }, { key: 'status', label: '状态', ratio: 0.1 },
+              { key: 'model', label: '当前模型', ratio: 0.14 }, { key: 'requests', label: '请求数', ratio: 0.09 }, { key: 'tokens', label: 'Token 消耗', ratio: 0.1 },
+              { key: 'points', label: '积分消耗', ratio: 0.1 }, { key: 'expires', label: '有效期', ratio: 0.11 }, { key: 'actions', label: '操作', ratio: 0.11 },
+            ],
             description: `可搜索名称、模型、标签和成员；共享 Key 的原始值受权限限制。显示 ${keys.length}/${allKeys.length}${activeTag ? ` · 标签 ${tags.find(tag => String(tag.id) === String(activeTag))?.name || activeTag}` : ''}${keySearch ? ` · 搜索 ${keySearch}` : ''}`,
             cards: [
               { label: '总数', value: allKeys.length, detail: '当前账号可见' },
@@ -487,9 +506,9 @@ function keysPage(runtime) {
           },
         ],
         actions: [
-          { label: keySearch ? '清除 Key 搜索' : '搜索 API Key', run: async ctx => { runtime.apiKeySearch = keySearch ? '' : String(await ctx.ask('搜索 Key 名称、模型、标签或成员', { defaultValue: runtime.apiKeySearch || '' }) || '').trim(); await ctx.refresh(); } },
+          { label: keySearch ? '清除 Key 搜索' : '搜索 API Key', toolbar: true, run: async ctx => { runtime.apiKeySearch = keySearch ? '' : String(await ctx.ask('搜索 Key 名称、模型、标签或成员', { defaultValue: runtime.apiKeySearch || '' }) || '').trim(); await ctx.refresh(); } },
           { label: '新建/编辑 Key 标签', run: async ctx => { const choice = await ctx.choose('API Key 标签管理', [{ label: '新建标签', value: 'create' }, ...tags.map(tag => ({ label: `编辑 ${tag.name}`, value: `edit:${tag.id}` })), ...tags.map(tag => ({ label: `删除 ${tag.name}`, value: `delete:${tag.id}` }))]); if (!choice) return; if (choice === 'create') { const values = await ctx.form('新建 Key 标签', [{ name: 'name', label: '名称' }, { name: 'color', label: '颜色', value: '#3b82f6' }]); if (!values || !String(values.name || '').trim()) return; await runtime.client.post('/api/user/key-tags', values); ctx.notify('标签已创建。'); await ctx.refresh(); return; } const [action, id] = choice.split(':'); const tag = tags.find(item => String(item.id) === id); if (action === 'edit') { const values = await ctx.form('编辑 Key 标签', [{ name: 'name', label: '名称', value: tag.name }, { name: 'color', label: '颜色', value: tag.color || '#3b82f6' }]); if (!values) return; await runtime.client.put(`/api/user/key-tags/${id}`, values); ctx.notify('标签已更新。'); await ctx.refresh(); } if (action === 'delete') { if (!await ctx.confirm('删除 Key 标签', `删除「${tag.name}」？关联的 Key 标签会一起移除。`)) return; await runtime.client.delete(`/api/user/key-tags/${id}`); ctx.notify('标签已删除。'); runtime.apiKeyTagFilter = ''; await ctx.refresh(); } } },
-          { label: '新建 API Key', run: async ctx => {
+          { label: '新建 API Key', toolbar: true, run: async ctx => {
             const values = await ctx.form('新建 API Key', [
               { name: 'name', label: '名称', value: 'CrewRouter CLI' },
               { name: 'expiresIn', label: '有效小时数（留空永久）', value: '' },
