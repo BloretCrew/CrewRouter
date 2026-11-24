@@ -13530,8 +13530,6 @@ ${extractorBody}
     const harnessMeta = isHarnessMode ? this._usageRequestSourceMeta(bindTarget) : null;
     const harnessBinding = isHarnessMode ? this._getKeyHarnessBinding(key, bindTarget) : null;
 
-    const requestBindingPanel = this._renderLibraryRequestModelBindings(key);
-
     // Harness 绑定模式：引导用户点选模型，同时保留独立的请求名映射管理。
     if (isHarnessMode) {
       const boundName = harnessBinding?.name || '';
@@ -13550,8 +13548,7 @@ ${extractorBody}
             <span class="binding-arrow" aria-hidden="true"><span data-icon="arrow-right" aria-hidden="true"></span></span>
             ${item(t('模型'), boundName ? `<span class="binding-model-name">${escapeHtml(boundName)}</span>` : `<span class="binding-model-unset">${t('跟随默认 · 点击下方模型单独绑定')}</span>`)}
           </div>
-          <div class="binding-hint">点击列表中的模型，仅影响 ${escapeHtml(harnessMeta.label)}；请求名映射可单独设置，不改变默认模型绑定。</div>
-          ${requestBindingPanel}
+          <div class="binding-hint">点击列表中的模型，仅影响 ${escapeHtml(harnessMeta.label)}；请求名映射可在当前 Key 菜单中管理。</div>
         </div>`);
       this._renderLibraryStickyKeyBtn();
       return;
@@ -13590,7 +13587,6 @@ ${extractorBody}
           </div>
           ${keySwitchRow}
           ${harnessChips}
-          ${requestBindingPanel}
           <div class="binding-hint">在下方列表中点击一个模型即可绑定 · 再次点击 Key 可打开工具菜单</div>
         </div>`);
       this._renderLibraryKeySelector();
@@ -13619,7 +13615,6 @@ ${extractorBody}
         ${uptimeHtml}
         ${keySwitchRow}
         ${harnessChips}
-        ${requestBindingPanel}
       </div>`);
 
     this._renderLibraryKeySelector();
@@ -13746,6 +13741,7 @@ ${extractorBody}
 
     const menu = this._ensureLibraryKeyBubbleEl();
     const defaultModel = key.current_model_name || t('未绑定');
+    const requestMappingCount = Array.isArray(key.request_model_bindings) ? key.request_model_bindings.length : 0;
     const harnessItems = this._libraryHarnessList().map(h => {
       const bound = this._getKeyHarnessBinding(key, h.id);
       const modelText = bound?.name || t('跟随默认');
@@ -13773,6 +13769,13 @@ ${extractorBody}
         <span class="library-key-bubble-item-main">默认绑定</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
       </button>
+      <div class="library-key-bubble-section-label">按请求名映射</div>
+      <button type="button" class="library-key-bubble-item" role="menuitem"
+              onclick="app.onLibraryKeyBubbleRequestModelBindings()">
+        <span class="library-key-bubble-item-main">${escapeHtml(t('配置请求模型名'))}</span>
+        <span class="library-key-bubble-item-meta">${escapeHtml(t('{count} 条规则', { count: requestMappingCount }))}</span>
+      </button>
+      <div class="expand-dropdown-divider"></div>
       <div class="library-key-bubble-section-label">按工具绑定</div>
       ${harnessItems}
       <div class="expand-dropdown-divider"></div>
@@ -13875,6 +13878,11 @@ ${extractorBody}
   onLibraryKeyBubbleHarness(harnessId) {
     this.closeLibraryKeyBubble();
     this.enterLibraryHarnessBindMode(harnessId);
+  }
+
+  onLibraryKeyBubbleRequestModelBindings() {
+    this.closeLibraryKeyBubble();
+    this.openLibraryRequestModelBindingDialog();
   }
 
   onLibraryKeyBubbleExportConfig() {
@@ -14370,18 +14378,6 @@ ${extractorBody}
       console.error(t('[模型库] 设置模型异常:'), error);
       this.showToast(t('设置失败'), 'error');
     }
-  }
-
-  _renderLibraryRequestModelBindings(key) {
-    const requestBindings = Array.isArray(key?.request_model_bindings) ? key.request_model_bindings : [];
-    return `<section class="ml-request-bindings" aria-label="${escapeHtml(t('请求模型名映射'))}">
-      <div class="ml-request-bindings-heading"><strong>${escapeHtml(t('请求模型名映射'))}</strong><span>${escapeHtml(t('可按所有 Harness 通用，或为指定 Harness 单独设置'))}</span></div>
-      <div class="ml-request-bindings-list">${requestBindings.map(binding => {
-        const source = binding.harness ? this._usageRequestSourceMeta(binding.harness).label : t('所有 Harness');
-        return `<div class="ml-request-binding-row"><span class="ml-request-binding-name">${escapeHtml(binding.request_model_name)}</span><span class="ml-request-binding-scope">${escapeHtml(source)}</span><span class="ml-request-binding-target">${escapeHtml(binding.name || binding.model_id)}</span><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.openLibraryRequestModelBindingDialog('${this._jsString(binding.request_model_name)}','${this._jsString(binding.harness || '')}')">${escapeHtml(t('编辑'))}</button><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.removeLibraryRequestModelBinding('${this._jsString(binding.request_model_name)}','${this._jsString(binding.harness || '')}')">${escapeHtml(t('移除'))}</button></div>`;
-      }).join('') || `<span class="ml-request-bindings-empty">${escapeHtml(t('尚未配置请求名映射'))}</span>`}</div>
-      <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.openLibraryRequestModelBindingDialog()">${escapeHtml(t('添加映射'))}</button>
-    </section>`;
   }
 
   async openLibraryRequestModelBindingDialog(editRequestModelName = '', editHarness = '') {

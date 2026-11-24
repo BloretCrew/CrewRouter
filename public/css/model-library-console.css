@@ -51,18 +51,18 @@
 }
 
 /* ---------- API Key 请求名映射：内容置于晶液纸面，控件复用全局玻璃皮肤 ---------- */
-#modelLibraryPage .ml-request-bindings { display: flex; flex-direction: column; gap: 10px; margin-block-start: 10px; padding: 14px 16px; border-radius: var(--lg-radius-group); background: var(--lg-group-bg); }
-#modelLibraryPage .ml-request-bindings-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; color: var(--lg-fg); font-size: 13px; }
-#modelLibraryPage .ml-request-bindings-heading span, #modelLibraryPage .ml-request-bindings-empty { color: var(--lg-fg-secondary); font-size: 12px; }
-#modelLibraryPage .ml-request-bindings-list { display: flex; flex-direction: column; gap: 6px; }
-#modelLibraryPage .ml-request-binding-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(100px, .8fr) minmax(100px, 1fr) auto auto; align-items: center; gap: 8px; color: var(--lg-fg); font-size: 12.5px; }
-#modelLibraryPage .ml-request-binding-scope { color: var(--lg-fg-secondary); }
-#modelLibraryPage .ml-request-binding-target { font-weight: 600; }
-#modelLibraryPage .ml-request-binding-form { display: grid; gap: 14px; }
-#modelLibraryPage .ml-request-binding-form label { display: grid; gap: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; }
-#modelLibraryPage .ml-request-binding-form :is(blora-select, input.blora-input, datalist) { inline-size: 100%; min-inline-size: 0; box-sizing: border-box; }
-#modelLibraryPage .ml-request-binding-form input.blora-input { min-block-size: var(--lg-control-h); padding-inline: 12px; }
-@media (max-width: 640px) { #modelLibraryPage .ml-request-binding-row { grid-template-columns: minmax(0, 1fr) auto; } #modelLibraryPage .ml-request-binding-scope, #modelLibraryPage .ml-request-binding-target { grid-column: 1; } }
+#libraryKeyBubbleMenu .ml-request-binding-form { display: grid; gap: 14px; }
+#libraryKeyBubbleMenu .ml-request-binding-form label { display: grid; gap: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; }
+#libraryKeyBubbleMenu .ml-request-binding-form :is(blora-select, input.blora-input, datalist) { inline-size: 100%; min-inline-size: 0; box-sizing: border-box; }
+#libraryKeyBubbleMenu .ml-request-binding-form input.blora-input { min-block-size: var(--lg-control-h); padding-inline: 12px; }
+#libraryKeyBubbleMenu .ml-request-bindings { display: grid; gap: 8px; padding: 4px; }
+#libraryKeyBubbleMenu .ml-request-bindings-heading { color: var(--lg-fg-secondary); font-size: 12px; }
+#libraryKeyBubbleMenu .ml-request-bindings-list { display: grid; gap: 6px; max-block-size: min(38vh, 280px); overflow: auto; }
+#libraryKeyBubbleMenu .ml-request-binding-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px; padding: 7px 8px; border-radius: var(--lg-radius-item); background: var(--lg-group-bg); color: var(--lg-fg); font-size: 12px; }
+#libraryKeyBubbleMenu .ml-request-binding-scope { grid-column: 1; color: var(--lg-fg-secondary); font-size: 11px; }
+#libraryKeyBubbleMenu .ml-request-binding-target { grid-column: 1; overflow: hidden; color: var(--lg-fg-secondary); text-overflow: ellipsis; }
+#libraryKeyBubbleMenu .ml-request-bindings-empty { padding: 7px 8px; color: var(--lg-fg-secondary); font-size: 12px; }
+#libraryKeyBubbleMenu .ml-request-bindings-add { justify-self: start; }
 
 /* ---------- 2. 绑定卡：本页主焦点，真实玻璃 ---------- */
 #modelLibraryPage .model-library-binding-bar {
