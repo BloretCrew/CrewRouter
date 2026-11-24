@@ -480,6 +480,14 @@ function createAdminPages(runtime) {
       },
     }),
     adminOnly({
+      id: 'admin-policy-clients', label: '客户端管控', description: '查看近 24 小时客户端请求、Token 与策略命中统计。网页端可创建拦截策略；此操作会立即影响请求。',
+      async load(api) {
+        const data = await api('/api/admin/policy-clients', { query: { range: '24h' } });
+        const items = array(data && data.items);
+        return { sections: [{ title: '客户端统计', rows: items.length ? items.map(item => ({ label: display(item.label, item.request_source, `${item.requests || 0} 请求`, `${item.tokens || 0} tokens`), detail: display(`${item.hits || 0} 次命中`, `${item.blocked || 0} 次拦截`) })) : [{ label: '暂无客户端数据。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }, { label: '禁止客户端策略', run: async ctx => { await ctx.show('高影响操作未开放', '创建客户端禁止规则会立即阻断匹配客户端的请求。为避免误封，此操作请在网页管理后台确认作用域后完成。'); } }] };
+      },
+    }),
+    adminOnly({
       id: 'admin-policy-notifications', label: '策略通知', description: '全局通知渠道和策略告警规则。测试渠道会向配置的外部目标发送通知。',
       async load(api) {
         if (runtime.client.isAdmin !== true) return { sections: [{ title: '策略通知', rows: [{ label: '仅全局管理员可管理通知渠道与告警规则。' }] }], actions: [] };
@@ -505,6 +513,47 @@ function createAdminPages(runtime) {
             { name: 'to', label: '邮件收件人（email 类型）' }, { name: 'chat_id', label: 'Telegram chat_id' }, { name: 'host', label: 'Syslog host' }, { name: 'port', label: 'Syslog 端口', value: '514' },
           ]); if (!values || !String(values.name || '').trim()) return; const config = {}; for (const key of ['url', 'secret', 'to', 'chat_id']) if (values[key]) config[key] = values[key]; if (values.host) { config.host = values.host; config.port = Number(values.port) || 514; } if (!await ctx.confirm('创建通知渠道', `${values.name} · ${values.type} · ${values.min_severity}\nSecret 不会回显；URL 需通过服务端 SSRF 校验。`)) return; await api('/api/admin/policy-channels', { method: 'POST', body: { name: values.name, type: values.type, min_severity: values.min_severity, config } }); ctx.notify('通知渠道已创建。'); await ctx.refresh(); } },
           { label: '新建告警规则', run: async ctx => { const values = await ctx.form('新建告警规则', [{ name: 'name', label: '名称', value: '策略告警' }, { name: 'event_type', label: '事件', value: 'hit', options: ['hit', 'block', 'suspend', 'approval', 'appeal', '*'] }, { name: 'severity', label: '级别', value: 'warning', options: ['info', 'warning', 'critical'] }, { name: 'silence_window_seconds', label: '静默秒数', value: '300' }, { name: 'channel_ids', label: `渠道 ID（逗号分隔，可选：${channels.map(channel => `${channel.id}=${channel.name}`).join(', ')}）` }]); if (!values) return; const channelIds = String(values.channel_ids || '').split(',').map(value => Number(value.trim())).filter(Number.isInteger); if (!await ctx.confirm('创建告警规则', `${values.name}\n事件 ${values.event_type} · ${values.severity}\n渠道 ${channelIds.join(', ') || '无'}`)) return; await api('/api/admin/policy-alert-rules', { method: 'POST', body: { name: values.name, event_type: values.event_type, severity: values.severity, silence_window_seconds: Number(values.silence_window_seconds) || 300, channel_ids: channelIds } }); await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
+      id: 'admin-policy-settings', label: '策略设置', description: '管理执行模式、失败模式、命中保留与通知偏好。紧急停止需在网页端操作。',
+      async load(api) {
+        const data = await api('/api/admin/policy-settings');
+        const settings = data.global || {};
+        const team = data.team || {};
+        return { sections: [
+          { title: '策略执行', rows: [
+            { label: `作用范围：${runtime.client.isAdmin ? '全局' : `Team #${team.team_id || '未知'}`}` },
+            { label: `执行模式：${settings.enforcement_mode || 'enforce'}` },
+            { label: `失败模式：${settings.fail_mode || 'open'}` },
+            { label: `命中保留：${settings.hit_retention_days || 90} 天` },
+            { label: `默认时区：${settings.default_timezone || 'Asia/Shanghai'}` },
+            { label: `白名单维度：${array(settings.allowlist_dimensions).join(', ') || '无'}` },
+            { label: `通知管理员：${settings.notify_admins !== false ? '开启' : '关闭'} · 通知成员：${settings.notify_member !== false ? '开启' : '关闭'}` },
+            { label: `紧急停止：${settings.kill_switch ? '已启用（所有请求放行）' : '未启用'}` },
+          ] },
+        ], actions: [
+          { label: '编辑策略设置', run: async ctx => {
+            const dimensions = array(settings.allowlist_dimensions);
+            const values = await ctx.form('编辑策略设置', [
+              { name: 'enforcement_mode', label: '执行模式', value: settings.enforcement_mode || 'enforce', options: ['enforce', 'shadow'] },
+              { name: 'fail_mode', label: '失败模式', value: settings.fail_mode || 'open', options: ['open', 'closed'] },
+              { name: 'hit_retention_days', label: '命中保留天数（1-3650）', value: String(settings.hit_retention_days || 90) },
+              { name: 'default_timezone', label: '默认时区', value: settings.default_timezone || 'Asia/Shanghai' },
+              ...['clients', 'models', 'providers', 'ips', 'protocols'].map(value => ({ name: `dimension_${value}`, label: `白名单维度：${value}`, type: 'boolean', value: dimensions.includes(value) })),
+              { name: 'notify_admins', label: '命中时通知管理员', type: 'boolean', value: settings.notify_admins !== false },
+              { name: 'notify_member', label: '命中时通知被拦截成员', type: 'boolean', value: settings.notify_member !== false },
+            ], { description: '启用白名单维度后，未匹配 allow 规则的请求会被拦截；请谨慎修改。' });
+            if (!values) return;
+            const retention = Number(values.hit_retention_days);
+            if (!Number.isInteger(retention) || retention < 1 || retention > 3650) { await ctx.show('保留天数无效', '请输入 1 到 3650 的整数。'); return; }
+            const allowlist_dimensions = ['clients', 'models', 'providers', 'ips', 'protocols'].filter(value => values[`dimension_${value}`]);
+            const body = { team_id: runtime.client.isAdmin === true ? null : (team.team_id ?? null), enforcement_mode: values.enforcement_mode, fail_mode: values.fail_mode, hit_retention_days: retention, default_timezone: values.default_timezone || 'Asia/Shanghai', allowlist_dimensions, notify_admins: values.notify_admins, notify_member: values.notify_member };
+            if (!await ctx.confirm('保存策略设置', `范围：${body.team_id === null ? '全局' : `Team #${body.team_id}`}\n执行 ${body.enforcement_mode} · 失败 ${body.fail_mode}\n白名单维度：${allowlist_dimensions.join(', ') || '无'}\n注意：未匹配 allow 的请求可能被拦截。`)) return;
+            await api('/api/admin/policy-settings', { method: 'PUT', body }); ctx.notify('策略设置已保存。'); await ctx.refresh();
+          } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
