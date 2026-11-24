@@ -29,6 +29,20 @@ test('admin error logs pass user/model/provider/status/date filters to API', asy
   assert.ok(data.actions.some(action => action.label === '筛选供应商'));
 });
 
+test('invite list is read-only and revocation requires explicit confirmation', async () => {
+  const calls = [];
+  const api = async (path, options = {}) => { calls.push({ path, options }); return [{ id: 4, status: 'active', team_id: 2, team_name: 'Team A', used_count: 1, max_uses: 3, expires_at: '2026-12-01', created_by_name: 'admin' }]; };
+  const data = await pageById('admin-invites').load(api);
+  assert.equal(calls[0].path, '/api/auth-invites');
+  const row = data.sections[0].rows[0];
+  await row.run({ show: async () => {}, confirm: async () => false });
+  assert.equal(calls.some(call => call.options.method === 'POST'), false);
+  await row.run({ show: async () => {}, confirm: async () => true, notify() {}, refresh: async () => {} });
+  const revoke = calls.find(call => call.options.method === 'POST');
+  assert.equal(revoke.path, '/api/auth-invites/4/revoke');
+  assert.deepEqual(revoke.options.body, {});
+});
+
 test('OAuth clients list is read-only and displays only a redacted secret hint', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { clients: [{ client_id: 'client-1', name: 'Desktop', type: 'confidential', enabled: true, scopes: ['profile'], redirect_uris: ['https://app.example/callback'], has_secret: true, secret_hint: 'abc123', secret_hash: 'must-not-appear', editable: true, builtin: false }], scopes: [{ scope: 'profile', description: 'Profile access' }] }; };

@@ -427,6 +427,17 @@ function createAdminPages(runtime) {
       },
     },
     adminOnly({
+      id: 'admin-invites', label: '邀请链接', description: '邀请列表不含原始 token；新建一次性凭证请在网页端完成。',
+      async load(api) {
+        const invites = array(await api('/api/auth-invites'));
+        const rows = invites.map(invite => ({ label: display(`#${invite.id}`, invite.team_name || (invite.team_id ? `Team ${invite.team_id}` : '默认 Team'), invite.status, `${invite.used_count || 0}/${invite.max_uses || 1} 次`), detail: display(`创建 ${formatTime(invite.created_at)}`, `到期 ${formatTime(invite.expires_at)}`, invite.created_by_name && `创建者 ${invite.created_by_name}`, invite.used_by_name && `使用者 ${invite.used_by_name}`), run: async ctx => { await ctx.show(`邀请 #${invite.id}`, JSON.stringify(invite, null, 2)); if (invite.status !== 'active') return; if (!await ctx.confirm('撤销邀请链接', `撤销 #${invite.id}？该邀请将立即无法注册，且撤销不可恢复。`)) return; await api(`/api/auth-invites/${encodeURIComponent(invite.id)}/revoke`, { method: 'POST', body: {} }); ctx.notify('邀请链接已撤销。'); await ctx.refresh(); } }));
+        return { sections: [{ title: '邀请链接', description: `${invites.length} 条 · 原始邀请 token 不可再次读取`, rows: rows.length ? rows : [{ label: '暂无邀请链接。' }] }], actions: [
+          { label: '生成邀请链接', run: async ctx => await ctx.show('邀请链接生成', '生成操作会创建可用于注册的一次性凭证并仅在当次响应显示。为降低误发风险，请在网页管理后台生成。') },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
       id: 'admin-oauth-clients', label: 'OAuth 客户端', description: '管理客户端只读目录。Secret 不回显；创建、轮换和删除请在网页端完成。',
       async load(api) {
         const payload = await api('/api/admin/oauth-clients');
