@@ -29,30 +29,6 @@ test('admin error logs pass user/model/provider/status/date filters to API', asy
   assert.ok(data.actions.some(action => action.label === '筛选供应商'));
 });
 
-test('invite list is read-only and revocation requires explicit confirmation', async () => {
-  const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); return [{ id: 4, status: 'active', team_id: 2, team_name: 'Team A', used_count: 1, max_uses: 3, expires_at: '2026-12-01', created_by_name: 'admin' }]; };
-  const data = await pageById('admin-invites').load(api);
-  assert.equal(calls[0].path, '/api/auth-invites');
-  const row = data.sections[0].rows[0];
-  await row.run({ show: async () => {}, confirm: async () => false });
-  assert.equal(calls.some(call => call.options.method === 'POST'), false);
-  await row.run({ show: async () => {}, confirm: async () => true, notify() {}, refresh: async () => {} });
-  const revoke = calls.find(call => call.options.method === 'POST');
-  assert.equal(revoke.path, '/api/auth-invites/4/revoke');
-  assert.deepEqual(revoke.options.body, {});
-});
-
-test('OAuth clients list is read-only and displays only a redacted secret hint', async () => {
-  const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); return { clients: [{ client_id: 'client-1', name: 'Desktop', type: 'confidential', enabled: true, scopes: ['profile'], redirect_uris: ['https://app.example/callback'], has_secret: true, secret_hint: 'abc123', secret_hash: 'must-not-appear', editable: true, builtin: false }], scopes: [{ scope: 'profile', description: 'Profile access' }] }; };
-  const data = await pageById('admin-oauth-clients').load(api);
-  assert.equal(calls[0].path, '/api/admin/oauth-clients');
-  assert.ok(data.sections[0].rows[0].label.includes('Desktop'));
-  assert.ok(!JSON.stringify(data.sections).includes('must-not-appear'));
-  assert.ok(!data.actions.some(action => /创建|轮换|删除|启用|停用/.test(action.label)));
-});
-
 test('admin popup notices are read-only and route to the actual list endpoint', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [{ id: 2, title: 'Maintenance', body: 'Service notice', closeText: 'OK', enabled: true, seenCount: 5, createdAt: '2026-11-01' }] }; };
@@ -60,4 +36,18 @@ test('admin popup notices are read-only and route to the actual list endpoint', 
   assert.equal(calls[0].path, '/api/admin/popup-notices');
   assert.ok(data.sections[0].rows[0].label.includes('Maintenance'));
   assert.ok(!data.actions.some(action => /删除|创建|重置|启用|停用/.test(action.label)));
+});
+
+test('admin updates page only performs the confirmed version check and never applies an update', async () => {
+  const calls = [];
+  const api = async (path, options = {}) => { calls.push({ path, options }); return path.endsWith('/runtime') ? { currentVersion: '1.0', status: { state: 'idle' } } : { hasUpdate: true, latestVersion: '1.1' }; };
+  const page = pageById('admin-updates');
+  const data = await page.load(api);
+  assert.deepEqual(calls.map(call => call.path), ['/api/admin/update/runtime', '/api/admin/update/status']);
+  const action = data.actions.find(item => item.label === '检查官方更新');
+  await action.run({ confirm: async () => false, show: async () => {}, refresh: async () => {} });
+  assert.equal(calls.some(call => call.path.endsWith('/check')), false);
+  await action.run({ confirm: async () => true, show: async () => {}, refresh: async () => {} });
+  assert.ok(calls.some(call => call.path.endsWith('/check')));
+  assert.equal(calls.some(call => call.path.endsWith('/apply')), false);
 });

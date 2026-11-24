@@ -427,6 +427,21 @@ function createAdminPages(runtime) {
       },
     },
     adminOnly({
+      id: 'admin-updates', label: '版本与更新', description: '检查官方版本与更新任务状态；TUI 不会下载安装或重启服务。',
+      async load(api) {
+        const [runtimeResult, statusResult] = await Promise.allSettled([api('/api/admin/update/runtime'), api('/api/admin/update/status')]);
+        const runtimeData = runtimeResult.status === 'fulfilled' ? runtimeResult.value : {};
+        const status = statusResult.status === 'fulfilled' ? statusResult.value : runtimeData.status || {};
+        return { sections: [
+          { title: '当前版本与运行环境', rows: Object.entries(runtimeData).filter(([key]) => !['status', 'versionUrl', 'packageUrl'].includes(key)).map(([key, value]) => ({ label: `${key}：${typeof value === 'object' ? JSON.stringify(value) : value}` })) },
+          { title: '更新任务状态', rows: Object.entries(status || {}).map(([key, value]) => ({ label: `${key}：${typeof value === 'object' ? JSON.stringify(value) : value}` })) },
+        ], actions: [
+          { label: '检查官方更新', run: async ctx => { if (!await ctx.confirm('检查官方版本', '将向配置的官方版本服务发起只读网络请求，不会自动安装或重启。继续？')) return; const result = await api('/api/admin/update/check'); await ctx.show('版本检查结果', JSON.stringify(result, null, 2)); await ctx.refresh(); } },
+          { label: '刷新状态', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
       id: 'admin-invites', label: '邀请链接', description: '邀请列表不含原始 token；新建一次性凭证请在网页端完成。',
       async load(api) {
         const invites = array(await api('/api/auth-invites'));
