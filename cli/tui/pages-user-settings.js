@@ -2,6 +2,24 @@
 
 const { text } = require('./pages-common');
 
+function securitySettingsPage(runtime) {
+  return {
+    id: 'security-settings', label: '安全设置', description: '双重验证需要二维码/密码挑战；Passkey 注册依赖浏览器 WebAuthn。',
+    async load(api) {
+      const result = await Promise.allSettled([api('/api/2fa/status')]);
+      const status = result[0].status === 'fulfilled' ? result[0].value : {};
+      return { sections: [{ title: '双重验证', rows: [
+        { label: `状态：${status.enabled ? '已启用' : '未启用'}` },
+        ...(status.enabled ? [{ label: `启用时间：${text(status.enabledAt || status.enabled_at)}` }] : []),
+        ...(result[0].status === 'rejected' ? [{ label: result[0].reason.message || '双重验证状态暂不可用' }] : []),
+      ] }, { title: 'Passkey', rows: [{ label: 'Passkey 注册和验证需要浏览器 WebAuthn；请从网页用户设置管理。' }] }], actions: [
+        { label: '在浏览器打开安全设置', run: async ctx => { const url = `${runtime.client.baseUrl}/console#settings`; const opened = require('../lib/context').openBrowser(url); ctx.notify(opened ? '已在浏览器打开安全设置。' : `请在浏览器访问：${url}`); } },
+        { label: '刷新状态', run: ctx => ctx.refresh() },
+      ] };
+    },
+  };
+}
+
 function notificationSettingsPage(runtime) {
   return {
     id: 'notification-settings',
@@ -72,4 +90,4 @@ function notificationSettingsPage(runtime) {
   };
 }
 
-module.exports = { notificationSettingsPage };
+module.exports = { notificationSettingsPage, securitySettingsPage };

@@ -4,7 +4,7 @@ const { overviewPage, servicePage, accountPage } = require('./pages-core');
 const { providersPage, providerTagsPage, modelsPage, keysPage } = require('./pages-resources');
 const { usagePage, sessionsPage } = require('./pages-data');
 const { createAdminPages } = require('./pages-admin');
-const { notificationSettingsPage } = require('./pages-user-settings');
+const { notificationSettingsPage, securitySettingsPage } = require('./pages-user-settings');
 
 const WEB_PAGE_MAP = Object.freeze([
   { area: 'console', web: 'home', cli: 'model-library', kind: 'redirect' },
@@ -27,6 +27,7 @@ const WEB_PAGE_MAP = Object.freeze([
   { area: 'console', web: 'bloraAgent', cli: 'blora-agent' },
   { area: 'console', web: 'policyCenter', cli: 'policy-center' },
   { area: 'console', web: 'settings', cli: 'settings' },
+  { area: 'console', web: 'securitySettings', cli: 'security-settings', kind: 'settings-category' },
   { area: 'console', web: 'notificationSettings', cli: 'notification-settings', kind: 'settings-category' },
   { area: 'admin', web: 'adminUsers', cli: 'admin-users' },
   { area: 'admin', web: 'adminAuditLogs', cli: 'admin-audit-logs' },
@@ -65,6 +66,7 @@ function buildPages(runtime) {
     adminById.get('policy-center'),
     adminById.get('settings'),
     notificationSettingsPage(runtime),
+    securitySettingsPage(runtime),
     adminById.get('admin-users'),
     adminById.get('admin-policies'),
     adminById.get('admin-policy-settings'),
@@ -94,7 +96,7 @@ function buildPages(runtime) {
 const navGroups = [
   { id: 'console', label: '控制台', pages: ['model-library', 'providers', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings'] },
   { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-policy-settings', 'admin-policy-members', 'admin-policy-approvals', 'admin-policy-clients', 'admin-policy-notifications', 'admin-model-library', 'admin-models', 'admin-teams', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings', 'admin-popups', 'admin-retention'] },
-  { id: 'tools', label: '终端工具', pages: ['provider-tags', 'models', 'account', 'overview'] },
+  { id: 'tools', label: '终端工具与设置子页', pages: ['provider-tags', 'models', 'account', 'overview', 'security-settings'] },
   { id: 'cli', label: 'CLI 服务', pages: ['service'] },
 ];
 
