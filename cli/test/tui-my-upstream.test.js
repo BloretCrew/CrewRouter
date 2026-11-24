@@ -38,6 +38,29 @@ test('my provider edit confirms and does not overwrite an absent API key', async
   assert.equal(Object.hasOwn(calls[0].body, 'api_key'), false);
 });
 
+test('my Team model tab clears searches and exposes web-equivalent bulk enable controls', async () => {
+  const posts = [];
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [] : [
+      { id: 'm1', name: 'Model One', alias: 'One', provider_name: 'Personal', enabled: false },
+      { id: 'm2', name: 'Model Two', alias: 'Two', provider_name: 'Personal', enabled: false },
+    ],
+    post: async (path, body) => { posts.push({ path, body }); return { updated: body.modelIds.length }; },
+  });
+  runtime.myUpstreamProviderSearch = 'persisted provider search';
+  runtime.myUpstreamModelSearch = 'persisted model search';
+  runtime.myUpstreamSelectedModels = ['m1'];
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  page.onTabChange({ id: 'models' });
+  assert.equal(runtime.myUpstreamProviderSearch, '');
+  assert.equal(runtime.myUpstreamModelSearch, '');
+  assert.deepEqual(runtime.myUpstreamSelectedModels, []);
+  const data = await page.load();
+  const choices = ['m1', '__done__', 'enable'];
+  await data.actions.find(action => action.label === '批量管理个人模型').run({ choose: async () => choices.shift(), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(posts, [{ path: '/api/user/my-team-models/batch-update', body: { modelIds: ['m1'], updates: { enabled: true } } }]);
+});
+
 test('personal Team model edit sends the complete web form and delete warns about cascades', async () => {
   const calls = [];
   const model = { id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Personal', series: 'S', enabled: true, description: 'old', input_price_per_1k_tokens: 1, output_price_per_1k_tokens: 2, cached_output_price_per_1k_tokens: 3, reference_input_price_per_1k_tokens: 4, reference_output_price_per_1k_tokens: 5, rate_limit_rpm: 10, rate_limit_tpm: 20, model_multiplier: 1.2, completion_multiplier: 1.3, thinking_model_id: '', non_thinking_model_id: '' };
