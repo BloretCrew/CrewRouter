@@ -70,7 +70,7 @@ Management responses are returned as the parsed JSON payload:
 
 ```ts
 const response = await client.keys.list();
-response.data;        // parsed JSON
+response.data;        // parsed JSON; e.g. ApiKeyListItem[] for client.keys.list()
 response.status;      // 200
 response.headers;     // Headers
 response.requestId;   // X-CrewRouter-Request-Id
@@ -78,9 +78,15 @@ response.raw;         // undici Response
 ```
 
 The management API does not use a single response envelope. Some endpoints return
-an object, some return an array, and some return `{ success: true }`. The SDK does
-not invent a shape; core wrappers are typed where the contract is stable and
-`call` returns the raw payload. Use `response.data` as the source of truth.
+an object, some return an array, and some return `{ success: true }`. The
+TypeScript client supplies convenience types for API-key lists, daily usage and
+balance; these are client-maintained shapes, not yet generated from authoritative
+OpenAPI response schemas. In Python and Go, decode the parsed response into the
+exported `ApiKeyListItem`, `DailyUsageItem` or `UserBalance` types as needed.
+Unknown or less stable operations remain available through `call` and should be
+treated as untyped until their server schemas are formally defined. Always treat
+`key_value` as nullable: the server redacts it unless the caller has `keys.secret`
+and owns the key.
 
 ## Pagination and filters
 

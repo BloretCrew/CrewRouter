@@ -60,6 +60,10 @@ if (beta.jobs['npm-beta-publish'].steps.find(step => step.uses === 'actions/down
 if (beta.jobs['github-release-manual'].needs.includes('npm-beta-publish') !== true) throw new Error('manual GitHub release must await npm publish if publish was explicitly selected');
 const electronGate = beta.jobs.gate.steps.find(step => step.name === 'Desktop behavior, sandboxed launcher and syntax');
 if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-sandbox') || !electronGate.run.includes('chmod 4755 node_modules/electron/dist/chrome-sandbox') || electronGate.run.includes('--no-sandbox')) throw new Error('Electron launcher gate must retain sandbox and configure the isolated SUID helper');
+const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
+for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {
+  if (!embeddedSdkDocs.includes(required)) throw new Error(`Embedded SDK release boundary omits ${required}`);
+}
 const sdkVersioning = await readFile('docs/sdk/versioning.md', 'utf8');
 for (const required of ['1.0', 'contractVersion', 'Deprecation', 'support matrix']) {
   if (!sdkVersioning.includes(required)) throw new Error(`SDK versioning policy omits ${required}`);
