@@ -99,10 +99,12 @@ function createAdminPages(runtime) {
       async load(api) {
         const page = runtime.userAuditPage || 1;
         const action = runtime.userAuditAction || '';
-        const data = await api('/api/user/audit-logs', { query: { page, limit: 50, action } });
+        const resourceType = runtime.userAuditResourceType || '';
+        const data = await api('/api/user/audit-logs', { query: { page, limit: 50, action, resource_type: resourceType } });
         const items = array(data && data.items);
-        return { sections: [{ title: '操作日志', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · ${action || '全部操作'}`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.action, item.resource_type), detail: display(item.description, item.status, item.ip_address) })) }], actions: [
+        return { sections: [{ title: '操作日志', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · ${action || '全部操作'} · ${resourceType || '全部资源'}`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.action, item.resource_type), detail: display(item.description, item.status, item.ip_address) })) }], actions: [
           ...[['', '全部操作'], ['api_key', 'API Key'], ['cokey', 'Co-Key'], ['user', '用户'], ['auth', '认证'], ['provider', '供应商'], ['model', '模型']].map(([value, label]) => ({ label, run: async ctx => { runtime.userAuditAction = value; runtime.userAuditPage = 1; await ctx.refresh(); } })),
+          ...[['', '全部资源'], ['api_key', 'API Key'], ['user', '用户'], ['provider', '供应商'], ['model', '模型'], ['team', 'Team'], ['policy', '策略']].map(([value, label]) => ({ label: `资源：${label}`, run: async ctx => { runtime.userAuditResourceType = value; runtime.userAuditPage = 1; await ctx.refresh(); } })),
           { label: '上一页', run: async ctx => { runtime.userAuditPage = Math.max(1, page - 1); await ctx.refresh(); } },
           { label: '下一页', run: async ctx => { runtime.userAuditPage = page + 1; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
@@ -159,6 +161,8 @@ function createAdminPages(runtime) {
           { label: '筛选状态码', run: async ctx => { const value = await ctx.ask('HTTP 状态码（留空全部）', { defaultValue: filters.status_code || '' }); if (value !== null) { runtime.errorFilters = { ...filters, status_code: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
           { label: '筛选模型', run: async ctx => { const value = await ctx.ask('模型名称或 ID（留空全部）', { defaultValue: filters.model_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, model_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
           { label: '筛选用户', run: async ctx => { const value = await ctx.ask('用户名或用户 ID（留空全部）', { defaultValue: filters.user_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, user_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '筛选供应商', run: async ctx => { const value = await ctx.ask('供应商名称或 ID（留空全部）', { defaultValue: filters.provider_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, provider_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '设置日期范围', run: async ctx => { const values = await ctx.form('错误日志日期范围', [{ name: 'start_date', label: '开始日期（YYYY-MM-DD）', value: filters.start_date || '' }, { name: 'end_date', label: '结束日期（YYYY-MM-DD）', value: filters.end_date || '' }]); if (!values) return; runtime.errorFilters = { ...filters, start_date: values.start_date, end_date: values.end_date }; runtime.errorPage = 1; await ctx.refresh(); } },
           { label: '清除筛选', run: async ctx => { runtime.errorFilters = {}; runtime.errorPage = 1; await ctx.refresh(); } },
           { label: '上一页', run: async ctx => { runtime.errorPage = Math.max(1, page - 1); await ctx.refresh(); } },
           { label: '下一页', run: async ctx => { runtime.errorPage = page + 1; await ctx.refresh(); } },
