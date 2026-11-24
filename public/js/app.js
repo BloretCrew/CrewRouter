@@ -8695,10 +8695,6 @@ class ConsoleApp {
       if (generated.supported && bridge?.getClientConfigTarget && bridge?.writeClientConfig) {
         try { target = await bridge.getClientConfigTarget(tool); } catch { /* 旧版或受限 Desktop 保留手动配置。 */ }
       }
-      if (tool === 'claude_desktop' && !target?.supported) {
-        alert(t('Claude Desktop 原生配置需要在 CrewRouter Desktop 应用中写入。'));
-        return;
-      }
       const desktop = !!target?.supported;
       const hasShell = !!(generated.supported && generated.shell);
       this._desktopClientConfig = desktop ? { tool, baseUrl, apiKey, model } : null;

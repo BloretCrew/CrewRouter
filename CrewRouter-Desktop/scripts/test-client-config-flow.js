@@ -199,6 +199,8 @@ if (process.type === 'renderer') {
                 for (const file of files) {
                   fs.mkdirSync(path.dirname(file), { recursive: true });
                   if (file.endsWith('claude_desktop_config.json')) fs.writeFileSync(file, JSON.stringify({ preserve: true }));
+                  else if (file.endsWith(`${path.sep}_meta.json`)) fs.writeFileSync(file, JSON.stringify(JSON.parse('{"entries":[{"id":"existing-profile","name":"Existing"}],"marker":"preserve"}')));
+                  else if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify({ existingProfileField: 'preserve' }));
                 }
                 before = fs.readFileSync(target, 'utf8');
               } else {
