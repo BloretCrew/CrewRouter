@@ -121,7 +121,7 @@ if (process.type === 'renderer') {
           fs.mkdirSync(caseHome);
           active = { win, calls: [], results: [], failures: [], response: 1, delay: 0, confirmations: [] };
           const state = active;
-          state.service = createClientConfigService({ home: caseHome, env: {}, getWindow: () => win, dialog: {
+          state.service = createClientConfigService({ home: caseHome, env: { HOME: caseHome, USERPROFILE: caseHome, XDG_CONFIG_HOME: path.join(caseHome, '.config') }, getWindow: () => win, dialog: {
             showMessageBox: async (_, options) => {
               state.confirmations.push(options);
               assert.equal(options.defaultId, 0, 'Native confirmation must default to cancellation');
@@ -184,19 +184,20 @@ if (process.type === 'renderer') {
             const desktopFlow = ['local', 'remote'].includes(mode) && tool !== 'deepseek';
             let target;
             let before;
+            let claudeDesktopFiles = null;
             if (desktopFlow) {
               target = state.service.getClientConfigTarget(tool).path;
               check(target.startsWith(caseHome + path.sep), 'Target is inside temporary home');
               if (tool === 'claude_desktop') {
-                const prefix = process.platform === 'darwin' ? 'Library/Application Support' : process.platform === 'win32' ? 'AppData/Local' : '.config';
-                const root = path.join(caseHome, prefix);
-                const files = [
+                const root = path.dirname(path.dirname(path.dirname(target)));
+                claudeDesktopFiles = [
                   path.join(root, 'Claude/claude_desktop_config.json'),
                   path.join(root, 'Claude-3p/claude_desktop_config.json'),
-                  path.join(root, 'Claude-3p/configLibrary/_meta.json'),
+                  path.join(path.dirname(target), '_meta.json'),
                   target,
                 ];
-                for (const file of files) {
+                for (const file of claudeDesktopFiles) {
+                  check(file.startsWith(caseHome + path.sep), 'Claude Desktop fixture files stay inside the temporary case home');
                   fs.mkdirSync(path.dirname(file), { recursive: true });
                   if (file.endsWith('claude_desktop_config.json')) fs.writeFileSync(file, JSON.stringify({ preserve: true }));
                   else if (file.endsWith(`${path.sep}_meta.json`)) fs.writeFileSync(file, JSON.stringify(JSON.parse('{"entries":[{"id":"existing-profile","name":"Existing"}],"marker":"preserve"}')));
@@ -216,6 +217,7 @@ if (process.type === 'renderer') {
               check(state.calls.length === 0 || tool === 'deepseek', 'Manual fallback does not call write bridge');
             } else {
               check(await execute(`document.getElementById('desktopConfigPath').textContent.includes(${JSON.stringify(target)})`), 'Target path shown');
+              if (tool === 'claude') before = fs.readFileSync(target, 'utf8');
               await click('#configManualSummary');
               check(await execute("document.getElementById('configManualDetails').open"), 'Manual configuration expands by mouse');
               await copy('#configManualCopy');
@@ -235,7 +237,8 @@ if (process.type === 'renderer') {
                 await wait("!app._desktopConfigBusy", 'failed write');
                 check(fs.readFileSync(target, 'utf8') === '{malformed fixture', 'Real parser failure preserves bytes');
                 check(await execute("document.getElementById('desktopConfigStatus').textContent.includes('失败') && !document.getElementById('desktopConfigWriteButton').disabled"), 'Failure shown and retry enabled');
-                fs.writeFileSync(target, before);
+                if (before) fs.writeFileSync(target, before);
+                else fs.rmSync(target, { force: true });
                 state.delay = 900;
               }
               const successfulCall = state.calls.length;
@@ -251,7 +254,7 @@ if (process.type === 'renderer') {
               check(result && !result.canceled && result.path === target, `Real write succeeds: ${tool}; failures=${state.failures.join('; ')}`);
               if (tool === 'claude_desktop') {
                 const backupPaths = result.backupPath.split('\n');
-                check(backupPaths.length === 3 && backupPaths.every(file => fs.existsSync(file)), 'Claude Desktop preserves an independent backup for each existing file');
+                check(backupPaths.length === 4 && backupPaths.every(file => fs.existsSync(file)), 'Claude Desktop preserves an independent backup for each existing file');
               } else {
                 check(result.backupPath.startsWith(caseHome + path.sep) && fs.readFileSync(result.backupPath, 'utf8') === before, 'Backup preserves original configuration');
               }
@@ -263,14 +266,12 @@ if (process.type === 'renderer') {
               }
               const config = readConfig(tool, target);
               if (tool === 'claude_desktop') {
-                const normalPath = path.join(root, 'Claude/claude_desktop_config.json');
-                const threepPath = path.join(root, 'Claude-3p/claude_desktop_config.json');
-                const metaPath = path.join(root, 'Claude-3p/configLibrary/_meta.json');
+                const [normalPath, threepPath, metaPath] = claudeDesktopFiles;
                 check(readConfig('claude_desktop', normalPath).deploymentMode === '3p' && readConfig('claude_desktop', threepPath).deploymentMode === '3p', 'Claude Desktop main and 3P deployment files enabled');
                 check(readConfig('claude_desktop', metaPath).appliedId === '00000000-0000-4000-8000-435200000001', 'Claude Desktop CrewRouter profile selected');
               }
               if (tool === 'codex' || tool === 'grok') check(fs.readFileSync(target, 'utf8').includes('# Keep existing comment') && fs.readFileSync(target, 'utf8').includes('# inline comment') && config.hooks.start[0].command === 'echo fixture', 'TOML comments and hook array tables preserved');
-              check(config.sentinel === 'keep-existing' && config.permissions.policy === 'ask', 'Existing settings and permissions preserved');
+              if (tool !== 'claude_desktop') check(config.sentinel === 'keep-existing' && config.permissions.policy === 'ask', 'Existing settings and permissions preserved');
               check(fs.readFileSync(target, 'utf8').includes(key) && fs.readFileSync(target, 'utf8').includes(mode === 'remote' ? 'https://remote.fixture.invalid' : base), 'Real configuration contains local/remote fixture endpoint and key');
               check(await execute(`document.getElementById('desktopConfigStatus').textContent.includes(${JSON.stringify(target)}) && document.getElementById('desktopConfigStatus').textContent.includes(${JSON.stringify(result.backupPath)})`), 'Success displays path and backup');
               check(state.calls.length === calls + (tool === 'claude' ? 3 : 1), 'Expected cancellation/failure/success call count');

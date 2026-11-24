@@ -346,9 +346,13 @@ function createClientConfigService({ env = process.env, home = os.homedir(), pla
     const handle = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
     try {
       const stat = fs.fstatSync(handle);
-      if (!stat.isFile() || stat.size > MAX_FILE || stat.nlink !== 1) fail('配置文件过大或不安全。');
+      if (!stat.isFile() || stat.size > MAX_FILE || stat.nlink !== 1) fail(`配置文件过大或不安全: ${file}`);
       const text = fs.readFileSync(handle, 'utf8');
-      return { text, config: parseConfig(text, format) };
+      try { return { text, config: parseConfig(text, format) }; }
+      catch (error) {
+        if (error instanceof ConfigError && error.message.includes('配置损坏')) fail(`配置文件格式损坏，请先修复或使用手动配置: ${file}`);
+        throw error;
+      }
     } finally { fs.closeSync(handle); }
   }
   async function writeClaudeDesktopConfig(request, { isTrusted }) {
