@@ -389,17 +389,24 @@ function createAdminPages(runtime) {
           const modelItems = models.status === 'fulfilled' ? itemsOf(models.value) : [];
           const modelSearch = String(runtime[`team_${team.id}_modelSearch`] || '').toLowerCase();
           const visibleModels = modelItems.filter(model => !modelSearch || [model.name, model.model_id, model.provider_name, model.provider, model.series].some(value => String(value || '').toLowerCase().includes(modelSearch)));
+          const memberRows = memberItems.map(member => ({ label: member.username, detail: display(member.email, member.created_at && formatTime(member.created_at)), run: async ctx => {
+            if (!await ctx.confirm('移除 Team 成员', `将 ${member.username} 从 ${team.name} 移出？`)) return;
+            await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members/${encodeURIComponent(member.id)}`, { method: 'DELETE' });
+            ctx.notify('成员已移出 Team。'); await ctx.refresh();
+          } }));
+          const modelRows = visibleModels.map(model => ({ label: `${model.name || model.model_id} · ${model.enabled ? '已启用' : '未授权'}`, detail: display(model.provider_name || model.provider, model.series, model.test_ok === true ? `测试 ${model.test_latency_ms || 0} ms` : model.test_error || ''), run: async ctx => { const enabled = model.enabled !== true; const impact = enabled ? '授权此模型给 Team 成员使用。' : '禁用后，若该成员的 API Key 没有其他 Team 提供此模型，服务端可能清除该 Key 的当前模型绑定。'; if (!await ctx.confirm(enabled ? '启用 Team 模型' : '禁用 Team 模型', `${team.name}\n${model.name || model.model_id}\n${impact}`)) return; const result = await api(`/api/admin/teams/${encodeURIComponent(team.id)}/models/${encodeURIComponent(model.model_id)}`, { method: 'PUT', body: { enabled } }); if (!enabled && result.cleared_keys) ctx.notify(`已禁用；清除了 ${result.cleared_keys} 个 API Key 的当前模型绑定。`); else ctx.notify(`Team 模型已${enabled ? '启用' : '禁用'}。`); await ctx.refresh(); } }));
+          const ruleRows = ruleItems.map(rule => ({ label: `${rule.rule_type} ${rule.rule_value} / ${rule.duration_hours} 小时`, detail: rule.description || rule.id, run: async ctx => { if (!await ctx.confirm('删除限额规则', `${team.name} · ${rule.rule_type} ${rule.rule_value}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules/${encodeURIComponent(rule.id)}`, { method: 'DELETE' }); await ctx.refresh(); } }));
           return {
             title: `${team.name} · Team #${team.id}`,
             description: display(team.is_default && '默认 Team', team.is_frontier && '前沿 Team', `${team.member_count || memberItems.length} 成员`, team.description),
+            cards: [{ label: '成员', value: team.member_count || memberItems.length }, { label: '模型授权', value: modelItems.filter(model => model.enabled).length }, { label: '限额规则', value: ruleItems.length }],
             rows: [
-              ...memberItems.map(member => ({ label: `成员 · ${member.username}`, detail: display(member.email, member.created_at && formatTime(member.created_at)), run: async ctx => {
-                if (!await ctx.confirm('移除 Team 成员', `将 ${member.username} 从 ${team.name} 移出？`)) return;
-                await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members/${encodeURIComponent(member.id)}`, { method: 'DELETE' });
-                ctx.notify('成员已移出 Team。'); await ctx.refresh();
-              } })),
-              ...ruleItems.map(rule => ({ label: `限额 · ${rule.rule_type} ${rule.rule_value} / ${rule.duration_hours} 小时`, detail: rule.description || rule.id, run: async ctx => { if (!await ctx.confirm('删除限额规则', `${team.name} · ${rule.rule_type} ${rule.rule_value}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules/${encodeURIComponent(rule.id)}`, { method: 'DELETE' }); await ctx.refresh(); } })),
-              ...visibleModels.map(model => ({ label: `模型 · ${model.name || model.model_id} · ${model.enabled ? '已启用' : '未授权'}`, detail: display(model.provider_name || model.provider, model.series, model.test_ok === true ? `测试 ${model.test_latency_ms || 0} ms` : model.test_error || ''), run: async ctx => { const enabled = model.enabled !== true; const impact = enabled ? '授权此模型给 Team 成员使用。' : '禁用后，若该成员的 API Key 没有其他 Team 提供此模型，服务端可能清除该 Key 的当前模型绑定。'; if (!await ctx.confirm(enabled ? '启用 Team 模型' : '禁用 Team 模型', `${team.name}\n${model.name || model.model_id}\n${impact}`)) return; const result = await api(`/api/admin/teams/${encodeURIComponent(team.id)}/models/${encodeURIComponent(model.model_id)}`, { method: 'PUT', body: { enabled } }); if (!enabled && result.cleared_keys) ctx.notify(`已禁用；清除了 ${result.cleared_keys} 个 API Key 的当前模型绑定。`); else ctx.notify(`Team 模型已${enabled ? '启用' : '禁用'}。`); await ctx.refresh(); } })),
+              { label: `成员列表 · ${memberRows.length} 人`, detail: memberRows.length ? '成员在下方独立分区展示' : '暂无成员' },
+              ...memberRows.map(row => ({ ...row, label: `成员 · ${row.label}` })),
+              { label: `模型授权 · ${modelRows.length} 个模型`, detail: '单模型启停；禁用可能清除无其他Team授权的Key当前模型绑定' },
+              ...modelRows.map(row => ({ ...row, label: `模型 · ${row.label}` })),
+              { label: `限额规则 · ${ruleRows.length} 条` },
+              ...ruleRows.map(row => ({ ...row, label: `限额 · ${row.label}` })),
             ],
             actions: [
               { label: `搜索 ${team.name} 模型`, run: async ctx => { runtime[`team_${team.id}_modelSearch`] = String(await ctx.ask('模型名称、ID 或供应商') || '').trim(); await ctx.refresh(); } },

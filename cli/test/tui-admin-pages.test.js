@@ -65,3 +65,20 @@ test('admin updates page only performs the confirmed version check and never app
   assert.ok(calls.some(call => call.path.endsWith('/check')));
   assert.equal(calls.some(call => call.path.endsWith('/apply')), false);
 });
+
+test('Team page separates member, model access and quota sections in web order', async () => {
+  const api = async path => {
+    if (path === '/api/admin/teams') return [{ id: 4, name: 'Team Four', member_count: 1 }];
+    if (path.endsWith('/members')) return [{ id: 9, username: 'alice', email: 'a@example.test' }];
+    if (path.endsWith('/rules')) return [{ id: 'r1', rule_type: 'requests', rule_value: 100, duration_hours: 24 }];
+    if (path.endsWith('/models')) return [{ model_id: 'm1', name: 'Model One', provider_name: 'Provider', enabled: true }];
+    return {};
+  };
+  const data = await pageById('admin-teams').load(api);
+  const section = data.sections[0];
+  assert.equal(section.title, 'Team Four · Team #4');
+  assert.deepEqual(section.cards.map(card => card.label), ['成员', '模型授权', '限额规则']);
+  const labels = section.rows.map(row => row.label);
+  assert.ok(labels.findIndex(label => label.startsWith('成员列表')) < labels.findIndex(label => label.startsWith('模型授权')));
+  assert.ok(labels.findIndex(label => label.startsWith('模型授权')) < labels.findIndex(label => label.startsWith('限额规则')));
+});
