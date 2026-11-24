@@ -61,6 +61,15 @@ class ApiKeyListItem(TypedDict, total=False):
     is_co_key: bool
 
 
+class ApiKeyDailyUsageItem(TypedDict):
+    date: str
+    model_id: str
+    model_name: Optional[str]
+    tokens: Union[int, str]
+    cost: Union[float, str]
+    requests: Union[int, str]
+
+
 class DailyUsageItem(TypedDict, total=False):
     date: str
     total_tokens: Union[int, str]

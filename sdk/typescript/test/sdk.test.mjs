@@ -113,6 +113,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 'shared-provider', name: 'Shared', format: 'openai', created_by: null }]);
       return;
     }
+    if (req.url === '/api/user/api-keys/7/usage') {
+      json(res, 200, [{ date: '2026-01-01', model_id: 'm1', model_name: null, tokens: '12', cost: '0.1', requests: '2' }]);
+      return;
+    }
     json(res, 404, { error: 'not found' });
   });
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
@@ -121,6 +125,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const balance = await client.balance.get();
   const models = await client.models.list();
   const providers = await client.providers.list();
+  const keyUsage = await client.keys.getUsage(7);
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -130,6 +135,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(models.data[0].alias, null);
   assert.equal(models.data[0].input_price_per_1k_tokens, '0.01');
   assert.equal(providers.data[0].created_by, null);
+  assert.equal(keyUsage.data[0].model_id, 'm1');
+  assert.equal(keyUsage.data[0].model_name, null);
 });
 
 test('management errors expose code and permission', async () => {

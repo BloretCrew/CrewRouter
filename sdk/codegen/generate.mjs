@@ -434,6 +434,10 @@ function managementSchemas() {
       date: { type: 'string', format: 'date' }, total_tokens: numberOrString,
       total_cost: numberOrString, total_requests: numberOrString,
     }, ['date', 'total_tokens', 'total_cost', 'total_requests']),
+    ApiKeyDailyUsageItem: object({
+      date: { type: 'string', format: 'date' }, model_id: { type: 'string' },
+      model_name: nullableString, tokens: numberOrString, cost: numberOrString, requests: numberOrString,
+    }, ['date', 'model_id', 'tokens', 'cost', 'requests']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -467,6 +471,7 @@ function managementResponseSchema(operationId) {
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
     'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
+    'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
   };
   return schemas[operationId] || null;
 }

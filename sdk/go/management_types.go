@@ -65,6 +65,16 @@ type ApiKeyListItem struct {
 	ScheduleTimezone             *string                `json:"schedule_timezone,omitempty"`
 }
 
+// ApiKeyDailyUsageItem is one grouped usage row for a single API key.
+type ApiKeyDailyUsageItem struct {
+	Date      string  `json:"date"`
+	ModelID   string  `json:"model_id"`
+	ModelName *string `json:"model_name"`
+	Tokens    any     `json:"tokens"`
+	Cost      any     `json:"cost"`
+	Requests  any     `json:"requests"`
+}
+
 // DailyUsageItem is one row in GET /api/user/usage.
 type DailyUsageItem struct {
 	Date          string `json:"date"`

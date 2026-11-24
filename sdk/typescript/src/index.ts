@@ -33,6 +33,7 @@ export type {
   ApiKeyTag,
   ApiKeyModelQueueItem,
   ApiKeyListItem,
+  ApiKeyDailyUsageItem,
   DailyUsageItem,
   TeamQuotaRule,
   UserBalance,

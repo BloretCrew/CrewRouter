@@ -160,6 +160,15 @@ export interface UserProviderListItem {
   created_by: number | null;
 }
 
+export interface ApiKeyDailyUsageItem {
+  date: string;
+  model_id: string;
+  model_name: string | null;
+  tokens: number | string;
+  cost: number | string;
+  requests: number | string;
+}
+
 export interface UserModelListItem {
   id: string;
   upstream_model_id: string;

@@ -472,6 +472,62 @@
         ],
         "additionalProperties": true
       },
+      "ApiKeyDailyUsageItem": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "model_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tokens": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "cost": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "requests": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "date",
+          "model_id",
+          "tokens",
+          "cost",
+          "requests"
+        ],
+        "additionalProperties": true
+      },
       "UserModelListItem": {
         "type": "object",
         "properties": {
@@ -14330,8 +14386,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyDailyUsageItem"
+                  }
                 }
               }
             }

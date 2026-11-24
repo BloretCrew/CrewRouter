@@ -8,6 +8,7 @@ from ._http import CrewRouterResponse
 from ._sse import AsyncStream, AsyncStreamRequest, Stream, StreamEvent
 from .client import (
     AnthropicMessagesRequest,
+    ApiKeyDailyUsageItem,
     ApiKeyListItem,
     ApiKeyTag,
     DailyUsageItem,
@@ -47,6 +48,7 @@ __all__ = [
     "OpenAIResponsesRequest",
     "ApiKeyTag",
     "ApiKeyListItem",
+    "ApiKeyDailyUsageItem",
     "DailyUsageItem",
     "UserBalance",
     "UserModelListItem",

@@ -6,6 +6,7 @@ from typing import get_type_hints
 from crewrouter import (
     AnthropicMessagesRequest,
     ApiKeyListItem,
+    ApiKeyDailyUsageItem,
     DailyUsageItem,
     UserBalance,
     UserModelListItem,
@@ -42,6 +43,14 @@ class TypedRequestTests(unittest.TestCase):
         }
         self.assertIsNone(key["key_value"])
         self.assertEqual(usage["total_tokens"], "12")
+        key_usage: ApiKeyDailyUsageItem = {
+            "date": "2026-01-01",
+            "model_id": "m1",
+            "model_name": None,
+            "tokens": "12",
+            "cost": "0.1",
+            "requests": "2",
+        }
         model: UserModelListItem = {
             "id": "model-1",
             "upstream_model_id": "upstream-1",
@@ -64,6 +73,7 @@ class TypedRequestTests(unittest.TestCase):
         }
         self.assertIsNone(model["alias"])
         self.assertIsNone(provider["created_by"])
+        self.assertIsNone(key_usage["model_name"])
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}
