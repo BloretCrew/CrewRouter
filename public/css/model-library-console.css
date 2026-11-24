@@ -60,7 +60,8 @@
 #modelLibraryPage .ml-request-binding-target { font-weight: 600; }
 #modelLibraryPage .ml-request-binding-form { display: grid; gap: 14px; }
 #modelLibraryPage .ml-request-binding-form label { display: grid; gap: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; }
-#modelLibraryPage .ml-request-binding-form :is(select, input) { inline-size: 100%; min-block-size: var(--lg-control-h); padding-inline: 12px; border: 0; border-radius: var(--lg-radius-field); background: var(--lg-field); color: var(--lg-fg); font: inherit; }
+#modelLibraryPage .ml-request-binding-form :is(blora-select, input.blora-input, datalist) { inline-size: 100%; min-inline-size: 0; box-sizing: border-box; }
+#modelLibraryPage .ml-request-binding-form input.blora-input { min-block-size: var(--lg-control-h); padding-inline: 12px; }
 @media (max-width: 640px) { #modelLibraryPage .ml-request-binding-row { grid-template-columns: minmax(0, 1fr) auto; } #modelLibraryPage .ml-request-binding-scope, #modelLibraryPage .ml-request-binding-target { grid-column: 1; } }
 
 /* ---------- 2. 绑定卡：本页主焦点，真实玻璃 ---------- */

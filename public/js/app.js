@@ -14396,14 +14396,14 @@ ${extractorBody}
       const editBinding = editRequestModelName
         ? currentBindings.find(item => item.request_model_name.toLowerCase() === editRequestModelName.toLowerCase() && (item.harness || '') === editHarness)
         : null;
-      const harnessOptions = (data.available_harnesses || []).map(item => `<option value="${escapeHtml(item.id)}"${editBinding?.harness === item.id ? ' selected' : ''}>${escapeHtml(item.label)}</option>`).join('');
-      const modelOptions = (data.models || []).map(item => `<option value="${escapeHtml(item.id)}"${editBinding?.model_id === item.id ? ' selected' : ''}>${escapeHtml(item.name)} · ${escapeHtml(item.id)}</option>`).join('');
+      const harnessOptions = (data.available_harnesses || []).map(item => `<blora-option value="${escapeHtml(item.id)}"${editBinding?.harness === item.id ? ' selected' : ''}>${escapeHtml(item.label)}</blora-option>`).join('');
+      const modelOptions = (data.models || []).map(item => `<blora-option value="${escapeHtml(item.id)}"${editBinding?.model_id === item.id ? ' selected' : ''}>${escapeHtml(item.name)} · ${escapeHtml(item.id)}</blora-option>`).join('');
       const dialog = Dialog.showModal({
         title: editBinding ? t('编辑请求模型名映射') : t('添加请求模型名映射'),
         content: `<div class="ml-request-binding-form lg-scope">
-          <label>${escapeHtml(t('作用范围'))}<select id="mlRequestBindingHarness"><option value=""${!editBinding?.harness ? ' selected' : ''}>${escapeHtml(t('所有 Harness'))}</option>${harnessOptions}</select></label>
-          <label>${escapeHtml(t('请求 model 名称'))}<input id="mlRequestBindingName" list="mlRequestBindingNames" maxlength="255" placeholder="例如 fast-chat" value="${escapeHtml(editBinding?.request_model_name || '')}" autocomplete="off"><datalist id="mlRequestBindingNames">${(data.models || []).flatMap(item => [item.id, item.name, item.alias, item.upstream_model_id].filter(Boolean)).filter((value, index, values) => values.indexOf(value) === index).map(value => `<option value="${escapeHtml(value)}"></option>`).join('')}</datalist></label>
-          <label>${escapeHtml(t('映射目标模型'))}<select id="mlRequestBindingTarget"><option value="">${escapeHtml(t('选择目标模型'))}</option>${modelOptions}</select></label>
+          <label>${escapeHtml(t('作用范围'))}<blora-select id="mlRequestBindingHarness" class="blora-select" value="${escapeHtml(editBinding?.harness || '')}" aria-label="${escapeHtml(t('作用范围'))}"><blora-option value="">${escapeHtml(t('所有 Harness'))}</blora-option>${harnessOptions}</blora-select></label>
+          <label>${escapeHtml(t('请求 model 名称'))}<input class="blora-input" type="text" id="mlRequestBindingName" list="mlRequestBindingNames" maxlength="255" placeholder="例如 fast-chat" value="${escapeHtml(editBinding?.request_model_name || '')}" autocomplete="off"><datalist id="mlRequestBindingNames">${(data.models || []).flatMap(item => [item.id, item.name, item.alias, item.upstream_model_id].filter(Boolean)).filter((value, index, values) => values.indexOf(value) === index).map(value => `<option value="${escapeHtml(value)}"></option>`).join('')}</datalist></label>
+          <label>${escapeHtml(t('映射目标模型'))}<blora-select id="mlRequestBindingTarget" class="blora-select" value="${escapeHtml(editBinding?.model_id || '')}" aria-label="${escapeHtml(t('映射目标模型'))}"><blora-option value="">${escapeHtml(t('选择目标模型'))}</blora-option>${modelOptions}</blora-select></label>
         </div>`,
         buttons: [
           { label: t('取消'), variant: 'secondary' },
