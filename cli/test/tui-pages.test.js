@@ -95,10 +95,10 @@ test('model library requires confirmation and sends the ordered key model queue'
   assert.ok(calls.some(call => call.path === '/api/user/model-library/search'));
   const row = expanded.sections.find(section => section.title.includes('模型目录')).rows[0];
   let confirmCount = 0;
-  await row.run({ choose: async () => 'toggle', confirm: async () => { confirmCount++; return false; } });
+  await row.run({ choose: async () => 'bind', confirm: async () => { confirmCount++; return false; }, notify() {}, refresh: async () => {} });
   assert.equal(confirmCount, 1);
   assert.equal(calls.some(call => call.options.method === 'PUT'), false, 'cancelled confirmation does not write');
-  await row.run({ choose: async () => 'toggle', confirm: async () => true, notify() {}, refresh: async () => {} });
+  await row.run({ choose: async () => 'bind', confirm: async () => true, notify() {}, refresh: async () => {} });
   assert.equal(calls.at(-1).options.method, 'PUT');
   assert.deepEqual(calls.at(-1).options.body.modelIds, ['m1']);
 });

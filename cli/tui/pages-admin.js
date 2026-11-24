@@ -321,11 +321,30 @@ function createAdminPages(runtime) {
         }
         const modelRows = searchedModels.map(item => {
           const id = String(item.model_id || item.id);
-          return { label: display(item.alias || item.name || id, item.provider_name || item.provider, item.series, assignedIds.has(id) ? '已绑定当前 Key' : ''), detail: display(id, item.description, `输入 ${item.input_price_per_1k_tokens ?? '—'} /1K`, `输出 ${item.output_price_per_1k_tokens ?? '—'} /1K`, item.test_ok === true ? `测试通过 ${item.test_latency_ms || 0} ms` : item.test_ok === false ? `测试失败 ${item.test_error || ''}` : '未测试', array(item.tags).map(tag => tag.name).join(', ')), run: async ctx => {
-            if (!keyId) { await ctx.show('模型绑定', '请先创建 API Key。'); return; }
-            const next = new Set(assignedIds); if (next.has(id)) next.delete(id); else next.add(id);
-            if (!await ctx.confirm(next.has(id) ? '绑定模型' : '解绑模型', `${keys.find(key => String(key.id) === String(keyId))?.name || keyId}\n${item.alias || item.name || id}`)) return;
-            await api(`/api/user/api-keys/${encodeURIComponent(keyId)}/models`, { method: 'PUT', body: { modelIds: [...next] } }); ctx.notify('模型队列已保存。'); await ctx.refresh();
+          return { label: display(item.alias || item.name || id, item.provider_name || item.provider, item.series, assignedIds.has(id) ? '已绑定当前 Key' : '', item.is_starred ? '★' : '', item.is_hidden ? '已隐藏' : ''), detail: display(id, item.description, `输入 ${item.input_price_per_1k_tokens ?? '—'} /1K`, `输出 ${item.output_price_per_1k_tokens ?? '—'} /1K`, item.test_ok === true ? `测试通过 ${item.test_latency_ms || 0} ms` : item.test_ok === false ? `测试失败 ${item.test_error || ''}` : '未测试', array(item.tags).map(tag => tag.name).join(', ')), run: async ctx => {
+            const choice = await ctx.choose(`模型 · ${item.alias || item.name || id}`, [
+              { label: item.is_starred ? '取消星标' : '加入星标', value: 'star' },
+              { label: item.is_hidden ? '显示模型' : '隐藏模型', value: 'hide' },
+              { label: assignedIds.has(id) ? '从当前 Key 队列移除' : '加入当前 Key 队列', value: 'bind' },
+            ], { description: `${item.team_name || `Team ${item.team_id}`} · ${item.provider_name || item.provider_name}` });
+            if (!choice) return;
+            if (choice === 'star') {
+              const starred = item.is_starred !== true;
+              if (!await ctx.confirm(starred ? '星标模型' : '取消模型星标', `${item.team_name || `Team ${item.team_id}`} · ${item.alias || item.name || id}`)) return;
+              await api('/api/user/model-library/star', { method: 'PUT', body: { teamId: item.team_id, providerId: item.provider, modelId: id, starred } });
+            }
+            if (choice === 'hide') {
+              const hidden = item.is_hidden !== true;
+              if (!await ctx.confirm(hidden ? '隐藏模型' : '显示模型', `${item.team_name || `Team ${item.team_id}`} · ${item.alias || item.name || id}`)) return;
+              await api('/api/user/model-library/hidden', { method: 'PUT', body: { scope: 'model', teamId: item.team_id, providerId: item.provider, modelId: id, hidden } });
+            }
+            if (choice === 'bind') {
+              if (!keyId) { await ctx.show('模型绑定', '请先创建 API Key。'); return; }
+              const next = new Set(assignedIds); if (next.has(id)) next.delete(id); else next.add(id);
+              if (!await ctx.confirm(next.has(id) ? '绑定模型' : '解绑模型', `${keys.find(key => String(key.id) === String(keyId))?.name || keyId}\n${item.alias || item.name || id}`)) return;
+              await api(`/api/user/api-keys/${encodeURIComponent(keyId)}/models`, { method: 'PUT', body: { modelIds: [...next] } });
+            }
+            ctx.notify('模型库设置已更新。'); await ctx.refresh();
           } };
         });
         const sections = [
