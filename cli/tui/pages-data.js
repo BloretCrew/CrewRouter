@@ -1,6 +1,6 @@
 'use strict';
 
-const { getStats, statsSummary, listSessions, getSessionMessages } = require('../lib/api');
+const { getStats, statsSummary, listSessions, getSessionMessages, searchSessions } = require('../lib/api');
 const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 const { bar, text } = require('./pages-common');
 
@@ -106,12 +106,12 @@ function sessionsPage(runtime) {
     label: '会话',
     description: '按 Harness 查看最近使用会话与消息摘要。',
     async load(api) {
-      const data = await listSessions(runtime.client, {
-        days: runtime.sessionsDays || 30,
-        page: runtime.sessionsPageNumber,
-        pageSize: 30,
-      });
-      const items = Array.isArray(data.items) ? data.items : [];
+      const days = runtime.sessionsDays || 30;
+      const search = runtime.sessionsSearch || '';
+      const data = search
+        ? await searchSessions(runtime.client, { q: search, days })
+        : await listSessions(runtime.client, { days, page: runtime.sessionsPageNumber, pageSize: 30 });
+      const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
       const rows = items.map(item => ({
         label: `${item.sessionKey || '未知会话'} · ${item.harness || 'unknown'} · ${Number(item.requestCount || 0).toLocaleString()} 请求 · ${formatBigNumber(item.totalTokens)} tokens`,
         detail: `${item.lastSeen ? `最后活动 ${formatTime(item.lastSeen)}` : ''}${item.models && item.models.length ? ` · 模型 ${item.models.slice(0, 3).join(', ')}` : ''}${item.summary ? ' · 有摘要' : ''}`,
@@ -120,10 +120,11 @@ function sessionsPage(runtime) {
       return {
         sections: [{
           title: '会话',
-          description: `最近 ${runtime.sessionsDays || 30} 天 · 第 ${data.page || runtime.sessionsPageNumber} 页 · 共 ${data.total || items.length} 个`,
+          description: `最近 ${days} 天${search ? ` · 搜索“${search}”` : ` · 第 ${data.page || runtime.sessionsPageNumber} 页`} · 共 ${data.total || items.length} 个`,
           rows: rows.length ? rows : [{ label: '暂无会话记录。' }],
         }],
         actions: [
+          { label: search ? '清除搜索' : '搜索会话', run: async ctx => { runtime.sessionsSearch = search ? '' : String(await ctx.ask('搜索会话内容、Harness 或摘要') || '').trim(); runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
           { label: '最近 7 天', run: async ctx => { runtime.sessionsDays = 7; runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
           { label: '最近 30 天', run: async ctx => { runtime.sessionsDays = 30; runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
           { label: '上一页', run: async ctx => { runtime.sessionsPageNumber = Math.max(1, runtime.sessionsPageNumber - 1); await ctx.refresh(); } },
