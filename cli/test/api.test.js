@@ -14,22 +14,25 @@ test('non-admin listProviders falls back from admin endpoint to user providers',
     await loginPassword(client, { login: 'admin', password: 'pass' });
     fake.sessions.forEach(session => { if (session.user) session.user = { ...session.user, isAdmin: false }; });
     client.isAdmin = false;
-    const result = await api.listProviders(client);
+    fake.state.providers.push({ id: 'p2', name: 'Another', base_url: 'https://other.example' });
+    const result = await api.listProviders(client, { search: 'provider' });
     assert.equal(result.scope, 'user');
     assert.equal(result.items.length, 1);
     assert.equal(result.items[0].id, 'p1');
   } finally { await fake.close(); }
 });
 
-test('admin listProviders uses paginated admin response', async () => {
+test('admin listProviders uses paginated response and web-compatible filters', async () => {
   const fake = await createFakeServer();
   try {
     const client = new CliClient({ baseUrl: fake.baseUrl });
     await loginApiKey(client, 'sk-admin');
-    const result = await api.listProviders(client);
+    const result = await api.listProviders(client, { search: 'acme', status: 'enabled', scope: 'global', keyMode: 'fixed', tagId: 4, page: 2, limit: 25 });
     assert.equal(result.scope, 'admin');
     assert.equal(result.total, 1);
     assert.equal(result.stats.enabledCount, 1);
+    const request = fake.state.requests.filter(item => item.path === '/api/admin/providers').at(-1);
+    assert.deepEqual(request.query, { page: '2', limit: '25', q: 'acme', status: 'enabled', scope: 'global', key_mode: 'fixed', tag_id: '4' });
   } finally { await fake.close(); }
 });
 

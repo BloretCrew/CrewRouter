@@ -53,25 +53,29 @@ async function getApiKeyUsage(client, id) {
   return client.get(`/api/user/api-keys/${encodeURIComponent(id)}/usage`);
 }
 
-async function fallbackUserProviders(client) {
+async function fallbackUserProviders(client, { search = '' } = {}) {
   try {
     const own = arrayOrEmpty(await client.get('/api/user/my-providers'));
-    if (own.length) return { scope: 'user', items: own, total: own.length, stats: null };
+    if (own.length) {
+      const items = own.filter(item => !search || [item.name, item.id, item.base_url].some(value => String(value || '').toLowerCase().includes(String(search).toLowerCase())));
+      return { scope: 'user', items, total: own.length, stats: null };
+    }
   } catch (error) {
     if (error instanceof ApiError && error.statusCode === 401) throw error;
   }
   const visible = arrayOrEmpty(await client.get('/api/user/providers'));
   return {
     scope: 'visible',
-    items: visible.map(item => ({ ...item, enabled: item.enabled !== false, has_api_key: null })),
+    items: visible.map(item => ({ ...item, enabled: item.enabled !== false, has_api_key: null }))
+      .filter(item => !search || [item.name, item.id, item.base_url].some(value => String(value || '').toLowerCase().includes(String(search).toLowerCase()))),
     total: visible.length,
     stats: null,
   };
 }
 
-async function listProviders(client) {
+async function listProviders(client, { search = '', status = '', scope = '', keyMode = '', tagId = '', page = 1, limit = 100 } = {}) {
   try {
-    const data = await client.get('/api/admin/providers', { query: { page: 1, limit: 100 } });
+    const data = await client.get('/api/admin/providers', { query: { page, limit, q: search, status, scope, key_mode: keyMode, tag_id: tagId } });
     if (data && Array.isArray(data.items)) {
       return { scope: 'admin', items: data.items, total: Number(data.total) || data.items.length, stats: data.stats || null };
     }
@@ -82,7 +86,7 @@ async function listProviders(client) {
     if (!(error instanceof ApiError) || !FALLBACK_STATUS.has(error.statusCode)) throw error;
     if (error.statusCode === 401) throw error;
   }
-  return fallbackUserProviders(client);
+  return fallbackUserProviders(client, { search });
 }
 
 async function pingProvider(client, id) {
