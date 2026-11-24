@@ -28,17 +28,14 @@ function providersPage(runtime) {
     label: '供应商',
     description: '查看供应商状态，检测连通性；管理员可启停。',
     async load(api) {
-      const data = await listProviders(runtime.client);
+      const search = runtime.providerSearch || '';
+      const scope = runtime.providerScope || '';
+      const enabledFilter = runtime.providerEnabled || '';
+      const keyMode = runtime.providerKeyMode || '';
+      const data = await listProviders(runtime.client, { search, scope, status: enabledFilter, keyMode, tagId: runtime.providerTagId || '' });
       const stats = data.stats || {};
-      const query = String(runtime.providerSearch || '').toLowerCase();
-      const scope = runtime.providerScope || 'all';
-      const enabledFilter = runtime.providerEnabled || 'all';
-      const visibleItems = data.items.filter(item => {
-        const matchQuery = !query || [item.name, item.id, item.base_url, item.format].some(value => String(value || '').toLowerCase().includes(query));
-        const matchScope = scope === 'all' || (scope === 'global' ? item.created_by == null : item.created_by != null);
-        const matchEnabled = enabledFilter === 'all' || (enabledFilter === 'enabled' ? item.enabled !== false : item.enabled === false);
-        return matchQuery && matchScope && matchEnabled;
-      });
+      const query = String(search).toLowerCase();
+      const visibleItems = data.items.filter(item => !query || data.scope === 'admin' || [item.name, item.id, item.base_url, item.format].some(value => String(value || '').toLowerCase().includes(query)));
       const rows = visibleItems.map(item => ({
         label: `${item.name || item.id} · ${item.format || 'unknown'} · ${enabledLabel(item.enabled)}${item.has_api_key === true ? ' · Key 已配置' : ''}`,
         detail: `${item.id}${item.base_url ? ` · ${item.base_url}` : ''}${Array.isArray(item.tags) && item.tags.length ? ` · 标签 ${item.tags.map(tag => tag.name).join('/')}` : ''}`,
@@ -80,10 +77,12 @@ function providersPage(runtime) {
         actions: [
           { label: '搜索供应商', run: async ctx => { runtime.providerSearch = String(await ctx.ask('供应商名称、ID 或地址', { defaultValue: runtime.providerSearch || '' }) || '').trim(); await ctx.refresh(); } },
           ...(data.scope === 'admin' ? [
-            ...[['all', '全部供应商'], ['global', '全局供应商'], ['user', '用户供应商']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerScope = value; await ctx.refresh(); } })),
-            ...[['all', '全部状态'], ['enabled', '仅启用'], ['disabled', '仅停用']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerEnabled = value; await ctx.refresh(); } })),
+            ...[['', '全部供应商'], ['global', '全局供应商'], ['user', '用户供应商']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerScope = value; await ctx.refresh(); } })),
+            ...[['', '全部状态'], ['enabled', '仅启用'], ['disabled', '仅停用']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerEnabled = value; await ctx.refresh(); } })),
+            ...[['', '全部密钥模式'], ['fixed', '固定密钥'], ['script', '脚本密钥']].map(([value, label]) => ({ label, run: async ctx => { runtime.providerKeyMode = value; await ctx.refresh(); } })),
+            ...(Array.isArray(stats.tags) ? stats.tags.map(tag => ({ label: `标签：${tag.name}`, run: async ctx => { runtime.providerTagId = String(tag.id); await ctx.refresh(); } })) : []),
           ] : []),
-          { label: '清除筛选', run: async ctx => { runtime.providerSearch = ''; runtime.providerScope = 'all'; runtime.providerEnabled = 'all'; await ctx.refresh(); } },
+          { label: '清除筛选', run: async ctx => { runtime.providerSearch = ''; runtime.providerScope = ''; runtime.providerEnabled = ''; runtime.providerKeyMode = ''; runtime.providerTagId = ''; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ],
       };
