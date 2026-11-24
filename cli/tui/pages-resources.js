@@ -124,7 +124,37 @@ function myUpstreamPage(runtime) {
             { name: 'models_url', label: '模型列表 URL（可空）', value: item.models_url || '' }, { name: 'test_user_agent', label: '测试 User-Agent（可空）', value: item.test_user_agent || '' },
             { name: 'forward_headers', label: '转发请求头', type: 'boolean', value: item.forward_headers !== false }, { name: 'api_key', label: 'API Key（留空保持现有）', secret: true },
           ]); if (!values) return; if (!String(values.name || '').trim() || !String(values.base_url || '').trim()) { await ctx.show('供应商信息不完整', '供应商名称和 Base URL 为必填项。'); return; } if (!await ctx.confirm('保存上游供应商', `${values.name}\n${values.base_url}\n${values.enabled ? '启用' : '停用'} · ${values.format}\nAPI Key 留空表示保留现有密钥。`)) return; const body = { name: values.name, base_url: values.base_url, format: values.format, notes: values.notes, enabled: values.enabled, models_url: values.models_url, test_user_agent: values.test_user_agent, forward_headers: values.forward_headers, ...(values.api_key ? { api_key: values.api_key } : {}) }; await runtime.client.put(`/api/user/providers/${encodeURIComponent(item.id)}`, body); ctx.notify('供应商已更新。'); await ctx.refresh(); } if (choice === 'ping') { const result = await pingProvider(runtime.client, item.id); await ctx.show('连通性检测', JSON.stringify(result, null, 2)); } } })) : [{ label: providersResult.status === 'rejected' ? providersResult.reason.message : '暂无我的上游供应商。' }] },
-          { title: '个人 Team 模型', tab: 'models', description: `${visibleModels.length}/${models.length} 个模型 · 搜索 ${modelQuery || '无'}`, rows: visibleModels.length ? visibleModels.map(item => ({ label: display(item.alias || item.name || item.id, item.upstream_model_id || item.name || item.id, item.provider_name || item.provider, item.series || '—'), detail: display(`倍率 ×${Number(item.model_multiplier || 1).toFixed(2)}`, item.enabled === false ? '停用' : '启用', item.description), run: async ctx => await ctx.show(`个人 Team 模型 · ${item.alias || item.name || item.id}`, JSON.stringify(item, null, 2)) })) : [{ label: modelsResult.status === 'rejected' ? modelsResult.reason.message : '暂无个人 Team 模型。' }] },
+          { title: '个人 Team 模型', tab: 'models', description: `${visibleModels.length}/${models.length} 个模型 · 搜索 ${modelQuery || '无'}`, rows: visibleModels.length ? visibleModels.map(item => ({ label: display(item.alias || item.name || item.id, item.upstream_model_id || item.name || item.id, item.provider_name || item.provider, item.series || '—'), detail: display(`倍率 ×${Number(item.model_multiplier || 1).toFixed(2)}`, item.enabled === false ? '停用' : '启用', item.description), run: async ctx => {
+            const choice = await ctx.choose(`个人 Team 模型 · ${item.alias || item.name || item.id}`, [{ label: '查看详情', value: 'detail' }, { label: '编辑模型', value: 'edit' }, { label: '删除模型', value: 'delete' }]);
+            if (choice === 'detail') await ctx.show(`个人 Team 模型 · ${item.alias || item.name || item.id}`, JSON.stringify(item, null, 2));
+            if (choice === 'edit') {
+              const values = await ctx.form('编辑个人模型', [
+                { name: 'upstream_model_id', label: '上游模型 ID', value: item.upstream_model_id || item.name || item.id },
+                { name: 'alias', label: '显示名称/别名', value: item.alias || '' }, { name: 'description', label: '说明', value: item.description || '' },
+                { name: 'series', label: '系列', value: item.series || '' }, { name: 'enabled', label: '启用模型', type: 'boolean', value: item.enabled !== false },
+                { name: 'input_price_per_1k_tokens', label: '输入价格 / 1K', value: String(item.input_price_per_1k_tokens || 0) },
+                { name: 'output_price_per_1k_tokens', label: '输出价格 / 1K', value: String(item.output_price_per_1k_tokens || 0) },
+                { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格 / 1K', value: String(item.cached_output_price_per_1k_tokens || 0) },
+                { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格 / 1K', value: String(item.reference_input_price_per_1k_tokens || 0) },
+                { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格 / 1K', value: String(item.reference_output_price_per_1k_tokens || 0) },
+                { name: 'rate_limit_rpm', label: 'RPM 限额', value: String(item.rate_limit_rpm || 0) }, { name: 'rate_limit_tpm', label: 'TPM 限额', value: String(item.rate_limit_tpm || 0) },
+                { name: 'model_multiplier', label: '模型倍率', value: String(item.model_multiplier || 1) }, { name: 'completion_multiplier', label: '补全倍率', value: String(item.completion_multiplier || 1) },
+                { name: 'thinking_model_id', label: 'Thinking 模型 ID', value: item.thinking_model_id || '' }, { name: 'non_thinking_model_id', label: 'Non-thinking 模型 ID', value: item.non_thinking_model_id || '' },
+              ]);
+              if (!values) return;
+              const numeric = ['input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'cached_output_price_per_1k_tokens', 'reference_input_price_per_1k_tokens', 'reference_output_price_per_1k_tokens', 'rate_limit_rpm', 'rate_limit_tpm', 'model_multiplier', 'completion_multiplier'];
+              const body = Object.fromEntries(Object.entries(values).map(([name, value]) => [name, numeric.includes(name) ? (Number(value) || 0) : value]));
+              const rates = numeric.slice(0, 5).map(name => `${name}: ${body[name]}`).join(' · ');
+              if (!await ctx.confirm('保存个人模型更改', `${item.alias || item.name || item.id}\n${body.enabled ? '启用' : '停用'} · 系列 ${body.series || '无'} · 倍率 ×${body.model_multiplier}\n价格：${rates}\n停用或改价可能影响 API Key 用户及计费。`)) return;
+              await runtime.client.put(`/api/user/models/${encodeURIComponent(item.id)}`, body);
+              ctx.notify('个人模型已更新。'); await ctx.refresh();
+            }
+            if (choice === 'delete') {
+              if (!await ctx.confirm('删除个人模型', `确定删除「${item.alias || item.name || item.id}」？删除会同步清除关联 Team 和 API Key 模型授权，且不可恢复。`)) return;
+              await runtime.client.delete(`/api/user/models/${encodeURIComponent(item.id)}`);
+              ctx.notify('个人模型已删除。'); await ctx.refresh();
+            }
+          } })) : [{ label: modelsResult.status === 'rejected' ? modelsResult.reason.message : '暂无个人 Team 模型。' }] },
         ],
         actions: [
           { label: '搜索我的供应商', tab: 'providers', run: async ctx => { runtime.myUpstreamProviderSearch = String(await ctx.ask('供应商名称、ID 或地址', { defaultValue: runtime.myUpstreamProviderSearch || '' }) || '').trim(); await ctx.refresh(); } },

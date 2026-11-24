@@ -4,12 +4,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buildPages } = require('../tui/pages');
 
-function makeRuntime() { return { client: { isAdmin: false, get: async path => path === '/api/user/my-providers' ? [{ id: 'p1', name: 'Personal', base_url: 'https://p.example', format: 'openai', enabled: true, model_count: 2, notes: 'safe note', forward_headers: true }] : [] }, cfg: { tui: { days: 30 } }, profileName: 'test' }; }
+function makeRuntime(client = {}) { return { client: { isAdmin: false, ...client }, cfg: { tui: { days: 30 } }, profileName: 'test' }; }
 
 test('my upstream page mirrors providers/models tabs and Team model columns', async () => {
   const calls = [];
-  const runtime = makeRuntime();
-  runtime.client.get = async path => { calls.push(path); if (path === '/api/user/my-providers') return [{ id: 'p1', name: 'Personal', base_url: 'https://p.example', format: 'openai', enabled: true, model_count: 2 }]; if (path === '/api/user/my-team-models') return [{ id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider_name: 'Personal', series: 'S', enabled: true, model_multiplier: 1.2 }]; return {}; };
+  const runtime = makeRuntime({ get: async path => { calls.push(path); if (path === '/api/user/my-providers') return [{ id: 'p1', name: 'Personal', base_url: 'https://p.example', format: 'openai', enabled: true, model_count: 2 }]; if (path === '/api/user/my-team-models') return [{ id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider_name: 'Personal', series: 'S', enabled: true, model_multiplier: 1.2 }]; return {}; } });
   const page = buildPages(runtime).find(item => item.id === 'my-upstream');
   assert.deepEqual(page.tabs.map(tab => tab.id), ['providers', 'models']);
   const data = await page.load();
@@ -22,9 +21,11 @@ test('my upstream page mirrors providers/models tabs and Team model columns', as
 });
 
 test('my provider edit confirms and does not overwrite an absent API key', async () => {
-  const runtime = makeRuntime();
   const calls = [];
-  runtime.client.put = async (path, body) => { calls.push({ path, body }); return { success: true }; };
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [{ id: 'p1', name: 'Personal', base_url: 'https://p.example', format: 'openai', enabled: true, model_count: 2, notes: 'safe note', forward_headers: true }] : [],
+    put: async (path, body) => { calls.push({ path, body }); return { success: true }; },
+  });
   const page = buildPages(runtime).find(item => item.id === 'my-upstream');
   const data = await page.load();
   const row = data.sections.find(section => section.title === '供应商').rows[0];
@@ -35,4 +36,29 @@ test('my provider edit confirms and does not overwrite an absent API key', async
   assert.equal(calls[0].path, '/api/user/providers/p1');
   assert.equal(calls[0].body.name, 'Renamed');
   assert.equal(Object.hasOwn(calls[0].body, 'api_key'), false);
+});
+
+test('personal Team model edit sends the complete web form and delete warns about cascades', async () => {
+  const calls = [];
+  const model = { id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Personal', series: 'S', enabled: true, description: 'old', input_price_per_1k_tokens: 1, output_price_per_1k_tokens: 2, cached_output_price_per_1k_tokens: 3, reference_input_price_per_1k_tokens: 4, reference_output_price_per_1k_tokens: 5, rate_limit_rpm: 10, rate_limit_tpm: 20, model_multiplier: 1.2, completion_multiplier: 1.3, thinking_model_id: '', non_thinking_model_id: '' };
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [] : [model],
+    put: async (path, body) => { calls.push({ path, method: 'PUT', body }); return {}; },
+    delete: async path => { calls.push({ path, method: 'DELETE' }); return {}; },
+  });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const data = await page.load();
+  const row = data.sections.find(section => section.title === '个人 Team 模型').rows[0];
+  const form = async () => ({ upstream_model_id: 'up-1', alias: 'Updated', description: 'desc', series: 'S', enabled: true, input_price_per_1k_tokens: '1.5', output_price_per_1k_tokens: '2.5', cached_output_price_per_1k_tokens: '3.5', reference_input_price_per_1k_tokens: '4', reference_output_price_per_1k_tokens: '5', rate_limit_rpm: '10', rate_limit_tpm: '20', model_multiplier: '1.4', completion_multiplier: '1.3', thinking_model_id: '', non_thinking_model_id: '' });
+  await row.run({ choose: async () => 'edit', form, confirm: async () => false });
+  assert.equal(calls.length, 0);
+  await row.run({ choose: async () => 'edit', form, confirm: async () => true, notify() {}, refresh: async () => {} });
+  const update = calls.find(call => call.method === 'PUT');
+  assert.equal(update.path, '/api/user/models/m1');
+  assert.equal(update.body.input_price_per_1k_tokens, 1.5);
+  assert.equal(update.body.model_multiplier, 1.4);
+  let warning = '';
+  await row.run({ choose: async () => 'delete', confirm: async (_title, message) => { warning = message; return false; } });
+  assert.match(warning, /清除关联 Team 和 API Key/);
+  assert.equal(calls.some(call => call.method === 'DELETE'), false);
 });
