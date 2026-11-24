@@ -102,8 +102,10 @@ function providersPage(runtime) {
 }
 
 function myUpstreamPage(runtime) {
+  const updateLabels = { enabled: '启用状态', input_price_per_1k_tokens: '输入价格（每 1,000 个 Token）', output_price_per_1k_tokens: '输出价格（每 1,000 个 Token）', cached_output_price_per_1k_tokens: '缓存输出价格（每 1,000 个 Token）', series: '模型系列', description: '模型说明', alias: '显示名称/别名' };
+  const describeUpdates = updates => Object.entries(updates).map(([name, value]) => `${updateLabels[name] || name}：${name === 'enabled' ? (value ? '启用' : '停用') : value}`).join('\n');
   return {
-    id: 'my-upstream', label: '我的上游', description: '网页“我的上游”供应商与个人 Team 模型双标签页。',
+    id: 'my-upstream', label: '我的上游', description: '自有供应商与个人团队模型。',
     tabs: [{ id: 'providers', label: '供应商' }, { id: 'models', label: '模型' }],
     onTabChange() { runtime.myUpstreamProviderSearch = ''; runtime.myUpstreamModelSearch = ''; runtime.myUpstreamSelectedModels = []; },
     async load() {
@@ -163,8 +165,8 @@ function myUpstreamPage(runtime) {
         if (action === 'enable' || action === 'disable') updates.enabled = action === 'enable';
         else {
           const fieldOptions = [
-            { label: '启用状态', value: 'enabled' }, { label: '输入价格 / 1K', value: 'input_price_per_1k_tokens' }, { label: '输出价格 / 1K', value: 'output_price_per_1k_tokens' },
-            { label: '缓存输出价格 / 1K', value: 'cached_output_price_per_1k_tokens' }, { label: '系列', value: 'series' }, { label: '说明', value: 'description' }, { label: '显示名称/别名', value: 'alias' }, { label: '完成字段选择', value: '__done__' },
+            { label: '启用状态', value: 'enabled' }, { label: '输入价格 / 1,000 Token', value: 'input_price_per_1k_tokens' }, { label: '输出价格 / 1,000 Token', value: 'output_price_per_1k_tokens' },
+            { label: '缓存输出价格 / 1,000 Token', value: 'cached_output_price_per_1k_tokens' }, { label: '系列', value: 'series' }, { label: '说明', value: 'description' }, { label: '显示名称/别名', value: 'alias' }, { label: '完成字段选择', value: '__done__' },
           ];
           while (true) {
             const field = await ctx.choose('选择供应商模型更新字段', fieldOptions, { description: '可添加多个字段；未选择字段保持不变。' });
@@ -178,7 +180,7 @@ function myUpstreamPage(runtime) {
           }
           if (!Object.keys(updates).length) return;
         }
-        if (!await ctx.confirm('更新供应商模型', `${provider.name}\n${modelIds.length} 个模型\n${JSON.stringify(updates)}\n价格变更会影响计费。`)) return;
+        if (!await ctx.confirm('更新供应商模型', `${provider.name}\n${modelIds.length} 个模型\n${describeUpdates(updates)}\n价格变更会影响计费。`)) return;
         const result = await runtime.client.post(`/api/user/providers/${encodeURIComponent(provider.id)}/models/batch-update`, { modelIds, updates });
         ctx.notify(`已更新 ${result.updated || 0} 个供应商模型。`); await ctx.refresh();
       };
@@ -221,7 +223,7 @@ function myUpstreamPage(runtime) {
           }
         }
         if (!Object.keys(updates).length) return;
-        if (!await ctx.confirm('批量更新个人模型', `更新 ${modelIds.length} 个模型：\n${JSON.stringify(updates, null, 2)}\n价格修改会影响计费。`)) return;
+        if (!await ctx.confirm('批量更新个人模型', `更新 ${modelIds.length} 个模型：\n${describeUpdates(updates)}\n价格修改会影响计费。`)) return;
         const result = await runtime.client.post('/api/user/my-team-models/batch-update', { modelIds, updates });
         ctx.notify(`已更新 ${result.updated || 0} 个模型。`); await ctx.refresh();
       };
@@ -246,14 +248,14 @@ function myUpstreamPage(runtime) {
                 { name: 'upstream_model_id', label: '上游模型 ID', value: item.upstream_model_id || item.name || item.id },
                 { name: 'alias', label: '显示名称/别名', value: item.alias || '' }, { name: 'description', label: '说明', value: item.description || '' },
                 { name: 'series', label: '系列', value: item.series || '' }, { name: 'enabled', label: '启用模型', type: 'boolean', value: item.enabled !== false },
-                { name: 'input_price_per_1k_tokens', label: '输入价格 / 1K', value: String(item.input_price_per_1k_tokens || 0) },
-                { name: 'output_price_per_1k_tokens', label: '输出价格 / 1K', value: String(item.output_price_per_1k_tokens || 0) },
-                { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格 / 1K', value: String(item.cached_output_price_per_1k_tokens || 0) },
-                { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格 / 1K', value: String(item.reference_input_price_per_1k_tokens || 0) },
-                { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格 / 1K', value: String(item.reference_output_price_per_1k_tokens || 0) },
-                { name: 'rate_limit_rpm', label: 'RPM 限额', value: String(item.rate_limit_rpm || 0) }, { name: 'rate_limit_tpm', label: 'TPM 限额', value: String(item.rate_limit_tpm || 0) },
+                { name: 'input_price_per_1k_tokens', label: '输入价格 / 1,000 Token', value: String(item.input_price_per_1k_tokens || 0) },
+                { name: 'output_price_per_1k_tokens', label: '输出价格 / 1,000 Token', value: String(item.output_price_per_1k_tokens || 0) },
+                { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格 / 1,000 Token', value: String(item.cached_output_price_per_1k_tokens || 0) },
+                { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格 / 1,000 Token', value: String(item.reference_input_price_per_1k_tokens || 0) },
+                { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格 / 1,000 Token', value: String(item.reference_output_price_per_1k_tokens || 0) },
+                { name: 'rate_limit_rpm', label: '每分钟最大请求数（不限制填 0）', value: String(item.rate_limit_rpm || 0) }, { name: 'rate_limit_tpm', label: '每分钟最大 Token 数（不限制填 0）', value: String(item.rate_limit_tpm || 0) },
                 { name: 'model_multiplier', label: '模型倍率', value: String(item.model_multiplier || 1) }, { name: 'completion_multiplier', label: '补全倍率', value: String(item.completion_multiplier || 1) },
-                { name: 'thinking_model_id', label: 'Thinking 模型 ID', value: item.thinking_model_id || '' }, { name: 'non_thinking_model_id', label: 'Non-thinking 模型 ID', value: item.non_thinking_model_id || '' },
+                { name: 'thinking_model_id', label: '思考模式模型 ID（可空）', value: item.thinking_model_id || '' }, { name: 'non_thinking_model_id', label: '普通模式模型 ID（可空）', value: item.non_thinking_model_id || '' },
               ]);
               if (!values) return;
               const numeric = ['input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'cached_output_price_per_1k_tokens', 'reference_input_price_per_1k_tokens', 'reference_output_price_per_1k_tokens', 'rate_limit_rpm', 'rate_limit_tpm', 'model_multiplier', 'completion_multiplier'];

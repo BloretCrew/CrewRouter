@@ -20,7 +20,7 @@ test('admin stats tabs expose web dimensions and latency endpoint', async () => 
   page.onTabChange({ id: 'latency' });
   const data = await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/admin/stats/latency'));
-  assert.equal(data.sections[0].cards.find(card => card.label === '端到端 P95').value, '90');
+  assert.equal(data.sections[0].cards.find(card => card.label === '完整响应95%分位延迟（P95）').value, '90');
 });
 
 test('admin stats date selection is explicit and includes 365 days', async () => {

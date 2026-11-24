@@ -10,10 +10,14 @@ const page = runtime => buildPages(runtime).find(item => item.id === 'usage');
 test('usage tabs request latency, message and log data with shared filters', async () => {
   const runtime = makeRuntime();
   const calls = [];
-  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [], byModel: [], byApiKey: [], byProvider: [], bySource: [] }; return {}; };
+  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [], byModel: [], byApiKey: [], byProvider: [], bySource: [] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; return {}; };
   const usage = page(runtime);
   usage.onTabChange({ id: 'latency' });
-  await usage.load();
+  const latencyData = await usage.load();
+  const latencySection = latencyData.sections.find(section => section.tab === 'latency');
+  assert.equal(latencySection.cards[0].label, '请求中位延迟（P50）');
+  assert.equal(latencySection.cards[1].value, '80');
+  assert.match(latencySection.rows[0].label, /输出速度 12 Token\/秒/);
   usage.onTabChange({ id: 'messages' });
   await usage.load();
   usage.onTabChange({ id: 'logs' });

@@ -129,9 +129,9 @@ function createAdminPages(runtime) {
               { name: 'email_verified', label: '邮箱已验证', type: 'boolean', value: item.email_verified === true },
               { name: 'isAdmin', label: '管理员', type: 'boolean', value: item.is_admin === true },
               { name: 'balance', label: '余额（留空不修改）', value: '' },
-              { name: 'team_id', label: 'Team ID（留空不修改）', value: String(item.team_id || '') },
-              { name: 'rate_limit_rpm', label: 'RPM 限额（留空不修改）', value: String(item.rate_limit_rpm || '') },
-              { name: 'rate_limit_tpm', label: 'TPM 限额（留空不修改）', value: String(item.rate_limit_tpm || '') },
+              { name: 'team_id', label: '团队 ID（留空不修改）', value: String(item.team_id || '') },
+              { name: 'rate_limit_rpm', label: '每分钟最大请求数（留空不修改）', value: String(item.rate_limit_rpm || '') },
+              { name: 'rate_limit_tpm', label: '每分钟最大 Token 数（留空不修改）', value: String(item.rate_limit_tpm || '') },
               { name: 'tags', label: '用户标签（逗号分隔；留空不修改）', value: Array.isArray(item.tags) ? item.tags.join(',') : '' },
             ]);
             if (!values) return;
@@ -470,10 +470,12 @@ function createAdminPages(runtime) {
           const latency = await api('/api/admin/stats/latency', { query: { days, ...(runtime.adminStatsFilters || {}) } });
           const summary = latency.summary || {};
           const percentile = (group, key) => group && group[key] != null ? Math.round(Number(group[key])) : null;
-          sections.push({ title: '全局延迟与吞吐', cards: [
-            { label: '端到端 P50', value: text(percentile(summary.e2e, 'p50'), '—'), detail: 'ms' }, { label: '端到端 P95', value: text(percentile(summary.e2e, 'p95'), '—'), detail: 'ms' },
-            { label: '首字 P95', value: text(percentile(summary.ttft, 'p95'), '—'), detail: 'ms' }, { label: '测量请求', value: text(summary.measuredRequests, '0'), detail: `覆盖 ${(Number(summary.coverage || 0) * 100).toFixed(1)}%` },
-          ], rows: array(latency.daily).map(item => ({ label: display(item.date, `${item.requests || 0} 请求`, `E2E P95 ${percentile(item.e2e, 'p95') ?? '—'} ms`, `TTFT P95 ${percentile(item.ttft, 'p95') ?? '—'} ms`, `输出 ${percentile(item.outputTps, 'p50') ?? '—'} tok/s`) })) });
+          sections.push({ title: '响应速度与首字延迟', cards: [
+            { label: '完整响应中位延迟（P50）', value: text(percentile(summary.e2e, 'p50'), '—'), detail: '一半请求不超过此耗时 · 毫秒' },
+            { label: '完整响应95%分位延迟（P95）', value: text(percentile(summary.e2e, 'p95'), '—'), detail: '95% 请求不超过此耗时 · 毫秒' },
+            { label: '首字延迟95%分位（P95）', value: text(percentile(summary.ttft, 'p95'), '—'), detail: '95% 请求不超过此耗时 · 毫秒' },
+            { label: '已测量请求数', value: text(summary.measuredRequests, '0'), detail: `数据覆盖 ${(Number(summary.coverage || 0) * 100).toFixed(1)}% 的请求` },
+          ], rows: array(latency.daily).map(item => ({ label: display(item.date, `${item.requests || 0} 次请求`, `完整响应95%分位 ${percentile(item.e2e, 'p95') ?? '—'} 毫秒`, `首字延迟95%分位 ${percentile(item.ttft, 'p95') ?? '—'} 毫秒`, `输出速度中位数 ${percentile(item.outputTps, 'p50') ?? '—'} Token/秒`) })) });
         }
         return { sections, actions: [
           ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, tab: 'overview', run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
@@ -490,9 +492,9 @@ function createAdminPages(runtime) {
         return { sections: [
           { title: '当前积分', cards: [{ label: '积分', value: text(data && data.balance, '0') }, { label: '可退款', value: text(data && data.refund_balance, '0') }] },
           { title: 'Team 与个人限额', rows: [
-            { label: `Team：${text(group.name, '未分配')}` },
-            { label: `个人速率限制：${Number(data && data.rate_limit_rpm || 0)} RPM · ${Number(data && data.rate_limit_tpm || 0)} TPM` },
-            ...rules.map(rule => ({ label: `${rule.rule_type === 'requests' ? '请求' : 'Token'} 限额：${rule.rule_value} / ${rule.duration_hours || 24} 小时`, detail: `当前用量 ${rule.current || 0}${rule.rule_type === 'requests' ? ' 请求' : ' tokens'}${rule.description ? ` · ${rule.description}` : ''}` })),
+            { label: `所属团队：${text(group.name, '未分配')}` },
+            { label: `个人速率限制：每分钟 ${Number(data && data.rate_limit_rpm || 0)} 次请求、${Number(data && data.rate_limit_tpm || 0)} Token` },
+            ...rules.map(rule => ({ label: `${rule.rule_type === 'requests' ? '请求' : 'Token'} 限额：${rule.rule_value} / ${rule.duration_hours || 24} 小时`, detail: `当前用量 ${rule.current || 0}${rule.rule_type === 'requests' ? ' 次请求' : ' Token'}${rule.description ? ` · ${rule.description}` : ''}` })),
           ] },
         ], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
       },

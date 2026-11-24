@@ -10,7 +10,7 @@ function usagePage(runtime) {
   return {
     id: 'usage',
     label: '用量',
-    description: '请求、Token、成本、客户端识别率与模型/来源分布。',
+    description: '请求数、Token（模型处理的文本单位）、费用、客户端识别率，以及各模型和来源的使用情况。',
     onTabChange(tab) { runtime.usageTab = tab?.id || 'overview'; },
     tabs: [
       { id: 'overview', label: '概览' },
@@ -19,7 +19,7 @@ function usagePage(runtime) {
       { id: 'providers', label: '供应商' },
       { id: 'keys', label: 'API Key' },
       { id: 'sources', label: '客户端' },
-      { id: 'latency', label: '延迟' },
+      { id: 'latency', label: '响应速度' },
       { id: 'messages', label: '消息分析' },
       { id: 'logs', label: '调用记录' },
     ],
@@ -35,7 +35,7 @@ function usagePage(runtime) {
         description: `最近 ${runtime.usageDays} 天。`,
         cards: [
           { label: '请求', value: summary.requests.toLocaleString(), detail: '总请求数' },
-          { label: 'Token', value: formatBigNumber(summary.tokens), detail: `缓存 ${formatBigNumber(summary.cachedTokens)}` },
+          { label: 'Token 总量', value: formatBigNumber(summary.tokens), detail: `缓存命中 Token ${formatBigNumber(summary.cachedTokens)}` },
           { label: '成本', value: formatCost(summary.cost), detail: '服务端计费合计' },
           { label: '延迟', value: `${Math.round(summary.avgLatency)} ms`, detail: '平均' },
           { label: '客户端识别', value: `${summary.identifiedRate.toFixed(1)}%`, detail: `${formatBigNumber(summary.unknownRequests)} 未识别` },
@@ -51,7 +51,7 @@ function usagePage(runtime) {
           title: '每日',
           tab: 'daily',
           rows: summary.daily.slice(-30).map(row => ({
-            label: `${row.date || '未知日期'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`,
+            label: `${row.date || '未知日期'} · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)}`,
             detail: bar(row.tokens, maxDaily, 26),
           })),
         });
@@ -61,26 +61,28 @@ function usagePage(runtime) {
           title: '按模型',
           tab: 'models',
           rows: summary.byModel.slice(0, 30).map(row => ({
-            label: `${row.model_name || row.model_id || '未知'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`,
+            label: `${row.model_name || row.model_id || '未知'} · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)}`,
             detail: bar(row.tokens, maxModel, 26),
           })),
         });
       }
       if (summary.byProvider?.length) {
-        sections.push({ title: '按供应商', tab: 'providers', rows: summary.byProvider.slice(0, 30).map(row => ({ label: `${row.provider_name || row.provider_id || '未知'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`, detail: bar(row.tokens, Math.max(...summary.byProvider.map(item => Number(item.tokens) || 0), 1), 26) })) });
+        sections.push({ title: '按供应商', tab: 'providers', rows: summary.byProvider.slice(0, 30).map(row => ({ label: `${row.provider_name || row.provider_id || '未知'} · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)}`, detail: bar(row.tokens, Math.max(...summary.byProvider.map(item => Number(item.tokens) || 0), 1), 26) })) });
       }
       if (summary.byApiKey.length) {
-        sections.push({ title: '按 API Key', tab: 'keys', rows: summary.byApiKey.slice(0, 30).map(row => ({ label: `${row.key_name || row.key_prefix || '未知 Key'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`, detail: bar(row.tokens, maxKey, 26) })) });
+        sections.push({ title: '按 API Key', tab: 'keys', rows: summary.byApiKey.slice(0, 30).map(row => ({ label: `${row.key_name || row.key_prefix || '未知 API Key'} · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)}`, detail: bar(row.tokens, maxKey, 26) })) });
       }
       if (summary.bySource?.length) {
-        sections.push({ title: '按客户端', tab: 'sources', rows: summary.bySource.slice(0, 30).map(row => ({ label: `${row.request_source || 'unknown'} · ${Number(row.requests || 0).toLocaleString()} 请求 · ${formatBigNumber(row.tokens)} tokens · ${formatCost(row.cost)}`, detail: bar(row.tokens, Math.max(...summary.bySource.map(item => Number(item.tokens) || 0), 1), 26) })) });
+        sections.push({ title: '按客户端', tab: 'sources', rows: summary.bySource.slice(0, 30).map(row => ({ label: `${row.request_source || '未知来源'} · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)}`, detail: bar(row.tokens, Math.max(...summary.bySource.map(item => Number(item.tokens) || 0), 1), 26) })) });
       }
       if (runtime.usageTab === 'latency') {
         const latency = await getLatencyStats(runtime.client, { days: runtime.usageDays, ...filters });
-        sections.push({ title: '延迟与吞吐', tab: 'latency', cards: [
-          { label: 'P50', value: text(latency.p50_ms, '—'), detail: '毫秒' }, { label: 'P95', value: text(latency.p95_ms, '—'), detail: '毫秒' },
-          { label: 'P99', value: text(latency.p99_ms, '—'), detail: '毫秒' }, { label: '请求', value: text(latency.total_requests, '0'), detail: '筛选范围' },
-        ], rows: (latency.daily || []).map(row => ({ label: `${row.date} · ${row.requests || 0} 请求 · P95 ${row.p95_ms || 0} ms · ${row.tokens_per_second || 0} tok/s` })) });
+        sections.push({ title: '响应速度与首字延迟', tab: 'latency', cards: [
+          { label: '请求中位延迟（P50）', value: text(latency.p50_ms, '—'), detail: '一半请求不超过此耗时 · 毫秒' },
+          { label: '请求95%分位延迟（P95）', value: text(latency.p95_ms, '—'), detail: '95% 请求不超过此耗时 · 毫秒' },
+          { label: '请求99%分位延迟（P99）', value: text(latency.p99_ms, '—'), detail: '99% 请求不超过此耗时 · 毫秒' },
+          { label: '请求总数', value: text(latency.total_requests, '0'), detail: '当前筛选范围' },
+        ], rows: (latency.daily || []).map(row => ({ label: `${row.date} · ${row.requests || 0} 次请求 · 95%请求延迟 ${row.p95_ms || 0} 毫秒 · 输出速度 ${row.tokens_per_second || 0} Token/秒` })) });
       }
       if (runtime.usageTab === 'messages') {
         const messageStats = await getMessageStats(runtime.client, { days: runtime.usageDays, ...filters });
