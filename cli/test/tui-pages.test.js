@@ -19,15 +19,84 @@ test('TUI pages map every console and admin navigation entry', () => {
   for (const page of pages) assert.ok(navGroups.some(group => group.pages.includes(page.id)), `${page.id} belongs to a navigation group`);
 });
 
-test('admin-only collection pages explain access for non-admin sessions without calling APIs', async () => {
-  const pages = buildPages(runtime(false));
-  const ids = ['admin-users', 'admin-error-logs', 'admin-prompts', 'admin-plugins', 'admin-model-library', 'admin-teams'];
-  for (const id of ids) {
-    const page = pages.find(item => item.id === id);
-    assert.ok(page, `${id} exists`);
-    let requested = false;
-    const data = await page.load(async () => { requested = true; throw new Error('unexpected request'); });
-    assert.equal(requested, false, `${id} must not request admin API as a non-admin`);
-    assert.match(data.sections[0].rows[0].label, /管理员/);
+test('admin-only pages require a verified admin identity before calling APIs', async () => {
+  for (const isAdmin of [false, null]) {
+    const pages = buildPages(runtime(isAdmin));
+    const ids = ['admin-users', 'admin-error-logs', 'admin-prompts', 'admin-plugins', 'admin-model-library', 'admin-models', 'admin-teams', 'admin-stats', 'admin-settings'];
+    for (const id of ids) {
+      const page = pages.find(item => item.id === id);
+      assert.ok(page, `${id} exists`);
+      let requested = false;
+      const data = await page.load(async () => { requested = true; throw new Error('unexpected request'); });
+      assert.equal(requested, false, `${id} must not request admin API without a verified admin`);
+      assert.match(data.sections[0].rows[0].label, /管理员/);
+    }
   }
+});
+
+test('user console pages query matching endpoints and expose equivalent controls', async () => {
+  const pages = new Map(buildPages(runtime(false)).map(page => [page.id, page]));
+  const calls = [];
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/user/project-stats') return { summary: { projects: 1, requests: 2, tokens: 30 }, projects: [{ workspace_path: '/repo/a', requests: 2, tokens: 30, sources: { codex: 2 } }], daily: [] };
+    if (path === '/api/user/leaderboard') return { leaderboard: [{ rank: 1, username: 'alice', totalRequests: 4, totalTokens: 40, totalPoints: 2, cacheHitRate: 25, balance: 3 }] };
+    if (path === '/api/user/audit-logs') return { items: [{ action: 'api_key', description: 'created', created_at: '2026-11-01T00:00:00Z' }], total: 1, page: 1 };
+    if (path === '/api/user/custom-instructions') return { items: [{ file: 'CLAUDE.md', source: 'claude_code', chars: 4, occurrence_count: 2, fingerprint: 'fp', preview: 'hint' }], total: 1, page: 1 };
+    if (path === '/api/user/inject-prompts') return [];
+    if (path === '/api/user/model-library') return { models: [{ id: 'm1', name: 'Model One' }] };
+    if (path === '/api/user/api-keys') return [{ id: 8, name: 'Main Key' }];
+    if (path === '/api/user/provider-tags') return [{ id: 2, name: 'Featured' }];
+    if (path.endsWith('/models')) return { models: [{ id: 'm1', name: 'Model One' }], queue: [] };
+    if (path.endsWith('/fp')) return { file: 'CLAUDE.md', content: 'prompt body' };
+    return {};
+  };
+
+  const project = await pages.get('projects').load(api);
+  assert.ok(project.sections.some(section => section.title === '每日活动'));
+  assert.ok(project.actions.some(action => action.label === '自定义日期范围'));
+  const leaderboard = await pages.get('leaderboard').load(api);
+  assert.ok(leaderboard.sections[0].rows[0].label.includes('alice'));
+  assert.ok(leaderboard.actions.some(action => action.label === '按缓存命中率排序'));
+  const audit = await pages.get('audit-logs').load(api);
+  assert.ok(audit.sections[0].rows[0].label.includes('api_key'));
+  assert.ok(audit.actions.some(action => action.label === '下一页'));
+  const prompts = await pages.get('prompts').load(api);
+  assert.ok(prompts.sections.some(section => section.title === '历史提示词'));
+  assert.ok(prompts.actions.some(action => action.label === '搜索历史提示词'));
+  assert.ok(calls.some(call => call.path === '/api/user/custom-instructions' && call.options.query.pageSize === 20));
+});
+
+test('model library requires confirmation and sends the ordered key model queue', async () => {
+  const page = buildPages(runtime(false)).find(item => item.id === 'model-library');
+  const calls = [];
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/user/model-library') return { models: [{ id: 'm1', name: 'Model One' }] };
+    if (path === '/api/user/api-keys') return [{ id: 8, name: 'Main Key' }];
+    if (path === '/api/user/provider-tags') return [{ id: 2, name: 'Featured' }];
+    if (path.endsWith('/models')) return { models: [{ id: 'm1', name: 'Model One' }], queue: [] };
+    return {};
+  };
+  const data = await page.load(api);
+  assert.ok(calls.some(call => call.path === '/api/user/model-library'));
+  assert.ok(calls.some(call => call.path === '/api/user/api-keys/8/models'));
+  const row = data.sections.find(section => section.title === '模型目录').rows[0];
+  let confirmCount = 0;
+  await row.run({ choose: async () => 'toggle', confirm: async () => { confirmCount++; return false; } });
+  assert.equal(confirmCount, 1);
+  assert.equal(calls.some(call => call.options.method === 'PUT'), false, 'cancelled confirmation does not write');
+  await row.run({ choose: async () => 'toggle', confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.equal(calls.at(-1).options.method, 'PUT');
+  assert.deepEqual(calls.at(-1).options.body.modelIds, ['m1']);
+});
+
+test('project date query sends the web API range parameters', async () => {
+  const page = buildPages(runtime(false)).find(item => item.id === 'projects');
+  const calls = [];
+  const api = async (path, options = {}) => { calls.push({ path, options }); return { projects: [] }; };
+  const actions = (await page.load(api)).actions;
+  const form = async (_title, fields) => Object.fromEntries(fields.map(field => [field.name, field.name === 'start' ? '2026-11-01' : '2026-11-07']));
+  await actions.find(action => action.label === '自定义日期范围').run({ form, notify() {} });
+  assert.deepEqual(calls.at(-1).options.query, { start: '2026-11-01', end: '2026-11-07' });
 });
