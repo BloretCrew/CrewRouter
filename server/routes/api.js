@@ -495,6 +495,10 @@ async function refreshApiUserModelAuthorization(apiUser) {
     Promise.all(configuredMappingIds.map(async id => [id, await require('../utils/resolved-model-access').resolveAuthorizedModelConfig(pool, apiUser.userId, id)])),
   ]);
   const requestModelConfigById = new Map(requestModelConfigs);
+  const requestModelConfigByBinding = new Map(requestModelBindings.map(binding => [
+    JSON.stringify([binding.harness || null, binding.requestModelName]),
+    requestModelConfigById.get(binding.modelId),
+  ]));
   apiUser.modelAuthorization = {
     deniedModelIds: allConfiguredIds.filter(id => !allowed.has(id)),
     deniedRequestModelBindings: requestModelBindings
@@ -502,6 +506,7 @@ async function refreshApiUserModelAuthorization(apiUser) {
       .map(binding => JSON.stringify([binding.harness || null, binding.requestModelName])),
     requestModelIds: [...allowedMappingIds],
     requestModelConfigs: [...requestModelConfigById.entries()],
+    requestModelConfigByBinding: [...requestModelConfigByBinding.entries()],
   };
   apiUser.currentModelId = currentModelId;
   apiUser.modelQueue = queue;
@@ -563,7 +568,7 @@ function resolveModelQueueForRequest(apiUser, req, metadata = {}) {
       ];
       const requestBindingKey = JSON.stringify([binding.harness || null, normalizedName]);
       const mappingDenied = (apiUser?.modelAuthorization?.deniedRequestModelBindings || []).includes(requestBindingKey);
-      const requestModelConfig = new Map(apiUser?.modelAuthorization?.requestModelConfigs || []).get(modelId);
+      const requestModelConfig = new Map(apiUser?.modelAuthorization?.requestModelConfigByBinding || []).get(requestBindingKey);
       return {
         queue: modelId ? [modelId] : [],
         requestSource,

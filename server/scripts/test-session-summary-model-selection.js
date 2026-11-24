@@ -47,10 +47,10 @@ const requestNameBindings = {
     deniedModelIds: [],
     deniedRequestModelBindings: [],
     requestModelIds: ['model-general', 'model-codex-special', 'model-reasoning'],
-    requestModelConfigs: [
-      ['model-general', { id: 'model-general' }],
-      ['model-codex-special', { id: 'model-codex-special' }],
-      ['model-reasoning', { id: 'model-reasoning' }],
+    requestModelConfigByBinding: [
+      [JSON.stringify([null, 'fast-chat']), { id: 'model-general' }],
+      [JSON.stringify(['codex', 'fast-chat']), { id: 'model-codex-special' }],
+      [JSON.stringify([null, 'reasoning']), { id: 'model-reasoning' }],
     ],
   },
 };
@@ -80,7 +80,7 @@ assert.deepStrictEqual(
   '策略覆盖必须仍高于请求名和 Harness 绑定'
 );
 assert.equal(
-  resolveModelQueueForRequest({ ...requestNameBindings, modelAuthorization: { deniedModelIds: [], deniedRequestModelBindings: [JSON.stringify(['codex', 'fast-chat'])], requestModelIds: ['model-general', 'model-reasoning'], requestModelConfigs: [['model-general', { id: 'model-general' }], ['model-reasoning', { id: 'model-reasoning' }]] } }, { headers: { 'x-crewrouter-client': 'codex' }, body: { model: 'fast-chat' } }).mappingDenied,
+  resolveModelQueueForRequest({ ...requestNameBindings, modelAuthorization: { deniedModelIds: [], deniedRequestModelBindings: [JSON.stringify(['codex', 'fast-chat'])], requestModelIds: ['model-general', 'model-reasoning'], requestModelConfigByBinding: [[JSON.stringify([null, 'fast-chat']), { id: 'model-general' }], [JSON.stringify([null, 'reasoning']), { id: 'model-reasoning' }]] } }, { headers: { 'x-crewrouter-client': 'codex' }, body: { model: 'fast-chat' } }).mappingDenied,
   true,
   '已配置映射目标失去授权时必须标记拒绝而不是回退'
 );

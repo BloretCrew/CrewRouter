@@ -23,8 +23,9 @@ function worker(state) {
     isAnthropicApiPath: () => false,
     buildApiErrorBody: (_req, type, message, extra) => ({ type, message, ...extra }),
     ApiKeyLifecycleError: class extends Error {},
+    suspensionState: () => ({ suspended: false }),
     refreshApiUserModelAuthorization: async () => { if (state.pause) await state.pause; },
-    loadModelQueueForKey: async () => [], loadHarnessModelsForKey: async () => ({}),
+    loadModelQueueForKey: async () => [], loadHarnessModelsForKey: async () => ({}), loadRequestModelBindingsForKey: async () => [],
     buildInjectedPrompt: async (user, id) => {
       assert.equal(user, 10);
       return state.fail ? Promise.reject(new Error('fake query failure')) : state.prompt(id);

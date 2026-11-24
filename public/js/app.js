@@ -14393,7 +14393,7 @@ ${extractorBody}
           <label>${escapeHtml(t('作用范围'))}<select id="mlRequestBindingHarness"><option value=""${!editBinding?.harness ? ' selected' : ''}>${escapeHtml(t('所有 Harness'))}</option>${harnessOptions}</select></label>
           <label>${escapeHtml(t('请求 model 名称'))}<input id="mlRequestBindingName" list="mlRequestBindingNames" maxlength="255" placeholder="例如 fast-chat" value="${escapeHtml(editBinding?.request_model_name || '')}" autocomplete="off"><datalist id="mlRequestBindingNames">${(data.models || []).flatMap(item => [item.id, item.name, item.alias, item.upstream_model_id].filter(Boolean)).filter((value, index, values) => values.indexOf(value) === index).map(value => `<option value="${escapeHtml(value)}"></option>`).join('')}</datalist></label>
           <label>${escapeHtml(t('映射目标模型'))}<select id="mlRequestBindingTarget"><option value="">${escapeHtml(t('选择目标模型'))}</option>${modelOptions}</select></label>
-        </div>`,អ
+        </div>`,
         buttons: [
           { label: t('取消'), variant: 'secondary' },
           ...(editBinding ? [{ label: t('清除映射'), variant: 'ghost', onClick: async () => {

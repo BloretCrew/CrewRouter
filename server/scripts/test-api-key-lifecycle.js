@@ -61,11 +61,12 @@ function fixture() {
       if (sql.includes('SELECT signature_enabled')) return { rows: [{ signature_enabled: null }] };
       if (sql.includes('FROM api_key_models')) return { rows: [{ model_id: 'fixture-model' }] };
       if (sql.includes('FROM api_key_harness_models')) return { rows: [] };
+      if (sql.includes('FROM api_key_request_model_bindings')) return { rows: [] };
       if (sql.startsWith('SELECT team_id, balance')) return { rows: [{ team_id: state.teamId, balance: state.balance }] };
       if (sql.startsWith('UPDATE api_keys SET last_used_at')) { state.writes++; return { rows: [] }; }
       throw new Error(`Unexpected isolated query: ${sql}`);
     } },
-    getAuthorizedModelIds: async () => new Set(['fixture-model']),
+    getAuthorizedModelIds: async (_userId, modelIds) => new Set((modelIds || []).filter(id => id === 'fixture-model')),
     getCachedApiKey: key => { assert.equal(key, RAW_KEY); return state.cache; },
     setCachedApiKey: (key, value) => { assert.equal(key, RAW_KEY); state.cache = value; state.cacheSets++; },
     invalidateApiKeyCacheByKeyId: key => { assert.equal(key, 17); state.cache = null; state.invalidations++; },
@@ -78,7 +79,16 @@ function fixture() {
     canConsumePoints: isolatedPoints(state),
     notifyUser: async () => {}, NOTIFICATION_TYPES: { QUOTA_INSUFFICIENT: 'quota' },
     googleError: { googleErrorBody: (code, message, options = {}) => ({ error: { code, message, status: options.status || 'UNKNOWN' } }) },
-    require: () => { state.downstream++; throw new Error('Unexpected downstream dependency'); },
+    require(name) {
+      if (name === '../utils/resolved-model-access') {
+        return {
+          getAuthorizedModelInputs: async (_db, _userId, modelIds) => new Set((modelIds || []).filter(id => id === 'fixture-model')),
+          resolveAuthorizedModelConfig: async (_db, _userId, modelId) => modelId === 'fixture-model' ? { id: modelId } : null,
+        };
+      }
+      state.downstream++;
+      throw new Error('Unexpected downstream dependency');
+    },
   };
   const functions = [
     declaration('ApiKeyLifecycleError', 'class'),
@@ -89,6 +99,7 @@ function fixture() {
     ...['refreshApiUserModelAuthorization', 'refreshApiUserForRequest', 'validateApiKey',
       'handleChatCompletion', 'handleAnthropicMessage', 'handleResponses'].map(name => declaration(name, 'async function')),
     ...['isAnthropicApiPath', 'isGeminiApiPath', 'buildApiErrorBody', 'omitOpenAIOnly'].map(name => declaration(name)),
+    ...['loadRequestModelBindingsForKey'].map(name => declaration(name, 'async function')),
   ].join('\n');
   vm.createContext(sandbox);
   vm.runInContext(`${functions}\nthis.fixtureFunctions = { validateApiKey, refreshApiUserForRequest, handleChatCompletion, handleAnthropicMessage, handleResponses };`, sandbox);
