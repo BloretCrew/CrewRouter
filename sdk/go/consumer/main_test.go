@@ -63,6 +63,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if !warning.QuotaWarningEnabled {
 		t.Fatalf("unexpected quota warning payload: %#v", warning)
 	}
+
+	var schedule crewrouter.ApiKeySchedule
+	if err := json.Unmarshal([]byte(`{"schedule_enabled":false,"schedule_on_time":null,"schedule_off_time":null,"schedule_days":[0,1,2,3,4,5,6],"schedule_timezone":"Asia/Shanghai"}`), &schedule); err != nil {
+		t.Fatalf("decode schedule: %v", err)
+	}
+	if schedule.ScheduleOnTime != nil || len(schedule.ScheduleDays) != 7 {
+		t.Fatalf("unexpected schedule payload: %#v", schedule)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

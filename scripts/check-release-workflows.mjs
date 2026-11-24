@@ -73,6 +73,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const keyTagUpdate = openapi.paths['/api/user/key-tags/{id}']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const keyMembers = openapi.paths['/api/user/api-keys/{id}/members']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const quotaWarning = openapi.paths['/api/user/api-keys/{id}/quota-warning']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const keySchedule = openapi.paths['/api/user/api-keys/{id}/schedule']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
@@ -94,6 +95,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (keyMembers?.$ref !== '#/components/schemas/ApiKeyMembersResponse') throw new Error(`${openapiPath} must define Co-Key member list responses`);
   if (!openapi.components.schemas.ApiKeyMembersResponse?.properties?.members?.items?.$ref?.endsWith('/ApiKeyMember')) throw new Error(`${openapiPath} must define Co-Key member fields`);
   if (quotaWarning?.$ref !== '#/components/schemas/ApiKeyQuotaWarning') throw new Error(`${openapiPath} must define quota-warning settings`);
+  if (keySchedule?.$ref !== '#/components/schemas/ApiKeySchedule') throw new Error(`${openapiPath} must define API Key schedule settings`);
+  if (!openapi.components.schemas.ApiKeySchedule?.properties?.schedule_on_time?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable API Key schedule times`);
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {

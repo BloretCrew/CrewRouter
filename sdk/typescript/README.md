@@ -77,6 +77,7 @@ const created = await client.keys.create({
 await client.keys.setModels(created.data.id, { models: ['claude-fable-5'] });
 const keyUsage = await client.keys.getUsage(created.data.id); // ApiKeyDailyUsageItem[]
 const membership = await client.keys.getMembers(created.data.id); // ApiKeyMembersResponse
+const schedule = await client.keys.getSchedule(created.data.id); // ApiKeySchedule
 
 const usage = await client.usage.get({ days: 7 }); // DailyUsageItem[]
 const balance = await client.balance.get(); // UserBalance

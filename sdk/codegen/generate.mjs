@@ -451,6 +451,11 @@ function managementSchemas() {
       members: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyMember' } },
     }, ['is_owner', 'members']),
     ApiKeyQuotaWarning: object({ quota_warning_enabled: { type: 'boolean' } }),
+    ApiKeySchedule: object({
+      schedule_enabled: { type: 'boolean' }, schedule_on_time: nullableString,
+      schedule_off_time: nullableString, schedule_days: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 } },
+      schedule_timezone: { type: 'string' },
+    }, ['schedule_enabled', 'schedule_on_time', 'schedule_off_time', 'schedule_days', 'schedule_timezone']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -495,6 +500,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.members.list': { $ref: '#/components/schemas/ApiKeyMembersResponse' },
     'user.apiKeys.byId.quotaWarning.list': { $ref: '#/components/schemas/ApiKeyQuotaWarning' },
     'user.apiKeys.byId.quotaWarning.update': { $ref: '#/components/schemas/ApiKeyQuotaWarning' },
+    'user.apiKeys.byId.schedule.list': { $ref: '#/components/schemas/ApiKeySchedule' },
   };
   return schemas[operationId] || null;
 }

@@ -7,6 +7,7 @@ import type {
   ApiKeyListItem,
   ApiKeyMembersResponse,
   ApiKeyQuotaWarning,
+  ApiKeySchedule,
   CallOptions,
   ChatCompletionRequest,
   CrewRouterOptions,
@@ -170,6 +171,8 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.quotaWarning.list', mergePathParams(options, { id })),
     setQuotaWarning: <T = ApiKeyQuotaWarning>(id: string | number, body: ApiKeyQuotaWarning, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.quotaWarning.update', mergePathParams({ ...options, body }, { id })),
+    getSchedule: <T = ApiKeySchedule>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.schedule.list', mergePathParams(options, { id })),
   };
 
   readonly usage = {

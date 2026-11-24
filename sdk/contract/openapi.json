@@ -589,6 +589,45 @@
         "required": [],
         "additionalProperties": true
       },
+      "ApiKeySchedule": {
+        "type": "object",
+        "properties": {
+          "schedule_enabled": {
+            "type": "boolean"
+          },
+          "schedule_on_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "schedule_off_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "schedule_days": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            }
+          },
+          "schedule_timezone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schedule_enabled",
+          "schedule_on_time",
+          "schedule_off_time",
+          "schedule_days",
+          "schedule_timezone"
+        ],
+        "additionalProperties": true
+      },
       "UserModelListItem": {
         "type": "object",
         "properties": {
@@ -14131,8 +14170,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeySchedule"
                 }
               }
             }

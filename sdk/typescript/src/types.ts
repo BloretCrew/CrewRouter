@@ -176,6 +176,14 @@ export interface ApiKeyQuotaWarning {
   quota_warning_enabled: boolean;
 }
 
+export interface ApiKeySchedule {
+  schedule_enabled: boolean;
+  schedule_on_time: string | null;
+  schedule_off_time: string | null;
+  schedule_days: number[];
+  schedule_timezone: string;
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;

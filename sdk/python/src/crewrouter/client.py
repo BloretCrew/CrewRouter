@@ -108,6 +108,14 @@ class ApiKeyQuotaWarning(TypedDict):
     quota_warning_enabled: bool
 
 
+class ApiKeySchedule(TypedDict):
+    schedule_enabled: bool
+    schedule_on_time: Optional[str]
+    schedule_off_time: Optional[str]
+    schedule_days: list[int]
+    schedule_timezone: str
+
+
 class UserKeyTag(TypedDict):
     id: int
     name: str

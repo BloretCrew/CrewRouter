@@ -9,6 +9,7 @@ from crewrouter import (
     ApiKeyDailyUsageItem,
     ApiKeyMembersResponse,
     ApiKeyQuotaWarning,
+    ApiKeySchedule,
     DailyUsageItem,
     UserBalance,
     UserModelListItem,
@@ -90,8 +91,16 @@ class TypedRequestTests(unittest.TestCase):
         }
         self.assertEqual(key_tag["sort_order"], 1)
         quota_warning: ApiKeyQuotaWarning = {"quota_warning_enabled": True}
+        schedule: ApiKeySchedule = {
+            "schedule_enabled": False,
+            "schedule_on_time": None,
+            "schedule_off_time": None,
+            "schedule_days": [0, 1, 2, 3, 4, 5, 6],
+            "schedule_timezone": "Asia/Shanghai",
+        }
         self.assertEqual(members["members"][0]["username"], "member")
         self.assertTrue(quota_warning["quota_warning_enabled"])
+        self.assertIsNone(schedule["schedule_on_time"])
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

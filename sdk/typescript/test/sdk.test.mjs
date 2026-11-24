@@ -129,6 +129,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { quota_warning_enabled: true });
       return;
     }
+    if (req.url === '/api/user/api-keys/7/schedule') {
+      json(res, 200, { schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: [0, 1, 2, 3, 4, 5, 6], schedule_timezone: 'Asia/Shanghai' });
+      return;
+    }
     json(res, 404, { error: 'not found' });
   });
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
@@ -141,6 +145,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const keyTags = await client.keyTags.list();
   const members = await client.keys.getMembers(7);
   const quotaWarning = await client.keys.getQuotaWarning(7);
+  const schedule = await client.keys.getSchedule(7);
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -156,6 +161,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(members.data.is_owner, true);
   assert.equal(members.data.members[0].username, 'member');
   assert.equal(quotaWarning.data.quota_warning_enabled, true);
+  assert.equal(schedule.data.schedule_on_time, null);
+  assert.deepEqual(schedule.data.schedule_days, [0, 1, 2, 3, 4, 5, 6]);
 });
 
 test('management errors expose code and permission', async () => {

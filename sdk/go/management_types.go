@@ -116,6 +116,15 @@ type ApiKeyMember struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// ApiKeySchedule is returned by GET /api/user/api-keys/:id/schedule.
+type ApiKeySchedule struct {
+	ScheduleEnabled  bool    `json:"schedule_enabled"`
+	ScheduleOnTime   *string `json:"schedule_on_time"`
+	ScheduleOffTime  *string `json:"schedule_off_time"`
+	ScheduleDays     []int   `json:"schedule_days"`
+	ScheduleTimezone string  `json:"schedule_timezone"`
+}
+
 // ApiKeyQuotaWarning is returned by the API Key quota-warning setting routes.
 type ApiKeyQuotaWarning struct {
 	QuotaWarningEnabled bool `json:"quota_warning_enabled"`
