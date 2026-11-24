@@ -27,8 +27,9 @@ test('API Key page applies tag filter and only exposes tag editing to owners', a
   runtime.apiKeyTagFilter = '3';
   const page = buildPages(runtime).find(item => item.id === 'keys');
   const data = await page.load(async () => ({}));
+  assert.deepEqual(data.sections.map(section => section.title), ['我的 Key 用量概览', '标签筛选', 'API Key', 'OAuth 授权']);
   assert.equal(data.sections.find(section => section.title === 'API Key').rows.length, 1);
-  assert.ok(data.actions.some(action => action.label === '标签：Ops'));
+  assert.ok(data.sections.find(section => section.title === '标签筛选').rows.some(row => row.label.includes('Ops')));
   const { runtime: memberRuntime } = makeRuntime(false);
   const memberPage = buildPages(memberRuntime).find(item => item.id === 'keys');
   const memberData = await memberPage.load(async () => ({}));

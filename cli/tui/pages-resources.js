@@ -223,7 +223,12 @@ function keysPage(runtime) {
       const allKeys = keysResult.value;
       const tags = tagsResult.status === 'fulfilled' ? (Array.isArray(tagsResult.value) ? tagsResult.value : []) : [];
       const activeTag = runtime.apiKeyTagFilter || '';
-      const keys = allKeys.filter(key => !activeTag || (Array.isArray(key.tags) && key.tags.some(tag => String(tag.id) === String(activeTag))));
+      const keySearch = String(runtime.apiKeySearch || '').toLowerCase();
+      const keys = allKeys.filter(key => {
+        const matchTag = !activeTag || (Array.isArray(key.tags) && key.tags.some(tag => String(tag.id) === String(activeTag)));
+        const matchSearch = !keySearch || [key.name, key.key_prefix, key.current_model_name, key.current_model_id, key.owner?.username, ...(key.tags || []).map(tag => tag.name), ...(key.members || []).map(member => member.username)].some(value => String(value || '').toLowerCase().includes(keySearch));
+        return matchTag && matchSearch;
+      });
       const authorizations = authorizationsResult.status === 'fulfilled' && Array.isArray(authorizationsResult.value?.authorizations) ? authorizationsResult.value.authorizations : [];
       const rows = keys.map(key => ({
         label: `${key.name || '未命名'} · ${key.key_prefix || ''} · ${enabledLabel(key.enabled)} · ${key.current_model_name || key.current_model_id || '未绑定模型'}`,
@@ -276,24 +281,37 @@ function keysPage(runtime) {
           }
         },
       }));
+      const totalRequests = allKeys.reduce((sum, key) => sum + Number(key.total_requests || 0), 0);
+      const totalTokens = allKeys.reduce((sum, key) => sum + Number(key.total_tokens || 0), 0);
+      const totalCost = allKeys.reduce((sum, key) => sum + Number(key.total_cost || 0), 0);
+      const tagRows = [{ label: `${activeTag ? '✓ ' : ''}全部标签`, run: async ctx => { runtime.apiKeyTagFilter = ''; await ctx.refresh(); } }, ...tags.map(tag => ({ label: `${String(tag.id) === String(activeTag) ? '✓ ' : ''}${tag.name}`, detail: `颜色 ${tag.color || '默认'}`, run: async ctx => { runtime.apiKeyTagFilter = String(tag.id); await ctx.refresh(); } }))];
       return {
-        sections: [{
-          title: 'OAuth 授权',
-          description: authorizations.length ? `${authorizations.length} 个客户端具有活跃授权。` : (authorizationsResult.status === 'rejected' ? '当前会话无法读取 OAuth 授权列表。' : '暂无活跃授权。'),
-          rows: authorizations.map(auth => ({ label: `${auth.client_name || auth.name || 'OAuth 客户端'} · ${auth.client_id || ''}`, detail: `授权时间 ${formatTime(auth.created_at || auth.authorized_at)} · 范围 ${(auth.scopes || []).join(', ') || '默认'}`, run: async ctx => { if (!await ctx.confirm('吊销 OAuth 授权', `${auth.client_name || auth.name || auth.client_id}\n吊销后该客户端的所有访问令牌立即失效。`)) return; await runtime.client.post('/oauth/authorizations/revoke', { id: Number(auth.id) }); ctx.notify('OAuth 授权已吊销。'); await ctx.refresh(); } })),
-        }, {
-          title: 'API Key',
-          description: `只能查看当前账号可见 Key；共享 Key 的原始值受权限限制。显示 ${keys.length}/${allKeys.length}${activeTag ? ` · 标签 ${tags.find(tag => String(tag.id) === String(activeTag))?.name || activeTag}` : ''}`,
-          cards: [
-            { label: '总数', value: allKeys.length, detail: '当前账号可见' },
-            { label: '显示', value: keys.length, detail: '当前筛选' },
-            { label: '启用', value: keys.filter(key => key.enabled !== false).length, detail: '可用 Key' },
-            { label: '停用', value: keys.filter(key => key.enabled === false).length, detail: '不可调用' },
-          ],
-          rows: rows.length ? rows : [{ label: '暂无 API Key。' }],
-        }],
+        sections: [
+          { title: '我的 Key 用量概览', cards: [
+            { label: '调用次数', value: totalRequests.toLocaleString() },
+            { label: 'Token 消耗', value: formatBigNumber(totalTokens) },
+            { label: '成本', value: formatCost(totalCost) },
+          ] },
+          { title: '标签筛选', rows: tagRows },
+          {
+            title: 'API Key',
+            description: `可搜索名称、模型、标签和成员；共享 Key 的原始值受权限限制。显示 ${keys.length}/${allKeys.length}${activeTag ? ` · 标签 ${tags.find(tag => String(tag.id) === String(activeTag))?.name || activeTag}` : ''}${keySearch ? ` · 搜索 ${keySearch}` : ''}`,
+            cards: [
+              { label: '总数', value: allKeys.length, detail: '当前账号可见' },
+              { label: '显示', value: keys.length, detail: '当前筛选' },
+              { label: '启用', value: keys.filter(key => key.enabled !== false).length, detail: '可用 Key' },
+              { label: '停用', value: keys.filter(key => key.enabled === false).length, detail: '不可调用' },
+            ],
+            rows: rows.length ? rows : [{ label: '暂无 API Key。' }],
+          },
+          {
+            title: 'OAuth 授权',
+            description: authorizations.length ? `${authorizations.length} 个客户端具有活跃授权。` : (authorizationsResult.status === 'rejected' ? '当前会话无法读取 OAuth 授权列表。' : '暂无活跃授权。'),
+            rows: authorizations.map(auth => ({ label: `${auth.client_name || auth.name || 'OAuth 客户端'} · ${auth.client_id || ''}`, detail: `授权时间 ${formatTime(auth.created_at || auth.authorized_at)} · 范围 ${(auth.scopes || []).join(', ') || '默认'}`, run: async ctx => { if (!await ctx.confirm('吊销 OAuth 授权', `${auth.client_name || auth.name || auth.client_id}\n吊销后该客户端的所有访问令牌立即失效。`)) return; await runtime.client.post('/oauth/authorizations/revoke', { id: Number(auth.id) }); ctx.notify('OAuth 授权已吊销。'); await ctx.refresh(); } })),
+          },
+        ],
         actions: [
-          ...[['', '全部标签'], ...tags.map(tag => [String(tag.id), `标签：${tag.name}`])].map(([value, label]) => ({ label, run: async ctx => { runtime.apiKeyTagFilter = value; await ctx.refresh(); } })),
+          { label: keySearch ? '清除 Key 搜索' : '搜索 API Key', run: async ctx => { runtime.apiKeySearch = keySearch ? '' : String(await ctx.ask('搜索 Key 名称、模型、标签或成员', { defaultValue: runtime.apiKeySearch || '' }) || '').trim(); await ctx.refresh(); } },
           { label: '新建/编辑 Key 标签', run: async ctx => { const choice = await ctx.choose('API Key 标签管理', [{ label: '新建标签', value: 'create' }, ...tags.map(tag => ({ label: `编辑 ${tag.name}`, value: `edit:${tag.id}` })), ...tags.map(tag => ({ label: `删除 ${tag.name}`, value: `delete:${tag.id}` }))]); if (!choice) return; if (choice === 'create') { const values = await ctx.form('新建 Key 标签', [{ name: 'name', label: '名称' }, { name: 'color', label: '颜色', value: '#3b82f6' }]); if (!values || !String(values.name || '').trim()) return; await runtime.client.post('/api/user/key-tags', values); ctx.notify('标签已创建。'); await ctx.refresh(); return; } const [action, id] = choice.split(':'); const tag = tags.find(item => String(item.id) === id); if (action === 'edit') { const values = await ctx.form('编辑 Key 标签', [{ name: 'name', label: '名称', value: tag.name }, { name: 'color', label: '颜色', value: tag.color || '#3b82f6' }]); if (!values) return; await runtime.client.put(`/api/user/key-tags/${id}`, values); ctx.notify('标签已更新。'); await ctx.refresh(); } if (action === 'delete') { if (!await ctx.confirm('删除 Key 标签', `删除「${tag.name}」？关联的 Key 标签会一起移除。`)) return; await runtime.client.delete(`/api/user/key-tags/${id}`); ctx.notify('标签已删除。'); runtime.apiKeyTagFilter = ''; await ctx.refresh(); } } },
           { label: '新建 API Key', run: async ctx => {
             const values = await ctx.form('新建 API Key', [
