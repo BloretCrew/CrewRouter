@@ -29,7 +29,10 @@ test('user model library renders teams, provider summaries, stars and searchable
   await providerRow.run({ refresh: async () => {} });
   const expanded = await page.load(api);
   assert.ok(expanded.sections.some(section => section.title.includes('模型目录')));
-  const query = calls.find(call => call.path === '/api/user/model-library/search').options.query;
+  runtime.librarySort = 'test_tps_desc';
+  await page.load(api);
+  const query = calls.filter(call => call.path === '/api/user/model-library/search').at(-1).options.query;
   assert.equal(query.provider, 'p1');
+  assert.equal(query.sort, 'test_tps_desc');
   assert.ok(expanded.sections.find(section => section.title.includes('模型目录')).rows[0].detail.includes('测试通过'));
 });
