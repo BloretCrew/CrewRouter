@@ -2,7 +2,6 @@
 
 const { text } = require('./pages-common');
 const { formatTime } = require('../lib/format');
-const { getSessionMessages } = require('../lib/api');
 
 function asRows(items, label, detail = () => '') {
   return items.map(item => ({
@@ -374,10 +373,41 @@ function createAdminPages(runtime) {
       },
     },
     adminOnly({
-      id: 'admin-settings', label: '系统设置', description: '管理员系统配置只读视图。',
+      id: 'admin-settings', label: '系统设置', description: '常规、请求采集、Agent 资料与数据保留配置。',
       async load(api) {
-        const data = await api('/api/admin/settings');
-        return { sections: [{ title: '系统设置', rows: Object.entries(data || {}).map(([key, value]) => ({ label: `${key}：${typeof value === 'object' ? JSON.stringify(value) : String(value)}` })) }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+        const [generalResult, quotaResult, agentResult, retentionResult, feishuResult] = await Promise.allSettled([
+          api('/api/admin/settings'), api('/api/admin/request-quota-config'), api('/api/admin/agent-web'), api('/api/admin/retention-config'), api('/api/admin/feishu-login'),
+        ]);
+        const general = generalResult.status === 'fulfilled' ? generalResult.value : {};
+        const quota = quotaResult.status === 'fulfilled' ? quotaResult.value : {};
+        const agent = agentResult.status === 'fulfilled' ? agentResult.value : {};
+        const retention = retentionResult.status === 'fulfilled' ? retentionResult.value : {};
+        const feishu = feishuResult.status === 'fulfilled' ? feishuResult.value : {};
+        const toRows = (object, error) => error ? [{ label: error.message || '读取失败' }] : Object.entries(object || {}).map(([key, value]) => ({ label: `${key}：${typeof value === 'object' ? JSON.stringify(value) : String(value)}` }));
+        return { sections: [
+          { title: '常规设置', rows: toRows({ stats_refresh_interval_sec: general.stats_refresh_interval_sec, model_list: general.model_list, site_name: general.site_name, default_quota: general.default_quota }, generalResult.status === 'rejected' ? generalResult.reason : null) },
+          { title: '请求采集', rows: toRows(quota, quotaResult.status === 'rejected' ? quotaResult.reason : null) },
+          { title: 'Agent Web（密钥已脱敏）', rows: toRows(agent, agentResult.status === 'rejected' ? agentResult.reason : null) },
+          { title: '数据保留', rows: toRows(retention, retentionResult.status === 'rejected' ? retentionResult.reason : null) },
+          { title: '飞书登录（密钥已脱敏）', rows: toRows(feishu, feishuResult.status === 'rejected' ? feishuResult.reason : null) },
+        ], actions: [
+          { label: '编辑常规设置', run: async ctx => { const values = await ctx.form('编辑常规设置', [
+            { name: 'stats_refresh_interval_sec', label: '统计刷新间隔秒数（3-300）', value: String(general.stats_refresh_interval_sec || 10) },
+            { name: 'site_name', label: '系统名称', value: String(general.site_name || '') },
+            { name: 'model_list', label: '模型 ID 列表（逗号分隔）', value: Array.isArray(general.model_list) ? general.model_list.join(',') : '' },
+          ]); if (!values) return; const seconds = Number(values.stats_refresh_interval_sec); if (!Number.isInteger(seconds) || seconds < 3 || seconds > 300) { await ctx.show('刷新间隔无效', '刷新间隔需为 3 到 300 秒的整数。'); return; } const models = values.model_list.split(',').map(value => value.trim()).filter(Boolean); if (models.length && models.every(value => value === 'fusion')) { await ctx.show('模型列表无效', '至少保留一个非 Fusion 模型。'); return; } if (!await ctx.confirm('保存常规设置', `间隔 ${seconds} 秒\n系统名称：${values.site_name || '(空)'}\n模型数：${models.length}`)) return; await api('/api/admin/settings', { method: 'PUT', body: { stats_refresh_interval_sec: seconds, ...(values.site_name ? { site_name: values.site_name } : {}), model_list: models } }); ctx.notify('系统设置已保存。'); await ctx.refresh(); } },
+          { label: '编辑请求采集配置', run: async ctx => { const numericFields = new Set(['reconciliation_seconds', 'max_tries', 'worker_interval_ms', 'batch_size', 'lease_seconds']); const values = await ctx.form('编辑请求采集配置', Object.entries(quota).map(([name, value]) => ({ name, label: name, value: typeof value === 'boolean' ? value : String(value ?? ''), ...(typeof value === 'boolean' ? { type: 'boolean' } : {}) }))); if (!values) return; const body = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, numericFields.has(key) ? Number(value) : value])); if (!await ctx.confirm('保存请求采集配置', JSON.stringify(body))) return; await api('/api/admin/request-quota-config', { method: 'PUT', body }); ctx.notify('请求采集配置已保存。'); await ctx.refresh(); } },
+          { label: '编辑 Agent Web 配置', run: async ctx => { const search = agent.search || {}; const fetch = agent.fetch || {}; const values = await ctx.form('编辑 Agent Web 配置', [
+            { name: 'search_enabled', label: '启用联网搜索', type: 'boolean', value: search.enabled === true },
+            { name: 'provider', label: '搜索提供方', value: search.provider || '', options: ['brave', 'tavily', 'exa', 'firecrawl'] },
+            { name: 'apiKey', label: 'API Key（已设密钥留空可保留）', secret: true },
+            { name: 'fetch_enabled', label: '启用链接抓取', type: 'boolean', value: fetch.enabled !== false },
+          ]); if (!values) return; if (!await ctx.confirm('保存 Agent Web 配置', `联网搜索 ${values.search_enabled ? '开启' : '关闭'}\n提供方 ${values.provider}\n链接抓取 ${values.fetch_enabled ? '开启' : '关闭'}\n密钥不会在界面回显。`)) return; await api('/api/admin/agent-web', { method: 'PUT', body: { search: { enabled: values.search_enabled, provider: values.provider, ...(values.apiKey ? { apiKey: values.apiKey } : {}) }, fetch: { enabled: values.fetch_enabled } } }); ctx.notify('Agent Web 配置已保存。'); await ctx.refresh(); } },
+          { label: '编辑飞书登录', run: async ctx => { const values = await ctx.form('编辑飞书登录', [{ name: 'enabled', label: '启用飞书登录', type: 'boolean', value: feishu.enabled === true }, { name: 'appId', label: 'App ID', value: feishu.appId || '' }, { name: 'appSecret', label: 'App Secret（留空保留现有密钥）', secret: true }, { name: 'tenantKey', label: 'Tenant Key', value: feishu.tenantKey || '' }]); if (!values) return; if (values.enabled && (!values.appId || (!values.appSecret && !feishu.hasAppSecret))) { await ctx.show('配置不完整', '启用飞书登录需要 App ID 与 App Secret。'); return; } if (!await ctx.confirm('保存飞书登录配置', `启用：${values.enabled}\nApp ID：${values.appId}\n密钥不会回显。`)) return; await api('/api/admin/feishu-login', { method: 'PUT', body: values }); ctx.notify('飞书登录配置已保存。'); await ctx.refresh(); } },
+          { label: '测试 Agent Web 搜索', run: async ctx => { const query = await ctx.ask('测试查询词'); if (!query) return; const result = await api('/api/admin/agent-web/test', { method: 'POST', body: { query } }); await ctx.show('Agent Web 搜索测试', JSON.stringify(result, null, 2)); } },
+          { label: '编辑数据保留配置', run: async ctx => { const numeric = ['provider_quota_days', 'compress_days', 'purge_days', 'compress_size_gb', 'purge_size_gb']; const values = await ctx.form('编辑数据保留配置', numeric.map(name => ({ name, label: name, value: String(retention[name] ?? 0) })).concat([{ name: 'agg_enabled', label: '启用聚合', type: 'boolean', value: retention.agg_enabled === true }])); if (!values) return; const body = Object.fromEntries(numeric.map(name => [name, Number(values[name])]).concat([['agg_enabled', values.agg_enabled]])); if (!await ctx.confirm('保存数据保留配置', JSON.stringify(body))) return; await api('/api/admin/retention-config', { method: 'PUT', body }); ctx.notify('数据保留配置已保存；本操作不会立即清理数据。'); await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
       },
     }),
     {
