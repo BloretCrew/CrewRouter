@@ -117,6 +117,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ date: '2026-01-01', model_id: 'm1', model_name: null, tokens: '12', cost: '0.1', requests: '2' }]);
       return;
     }
+    if (req.url === '/api/user/api-keys/7/models') {
+      json(res, 200, { models: [], queue: [{ model_id: 'm1', id: 'm1', name: 'Model', provider: 'p1', series: 's1', icon_url: null, sort_order: 0 }] });
+      return;
+    }
     if (req.url === '/api/user/key-tags') {
       json(res, 200, [{ id: 3, name: 'prod', color: '#00aa00', sort_order: 1, created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
@@ -150,6 +154,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const models = await client.models.list();
   const providers = await client.providers.list();
   const keyUsage = await client.keys.getUsage(7);
+  const keyModels = await client.keys.getModels(7);
   const keyTags = await client.keyTags.list();
   const members = await client.keys.getMembers(7);
   const quotaWarning = await client.keys.getQuotaWarning(7);
@@ -167,6 +172,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(providers.data[0].created_by, null);
   assert.equal(keyUsage.data[0].model_id, 'm1');
   assert.equal(keyUsage.data[0].model_name, null);
+  assert.equal(keyModels.data.queue[0].sort_order, 0);
+  assert.equal(keyModels.data.models.length, 0);
   assert.equal(keyTags.data[0].sort_order, 1);
   assert.equal(members.data.is_owner, true);
   assert.equal(members.data.members[0].username, 'member');

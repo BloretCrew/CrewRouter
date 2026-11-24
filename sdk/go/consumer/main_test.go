@@ -87,6 +87,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if usageLogs.Total != 1 || usageLogs.Logs[0].TokensUsed != "12" {
 		t.Fatalf("unexpected usage log response: %#v", usageLogs)
 	}
+
+	var keyModels crewrouter.ApiKeyModelsResponse
+	if err := json.Unmarshal([]byte(`{"models":[{"id":"m1","name":"Model","provider":"p1","series":"s1","description":null,"enabled":true,"icon_url":null,"input_price_per_1k_tokens":"0.01","output_price_per_1k_tokens":0.02,"assigned":true,"sort_order":0}],"queue":[{"model_id":"m1","id":"m1","name":"Model","provider":"p1","series":"s1","icon_url":null,"sort_order":0}]}`), &keyModels); err != nil {
+		t.Fatalf("decode API key models: %v", err)
+	}
+	if len(keyModels.Queue) != 1 || keyModels.Queue[0].SortOrder != 0 || len(keyModels.Models) != 1 {
+		t.Fatalf("unexpected API key models payload: %#v", keyModels)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

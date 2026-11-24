@@ -359,7 +359,7 @@
           "model_queue": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ApiKeyModelQueueItem"
+              "$ref": "#/components/schemas/ApiKeyQueueItem"
             }
           },
           "harness_models": {
@@ -856,6 +856,142 @@
           "total",
           "page",
           "logs"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyQueueItem": {
+        "type": "object",
+        "properties": {
+          "model_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "icon_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort_order": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_id",
+          "id",
+          "name",
+          "sort_order"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyAvailableModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "icon_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "input_price_per_1k_tokens": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "output_price_per_1k_tokens": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "assigned": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "enabled",
+          "assigned"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyModelsResponse": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyAvailableModel"
+            }
+          },
+          "queue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyQueueItem"
+            }
+          }
+        },
+        "required": [
+          "models",
+          "queue"
         ],
         "additionalProperties": true
       },
@@ -14112,8 +14248,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyModelsResponse"
                 }
               }
             }

@@ -8,61 +8,68 @@ type ApiKeyTag struct {
 }
 
 // ApiKeyModelQueueItem describes an API key's ordered model binding.
-type ApiKeyModelQueueItem struct {
-	ModelID  string `json:"model_id"`
-	Name     string `json:"name,omitempty"`
-	Provider string `json:"provider,omitempty"`
+type ApiKeyQueueItem struct {
+	ModelID   string  `json:"model_id"`
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Provider  *string `json:"provider"`
+	Series    *string `json:"series"`
+	IconURL   *string `json:"icon_url"`
+	SortOrder int     `json:"sort_order"`
 }
+
+// ApiKeyModelQueueItem is retained as a source-compatible alias.
+type ApiKeyModelQueueItem = ApiKeyQueueItem
 
 // ApiKeyListItem is the stable common shape returned by GET /api/user/api-keys.
 // KeyValue is intentionally nullable: the server redacts secrets unless the
 // caller has keys.secret and owns the key.
 type ApiKeyListItem struct {
-	ID                           any                    `json:"id"`
-	Name                         string                 `json:"name"`
-	KeyGroup                     string                 `json:"key_group,omitempty"`
-	KeyPrefix                    *string                `json:"key_prefix,omitempty"`
-	KeyValue                     *string                `json:"key_value"`
-	Permissions                  []string               `json:"permissions"`
-	CurrentModelID               *string                `json:"current_model_id,omitempty"`
-	CurrentModelName             *string                `json:"current_model_name,omitempty"`
-	CurrentModelProviderName     *string                `json:"current_model_provider_name,omitempty"`
-	CurrentModelTestOK           *bool                  `json:"current_model_test_ok,omitempty"`
-	CurrentModelTestLatencyMS    *int                   `json:"current_model_test_latency_ms,omitempty"`
-	CurrentModelTestTokensPerSec *float64               `json:"current_model_test_tokens_per_second,omitempty"`
-	CurrentModelTestTestedAt     *string                `json:"current_model_test_tested_at,omitempty"`
-	Enabled                      bool                   `json:"enabled"`
-	ExpiresAt                    *string                `json:"expires_at,omitempty"`
-	CreatedAt                    *string                `json:"created_at,omitempty"`
-	LastUsedAt                   *string                `json:"last_used_at,omitempty"`
-	TotalTokens                  any                    `json:"total_tokens,omitempty"`
-	TotalCost                    any                    `json:"total_cost,omitempty"`
-	TotalRequests                any                    `json:"total_requests,omitempty"`
-	Tags                         []ApiKeyTag            `json:"tags"`
-	ModelQueue                   []ApiKeyModelQueueItem `json:"model_queue"`
-	HarnessModels                []map[string]any       `json:"harness_models,omitempty"`
-	RequestModelBindings         []map[string]any       `json:"request_model_bindings,omitempty"`
-	Owner                        map[string]any         `json:"owner,omitempty"`
-	Members                      []map[string]any       `json:"members,omitempty"`
-	MemberCount                  int                    `json:"member_count,omitempty"`
-	IsOwner                      bool                   `json:"is_owner,omitempty"`
-	IsCoKey                      bool                   `json:"is_co_key,omitempty"`
-	KeyType                      string                 `json:"key_type,omitempty"`
-	CoKeyRole                    *string                `json:"co_key_role,omitempty"`
-	CustomModelName              string                 `json:"custom_model_name,omitempty"`
-	IsSystem                     bool                   `json:"is_system,omitempty"`
-	SignatureEnabled             bool                   `json:"signature_enabled,omitempty"`
-	SignatureTemplate            string                 `json:"signature_template,omitempty"`
-	APISignatureEnabled          bool                   `json:"api_signature_enabled,omitempty"`
-	APISignatureTemplate         string                 `json:"api_signature_template,omitempty"`
-	QuotaWarningEnabled          bool                   `json:"quota_warning_enabled,omitempty"`
-	SwallowImages                bool                   `json:"swallow_images,omitempty"`
-	CrewRouterCommands           bool                   `json:"crewrouter_commands,omitempty"`
-	ScheduleEnabled              bool                   `json:"schedule_enabled,omitempty"`
-	ScheduleOnTime               *string                `json:"schedule_on_time,omitempty"`
-	ScheduleOffTime              *string                `json:"schedule_off_time,omitempty"`
-	ScheduleDays                 []int                  `json:"schedule_days,omitempty"`
-	ScheduleTimezone             *string                `json:"schedule_timezone,omitempty"`
+	ID                           any               `json:"id"`
+	Name                         string            `json:"name"`
+	KeyGroup                     string            `json:"key_group,omitempty"`
+	KeyPrefix                    *string           `json:"key_prefix,omitempty"`
+	KeyValue                     *string           `json:"key_value"`
+	Permissions                  []string          `json:"permissions"`
+	CurrentModelID               *string           `json:"current_model_id,omitempty"`
+	CurrentModelName             *string           `json:"current_model_name,omitempty"`
+	CurrentModelProviderName     *string           `json:"current_model_provider_name,omitempty"`
+	CurrentModelTestOK           *bool             `json:"current_model_test_ok,omitempty"`
+	CurrentModelTestLatencyMS    *int              `json:"current_model_test_latency_ms,omitempty"`
+	CurrentModelTestTokensPerSec *float64          `json:"current_model_test_tokens_per_second,omitempty"`
+	CurrentModelTestTestedAt     *string           `json:"current_model_test_tested_at,omitempty"`
+	Enabled                      bool              `json:"enabled"`
+	ExpiresAt                    *string           `json:"expires_at,omitempty"`
+	CreatedAt                    *string           `json:"created_at,omitempty"`
+	LastUsedAt                   *string           `json:"last_used_at,omitempty"`
+	TotalTokens                  any               `json:"total_tokens,omitempty"`
+	TotalCost                    any               `json:"total_cost,omitempty"`
+	TotalRequests                any               `json:"total_requests,omitempty"`
+	Tags                         []ApiKeyTag       `json:"tags"`
+	ModelQueue                   []ApiKeyQueueItem `json:"model_queue"`
+	HarnessModels                []map[string]any  `json:"harness_models,omitempty"`
+	RequestModelBindings         []map[string]any  `json:"request_model_bindings,omitempty"`
+	Owner                        map[string]any    `json:"owner,omitempty"`
+	Members                      []map[string]any  `json:"members,omitempty"`
+	MemberCount                  int               `json:"member_count,omitempty"`
+	IsOwner                      bool              `json:"is_owner,omitempty"`
+	IsCoKey                      bool              `json:"is_co_key,omitempty"`
+	KeyType                      string            `json:"key_type,omitempty"`
+	CoKeyRole                    *string           `json:"co_key_role,omitempty"`
+	CustomModelName              string            `json:"custom_model_name,omitempty"`
+	IsSystem                     bool              `json:"is_system,omitempty"`
+	SignatureEnabled             bool              `json:"signature_enabled,omitempty"`
+	SignatureTemplate            string            `json:"signature_template,omitempty"`
+	APISignatureEnabled          bool              `json:"api_signature_enabled,omitempty"`
+	APISignatureTemplate         string            `json:"api_signature_template,omitempty"`
+	QuotaWarningEnabled          bool              `json:"quota_warning_enabled,omitempty"`
+	SwallowImages                bool              `json:"swallow_images,omitempty"`
+	CrewRouterCommands           bool              `json:"crewrouter_commands,omitempty"`
+	ScheduleEnabled              bool              `json:"schedule_enabled,omitempty"`
+	ScheduleOnTime               *string           `json:"schedule_on_time,omitempty"`
+	ScheduleOffTime              *string           `json:"schedule_off_time,omitempty"`
+	ScheduleDays                 []int             `json:"schedule_days,omitempty"`
+	ScheduleTimezone             *string           `json:"schedule_timezone,omitempty"`
 }
 
 // ApiKeyDailyUsageItem is one grouped usage row for a single API key.
@@ -178,6 +185,27 @@ type ApiKeySchedule struct {
 // ApiKeyQuotaWarning is returned by the API Key quota-warning setting routes.
 type ApiKeyQuotaWarning struct {
 	QuotaWarningEnabled bool `json:"quota_warning_enabled"`
+}
+
+// ApiKeyModelsResponse is returned by GET /api/user/api-keys/:id/models.
+type ApiKeyModelsResponse struct {
+	Models []ApiKeyAvailableModel `json:"models"`
+	Queue  []ApiKeyQueueItem      `json:"queue"`
+}
+
+// ApiKeyAvailableModel is an enabled model available to the owning user's Teams.
+type ApiKeyAvailableModel struct {
+	ID                     string  `json:"id"`
+	Name                   string  `json:"name"`
+	Provider               string  `json:"provider"`
+	Series                 *string `json:"series"`
+	Description            *string `json:"description"`
+	Enabled                bool    `json:"enabled"`
+	IconURL                *string `json:"icon_url"`
+	InputPricePer1KTokens  any     `json:"input_price_per_1k_tokens"`
+	OutputPricePer1KTokens any     `json:"output_price_per_1k_tokens"`
+	Assigned               bool    `json:"assigned"`
+	SortOrder              *int    `json:"sort_order"`
 }
 
 // ApiKeyMembersResponse is returned by GET /api/user/api-keys/:id/members.

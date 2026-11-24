@@ -6,6 +6,7 @@ import type {
   ApiKeyDailyUsageItem,
   ApiKeyListItem,
   ApiKeyMembersResponse,
+  ApiKeyModelsResponse,
   ApiKeyQuotaWarning,
   ApiKeySchedule,
   CallOptions,
@@ -159,7 +160,7 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.update', mergePathParams({ ...options, body }, { id })),
     delete: <T = unknown>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.delete', mergePathParams(options, { id })),
-    getModels: <T = unknown>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+    getModels: <T = ApiKeyModelsResponse>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.models.list', mergePathParams(options, { id })),
     setModels: <T = unknown>(id: string | number, body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.models.update', mergePathParams({ ...options, body }, { id })),

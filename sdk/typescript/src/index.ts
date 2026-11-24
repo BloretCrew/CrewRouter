@@ -32,6 +32,8 @@ export type {
   CrewRouterResponse,
   ApiKeyTag,
   ApiKeyModelQueueItem,
+  ApiKeyAvailableModel,
+  ApiKeyModelsResponse,
   ApiKeyListItem,
   ApiKeyDailyUsageItem,
   ApiKeyMember,

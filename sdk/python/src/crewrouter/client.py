@@ -20,6 +20,45 @@ class ApiKeyTag(TypedDict, total=False):
     color: Optional[str]
 
 
+class ApiKeyModelQueueItem(TypedDict, total=False):
+    model_id: str
+    id: str
+    name: str
+    provider: Optional[str]
+    series: Optional[str]
+    icon_url: Optional[str]
+    sort_order: int
+
+
+class ApiKeyQueueItem(TypedDict):
+    model_id: str
+    id: str
+    name: str
+    provider: Optional[str]
+    series: Optional[str]
+    icon_url: Optional[str]
+    sort_order: int
+
+
+class ApiKeyAvailableModel(TypedDict):
+    id: str
+    name: str
+    provider: str
+    series: Optional[str]
+    description: Optional[str]
+    enabled: bool
+    icon_url: Optional[str]
+    input_price_per_1k_tokens: Optional[Union[float, str]]
+    output_price_per_1k_tokens: Optional[Union[float, str]]
+    assigned: bool
+    sort_order: Optional[int]
+
+
+class ApiKeyModelsResponse(TypedDict):
+    models: list[ApiKeyAvailableModel]
+    queue: list[ApiKeyQueueItem]
+
+
 class ApiKeyListItem(TypedDict, total=False):
     id: Union[int, str]
     name: str
@@ -54,7 +93,7 @@ class ApiKeyListItem(TypedDict, total=False):
     total_cost: Union[float, str]
     total_requests: Union[int, str]
     tags: list[ApiKeyTag]
-    model_queue: list[dict[str, Any]]
+    model_queue: list[ApiKeyModelQueueItem]
     members: list[dict[str, Any]]
     member_count: int
     is_owner: bool

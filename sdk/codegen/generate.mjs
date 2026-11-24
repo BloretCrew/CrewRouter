@@ -421,7 +421,7 @@ function managementSchemas() {
       current_model_test_tokens_per_second: { type: ['number', 'null'] }, current_model_test_tested_at: nullableString,
       total_tokens: numberOrString, total_cost: numberOrString, total_requests: numberOrString,
       tags: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyTag' } },
-      model_queue: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyModelQueueItem' } },
+      model_queue: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyQueueItem' } },
       harness_models: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyHarnessModel' } },
       request_model_bindings: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyRequestModelBinding' } },
       owner: { anyOf: [{ $ref: '#/components/schemas/ApiKeyOwner' }, { type: 'null' }] },
@@ -479,6 +479,20 @@ function managementSchemas() {
       total: { type: 'integer' }, page: { type: 'integer' },
       logs: { type: 'array', items: { $ref: '#/components/schemas/UserUsageLog' } },
     }, ['total', 'page', 'logs']),
+    ApiKeyQueueItem: object({
+      model_id: { type: 'string' }, id: { type: 'string' }, name: { type: 'string' },
+      provider: nullableString, series: nullableString, icon_url: nullableString, sort_order: { type: 'integer' },
+    }, ['model_id', 'id', 'name', 'sort_order']),
+    ApiKeyAvailableModel: object({
+      id: { type: 'string' }, name: { type: 'string' }, provider: { type: 'string' },
+      series: nullableString, description: nullableString, enabled: { type: 'boolean' }, icon_url: nullableString,
+      input_price_per_1k_tokens: numberOrString, output_price_per_1k_tokens: numberOrString,
+      assigned: { type: 'boolean' }, sort_order: { type: ['integer', 'null'] },
+    }, ['id', 'name', 'provider', 'enabled', 'assigned']),
+    ApiKeyModelsResponse: object({
+      models: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyAvailableModel' } },
+      queue: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyQueueItem' } },
+    }, ['models', 'queue']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -517,6 +531,7 @@ function managementResponseSchema(operationId) {
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
     'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
+    'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },

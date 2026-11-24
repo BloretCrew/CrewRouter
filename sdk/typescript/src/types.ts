@@ -96,8 +96,31 @@ export interface ApiKeyTag {
 
 export interface ApiKeyModelQueueItem {
   model_id: string;
-  name?: string | null;
-  provider?: string | null;
+  id: string;
+  name: string;
+  provider: string | null;
+  series: string | null;
+  icon_url: string | null;
+  sort_order: number;
+}
+
+export interface ApiKeyAvailableModel {
+  id: string;
+  name: string;
+  provider: string;
+  series: string | null;
+  description: string | null;
+  enabled: boolean;
+  icon_url: string | null;
+  input_price_per_1k_tokens: number | string | null;
+  output_price_per_1k_tokens: number | string | null;
+  assigned: boolean;
+  sort_order: number | null;
+}
+
+export interface ApiKeyModelsResponse {
+  models: ApiKeyAvailableModel[];
+  queue: ApiKeyModelQueueItem[];
 }
 
 export interface ApiKeyListItem {

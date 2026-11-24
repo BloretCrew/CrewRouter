@@ -6,6 +6,12 @@ from typing import get_type_hints
 from crewrouter import (
     AnthropicMessagesRequest,
     ApiKeyListItem,
+    ApiKeyModelsResponse,
+    ApiKeyAvailableModel,
+    ApiKeyModelQueueItem,
+    ApiKeyModelsResponse,
+    ApiKeyQueueItem,
+    ApiKeyAvailableModel,
     ApiKeyDailyUsageItem,
     ApiKeyMembersResponse,
     ApiKeyQuotaWarning,
@@ -118,8 +124,20 @@ class TypedRequestTests(unittest.TestCase):
             "response_model": None, "provider_name": None,
         }
         usage_logs: UserUsageLogsResponse = {"total": 1, "page": 1, "logs": [usage_log]}
+        available_model: ApiKeyAvailableModel = {
+            "id": "m1", "name": "Model", "provider": "p1", "series": "s1",
+            "description": None, "enabled": True, "icon_url": None,
+            "input_price_per_1k_tokens": "0.01", "output_price_per_1k_tokens": 0.02,
+            "assigned": True, "sort_order": 0,
+        }
+        queue_item: ApiKeyModelQueueItem = {
+            "model_id": "m1", "id": "m1", "name": "Model", "provider": "p1",
+            "series": "s1", "icon_url": None, "sort_order": 0,
+        }
+        key_models: ApiKeyModelsResponse = {"models": [available_model], "queue": [queue_item]}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
+        self.assertEqual(key_models["queue"][0]["sort_order"], 0)
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}
