@@ -58,6 +58,10 @@ if (beta.jobs['npm-beta-publish'].steps.find(step => step.uses === 'actions/down
 if (beta.jobs['github-release-manual'].needs.includes('npm-beta-publish') !== true) throw new Error('manual GitHub release must await npm publish if publish was explicitly selected');
 const electronGate = beta.jobs.gate.steps.find(step => step.name === 'Desktop behavior, sandboxed launcher and syntax');
 if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-sandbox') || !electronGate.run.includes('chmod 4755 node_modules/electron/dist/chrome-sandbox') || electronGate.run.includes('--no-sandbox')) throw new Error('Electron launcher gate must retain sandbox and configure the isolated SUID helper');
+const sdkVersioning = await readFile('docs/sdk/versioning.md', 'utf8');
+for (const required of ['1.0', 'contractVersion', 'Deprecation', 'support matrix']) {
+  if (!sdkVersioning.includes(required)) throw new Error(`SDK versioning policy omits ${required}`);
+}
 const stable = parse(await readFile(files[0], 'utf8'));
 if (!stable.jobs['build-docker'].if?.includes("contains(github.ref, '-beta.')")) throw new Error('Stable workflow is missing prerelease protection');
 console.log('release workflow YAML and sequencing contracts passed');

@@ -28,14 +28,21 @@ contract version. The Node SDK exports `CONTRACT_VERSION`.
 
 ## Compatibility policy
 
-- `0.x` versions may make breaking changes in minor releases. Pin an exact
-  version for production automation.
-- After `1.0`, follow semantic versioning for the SDK API.
+- The packages are currently pre-release: npm `27.0.0-beta.1`, Python
+  `27.0.0b1`, and Go `27.0.0-beta.1`. Treat their convenience APIs and operation
+  catalogs as beta contracts; pin exact versions in production and expect that a
+  later beta may require migration.
+- A stable `1.0` release requires a published support matrix and compatibility
+  tests across supported server/SDK combinations. From `1.0`, SDK public APIs
+  follow semantic versioning: breaking changes require a major release; additive
+  operations and optional fields may ship in a minor release.
 - The SDK talks to an instance over HTTP; the instance may be older or newer than
-  the SDK. Use `npm run sdk:check` in the server repository to detect drift, and
-  use `client.raw()` when calling a route that is newer than the installed SDK.
+  the SDK. Use `npm run sdk:check` in the server repository to detect stale
+  generated artifacts. Calling a route newer than the installed SDK is possible
+  through `request`/`raw` but is not covered by that SDK's compatibility promise.
 - The SDK sends no version-specific headers today. Server-side behavior is
-  selected by the API key and the instance build.
+  selected by the API key and instance build; the SDK cannot automatically
+  negotiate an unsupported server contract.
 
 ## Drift detection
 
@@ -51,6 +58,14 @@ non-excluded Express route appears in the catalog.
 
 ## Deprecation
 
-Deprecated operations remain in the catalog for at least one minor release with a
-`deprecated` note in the generated reference. Removing an operation requires a
-contract version bump and a major SDK release after 1.0.
+- Mark a deprecated operation in the source contract and generated reference with
+  a replacement operation ID and removal target. Keep it callable for at least
+  one stable minor release; security or legal removals are documented as
+  exceptions with an immediate migration notice.
+- After `1.0`, removal/rename, method or path incompatibility, required request
+  field additions, permission/auth changes that invalidate existing callers, and
+  response shape changes that break documented typed APIs require both a
+  `contractVersion` bump and an SDK major release.
+- `sdk:check` verifies generated output freshness. Contract-version bump policy
+  and compatibility impact must also be reviewed in the PR/release checklist;
+  generated route catalogs cannot infer every semantic breaking change.
