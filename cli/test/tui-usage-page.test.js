@@ -10,7 +10,7 @@ const page = runtime => buildPages(runtime).find(item => item.id === 'usage');
 test('usage tabs request latency, message and log data with shared filters', async () => {
   const runtime = makeRuntime();
   const calls = [];
-  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [], byModel: [], byApiKey: [], byProvider: [], bySource: [] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; return {}; };
+  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [{ date: 'today', requests: 3, prompt_tokens: 10, completion_tokens: 20, tokens: 30, cost: 0.5 }], byModel: [{ model_name: 'Model One', requests: 2, tokens: 10, cost: 0.25 }], byApiKey: [{ key_name: 'Main Key', requests: 1, tokens: 5, cost: 0.1 }], byProvider: [{ provider_name: 'Provider One', requests: 1, tokens: 7, cost: 0.2 }], bySource: [{ request_source: 'codex', requests: 1, tokens: 6, cost: 0.15 }] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; return {}; };
   const usage = page(runtime);
   usage.onTabChange({ id: 'latency' });
   const latencyData = await usage.load();
@@ -18,14 +18,24 @@ test('usage tabs request latency, message and log data with shared filters', asy
   assert.equal(latencySection.cards[0].label, '请求中位延迟（P50）');
   assert.equal(latencySection.cards[1].value, '80');
   assert.match(latencySection.rows[0].label, /输出速度 12 Token\/秒/);
+  assert.ok(latencySection.toolbar);
+  usage.onTabChange({ id: 'daily' });
+  const dailySection = (await usage.load()).sections.find(section => section.tab === 'daily');
+  assert.deepEqual(dailySection.columns.map(column => column.label), ['日期', '请求数', '输入 Token', '输出 Token', '总 Token', '费用（积分）']);
+  assert.equal(dailySection.rows[0].cells.input, '10 Token');
+  usage.onTabChange({ id: 'models' });
+  const modelData = await usage.load();
+  const modelSection = modelData.sections.find(section => section.tab === 'models');
+  assert.deepEqual(modelSection.rows[0].cells, { name: 'Model One', requests: '2 次', tokens: '10 Token', cost: '0.2500 积分' });
+  assert.ok(modelData.actions.some(action => action.label === '时间范围与筛选' && action.toolbar === true));
   usage.onTabChange({ id: 'messages' });
   await usage.load();
   usage.onTabChange({ id: 'logs' });
   await usage.load();
   assert.deepEqual(calls.map(call => call.path), [
     '/api/user/stats', '/api/user/stats/latency',
-    '/api/user/stats', '/api/user/message-stats',
-    '/api/user/stats', '/api/user/usage-logs',
+    '/api/user/stats', '/api/user/stats', '/api/user/stats',
+    '/api/user/message-stats', '/api/user/stats', '/api/user/usage-logs',
   ]);
 });
 
