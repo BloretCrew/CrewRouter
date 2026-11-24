@@ -103,6 +103,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(products) != 1 || products[0].Description != nil || products[0].SortOrder != 0 {
 		t.Fatalf("unexpected products payload: %#v", products)
 	}
+
+	var codeBalances []crewrouter.UserCodeBalanceItem
+	if err := json.Unmarshal([]byte(`[{"amount":"2.5","fee_rate":"0.1","code":"redeem-1","code_amount":"3","net_amount":"2.2727"}]`), &codeBalances); err != nil {
+		t.Fatalf("decode code balances: %v", err)
+	}
+	if len(codeBalances) != 1 || codeBalances[0].Code != "redeem-1" || codeBalances[0].NetAmount != "2.2727" {
+		t.Fatalf("unexpected code balances payload: %#v", codeBalances)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

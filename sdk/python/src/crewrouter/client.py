@@ -140,6 +140,14 @@ class UserProduct(TypedDict):
     sort_order: int
 
 
+class UserCodeBalanceItem(TypedDict):
+    amount: Union[float, str]
+    fee_rate: Union[float, str]
+    code: str
+    code_amount: Union[float, str]
+    net_amount: Union[float, str]
+
+
 class ApiKeyMember(TypedDict):
     id: int
     username: str

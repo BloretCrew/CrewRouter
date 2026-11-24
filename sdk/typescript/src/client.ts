@@ -20,6 +20,7 @@ import type {
   UserModelListItem,
   UserProviderListItem,
   UserProduct,
+  UserCodeBalanceItem,
   UserUsageLogsResponse,
   RequestOptions,
   StreamHandle,
@@ -211,6 +212,11 @@ export class CrewRouter {
   readonly products = {
     list: <T = UserProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.products.list', options),
+  };
+
+  readonly codeBalances = {
+    list: <T = UserCodeBalanceItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.codeBalances.list', options),
   };
 
   readonly keyTags = {

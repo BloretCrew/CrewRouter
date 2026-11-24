@@ -51,6 +51,7 @@ export type {
   UserModelListItem,
   UserProviderListItem,
   UserProduct,
+  UserCodeBalanceItem,
   ChatCompletionRequest,
   AnthropicMessagesRequest,
   OpenAIResponsesRequest,

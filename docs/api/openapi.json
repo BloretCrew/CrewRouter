@@ -1124,6 +1124,62 @@
         ],
         "additionalProperties": true
       },
+      "UserCodeBalanceItem": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "fee_rate": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "code_amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "net_amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "amount",
+          "fee_rate",
+          "code",
+          "code_amount",
+          "net_amount"
+        ],
+        "additionalProperties": true
+      },
       "TeamQuotaRule": {
         "type": "object",
         "properties": {
@@ -15084,8 +15140,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserCodeBalanceItem"
+                  }
                 }
               }
             }

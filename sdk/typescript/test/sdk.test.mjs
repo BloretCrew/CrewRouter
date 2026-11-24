@@ -125,6 +125,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 1, name: 'Product', description: null, image_url: null, link: null, sort_order: 0 }]);
       return;
     }
+    if (req.url === '/api/user/code-balances') {
+      json(res, 200, [{ amount: '2.5', fee_rate: '0.1', code: 'redeem-1', code_amount: '3', net_amount: '2.2727' }]);
+      return;
+    }
     if (req.url === '/api/user/key-tags') {
       json(res, 200, [{ id: 3, name: 'prod', color: '#00aa00', sort_order: 1, created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
@@ -166,6 +170,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const currentModel = await client.currentModel.get();
   const usageLogs = await client.usage.logs({ page: 1 });
   const products = await client.products.list();
+  const codeBalances = await client.codeBalances.list();
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -189,6 +194,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(usageLogs.data.total, 1);
   assert.equal(usageLogs.data.logs[0].tokens_used, '12');
   assert.equal(products.data[0].description, null);
+  assert.equal(codeBalances.data[0].net_amount, '2.2727');
 });
 
 test('management errors expose code and permission', async () => {

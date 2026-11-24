@@ -68,6 +68,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const models = openapi.paths['/api/user/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const providers = openapi.paths['/api/user/providers']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const products = openapi.paths['/api/user/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const codeBalances = openapi.paths['/api/user/code-balances']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyUsage = openapi.paths['/api/user/api-keys/{id}/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyTags = openapi.paths['/api/user/key-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyTagCreate = openapi.paths['/api/user/key-tags']?.post?.responses?.[201]?.content?.['application/json']?.schema;
@@ -91,6 +92,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (!openapi.components.schemas.UserProviderListItem?.properties?.created_by?.type?.includes('null')) throw new Error(`${openapiPath} must allow shared providers without created_by`);
   if (products?.type !== 'array' || products.items?.$ref !== '#/components/schemas/UserProduct') throw new Error(`${openapiPath} must define active product list responses`);
   if (!openapi.components.schemas.UserProduct?.properties?.description?.type?.includes('null') || !openapi.components.schemas.UserProduct?.properties?.link?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable product fields`);
+  if (codeBalances?.type !== 'array' || codeBalances.items?.$ref !== '#/components/schemas/UserCodeBalanceItem') throw new Error(`${openapiPath} must define code-balance list responses`);
   if (keyUsage?.type !== 'array' || keyUsage.items?.$ref !== '#/components/schemas/ApiKeyDailyUsageItem') throw new Error(`${openapiPath} must define per-key usage responses`);
   for (const field of ['model_id', 'tokens', 'cost', 'requests']) {
     if (!openapi.components.schemas.ApiKeyDailyUsageItem?.properties?.[field]) throw new Error(`${openapiPath} is missing ApiKeyDailyUsageItem.${field}`);

@@ -192,6 +192,14 @@ export interface UserProduct {
   sort_order: number;
 }
 
+export interface UserCodeBalanceItem {
+  amount: number | string;
+  fee_rate: number | string;
+  code: string;
+  code_amount: number | string;
+  net_amount: number | string;
+}
+
 export interface ApiKeyMember {
   id: number;
   username: string;

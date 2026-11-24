@@ -18,6 +18,7 @@ from crewrouter import (
     UserCurrentModel,
     DailyUsageItem,
     UserBalance,
+    UserCodeBalanceItem,
     UserModelListItem,
     UserProviderListItem,
     UserProduct,
@@ -138,7 +139,12 @@ class TypedRequestTests(unittest.TestCase):
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)
+        code_balance: UserCodeBalanceItem = {
+            "amount": "2.5", "fee_rate": "0.1", "code": "redeem-1",
+            "code_amount": "3", "net_amount": "2.2727",
+        }
         self.assertIsNone(product["description"])
+        self.assertEqual(code_balance["net_amount"], "2.2727")
 
     def test_gateway_request_types_are_exported(self) -> None:
         message: ChatMessage = {"role": "user", "content": "hello"}

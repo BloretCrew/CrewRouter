@@ -223,6 +223,15 @@ type UserKeyTag struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// UserCodeBalanceItem is one refundable redemption-code balance row.
+type UserCodeBalanceItem struct {
+	Amount     any    `json:"amount"`
+	FeeRate    any    `json:"fee_rate"`
+	Code       string `json:"code"`
+	CodeAmount any    `json:"code_amount"`
+	NetAmount  any    `json:"net_amount"`
+}
+
 // UserProduct is one active product returned by GET /api/user/products.
 type UserProduct struct {
 	ID          int64   `json:"id"`
