@@ -325,6 +325,8 @@
 | `user.apiKeys.byId.models.update` | PUT | `/api/user/api-keys/:id/models` | `keys.write` | api_key, session | no |
 | `user.apiKeys.byId.quotaWarning.list` | GET | `/api/user/api-keys/:id/quota-warning` | `keys.read` | api_key, session | no |
 | `user.apiKeys.byId.quotaWarning.update` | PUT | `/api/user/api-keys/:id/quota-warning` | `keys.write` | api_key, session | no |
+| `user.apiKeys.byId.requestModelBindings.list` | GET | `/api/user/api-keys/:id/request-model-bindings` | `keys.read` | api_key, session | no |
+| `user.apiKeys.byId.requestModelBindings.update` | PUT | `/api/user/api-keys/:id/request-model-bindings` | `keys.write` | api_key, session | no |
 | `user.apiKeys.byId.schedule.list` | GET | `/api/user/api-keys/:id/schedule` | `keys.read` | api_key, session | no |
 | `user.apiKeys.byId.schedule.update` | PUT | `/api/user/api-keys/:id/schedule` | `keys.write` | api_key, session | no |
 | `user.apiKeys.byId.signature.list` | GET | `/api/user/api-keys/:id/signature` | `keys.read` | api_key, session | no |
@@ -495,6 +497,7 @@
 | `oauth.authorize.approve` | POST | `/oauth/authorize/approve` | — | session | no |
 | `oauth.authorize.info.list` | GET | `/oauth/authorize/info` | — | session | no |
 | `oauth.desktopSession.create` | POST | `/oauth/desktop-session` | — | public | no |
+| `oauth.githubActions.create` | POST | `/oauth/github-actions` | — | session | no |
 | `oauth.revoke` | POST | `/oauth/revoke` | — | public | no |
 | `oauth.token.create` | POST | `/oauth/token` | — | public | no |
 

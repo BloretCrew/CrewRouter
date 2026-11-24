@@ -5,13 +5,14 @@
 | Package | Current | Tag scheme |
 | --- | --- | --- |
 | `@bloret-crew/crewrouter-sdk` (npm) | 27.0.0-beta.1 | `sdk/typescript/vX.Y.Z` |
-| `crewrouter-sdk` (PyPI) | 0.1.0 | `sdk/python/vX.Y.Z` |
-| Go module | 0.1.0 | `sdk/go/vX.Y.Z` |
+| `crewrouter-sdk` (PyPI) | 27.0.0b1 (repository metadata; registry publication status must be verified per release) | `sdk/python/vX.Y.Z` |
+| Go module | 27.0.0-beta.1 (repository metadata; tag/publication status must be verified per release) | `sdk/go/vX.Y.Z` |
 | `crewrouter/embedded` | preview | root `vX.Y.Z` |
 
-Go requires the module tag to be prefixed with the module subdirectory:
-`go get github.com/BloretCrew/CrewRouter/sdk/go@v0.1.0` resolves the
-`sdk/go/v0.1.0` tag.
+Go requires the module tag to be prefixed with the module subdirectory. For
+example, `go get github.com/BloretCrew/CrewRouter/sdk/go@v27.0.0-beta.1` resolves
+the `sdk/go/v27.0.0-beta.1` tag. Confirm that the release tag exists before
+recommending an installation version.
 
 ## Contract version
 

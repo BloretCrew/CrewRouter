@@ -29,8 +29,9 @@ for (const event of ['push', 'pull_request']) {
 const sdkWorkflow = parse(await readFile('.github/workflows/sdk-ci.yml', 'utf8'));
 for (const event of ['push', 'pull_request']) {
   const paths = sdkWorkflow.on[event].paths || [];
-  for (const required of ['cli/**', 'CrewRouter-Desktop/package.json']) if (!paths.includes(required)) throw new Error(`SDK CI ${event} path filter omits ${required}`);
+  for (const required of ['cli/**', 'CrewRouter-Desktop/package.json', 'server/index.js', 'server/routes/mount-loader.js']) if (!paths.includes(required)) throw new Error(`SDK CI ${event} path filter omits ${required}`);
 }
+if (!sdkWorkflow.jobs.contract.steps.some(step => step.run === 'npm run sdk:conformance')) throw new Error('SDK CI contract job must run cross-language conformance');
 const postgresSetup = beta.jobs.gate.steps.find(step => step.name === 'Install isolated PostgreSQL test runtime');
 if (!postgresSetup?.run?.includes('pg_config --bindir')) throw new Error('PostgreSQL integration tests require their isolated runner dependencies');
 if (!beta.jobs['npm-beta-candidate'].steps.some(step => step.uses === 'actions/upload-artifact@v4' && step.with?.name?.startsWith('crewrouter-27-beta-npm-candidates-') && step.if?.includes("inputs.dry_run"))) throw new Error('npm beta candidate tarballs must be uploaded for dry-runs and tagged builds');

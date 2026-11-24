@@ -10383,6 +10383,76 @@
       "contractVersion": 1
     },
     {
+      "operationId": "user.apiKeys.byId.requestModelBindings.list",
+      "method": "GET",
+      "path": "/api/user/api-keys/:id/request-model-bindings",
+      "aliases": [],
+      "module": "server/routes/user.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": "keys.read",
+      "permissionGroup": "keys",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "user.apiKeys.byId.requestModelBindings.update",
+      "method": "PUT",
+      "path": "/api/user/api-keys/:id/request-model-bindings",
+      "aliases": [],
+      "module": "server/routes/user.js",
+      "mount": "/api/user",
+      "feature": "management",
+      "permission": "keys.write",
+      "permissionGroup": "keys",
+      "adminOnly": false,
+      "authModes": [
+        "api_key",
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "generated",
+      "exclusion": null,
+      "contractVersion": 1
+    },
+    {
       "operationId": "user.apiKeys.byId.schedule.list",
       "method": "GET",
       "path": "/api/user/api-keys/:id/schedule",
@@ -15412,6 +15482,41 @@
       },
       "sdkStatus": "generated",
       "exclusion": null,
+      "contractVersion": 1
+    },
+    {
+      "operationId": "oauth.githubActions.create",
+      "method": "POST",
+      "path": "/oauth/github-actions",
+      "aliases": [],
+      "module": "server/routes/github-actions-oidc.js",
+      "mount": "/",
+      "feature": "oauth",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "session_only",
       "contractVersion": 1
     },
     {

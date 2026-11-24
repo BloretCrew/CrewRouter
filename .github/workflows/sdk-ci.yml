@@ -5,6 +5,8 @@ on:
     paths:
       - 'sdk/**'
       - 'server/routes/**'
+      - 'server/routes/mount-loader.js'
+      - 'server/index.js'
       - 'server/constants/**'
       - 'server/sdk/**'
       - 'server/middleware/request-auth.js'
@@ -25,6 +27,8 @@ on:
     paths:
       - 'sdk/**'
       - 'server/routes/**'
+      - 'server/routes/mount-loader.js'
+      - 'server/index.js'
       - 'server/constants/**'
       - 'server/sdk/**'
       - 'server/middleware/request-auth.js'
@@ -54,6 +58,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run sdk:check
+      - run: npm run sdk:conformance
       - run: node server/scripts/test-console-route-auth-coverage.js
       - run: npm run test:embedded-sdk
       - run: npm run docs:check

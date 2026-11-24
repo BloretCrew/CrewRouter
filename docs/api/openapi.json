@@ -13251,6 +13251,103 @@
         }
       }
     },
+    "/api/user/api-keys/{id}/request-model-bindings": {
+      "get": {
+        "operationId": "user.apiKeys.byId.requestModelBindings.list",
+        "summary": "GET /api/user/api-keys/:id/request-model-bindings",
+        "tags": [
+          "keys"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "keys.read",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb"
+      },
+      "put": {
+        "operationId": "user.apiKeys.byId.requestModelBindings.update",
+        "summary": "PUT /api/user/api-keys/:id/request-model-bindings",
+        "tags": [
+          "keys"
+        ],
+        "security": [
+          {
+            "bearerApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": "keys.write",
+        "x-crewrouter-auth-modes": [
+          "api_key",
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user/api-keys/{id}/schedule": {
       "get": {
         "operationId": "user.apiKeys.byId.schedule.list",
@@ -19153,6 +19250,48 @@
         "x-crewrouter-auth-modes": [],
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/github-actions": {
+      "post": {
+        "operationId": "oauth.githubActions.create",
+        "summary": "POST /oauth/github-actions",
+        "tags": [
+          "oauth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "session_only",
         "requestBody": {
           "required": false,
           "content": {

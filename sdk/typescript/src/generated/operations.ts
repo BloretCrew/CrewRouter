@@ -5313,6 +5313,42 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": null,
     "bodyLimit": "2mb"
   },
+  "user.apiKeys.byId.requestModelBindings.list": {
+    "operationId": "user.apiKeys.byId.requestModelBindings.list",
+    "method": "GET",
+    "path": "/api/user/api-keys/:id/request-model-bindings",
+    "aliases": [],
+    "permission": "keys.read",
+    "permissionGroup": "keys",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "user.apiKeys.byId.requestModelBindings.update": {
+    "operationId": "user.apiKeys.byId.requestModelBindings.update",
+    "method": "PUT",
+    "path": "/api/user/api-keys/:id/request-model-bindings",
+    "aliases": [],
+    "permission": "keys.write",
+    "permissionGroup": "keys",
+    "adminOnly": false,
+    "authModes": [
+      "api_key",
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "generated",
+    "exclusion": null,
+    "bodyLimit": "2mb"
+  },
   "user.apiKeys.byId.schedule.list": {
     "operationId": "user.apiKeys.byId.schedule.list",
     "method": "GET",
@@ -7899,6 +7935,23 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "dynamic": false,
     "sdkStatus": "generated",
     "exclusion": null,
+    "bodyLimit": "2mb"
+  },
+  "oauth.githubActions.create": {
+    "operationId": "oauth.githubActions.create",
+    "method": "POST",
+    "path": "/oauth/github-actions",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "session_only",
     "bodyLimit": "2mb"
   },
   "oauth.revoke": {
