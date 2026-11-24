@@ -148,6 +148,31 @@ test('SSE parser handles split UTF-8, multi-line data and [DONE]', async () => {
   assert.equal(events[2].data, '[DONE]');
 });
 
+test('breaking from an SSE iterator cancels the reader and closes the response', async () => {
+  let responseClosed = false;
+  reset((req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write('data: {"chunk":1}\n\n');
+    const interval = setInterval(() => res.write('data: {"chunk":2}\\n\\n'), 20);
+    res.on('close', () => {
+      responseClosed = true;
+      clearInterval(interval);
+    });
+  });
+  const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
+  for await (const _event of client.gateway.chat.completions.stream({ messages: [] })) break;
+
+  await new Promise((resolve, reject) => {
+    const deadline = Date.now() + 1_000;
+    const poll = () => {
+      if (responseClosed) return resolve();
+      if (Date.now() >= deadline) return reject(new Error('SSE response was not closed after iterator break'));
+      setTimeout(poll, 10);
+    };
+    poll();
+  });
+});
+
 test('GET retries 429 when maxRetries is enabled and honors Retry-After', async () => {
   let attempts = 0;
   reset((req, res) => {

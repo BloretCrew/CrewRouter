@@ -122,12 +122,9 @@ export async function* parseSSE(
       };
     }
   } finally {
-    signalCleanup(options.signal);
+    if (!terminated) {
+      await reader.cancel().catch(() => {});
+    }
+    reader.releaseLock();
   }
-}
-
-// Kept as a function so future versions can detach abort listeners without
-// changing the public signature of parseSSE.
-function signalCleanup(_signal: AbortSignal | undefined): void {
-  // readWithTimeout removes its own listeners; nothing else is attached here.
 }
