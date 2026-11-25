@@ -41,7 +41,12 @@ test('user model library renders teams, provider summaries, stars and searchable
   runtime.librarySort = 'test_tps_desc';
   await page.load(api);
   const modelSearch = calls.filter(call => call.path === '/api/user/team/2/provider/p1/models').at(-1);
-  assert.deepEqual(modelSearch.options.query, { page: 1, limit: 30, search: 'model search', series: 'S', test: 'pass', sort: 'test_tps_desc' });
+  assert.deepEqual(modelSearch.options.query, { page: 1, limit: 30, search: 'model search', include_hidden: '', series: 'S', test: 'pass', sort: 'test_tps_desc' });
+  const hiddenToggle = expanded.actions.find(action => action.label === '显示已隐藏的项目');
+  await hiddenToggle.run({ refresh: async () => {} });
+  assert.equal(runtime.libraryShowHidden, true);
+  await page.load(api);
+  assert.equal(calls.filter(call => call.path === '/api/user/team/2/provider/p1/models').at(-1).options.query.include_hidden, '1');
   const modelSection = expanded.sections.find(section => section.title.includes('模型目录'));
   assert.deepEqual(modelSection.columns.map(column => column.label), ['模型名称', '供应商', '系列', '计费倍率', '接口测试', 'Key 队列', '操作']);
   const modelRow = modelSection.rows[0];

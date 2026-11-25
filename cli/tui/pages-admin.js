@@ -306,8 +306,9 @@ function createAdminPages(runtime) {
           api('/api/user/model-library'), api('/api/user/api-keys'), api('/api/user/provider-tags'),
         ]);
         const library = libraryResult.status === 'fulfilled' ? libraryResult.value : {};
+        const showHidden = runtime.libraryShowHidden === true;
         const teams = array(library && library.teams);
-        const stars = array(library && library.starred_models);
+        const stars = array(library && library.starred_models).filter(item => showHidden || item.is_hidden !== true);
         const tags = tagsResult.status === 'fulfilled' ? itemsOf(tagsResult.value) : [];
         const keys = keysResult.status === 'fulfilled' ? itemsOf(keysResult.value) : [];
         const keyId = runtime.libraryKeyId || (keys[0] && keys[0].id);
@@ -319,13 +320,14 @@ function createAdminPages(runtime) {
         let searchedModels = [];
         if (selectedProvider) {
           searchData = await api(`/api/user/team/${encodeURIComponent(selectedProvider.team_id)}/provider/${encodeURIComponent(selectedProvider.provider_id)}/models`, { query: {
-            page: runtime.libraryPage || 1, limit: 30, search: runtime.librarySearch || '',
+            page: runtime.libraryPage || 1, limit: 30, search: runtime.librarySearch || '', include_hidden: showHidden ? '1' : '',
             series: runtime.librarySeries || 'all', test: runtime.libraryTest || 'all', sort: runtime.librarySort || 'default',
           } });
           searchedModels = array(searchData.models || searchData.items);
         }
         const providerEntries = [];
         for (const team of teams) for (const provider of array(team.providers)) {
+          if (provider.is_hidden && !showHidden) continue;
           const matchSearch = !runtime.librarySearch || [provider.provider_name, provider.provider_id, provider.provider_notes].some(value => String(value || '').toLowerCase().includes(runtime.librarySearch.toLowerCase()));
           const matchTag = !runtime.libraryTag || runtime.libraryTag === 'all' || array(provider.tags).some(tag => String(tag.id) === String(runtime.libraryTag));
           if (!matchSearch || !matchTag) continue;
@@ -394,6 +396,7 @@ function createAdminPages(runtime) {
         return { pageToolbar: true, sections, actions: [
           ...(providerEntries.length ? [{ label: '选择供应商展开模型', toolbar: 'page', run: async ctx => { const choice = await ctx.choose('选择团队供应商', providerEntries.map(({ team, provider }, index) => ({ label: `${team.team_name} · ${provider.provider_name} · ${provider.visible_model_count || 0}/${provider.model_count || 0} 个模型`, value: index }))); if (choice === null) return; const entry = providerEntries[choice]; runtime.libraryProvider = { team_id: entry.team.team_id, provider_id: entry.provider.provider_id, provider_name: entry.provider.provider_name }; runtime.libraryPage = 1; await ctx.refresh(); } }] : []),
           { label: '搜索模型/供应商', toolbar: 'page', run: async ctx => { runtime.librarySearch = String(await ctx.ask('搜索模型、供应商或上游 ID', { defaultValue: runtime.librarySearch || '' }) || '').trim(); runtime.libraryPage = 1; await ctx.refresh(); } },
+          { label: showHidden ? '隐藏已显示的项目' : '显示已隐藏的项目', toolbar: 'page', run: async ctx => { runtime.libraryShowHidden = !showHidden; runtime.libraryPage = 1; await ctx.refresh(); } },
           ...(selectedProvider ? [
             { label: '筛选模型系列', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型系列', [{ label: '全部', value: 'all' }, ...array(library.available_series).map(series => ({ label: series, value: series }))]); if (value !== null) { runtime.librarySeries = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
             { label: '筛选测试状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('测试状态', [{ label: '全部', value: 'all' }, { label: '通过', value: 'pass' }, { label: '失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.libraryTest = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
