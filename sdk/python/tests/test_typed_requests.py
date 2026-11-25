@@ -44,6 +44,7 @@ from crewrouter import (
     TeamQuotaRule,
     UserCodeBalanceItem,
     UserModelListItem,
+    UserModelInfo,
     UserProviderListItem,
     ProviderTag,
     UserProduct,
@@ -97,6 +98,7 @@ class TypedRequestTests(unittest.TestCase):
             "cost": "0.1",
             "requests": "2",
         }
+        model_info: UserModelInfo = {"model_id": "m1", "name": "Model", "alias": None, "series": None, "description": None, "input_price_per_1k_tokens": "0.01", "output_price_per_1k_tokens": 0.02, "cached_output_price_per_1k_tokens": None, "reference_input_price_per_1k_tokens": None, "reference_output_price_per_1k_tokens": None, "rate_limit_rpm": None, "rate_limit_tpm": None, "icon_url": None, "series_icon_url": None, "created_by": None, "enabled": True, "billing_mode": "ratio", "model_multiplier": "1.0", "completion_multiplier": "1.0", "thinking_model_id": None, "non_thinking_model_id": None, "upstream_model_id": "upstream-m1", "provider_id": "p1", "provider_name": "Provider", "test_ok": None, "test_latency_ms": None, "test_tokens_per_second": None, "test_total_tokens": "0", "test_error": None, "test_tested_at": None}
         model: UserModelListItem = {
             "id": "model-1",
             "upstream_model_id": "upstream-1",
@@ -118,6 +120,7 @@ class TypedRequestTests(unittest.TestCase):
             "created_by": None,
         }
         self.assertIsNone(model["alias"])
+        self.assertIsNone(model_info["cached_output_price_per_1k_tokens"])
         self.assertIsNone(provider["created_by"])
         assigned_tags: ApiKeyTagsResponse = {"tags": [{"id": 2, "name": "prod", "color": "#445566"}]}
         key_tag: UserKeyTag = {

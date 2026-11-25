@@ -2059,6 +2059,244 @@
         ],
         "additionalProperties": true
       },
+      "UserModelInfo": {
+        "type": "object",
+        "properties": {
+          "model_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "alias": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "input_price_per_1k_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output_price_per_1k_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cached_output_price_per_1k_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference_input_price_per_1k_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference_output_price_per_1k_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rate_limit_rpm": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "rate_limit_tpm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "icon_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "series_icon_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_by": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "billing_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completion_multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thinking_model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "non_thinking_model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "upstream_model_id": {
+            "type": "string"
+          },
+          "provider_id": {
+            "type": "string"
+          },
+          "provider_name": {
+            "type": "string"
+          },
+          "test_ok": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "test_latency_ms": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "test_tokens_per_second": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "test_total_tokens": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "test_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "test_tested_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "model_id",
+          "name",
+          "enabled",
+          "upstream_model_id",
+          "provider_id",
+          "provider_name"
+        ],
+        "additionalProperties": true
+      },
       "UserProviderListItem": {
         "type": "object",
         "properties": {
@@ -18230,8 +18468,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/UserModelInfo"
                 }
               }
             }

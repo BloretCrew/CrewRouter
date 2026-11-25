@@ -617,6 +617,39 @@ export interface ApiKeyDailyUsageItem {
   requests: number | string;
 }
 
+export interface UserModelInfo {
+  model_id: string;
+  name: string;
+  alias: string | null;
+  series: string | null;
+  description: string | null;
+  input_price_per_1k_tokens: number | string | null;
+  output_price_per_1k_tokens: number | string | null;
+  cached_output_price_per_1k_tokens: number | string | null;
+  reference_input_price_per_1k_tokens: number | string | null;
+  reference_output_price_per_1k_tokens: number | string | null;
+  rate_limit_rpm: number | null;
+  rate_limit_tpm: number | string | null;
+  icon_url: string | null;
+  series_icon_url: string | null;
+  created_by: number | null;
+  enabled: boolean;
+  billing_mode: string | null;
+  model_multiplier: number | string | null;
+  completion_multiplier: number | string | null;
+  thinking_model_id: string | null;
+  non_thinking_model_id: string | null;
+  upstream_model_id: string;
+  provider_id: string;
+  provider_name: string;
+  test_ok: boolean | null;
+  test_latency_ms: number | string | null;
+  test_tokens_per_second: number | string | null;
+  test_total_tokens: number | string;
+  test_error: string | null;
+  test_tested_at: string | null;
+}
+
 export interface UserModelListItem {
   id: string;
   upstream_model_id: string;

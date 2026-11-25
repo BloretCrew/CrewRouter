@@ -590,6 +590,40 @@ type UserProviderListItem struct {
 	CreatedBy *int64 `json:"created_by"`
 }
 
+// UserModelInfo is the detailed model response returned to a user with Team access.
+type UserModelInfo struct {
+	ModelID                         string  `json:"model_id"`
+	Name                            string  `json:"name"`
+	Alias                           *string `json:"alias"`
+	Series                          *string `json:"series"`
+	Description                     *string `json:"description"`
+	InputPricePer1KTokens           any     `json:"input_price_per_1k_tokens"`
+	OutputPricePer1KTokens          any     `json:"output_price_per_1k_tokens"`
+	CachedOutputPricePer1KTokens    any     `json:"cached_output_price_per_1k_tokens"`
+	ReferenceInputPricePer1KTokens  any     `json:"reference_input_price_per_1k_tokens"`
+	ReferenceOutputPricePer1KTokens any     `json:"reference_output_price_per_1k_tokens"`
+	RateLimitRPM                    *int64  `json:"rate_limit_rpm"`
+	RateLimitTPM                    any     `json:"rate_limit_tpm"`
+	IconURL                         *string `json:"icon_url"`
+	SeriesIconURL                   *string `json:"series_icon_url"`
+	CreatedBy                       *int64  `json:"created_by"`
+	Enabled                         bool    `json:"enabled"`
+	BillingMode                     *string `json:"billing_mode"`
+	ModelMultiplier                 any     `json:"model_multiplier"`
+	CompletionMultiplier            any     `json:"completion_multiplier"`
+	ThinkingModelID                 *string `json:"thinking_model_id"`
+	NonThinkingModelID              *string `json:"non_thinking_model_id"`
+	UpstreamModelID                 string  `json:"upstream_model_id"`
+	ProviderID                      string  `json:"provider_id"`
+	ProviderName                    string  `json:"provider_name"`
+	TestOK                          *bool   `json:"test_ok"`
+	TestLatencyMS                   any     `json:"test_latency_ms"`
+	TestTokensPerSecond             any     `json:"test_tokens_per_second"`
+	TestTotalTokens                 any     `json:"test_total_tokens"`
+	TestError                       *string `json:"test_error"`
+	TestTestedAt                    *string `json:"test_tested_at"`
+}
+
 // UserModelListItem is one model returned by GET /api/user/models.
 type UserModelListItem struct {
 	ID                     string  `json:"id"`

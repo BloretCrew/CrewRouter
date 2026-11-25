@@ -39,6 +39,7 @@ import type {
   UserBalance,
   UserKeyTag,
   UserModelListItem,
+  UserModelInfo,
   UserProviderListItem,
   UserProduct,
   ProviderTag,
@@ -240,6 +241,8 @@ export class CrewRouter {
   readonly models = {
     list: <T = UserModelListItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.models.list', options),
+    getInfo: <T = UserModelInfo>(id: string, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.models.byId.info.list', mergePathParams(options, { id })),
   };
 
   readonly currentModel = {

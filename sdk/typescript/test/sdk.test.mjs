@@ -109,6 +109,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 'model-1', upstream_model_id: 'upstream-1', name: 'Model One', alias: null, provider: 'p1', provider_name: 'Provider', input_price_per_1k_tokens: '0.01', output_price_per_1k_tokens: 0.02, output_kind: 'chat' }]);
       return;
     }
+    if (req.url === '/api/user/models/m1/info') {
+      json(res, 200, { model_id: 'm1', name: 'Model', alias: null, series: null, description: null, input_price_per_1k_tokens: '0.01', output_price_per_1k_tokens: 0.02, cached_output_price_per_1k_tokens: null, reference_input_price_per_1k_tokens: null, reference_output_price_per_1k_tokens: null, rate_limit_rpm: null, rate_limit_tpm: null, icon_url: null, series_icon_url: null, created_by: null, enabled: true, billing_mode: 'ratio', model_multiplier: '1.0', completion_multiplier: '1.0', thinking_model_id: null, non_thinking_model_id: null, upstream_model_id: 'upstream-m1', provider_id: 'p1', provider_name: 'Provider', test_ok: null, test_latency_ms: null, test_tokens_per_second: null, test_total_tokens: '0', test_error: null, test_tested_at: null });
+      return;
+    }
     if (req.url === '/api/user/providers') {
       json(res, 200, [{ id: 'shared-provider', name: 'Shared', format: 'openai', created_by: null }]);
       return;
@@ -277,6 +281,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const usage = await client.usage.get();
   const balance = await client.balance.get();
   const models = await client.models.list();
+  const modelInfo = await client.models.getInfo('m1');
   const providers = await client.providers.list();
   const keyUsage = await client.keys.getUsage(7);
   const keyModels = await client.keys.getModels(7);
@@ -326,6 +331,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(balance.data.group, null);
   assert.equal(models.data[0].alias, null);
   assert.equal(models.data[0].input_price_per_1k_tokens, '0.01');
+  assert.equal(modelInfo.data.cached_output_price_per_1k_tokens, null);
   assert.equal(providers.data[0].created_by, null);
   assert.equal(keyUsage.data[0].model_id, 'm1');
   assert.equal(keyUsage.data[0].model_name, null);

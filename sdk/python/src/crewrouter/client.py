@@ -576,6 +576,39 @@ class UserKeyTag(TypedDict):
     created_at: str
 
 
+class UserModelInfo(TypedDict, total=False):
+    model_id: str
+    name: str
+    alias: Optional[str]
+    series: Optional[str]
+    description: Optional[str]
+    input_price_per_1k_tokens: Optional[Union[float, str]]
+    output_price_per_1k_tokens: Optional[Union[float, str]]
+    cached_output_price_per_1k_tokens: Optional[Union[float, str]]
+    reference_input_price_per_1k_tokens: Optional[Union[float, str]]
+    reference_output_price_per_1k_tokens: Optional[Union[float, str]]
+    rate_limit_rpm: Optional[int]
+    rate_limit_tpm: Optional[Union[int, str]]
+    icon_url: Optional[str]
+    series_icon_url: Optional[str]
+    created_by: Optional[int]
+    enabled: bool
+    billing_mode: Optional[str]
+    model_multiplier: Optional[Union[float, str]]
+    completion_multiplier: Optional[Union[float, str]]
+    thinking_model_id: Optional[str]
+    non_thinking_model_id: Optional[str]
+    upstream_model_id: str
+    provider_id: str
+    provider_name: str
+    test_ok: Optional[bool]
+    test_latency_ms: Optional[Union[float, str]]
+    test_tokens_per_second: Optional[Union[float, str]]
+    test_total_tokens: Union[int, str]
+    test_error: Optional[str]
+    test_tested_at: Optional[str]
+
+
 class UserModelListItem(TypedDict):
     id: str
     upstream_model_id: str

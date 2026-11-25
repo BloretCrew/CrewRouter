@@ -76,6 +76,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const usage = openapi.paths['/api/user/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const balance = openapi.paths['/api/user/balance']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const models = openapi.paths['/api/user/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const modelInfo = openapi.paths['/api/user/models/{id}/info']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const providers = openapi.paths['/api/user/providers']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const products = openapi.paths['/api/user/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const codeBalances = openapi.paths['/api/user/code-balances']?.get?.responses?.[200]?.content?.['application/json']?.schema;
@@ -123,6 +124,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
   if (balance?.$ref !== '#/components/schemas/UserBalance' || !openapi.components.schemas.UserBalance?.properties?.group?.anyOf?.some(item => item.type === 'null')) throw new Error(`${openapiPath} must define nullable balance group responses`);
   if (models?.type !== 'array' || models.items?.$ref !== '#/components/schemas/UserModelListItem') throw new Error(`${openapiPath} must define visible model list responses`);
+  if (modelInfo?.$ref !== '#/components/schemas/UserModelInfo' || !openapi.components.schemas.UserModelInfo?.properties?.cached_output_price_per_1k_tokens) throw new Error(`${openapiPath} must define detailed user-visible model info`);
   if (!openapi.components.schemas.UserModelListItem?.properties?.alias?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable visible model aliases`);
   for (const field of ['upstream_model_id', 'provider_name', 'input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'output_kind']) {
     if (!openapi.components.schemas.UserModelListItem?.properties?.[field]) throw new Error(`${openapiPath} is missing UserModelListItem.${field}`);

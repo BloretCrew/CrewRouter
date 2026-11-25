@@ -80,6 +80,7 @@ export type {
   DailyUsageItem,
   UserBalance,
   UserModelListItem,
+  UserModelInfo,
   UserProviderListItem,
   UserProduct,
   UserCodeBalanceItem,

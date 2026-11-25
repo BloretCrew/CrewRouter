@@ -24,6 +24,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected balance payload: %#v", balance)
 	}
 
+	var modelInfo crewrouter.UserModelInfo
+	if err := json.Unmarshal([]byte(`{"model_id":"m1","name":"Model","alias":null,"series":null,"description":null,"input_price_per_1k_tokens":"0.01","output_price_per_1k_tokens":0.02,"cached_output_price_per_1k_tokens":null,"reference_input_price_per_1k_tokens":null,"reference_output_price_per_1k_tokens":null,"rate_limit_rpm":null,"rate_limit_tpm":null,"icon_url":null,"series_icon_url":null,"created_by":null,"enabled":true,"billing_mode":"ratio","model_multiplier":"1.0","completion_multiplier":"1.0","thinking_model_id":null,"non_thinking_model_id":null,"upstream_model_id":"upstream-m1","provider_id":"p1","provider_name":"Provider","test_ok":null,"test_latency_ms":null,"test_tokens_per_second":null,"test_total_tokens":"0","test_error":null,"test_tested_at":null}`), &modelInfo); err != nil {
+		t.Fatalf("decode model info: %v", err)
+	}
+	if modelInfo.ModelID != "m1" || modelInfo.CachedOutputPricePer1KTokens != nil {
+		t.Fatalf("unexpected model info payload: %#v", modelInfo)
+	}
+
 	var model crewrouter.UserModelListItem
 	if err := json.Unmarshal([]byte(`{"id":"model-1","upstream_model_id":"upstream-1","name":"Model One","alias":null,"provider":"p1","provider_name":"Provider","input_price_per_1k_tokens":"0.01","output_price_per_1k_tokens":0.02,"output_kind":"chat"}`), &model); err != nil {
 		t.Fatalf("decode user model: %v", err)
