@@ -525,6 +525,28 @@ function managementSchemas() {
       days: { const: 1 }, hours: { const: 24 }, slots: { type: 'integer' }, granularity: { const: '15m' },
       items: { type: 'object', additionalProperties: { $ref: '#/components/schemas/ModelUptimeSummaryItem' } },
     }, ['days', 'hours', 'slots', 'granularity', 'items']),
+    ModelUptimeDetailPoint: object({
+      date: { type: 'string', format: 'date-time' },
+      status: { type: 'string', enum: ['none', 'ok', 'degraded', 'outage'] },
+      success: { type: 'integer' }, fail: { type: 'integer' },
+    }, ['date', 'status', 'success', 'fail']),
+    ModelUptimeDailyDetail: object({
+      model_id: { type: 'string' }, uptime_pct: { type: ['number', 'null'] },
+      label: { type: 'string' }, total_success: { type: 'integer' }, total_fail: { type: 'integer' },
+      granularity: { const: 'day' }, days: { type: 'array', items: { $ref: '#/components/schemas/ModelUptimeDetailPoint' } },
+    }, ['model_id', 'uptime_pct', 'label', 'total_success', 'total_fail', 'granularity', 'days']),
+    ModelUptimeSlotDetail: object({
+      model_id: { type: 'string' }, uptime_pct: { type: ['number', 'null'] },
+      label: { type: 'string' }, total_success: { type: 'integer' }, total_fail: { type: 'integer' },
+      granularity: { const: '15m' }, hours: { const: 24 }, slots: { type: 'integer' },
+      days: { type: 'array', items: { $ref: '#/components/schemas/ModelUptimeDetailPoint' } },
+    }, ['model_id', 'uptime_pct', 'label', 'total_success', 'total_fail', 'granularity', 'hours', 'slots', 'days']),
+    ModelUptimeDetailResponse: {
+      oneOf: [
+        { $ref: '#/components/schemas/ModelUptimeDailyDetail' },
+        { $ref: '#/components/schemas/ModelUptimeSlotDetail' },
+      ],
+    },
     ModelUptimeResponse: {
       oneOf: [
         { $ref: '#/components/schemas/ModelUptimeDailyResponse' },
@@ -560,6 +582,7 @@ function managementResponseSchema(operationId) {
     'user.products.list': { type: 'array', items: { $ref: '#/components/schemas/UserProduct' } },
     'user.codeBalances.list': { type: 'array', items: { $ref: '#/components/schemas/UserCodeBalanceItem' } },
     'user.models.uptime.list': { $ref: '#/components/schemas/ModelUptimeResponse' },
+    'user.models.byId.uptime.list': { $ref: '#/components/schemas/ModelUptimeDetailResponse' },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },

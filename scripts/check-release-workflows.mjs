@@ -70,6 +70,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const products = openapi.paths['/api/user/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const codeBalances = openapi.paths['/api/user/code-balances']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const modelUptime = openapi.paths['/api/user/models/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const modelUptimeDetail = openapi.paths['/api/user/models/{id}/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyUsage = openapi.paths['/api/user/api-keys/{id}/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyTags = openapi.paths['/api/user/key-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyTagCreate = openapi.paths['/api/user/key-tags']?.post?.responses?.[201]?.content?.['application/json']?.schema;
@@ -95,6 +96,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (!openapi.components.schemas.UserProduct?.properties?.description?.type?.includes('null') || !openapi.components.schemas.UserProduct?.properties?.link?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable product fields`);
   if (codeBalances?.type !== 'array' || codeBalances.items?.$ref !== '#/components/schemas/UserCodeBalanceItem') throw new Error(`${openapiPath} must define code-balance list responses`);
   if (modelUptime?.$ref !== '#/components/schemas/ModelUptimeResponse' || openapi.components.schemas.ModelUptimeResponse?.oneOf?.length !== 2) throw new Error(`${openapiPath} must define daily and 15-minute uptime variants`);
+  if (modelUptimeDetail?.$ref !== '#/components/schemas/ModelUptimeDetailResponse' || openapi.components.schemas.ModelUptimeDetailResponse?.oneOf?.length !== 2) throw new Error(`${openapiPath} must define daily and 15-minute uptime detail variants`);
   if (keyUsage?.type !== 'array' || keyUsage.items?.$ref !== '#/components/schemas/ApiKeyDailyUsageItem') throw new Error(`${openapiPath} must define per-key usage responses`);
   for (const field of ['model_id', 'tokens', 'cost', 'requests']) {
     if (!openapi.components.schemas.ApiKeyDailyUsageItem?.properties?.[field]) throw new Error(`${openapiPath} is missing ApiKeyDailyUsageItem.${field}`);

@@ -119,6 +119,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if uptime.Granularity != "15m" || uptime.Hours == nil || *uptime.Hours != 24 || uptime.Items["m1"].UptimePct != nil {
 		t.Fatalf("unexpected uptime payload: %#v", uptime)
 	}
+
+	var detail crewrouter.ModelUptimeDetailResponse
+	if err := json.Unmarshal([]byte(`{"model_id":"m1","uptime_pct":null,"label":"No data","total_success":0,"total_fail":0,"granularity":"15m","hours":24,"slots":96,"days":[{"date":"2026-01-01T00:00:00.000Z","status":"none","success":0,"fail":0}]}`), &detail); err != nil {
+		t.Fatalf("decode uptime detail: %v", err)
+	}
+	if detail.Granularity != "15m" || len(detail.Days) != 1 || detail.Days[0].Status != "none" {
+		t.Fatalf("unexpected uptime detail payload: %#v", detail)
+	}
 }
 
 func TestSDKConsumerCompiles(t *testing.T) {

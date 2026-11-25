@@ -1274,6 +1274,139 @@
         ],
         "additionalProperties": true
       },
+      "ModelUptimeDetailPoint": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "ok",
+              "degraded",
+              "outage"
+            ]
+          },
+          "success": {
+            "type": "integer"
+          },
+          "fail": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "status",
+          "success",
+          "fail"
+        ],
+        "additionalProperties": true
+      },
+      "ModelUptimeDailyDetail": {
+        "type": "object",
+        "properties": {
+          "model_id": {
+            "type": "string"
+          },
+          "uptime_pct": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "total_success": {
+            "type": "integer"
+          },
+          "total_fail": {
+            "type": "integer"
+          },
+          "granularity": {
+            "const": "day"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelUptimeDetailPoint"
+            }
+          }
+        },
+        "required": [
+          "model_id",
+          "uptime_pct",
+          "label",
+          "total_success",
+          "total_fail",
+          "granularity",
+          "days"
+        ],
+        "additionalProperties": true
+      },
+      "ModelUptimeSlotDetail": {
+        "type": "object",
+        "properties": {
+          "model_id": {
+            "type": "string"
+          },
+          "uptime_pct": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "total_success": {
+            "type": "integer"
+          },
+          "total_fail": {
+            "type": "integer"
+          },
+          "granularity": {
+            "const": "15m"
+          },
+          "hours": {
+            "const": 24
+          },
+          "slots": {
+            "type": "integer"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelUptimeDetailPoint"
+            }
+          }
+        },
+        "required": [
+          "model_id",
+          "uptime_pct",
+          "label",
+          "total_success",
+          "total_fail",
+          "granularity",
+          "hours",
+          "slots",
+          "days"
+        ],
+        "additionalProperties": true
+      },
+      "ModelUptimeDetailResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ModelUptimeDailyDetail"
+          },
+          {
+            "$ref": "#/components/schemas/ModelUptimeSlotDetail"
+          }
+        ]
+      },
       "ModelUptimeResponse": {
         "oneOf": [
           {
@@ -17126,8 +17259,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ModelUptimeDetailResponse"
                 }
               }
             }

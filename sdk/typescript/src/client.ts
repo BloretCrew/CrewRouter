@@ -23,6 +23,7 @@ import type {
   UserCodeBalanceItem,
   UserUsageLogsResponse,
   ModelUptimeResponse,
+  ModelUptimeDetailResponse,
   RequestOptions,
   StreamHandle,
   StreamOptions,
@@ -209,6 +210,8 @@ export class CrewRouter {
   readonly modelUptime = {
     get: <T = ModelUptimeResponse>(query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.models.uptime.list', { ...options, query }),
+    getDetail: <T = ModelUptimeDetailResponse>(id: string, query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.models.byId.uptime.list', { ...options, pathParams: { ...(options?.pathParams || {}), id }, query }),
   };
 
   readonly providers = {

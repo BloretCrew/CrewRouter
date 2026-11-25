@@ -133,6 +133,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { days: 1, hours: 24, slots: 96, granularity: '15m', items: { m1: { uptime_pct: null, label: 'No data', total_success: 0, total_fail: 0, spark: ['none'] } } });
       return;
     }
+    if (req.url.startsWith('/api/user/models/m1/uptime')) {
+      json(res, 200, { model_id: 'm1', uptime_pct: null, label: 'No data', total_success: 0, total_fail: 0, granularity: '15m', hours: 24, slots: 96, days: [{ date: '2026-01-01T00:00:00.000Z', status: 'none', success: 0, fail: 0 }] });
+      return;
+    }
     if (req.url === '/api/user/key-tags') {
       json(res, 200, [{ id: 3, name: 'prod', color: '#00aa00', sort_order: 1, created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
@@ -176,6 +180,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const products = await client.products.list();
   const codeBalances = await client.codeBalances.list();
   const uptime = await client.modelUptime.get();
+  const uptimeDetail = await client.modelUptime.getDetail('m1');
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -202,6 +207,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(codeBalances.data[0].net_amount, '2.2727');
   assert.equal(uptime.data.granularity, '15m');
   assert.equal(uptime.data.items.m1.uptime_pct, null);
+  assert.equal(uptimeDetail.data.granularity, '15m');
+  assert.equal(uptimeDetail.data.days[0].status, 'none');
 });
 
 test('management errors expose code and permission', async () => {

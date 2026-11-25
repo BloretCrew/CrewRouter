@@ -232,6 +232,27 @@ type ModelUptimeSummaryItem struct {
 	Spark        []string `json:"spark"`
 }
 
+// ModelUptimeDetailPoint is one day or 15-minute slot in a model detail response.
+type ModelUptimeDetailPoint struct {
+	Date    string `json:"date"`
+	Status  string `json:"status"`
+	Success int64  `json:"success"`
+	Fail    int64  `json:"fail"`
+}
+
+// ModelUptimeDetailResponse supports daily and 15-minute detail variants.
+type ModelUptimeDetailResponse struct {
+	ModelID      string                   `json:"model_id"`
+	UptimePct    *float64                 `json:"uptime_pct"`
+	Label        string                   `json:"label"`
+	TotalSuccess int64                    `json:"total_success"`
+	TotalFail    int64                    `json:"total_fail"`
+	Granularity  string                   `json:"granularity"`
+	Hours        *int                     `json:"hours,omitempty"`
+	Slots        *int                     `json:"slots,omitempty"`
+	Days         []ModelUptimeDetailPoint `json:"days"`
+}
+
 // ModelUptimeResponse supports daily and 15-minute aggregate variants.
 type ModelUptimeResponse struct {
 	Days        int                               `json:"days"`

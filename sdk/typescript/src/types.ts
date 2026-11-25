@@ -224,6 +224,37 @@ export interface ModelUptimeSlotResponse {
 
 export type ModelUptimeResponse = ModelUptimeDailyResponse | ModelUptimeSlotResponse;
 
+export interface ModelUptimeDetailPoint {
+  date: string;
+  status: 'none' | 'ok' | 'degraded' | 'outage';
+  success: number;
+  fail: number;
+}
+
+export interface ModelUptimeDailyDetail {
+  model_id: string;
+  uptime_pct: number | null;
+  label: string;
+  total_success: number;
+  total_fail: number;
+  granularity: 'day';
+  days: ModelUptimeDetailPoint[];
+}
+
+export interface ModelUptimeSlotDetail {
+  model_id: string;
+  uptime_pct: number | null;
+  label: string;
+  total_success: number;
+  total_fail: number;
+  granularity: '15m';
+  hours: 24;
+  slots: number;
+  days: ModelUptimeDetailPoint[];
+}
+
+export type ModelUptimeDetailResponse = ModelUptimeDailyDetail | ModelUptimeSlotDetail;
+
 export interface ApiKeyMember {
   id: number;
   username: string;

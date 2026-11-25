@@ -243,6 +243,38 @@ class ModelUptimeSlotResponse(TypedDict):
 ModelUptimeResponse = Union[ModelUptimeDailyResponse, ModelUptimeSlotResponse]
 
 
+class ModelUptimeDetailPoint(TypedDict):
+    date: str
+    status: str
+    success: int
+    fail: int
+
+
+class ModelUptimeDailyDetail(TypedDict):
+    model_id: str
+    uptime_pct: Optional[float]
+    label: str
+    total_success: int
+    total_fail: int
+    granularity: str
+    days: list[ModelUptimeDetailPoint]
+
+
+class ModelUptimeSlotDetail(TypedDict):
+    model_id: str
+    uptime_pct: Optional[float]
+    label: str
+    total_success: int
+    total_fail: int
+    granularity: str
+    hours: int
+    slots: int
+    days: list[ModelUptimeDetailPoint]
+
+
+ModelUptimeDetailResponse = Union[ModelUptimeDailyDetail, ModelUptimeSlotDetail]
+
+
 class UserKeyTag(TypedDict):
     id: int
     name: str
