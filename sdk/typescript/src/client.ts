@@ -5,6 +5,7 @@ import type {
   AnthropicMessagesRequest,
   AdminUsersResponse,
   AdminProduct,
+  AdminProviderTag,
   TeamMember,
   ApiKeyActionSuccess,
   ApiKeyEnabledUpdateResponse,
@@ -309,6 +310,10 @@ export class CrewRouter {
     products: {
       list: <T = AdminProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.products.list', options),
+    },
+    providerTags: {
+      list: <T = AdminProviderTag[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.providerTags.list', options),
     },
   };
 }

@@ -1884,6 +1884,35 @@
         ],
         "additionalProperties": true
       },
+      "AdminProviderTag": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color",
+          "sort_order",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
       "UserCodeBalanceItem": {
         "type": "object",
         "properties": {
@@ -8278,8 +8307,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminProviderTag"
+                  }
                 }
               }
             }

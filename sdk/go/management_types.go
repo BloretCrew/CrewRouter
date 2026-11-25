@@ -38,6 +38,15 @@ type AdminUser struct {
 	TeamName      *string `json:"team_name"`
 }
 
+// AdminProviderTag is a global provider tag returned to provider managers.
+type AdminProviderTag struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Color     string `json:"color"`
+	SortOrder int    `json:"sort_order"`
+	CreatedAt string `json:"created_at"`
+}
+
 // TeamMember is one user returned in an administrator Team membership list.
 type TeamMember struct {
 	ID        int64   `json:"id"`

@@ -31,6 +31,14 @@ class AdminUser(TypedDict, total=False):
     team_name: Optional[str]
 
 
+class AdminProviderTag(TypedDict):
+    id: int
+    name: str
+    color: str
+    sort_order: int
+    created_at: str
+
+
 class TeamMember(TypedDict, total=False):
     id: int
     username: str

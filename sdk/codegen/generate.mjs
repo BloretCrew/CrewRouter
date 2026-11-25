@@ -610,6 +610,10 @@ function managementSchemas() {
       id: { type: 'integer' }, name: { type: 'string' }, color: { type: 'string' },
       sort_order: { type: 'integer' },
     }, ['id', 'name', 'color', 'sort_order']),
+    AdminProviderTag: object({
+      id: { type: 'integer' }, name: { type: 'string' }, color: { type: 'string' },
+      sort_order: { type: 'integer' }, created_at: { type: 'string', format: 'date-time' },
+    }, ['id', 'name', 'color', 'sort_order', 'created_at']),
     UserCodeBalanceItem: object({
       amount: numberOrString, fee_rate: numberOrString, code: { type: 'string' },
       code_amount: numberOrString, net_amount: numberOrString,
@@ -679,6 +683,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
+    'admin.providerTags.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProviderTag' } },
     'admin.teams.byId.members.list': { type: 'array', items: { $ref: '#/components/schemas/TeamMember' } },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },

@@ -312,6 +312,14 @@ export interface AdminUsersPage {
   stats: AdminUserStats;
 }
 
+export interface AdminProviderTag {
+  id: number;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface TeamMember {
   id: number;
   username: string;
