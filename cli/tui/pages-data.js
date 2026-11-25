@@ -162,7 +162,18 @@ function usagePage(runtime) {
         ], description: `共 ${modelRows.length} 个模型 · 按请求数排序 · ${periodLabel}`, rows: modelRows.length ? modelRows : [{ label: '当前范围没有模型用量。' }] });
       }
       if (runtime.usageTab === 'providers') sections.push({ title: '按供应商统计', tab: 'providers', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byProvider || [], row => row.provider_name || row.provider_id || '未知供应商') });
-      if (runtime.usageTab === 'keys') sections.push({ title: '按 API Key 统计', tab: 'keys', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byApiKey || [], row => row.key_name || row.key_prefix || '未知 API Key') });
+      if (runtime.usageTab === 'keys') {
+        const keyRows = (summary.byApiKey || []).map(row => {
+          const tokens = Number(row.tokens || 0);
+          const cached = Number(row.cached_tokens || 0);
+          const prefix = String(row.key_prefix || '').trim();
+          return { label: row.key_name || 'API Key', cells: { name: row.key_name || 'API Key', prefix: prefix ? `${prefix}****` : '—', requests: Number(row.requests || 0).toLocaleString(), tokens: formatBigNumber(tokens), cached: cached > 0 ? formatBigNumber(cached) : '—', cost: Number(row.cost || 0).toFixed(4) } };
+        });
+        sections.push({ title: 'API Key 详细数据', tab: 'keys', toolbar: true, tableMinWidth: 108, columns: [
+          { key: 'name', label: '密钥名称', ratio: 0.22 }, { key: 'prefix', label: '前缀', ratio: 0.16 }, { key: 'requests', label: '请求数', ratio: 0.16 },
+          { key: 'tokens', label: 'Token', ratio: 0.16 }, { key: 'cached', label: '缓存命中', ratio: 0.16 }, { key: 'cost', label: '积分', ratio: 0.14 },
+        ], description: `${keyRows.length} 个 API Key · ${periodLabel}`, rows: keyRows.length ? keyRows : [{ label: '当前范围没有 API Key 用量。' }] });
+      }
       if (runtime.usageTab === 'sources') sections.push({ title: '按客户端统计', tab: 'sources', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.bySource || [], row => clientDisplay(row.request_source)) });
       if (runtime.usageTab === 'latency') {
         const latency = await getLatencyStats(runtime.client, { ...dateQuery, ...filters });
