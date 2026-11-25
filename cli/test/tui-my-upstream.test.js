@@ -18,13 +18,13 @@ test('my upstream page mirrors providers/models tabs and Team model columns', as
   assert.equal(section.rows[0].cells.name, 'Friendly');
   assert.equal(section.rows[0].cells.upstream_id, 'up-1');
   assert.equal(section.rows[0].cells.provider, 'Personal');
-  assert.equal(section.rows[0].cells.multiplier, '计费倍率 ×1.20');
+  assert.equal(section.rows[0].cells.multiplier, '×1.20');
   assert.deepEqual(calls, ['/api/user/my-providers', '/api/user/my-team-models']);
   const rows = data.sections.find(item => item.title === '我的模型').rows;
   assert.equal(rows[0].cells.name, 'Friendly');
   assert.equal(rows[0].cells.upstream_id, 'up-1');
   assert.equal(rows[0].cells.provider, 'Personal');
-  assert.equal(rows[0].cells.multiplier, '计费倍率 ×1.20');
+  assert.equal(rows[0].cells.multiplier, '×1.20');
   assert.equal(rows[0].cells.status, '已启用');
 });
 
@@ -72,8 +72,12 @@ test('my upstream uses web column order on wide terminals and readable field row
     await until(() => wide.screen().includes('Friendly'));
     const wideScreen = wide.screen();
     assert.ok(wideScreen.indexOf('常用操作') < wideScreen.indexOf('模型名称'));
-    for (const header of ['模型名称', '上游模型 ID', '供应商', '系列', '计费倍率', '状态', '操作']) assert.ok(wideScreen.includes(header), `wide table header missing: ${header}`);
-    for (const value of ['Friendly', 'up-1', 'Personal', 'S', '计费倍率 ×1.20', '已启用']) assert.ok(wideScreen.includes(value), `wide table value missing: ${value}`);
+    const expectedHeaders = ['模型名称', '上游模型 ID', '供应商', '系列', '倍率', '状态', '说明', '操作'];
+    const headerLine = wideScreen.split('\n').find(line => expectedHeaders.every(value => line.includes(value)));
+    assert.ok(headerLine, `wide table header row missing: ${expectedHeaders.join(' / ')}`);
+    const headerPositions = expectedHeaders.map(value => headerLine.indexOf(value));
+    assert.ok(headerPositions.every((value, index) => index === 0 || headerPositions[index - 1] < value), `web column order differs: ${headerPositions.join(',')}`);
+    for (const value of ['Friendly', 'up-1', 'Personal', 'S', '×1.20', '已启用', 'Short description']) assert.ok(wideScreen.includes(value), `wide table value missing: ${value}`);
   } finally { wide.input.write('q'); await wideTask; }
 
   const narrow = terminal(60, 20);
@@ -84,7 +88,7 @@ test('my upstream uses web column order on wide terminals and readable field row
     narrow.input.write('\x1b[6~');
     await tick(30);
     narrowScreen += narrow.screen();
-    for (const field of ['模型名称：Friendly', '上游模型 ID：up-1', '供应商：Personal', '系列：S', '计费倍率：计费倍率 ×1.20', '状态：已启用']) assert.ok(narrowScreen.includes(field), `narrow field missing: ${field}`);
+    for (const field of ['模型名称：Friendly', '上游模型 ID：up-1', '供应商：Personal', '系列：S', '倍率：×1.20', '状态：已启用']) assert.ok(narrowScreen.includes(field), `narrow field missing: ${field}`);
   } finally { narrow.input.write('q'); await narrowTask; }
 });
 
