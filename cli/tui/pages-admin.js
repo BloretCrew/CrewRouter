@@ -78,17 +78,23 @@ async function editOAuthClient(ctx, api, client, scopeOptions) {
 
 async function runRetentionTask(api, ctx, kind, dryRun) {
   const label = kind === 'compress' ? '压缩' : '清除';
-  if (!dryRun && !await ctx.confirm(`立即执行数据${label}`, '此操作可能修改或删除历史数据。确认启动任务？')) return;
+  if (!dryRun && !await ctx.confirm(`立即执行数据${label}`, '此操作将启动后台任务；清除会删除符合阈值的旧数据，且不可撤销。确认启动？')) return;
   const started = await api(`/api/admin/retention/run-${kind}`, { method: 'POST', body: { dry_run: dryRun } });
   if (!started?.taskId) { await ctx.show('任务未启动', '服务端未返回任务编号。'); return; }
-  await ctx.show('保留任务已启动', `任务编号：${started.taskId}\n状态：${started.status || 'queued'}\n${dryRun ? '这是预览任务，不会修改数据。' : '请等待任务完成；执行期间同一实例不能启动其他保留任务。'}`);
+  const initialStatus = started.status === 'queued' ? '排队中' : started.status || '已启动';
+  await ctx.show(dryRun ? `数据${label}预览已启动` : `数据${label}任务已启动`, `任务编号：${started.taskId}\n状态：${initialStatus}\n${dryRun ? '这是 dry-run 预览，不会修改或删除数据。' : '任务将在后台执行；同一实例不允许同时运行多个保留任务。'}`);
+  const resultLabels = { compressed: '已压缩', deleted: '已清除', purged: '已删除', scanned: '已检查', skipped: '已跳过', tables: '涉及表数', rows: '记录数', bytes: '字节数', dryRun: '预览模式' };
   for (let attempt = 0; attempt < 600; attempt++) {
     await new Promise(resolve => setTimeout(resolve, 1000));
     const task = await api(`/api/admin/retention/tasks/${encodeURIComponent(started.taskId)}`);
-    if (task.status === 'completed') { await ctx.show(`数据${label}任务完成`, JSON.stringify(task.result || {}, null, 2)); return; }
-    if (task.status === 'failed') { await ctx.show(`数据${label}任务失败`, task.error?.message || task.error?.code || '未知错误'); return; }
+    if (task.status === 'completed') {
+      const result = task.result || {};
+      const details = Object.entries(result).map(([key, value]) => `${resultLabels[key] || key.replace(/_/g, ' ')}：${typeof value === 'boolean' ? value ? '是' : '否' : typeof value === 'object' ? JSON.stringify(value) : value}`).join('\n');
+      await ctx.show(dryRun ? `数据${label}预览完成（dry-run）` : `数据${label}任务完成`, `任务编号：${started.taskId}${dryRun ? '\n预览模式：未修改或删除数据' : ''}${details ? `\n${details}` : '\n任务已完成。'}`); return;
+    }
+    if (task.status === 'failed') { await ctx.show(`数据${label}任务失败`, `任务编号：${started.taskId}\n${task.error?.message || task.error?.code || '未知错误'}`); return; }
   }
-  await ctx.show('任务仍在执行', `任务编号：${started.taskId}\n超过 10 分钟未完成；可稍后刷新或重试查看状态。`);
+  await ctx.show('任务仍在执行', `任务编号：${started.taskId}\n超过 10 分钟未完成；可稍后刷新状态。`);
 }
 
 function createAdminPages(runtime) {
@@ -1571,10 +1577,10 @@ function createAdminPages(runtime) {
         ];
         const describe = (key, value) => key === 'agg_enabled' ? (value ? '启用' : '关闭') : `${value}${key.endsWith('_gb') ? ' GB' : ' 天'}`;
         return { sections: [
-          { title: '压缩阈值', rows: [{ label: `按时间：${describe('compress_days', values.compress_days)}` }, { label: `按表大小：${describe('compress_size_gb', values.compress_size_gb)}` }, { label: '说明：任一阈值达到即触发；0 表示禁用该条件。' }] },
-          { title: '清除阈值', rows: [{ label: `按时间：${describe('purge_days', values.purge_days)}` }, { label: `按表大小：${describe('purge_size_gb', values.purge_size_gb)}` }, { label: '说明：任一阈值达到即触发；删除阈值为 0 时永不删除。' }] },
-          { title: '其他保留配置', rows: [{ label: `${fields[4][1]}：${describe('provider_quota_days', values.provider_quota_days)}` }, { label: `每日聚合：${describe('agg_enabled', values.agg_enabled)}` }] },
-          { title: '任务状态', rows: [{ label: '任务启动后可查看返回的结果；同一实例已有保留任务运行时，新任务会被拒绝。' }] },
+          { title: '压缩阈值', description: '后台按时间或表大小任一条件达到时触发；压缩保留记录但回收存储空间。输入 0 表示禁用对应条件。', rows: [{ label: `按时间：${describe('compress_days', values.compress_days)}` }, { label: `按表大小：${describe('compress_size_gb', values.compress_size_gb)}` }] },
+          { title: '清除阈值', description: '后台按时间或表大小任一条件达到时删除历史数据；删除阈值为 0 表示不自动删除。', rows: [{ label: `按时间：${describe('purge_days', values.purge_days)}` }, { label: `按表大小：${describe('purge_size_gb', values.purge_size_gb)}` }] },
+          { title: '其他保留配置', rows: [{ label: `${fields[4][1]}：${describe('provider_quota_days', values.provider_quota_days)}`, detail: '供应商额度历史明细保留天数；每日额度聚合数据长期保留。' }, { label: `每日聚合：${describe('agg_enabled', values.agg_enabled)}` }] },
+          { title: '任务状态', rows: [{ label: '压缩/清除任务在后台运行；可先用 dry-run 预览（不会修改或删除数据），完成后显示影响记录数。', detail: '同一实例已有保留任务运行时，服务器会拒绝启动新任务。' }] },
         ], actions: [
           { label: '编辑保留配置', run: async ctx => {
             const formFields = fields.map(([name, label]) => ({ name, label, value: String(values[name] ?? 0) }));
