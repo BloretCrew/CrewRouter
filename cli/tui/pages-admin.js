@@ -353,10 +353,11 @@ function createAdminPages(runtime) {
           if (!matchSearch || !matchTag) continue;
           providerEntries.push({ team, provider });
         }
+        const formatLatency = value => Number(value) >= 1000 ? `平均 ${(Number(value) / 1000).toFixed(1)} 秒` : Number(value) > 0 ? `平均 ${Math.round(Number(value))} 毫秒` : '';
         const providerCards = providerEntries.map(({ team, provider }) => ({
           label: provider.provider_name || provider.provider_id,
           value: `${provider.visible_model_count || 0}/${provider.model_count || 0}`,
-          detail: display(team.team_name, `${provider.test_summary?.success || 0}/${provider.test_summary?.tested || 0} 测试通过`, provider.test_summary?.avg_latency_ms && `平均响应时间 ${provider.test_summary.avg_latency_ms} 毫秒`, array(provider.tags).map(tag => tag.name).join(', '), provider.is_hidden ? '已隐藏' : ''),
+          detail: display(team.team_name, `${provider.test_summary?.success || 0}/${provider.test_summary?.tested || 0} 项测试通过`, formatLatency(provider.test_summary?.avg_latency_ms), provider.is_hidden ? '已隐藏' : ''),
         }));
         const shortError = (value, max = 72) => { const normalized = String(value || '').replace(/\s+/g, ' ').trim(); return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized; };
         const modelRows = searchedModels.map(item => {
