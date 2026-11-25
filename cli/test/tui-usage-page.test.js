@@ -163,6 +163,26 @@ test('usage custom dates validate dates and send the same interval to stats, lat
   ]);
 });
 
+test('latency query omits unsupported Team filter and warns that it is unapplied', async () => {
+  const runtime = makeRuntime();
+  const calls = [];
+  runtime.usageFilters = { model_id: 'm1', provider_id: 'p1', team_id: '2', request_source: 'codex' };
+  runtime.usageTab = 'latency';
+  runtime.client.get = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/user/stats') return { summary: {}, daily: [], hourly: [] };
+    if (path === '/api/user/stats/latency') return { window: {}, coverage: { totalRequests: 0, measuredRequests: 0, rate: 0 }, summary: {}, byModel: [], daily: [], rateLimits: [] };
+    return {};
+  };
+  const usage = page(runtime);
+  const data = await usage.load();
+  const latencyCall = calls.find(call => call.path === '/api/user/stats/latency');
+  assert.deepEqual(latencyCall.options.query, { days: 30, model_id: 'm1', provider_id: 'p1', request_source: 'codex' });
+  const notes = data.sections.find(section => section.title === '延迟指标说明').rows.map(row => row.label);
+  assert.ok(notes.some(note => note.includes('Team 筛选不适用于')));
+  assert.ok(notes.some(note => note.includes('模型、供应商、客户端')));
+});
+
 test('usage filter action mirrors web model, provider, team and client filters', async () => {
   const runtime = makeRuntime();
   const calls = [];

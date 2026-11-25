@@ -202,7 +202,8 @@ function usagePage(runtime) {
         ], rows: sourceModelRows.length ? sourceModelRows : [{ label: '暂无客户端与模型交叉数据。' }] });
       }
       if (runtime.usageTab === 'latency') {
-        const latency = await getLatencyStats(runtime.client, { ...dateQuery, ...filters });
+        const { team_id: _unsupportedLatencyTeamFilter, ...latencyFilters } = filters;
+        const latency = await getLatencyStats(runtime.client, { ...dateQuery, ...latencyFilters });
         const latencySummary = latency.summary || {};
         const latencyModelRows = arrayOrEmpty(latency.byModel).map(row => ({ label: row.name || '未知模型', cells: {
           model: row.name || '未知模型', requests: Number(row.requests || 0).toLocaleString(), measured: `${Number(row.measuredRequests || 0).toLocaleString()} (${(Number(row.coverage || 0) * 100).toFixed(1)}%)`,
@@ -218,7 +219,7 @@ function usagePage(runtime) {
         } }));
         const rateLimitRows = arrayOrEmpty(latency.rateLimits).map(row => ({ label: row.providerName || row.providerId || '未知供应商', detail: `采集时间：${row.observedAt ? formatTime(row.observedAt) : '未知'} · 服务层级：${row.serviceTier || '未提供'} · ${row.rateLimit ? Object.entries(row.rateLimit).map(([key, value]) => `${({ requests_remaining: '剩余请求', requests_limit: '请求上限', requests_reset: '请求重置', tokens_remaining: '剩余 Token', tokens_limit: 'Token 上限', tokens_reset: 'Token 重置' })[key] || key.replace(/_/g, ' ')} ${value}`).join(' · ') : '上游未返回限流数据'}` }));
         sections.push(
-          { title: '延迟指标说明', tab: 'latency', rows: [{ label: '以下为网关实际采集的首字延迟（TTFT）、每 Token 生成耗时（TPOT）、输出速度和端到端延迟（E2E）。' }, { label: `当前范围：${latency.window?.start || '未知'} 至 ${latency.window?.end || '未知'} · 时区 ${latency.window?.timezone || 'Asia/Shanghai'}` }, { label: `已采集 ${Number(latencySummary.measuredRequests || 0).toLocaleString()} / ${Number(latencySummary.requests || 0).toLocaleString()} 条请求（${(Number(latencySummary.coverage || 0) * 100).toFixed(1)}%）` }] },
+          { title: '延迟指标说明', tab: 'latency', rows: [{ label: '以下为网关实际采集的首字延迟（TTFT）、每 Token 生成耗时（TPOT）、输出速度和端到端延迟（E2E）。' }, { label: `当前范围：${latency.window?.start || '未知'} 至 ${latency.window?.end || '未知'} · 时区 ${latency.window?.timezone || 'Asia/Shanghai'}` }, { label: `已采集 ${Number(latencySummary.measuredRequests || 0).toLocaleString()} / ${Number(latencySummary.requests || 0).toLocaleString()} 条请求（${(Number(latencySummary.coverage || 0) * 100).toFixed(1)}%）` }, { label: `已应用延迟筛选：${[filters.model_id && '模型', filters.provider_id && '供应商', filters.request_source && '客户端'].filter(Boolean).join('、') || '无额外筛选'}` }, ...(filters.team_id ? [{ label: '注意：Team 筛选不适用于延迟与吞吐统计；此结果未按 Team 限定。' }] : [])] },
           { title: '延迟与吞吐摘要', tab: 'latency', cards: [
             { label: 'TTFT P50', value: latencySummary.ttft?.p50 == null ? '未采集' : `${latencySummary.ttft.p50} 毫秒` },
             { label: 'TTFT P95', value: latencySummary.ttft?.p95 == null ? '未采集' : `${latencySummary.ttft.p95} 毫秒` },
