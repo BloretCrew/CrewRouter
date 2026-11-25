@@ -1320,6 +1320,7 @@ function createAdminPages(runtime) {
             ...(hookResult.status === 'rejected' ? [{ label: `事件通知设置读取失败：${hookResult.reason.message || '未知错误'}` }] : []),
           ] },
           { title: '网页专属设置', rows: [
+            { label: '全局代理池（网页网络设置）', detail: '在管理员网页「设置 → 网络」配置订阅地址或手动代理；只有供应商选择“代理池”模式并启用后才生效，遇到 IP 限速时可自动切换代理。此处不读取或修改代理地址。' },
             { label: '界面背景与主题', detail: '壁纸上传及主题插件选择需要浏览器图形界面。' },
             { label: 'API 签名预览', detail: 'TUI 显示签名模板；依赖网页即时预览的变量渲染在此不支持。' },
           ] },

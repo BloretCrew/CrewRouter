@@ -114,6 +114,7 @@ test('user settings show readable profile/signature fields and edit the complete
   assert.ok(data.sections[4].rows.some(row => row.label.includes('已授权')));
   assert.ok(data.sections[5].rows.some(row => row.label === '客户端：Codex'));
   assert.ok(data.sections[5].rows.some(row => row.label === '事件：工具调用'));
+  assert.ok(data.sections[6].rows.some(row => row.label === '全局代理池（网页网络设置）' && /供应商选择“代理池”模式并启用后才生效/.test(row.detail)));
   assert.ok(data.sections[6].rows.some(row => row.label.includes('界面背景与主题')));
   const notificationEdit = data.actions.find(action => action.label === '编辑通知设置');
   let notificationFields;
