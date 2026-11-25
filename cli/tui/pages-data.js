@@ -1,8 +1,11 @@
 'use strict';
 
 const { getStats, getStatsFilters, getLatencyStats, getMessageStats, getUsageLogs, statsSummary, listSessions, getSessionMessages, searchSessions } = require('../lib/api');
+const { ApiError } = require('../lib/client');
 const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 const { text } = require('./pages-common');
+const fs = require('node:fs/promises');
+const path = require('node:path');
 
 const arrayOrEmpty = value => Array.isArray(value) ? value : [];
 
@@ -280,14 +283,16 @@ function usagePage(runtime) {
         );
       }
       if (runtime.usageTab === 'logs') {
-        const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, limit: 20, ...(runtime.usageLogFilters || {}) });
+        const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, limit: 50, ...(runtime.usageLogFilters || {}) });
         runtime.usageLogTotal = Number(logs.total || 0);
         const items = Array.isArray(logs.logs) ? logs.logs : Array.isArray(logs.items) ? logs.items : [];
-        sections.push({ title: '调用记录', tab: 'logs', toolbar: true, tableMinWidth: 124, columns: [
+        const logPage = Number(logs.page || runtime.usageLogPage || 1);
+        const logPages = Math.max(1, Math.ceil(Number(logs.total || 0) / 50));
+        sections.push({ title: '调用记录', tab: 'logs', toolbar: true, toolbarLabel: '筛选、导出与分页', tableMinWidth: 124, columns: [
           { key: 'time', label: '时间', ratio: 0.17 }, { key: 'model', label: '模型', ratio: 0.17 }, { key: 'series', label: '系列', ratio: 0.09 },
           { key: 'source', label: '客户端', ratio: 0.13 }, { key: 'key', label: 'API Key', ratio: 0.14 }, { key: 'tokens', label: 'Token', ratio: 0.1 },
           { key: 'cached', label: '缓存命中', ratio: 0.1 }, { key: 'cost', label: '积分', ratio: 0.1 },
-        ], description: `第 ${logs.page || runtime.usageLogPage || 1} 页 · 共 ${logs.total || 0} 条`, rows: items.map(item => ({ label: formatTime(item.created_at), cells: {
+        ], description: `第 ${logPage}/${logPages} 页 · 共 ${logs.total || 0} 条 · 每页 50 条${Object.keys(runtime.usageLogFilters || {}).length ? ` · 已应用 ${Object.keys(runtime.usageLogFilters).length} 项筛选` : ''}`, rows: items.map(item => ({ label: formatTime(item.created_at), cells: {
           time: formatTime(item.created_at), model: item.model_name || item.model_id || '未知模型', series: item.series || '无系列',
           source: clientDisplay(item.request_source), key: `${item.key_prefix ? `${item.key_prefix}••••` : '无前缀'}${item.key_name ? `（${item.key_name}）` : ''}`,
           tokens: `${formatBigNumber(item.tokens_used || item.tokens)} Token`, cached: `${formatBigNumber(item.cached_tokens || 0)} Token`, cost: `${formatCost(item.cost)} 积分`,
@@ -407,29 +412,47 @@ function usagePage(runtime) {
             runtime.usageFilters = Object.fromEntries(Object.entries({ model_id, provider_id, team_id, request_source, ...(filters.q ? { q: filters.q } : {}) }).filter(([, value]) => value !== ''));
             runtime.usageLogPage = 1; await ctx.refresh();
           } },
-          { label: '筛选调用记录', tab: 'logs', toolbar: true, run: async ctx => {
+          { label: '筛选调用记录', tab: 'logs', toolbar: 'page', run: async ctx => {
             const current = runtime.usageLogFilters || {};
-            const model_q = await ctx.ask('模型名称或模型 ID（留空不过滤）', { defaultValue: current.model_q || '' }); if (model_q === null) return;
-            const requestType = await ctx.choose('请求类型', [{ label: '全部类型', value: '' }, ...['chat', 'responses', 'fusion', 'playground', 'imagine', 'agent_manage', 'gemini', 'interactions'].map(value => ({ label: value, value }))]); if (requestType === null) return;
-            const requestSource = await ctx.choose('客户端来源', [{ label: '全部客户端', value: '' }, ...['grok', 'codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness', 'unknown'].map(value => ({ label: clientDisplay(value), value }))]); if (requestSource === null) return;
-            const dateRange = await ctx.choose('调用记录日期', [{ label: '不限制日期', value: 'keep' }, { label: '设置自定义起止日期', value: 'custom' }, { label: '清除日期筛选', value: 'clear' }]); if (dateRange === null) return;
-            const next = { ...(model_q.trim() ? { model_q: model_q.trim() } : {}), ...(requestType ? { request_type: requestType } : {}), ...(requestSource ? { request_source: requestSource } : {}) };
-            if (dateRange === 'custom') {
-              const values = await ctx.form('调用记录日期范围', [{ name: 'start_date', label: '开始日期（YYYY-MM-DD）', value: current.start_date || '' }, { name: 'end_date', label: '结束日期（YYYY-MM-DD）', value: current.end_date || '' }]);
-              if (!values) return;
-              const validDate = value => typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
-              if (!validDate(values.start_date) || !validDate(values.end_date) || values.start_date > values.end_date) { await ctx.show('调用记录日期无效', '请输入真实存在的日期，且开始日期不得晚于结束日期。'); return; }
-              next.start_date = values.start_date; next.end_date = values.end_date;
-            } else if (dateRange === 'keep') {
-              if (current.start_date) next.start_date = current.start_date;
-              if (current.end_date) next.end_date = current.end_date;
-            }
-            runtime.usageLogFilters = next; runtime.usageLogPage = 1; await ctx.refresh();
+            const values = await ctx.form('调用记录筛选', [
+              { name: 'model_q', label: '模型名称或模型 ID（可空）', value: current.model_q || '' },
+              { name: 'request_type', label: '请求类型', value: current.request_type || '', options: [{ value: '', label: '全部类型' }, ...['chat', 'responses', 'fusion', 'playground', 'imagine', 'agent_manage', 'gemini', 'interactions'].map(value => ({ value, label: value }))] },
+              { name: 'request_source', label: '客户端来源', value: current.request_source || '', options: [{ value: '', label: '全部客户端' }, ...['grok', 'codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness', 'unknown'].map(value => ({ value, label: clientDisplay(value) }))] },
+              { name: 'start_date', label: '开始日期（留空不筛选）', value: current.start_date || '' },
+              { name: 'end_date', label: '结束日期（留空不筛选）', value: current.end_date || '' },
+            ], { description: '与网页调用记录筛选项相同；开始与结束日期需同时填写或同时留空。' });
+            if (!values) return;
+            const startDate = String(values.start_date || '').trim(); const endDate = String(values.end_date || '').trim();
+            const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+            if (!!startDate !== !!endDate || (startDate && (!validDate(startDate) || !validDate(endDate) || startDate > endDate))) { await ctx.show('调用记录日期无效', '请输入真实存在的开始和结束日期；两者必须同时填写，且开始日期不得晚于结束日期。'); return; }
+            runtime.usageLogFilters = { ...(String(values.model_q || '').trim() ? { model_q: String(values.model_q).trim() } : {}), ...(values.request_type ? { request_type: values.request_type } : {}), ...(values.request_source ? { request_source: values.request_source } : {}), ...(startDate ? { start_date: startDate, end_date: endDate } : {}) };
+            runtime.usageLogPage = 1; await ctx.refresh();
           } },
+          { label: '清除调用记录筛选', tab: 'logs', toolbar: 'page', disabled: !Object.keys(runtime.usageLogFilters || {}).length, run: async ctx => { runtime.usageLogFilters = {}; runtime.usageLogPage = 1; await ctx.refresh(); } },
+          { label: '导出当前筛选 CSV', tab: 'logs', toolbar: 'page', run: async ctx => {
+            const destination = String(await ctx.ask('CSV 文件保存路径', { defaultValue: path.resolve(process.cwd(), 'my-usage-logs.csv'), description: '将导出最多 50000 条；请输入绝对路径。若文件已存在，将再次确认后覆盖。' }) || '').trim();
+            if (!destination) return;
+            if (!path.isAbsolute(destination) || [...destination].some(character => { const code = character.charCodeAt(0); return code < 32 || code === 127; })) { await ctx.show('导出路径无效', '请提供不含控制字符的绝对文件路径。'); return; }
+            const target = path.resolve(destination);
+            let stat = null; try { stat = await fs.lstat(target); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+            if (stat && (!stat.isFile() || stat.isSymbolicLink())) { await ctx.show('无法导出到此路径', '目标必须是普通文件；为避免覆盖目录或符号链接，已取消导出。'); return; }
+            if (stat && !await ctx.confirm('覆盖已有 CSV 文件', `${target}\n现有文件将被 CSV 内容替换，是否继续？`)) return;
+            if (!await ctx.confirm('导出调用记录', `将按当前筛选导出最多 50000 条记录到：\n${target}`)) return;
+            const response = await runtime.client.get('/api/user/usage-logs/export', { query: { ...(runtime.usageLogFilters || {}), limit: 50000 }, raw: true, maxBytes: 64 * 1024 * 1024 });
+            if (Number(response.statusCode || 0) < 200 || Number(response.statusCode || 0) >= 300) throw new Error(`CSV 导出失败（HTTP ${response.statusCode || '未知'}），未写入文件。`);
+            const contentType = String(response.headers?.['content-type'] || '');
+            if (!contentType.toLowerCase().includes('text/csv')) throw new Error('服务器未返回 CSV 文件，已取消写入。');
+            const csv = String(response.text || '');
+            if (!csv || csv.trimStart().startsWith('{')) throw new Error('服务器返回的 CSV 内容无效，已取消写入。');
+            if (stat) await fs.writeFile(target, csv, { encoding: 'utf8', flag: 'w', mode: 0o600 });
+            else { const handle = await fs.open(target, 'wx', 0o600); try { await handle.writeFile(csv, 'utf8'); } finally { await handle.close(); } }
+            await fs.chmod(target, 0o600).catch(() => {});
+            ctx.notify(`CSV 已导出到 ${target}`);
+          } },
+
           { label: '搜索调用记录模型', tab: 'logs', toolbar: true, run: async ctx => { const value = await ctx.ask('搜索模型名称或上游模型 ID', { defaultValue: runtime.usageLogFilters?.model_q || '' }); if (value === null) return; runtime.usageLogFilters = { ...(runtime.usageLogFilters || {}), ...(String(value).trim() ? { model_q: String(value).trim() } : {}) }; if (!String(value).trim()) delete runtime.usageLogFilters.model_q; runtime.usageLogPage = 1; await ctx.refresh(); } },
-          { label: '上一页调用记录', tab: 'logs', toolbar: true, disabled: (runtime.usageLogPage || 1) <= 1, run: async ctx => { runtime.usageLogPage = Math.max(1, (runtime.usageLogPage || 1) - 1); await ctx.refresh(); } },
-          { label: '下一页调用记录', tab: 'logs', toolbar: true, disabled: (runtime.usageLogPage || 1) * 20 >= Number(runtime.usageLogTotal || 0), run: async ctx => { runtime.usageLogPage = (runtime.usageLogPage || 1) + 1; await ctx.refresh(); } },
-          { label: '导出当前筛选 CSV', tab: 'logs', toolbar: true, run: async ctx => { await ctx.show('CSV 导出不可用', '网页支持下载 CSV；CLI 当前 API 客户端不支持接收二进制响应并写入文件。请在网页调用记录页使用“导出 CSV”。'); } },
+          { label: '上一页调用记录', tab: 'logs', toolbar: 'page', disabled: (runtime.usageLogPage || 1) <= 1, run: async ctx => { runtime.usageLogPage = Math.max(1, (runtime.usageLogPage || 1) - 1); await ctx.refresh(); } },
+          { label: '下一页调用记录', tab: 'logs', toolbar: 'page', disabled: (runtime.usageLogPage || 1) >= Math.max(1, Math.ceil(Number(runtime.usageLogTotal || 0) / 50)), run: async ctx => { runtime.usageLogPage = Math.min(Math.max(1, Math.ceil(Number(runtime.usageLogTotal || 0) / 50)), (runtime.usageLogPage || 1) + 1); await ctx.refresh(); } },
           ...[7, 30, 90, 180, 365].map(days => ({ label: `最近 ${days} 天`, toolbar: true, run: async ctx => { runtime.usageDays = days; runtime.usageCustomRange = null; runtime.usageLogPage = 1; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },
         ],

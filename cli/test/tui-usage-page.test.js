@@ -5,6 +5,9 @@ const assert = require('node:assert/strict');
 const { buildPages } = require('../tui/pages');
 const { runPagedTui } = require('../tui/engine');
 const { terminal, until } = require('./helpers/tty');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 
 const makeRuntime = () => ({ client: { get: async () => ({ summary: {}, daily: [], byModel: [], byApiKey: [], byProvider: [], bySource: [] }) }, cfg: { tui: { days: 30 } }, profileName: 'test' });
 const page = runtime => buildPages(runtime).find(item => item.id === 'usage');
@@ -121,6 +124,7 @@ test('usage tabs request latency, message and log data with shared filters', asy
   const logData = await usage.load();
   const logSection = logData.sections.find(section => section.tab === 'logs');
   assert.deepEqual(logSection.columns.map(column => column.label), ['时间', '模型', '系列', '客户端', 'API Key', 'Token', '缓存命中', '积分']);
+  assert.match(logSection.description, /每页 50 条/);
   const logRow = logSection.rows[0];
   assert.equal(logRow.cells.series, 'S');
   assert.equal(logRow.cells.key, 'cr_live_••••（Main）');
@@ -131,16 +135,55 @@ test('usage tabs request latency, message and log data with shared filters', asy
   assert.match(detail, /缓存命中 Token：30（37.5%）/);
   assert.match(detail, /每输出 Token 耗时（TPOT）：2.0 毫秒/);
   assert.doesNotMatch(detail, /"model_name"|"cached_tokens"/);
-  await logData.actions.find(action => action.label === '搜索调用记录模型').run({ ask: async () => 'up-1', refresh: async () => {} });
-  await usage.load();
-  const logQuery = calls.filter(call => call.path === '/api/user/usage-logs').at(-1).options.query;
-  assert.equal(logQuery.model_q, 'up-1');
-  assert.equal(logQuery.q, undefined);
+  const filterAction = logData.actions.find(action => action.label === '筛选调用记录');
+  const filterChoices = [{ name: 'model_q', value: 'Model One' }, { name: 'request_type', value: 'chat' }, { name: 'request_source', value: 'codex' }, { name: 'start_date', value: '2026-11-01' }, { name: 'end_date', value: '2026-11-07' }];
+  await filterAction.run({ form: async () => Object.fromEntries(filterChoices.map(item => [item.name, item.value])), show: async () => {}, refresh: async () => {} });
+  assert.deepEqual(runtime.usageLogFilters, { model_q: 'Model One', request_type: 'chat', request_source: 'codex', start_date: '2026-11-01', end_date: '2026-11-07' });
+  assert.equal(calls.find(call => call.path === '/api/user/usage-logs').options.query.limit, 50);
+  let invalidDateNotice = '';
+  await filterAction.run({ form: async () => ({ model_q: '', request_type: '', request_source: '', start_date: '2026-11-01', end_date: '' }), show: async (_title, message) => { invalidDateNotice = message; }, refresh: async () => {} });
+  assert.match(invalidDateNotice, /必须同时填写/);
+  assert.equal(runtime.usageLogFilters.end_date, '2026-11-07', 'invalid query must not replace existing filters');
+  const refreshedLogData = await usage.load();
+  const clearAction = refreshedLogData.actions.find(action => action.label === '清除调用记录筛选');
+  assert.equal(clearAction.disabled, false);
+  await clearAction.run({ refresh: async () => {} });
+  assert.deepEqual(runtime.usageLogFilters, {});
   assert.deepEqual(calls.map(call => call.path), [
     '/api/user/stats', '/api/user/stats', '/api/user/stats/latency',
     '/api/user/stats', '/api/user/stats', '/api/user/stats', '/api/user/stats', '/api/user/stats', '/api/user/stats',
     '/api/user/message-stats', '/api/user/stats', '/api/user/usage-logs', '/api/user/usage-logs/42', '/api/user/stats', '/api/user/usage-logs',
   ]);
+});
+
+test('usage CSV export honors filters and requires confirmation before replacing an existing file', async () => {
+  const runtime = makeRuntime();
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'crewrouter-logs-'));
+  const destination = path.join(tempDir, 'usage.csv');
+  const calls = [];
+  runtime.usageTab = 'logs';
+  runtime.usageLogFilters = { model_q: 'Model One', request_type: 'chat' };
+  runtime.client.get = async (endpoint, options = {}) => { calls.push({ endpoint, options }); if (endpoint === '/api/user/stats') return { summary: {}, daily: [], hourly: [] }; if (options.raw) return { statusCode: 200, headers: { 'content-type': 'text/csv; charset=utf-8' }, text: '\\uFEFF时间,模型\\n今天,Model One' }; return { total: 0, page: 1, logs: [] }; };
+  try {
+    const data = await page(runtime).load();
+    const exportAction = data.actions.find(action => action.label === '导出当前筛选 CSV');
+    let confirms = 0;
+    await exportAction.run({ ask: async () => destination, confirm: async () => { confirms++; return false; }, notify() {}, show: async () => {} });
+    assert.equal(await fs.access(destination).then(() => true).catch(() => false), false, 'declining confirmation must not create a file');
+    assert.equal(confirms, 1);
+
+    await fs.writeFile(destination, 'preserve existing', 'utf8');
+    confirms = 0;
+    await exportAction.run({ ask: async () => destination, confirm: async () => { confirms++; return confirms > 1; }, notify() {}, show: async () => {} });
+    assert.equal(await fs.readFile(destination, 'utf8'), 'preserve existing', 'declining overwrite must preserve the destination');
+    assert.equal(confirms, 1);
+
+    await exportAction.run({ ask: async () => destination, confirm: async () => true, notify() {}, show: async () => {} });
+    assert.equal(await fs.readFile(destination, 'utf8'), '\\uFEFF时间,模型\\n今天,Model One');
+    const exportRequest = calls.find(call => call.endpoint === '/api/user/usage-logs/export');
+    assert.deepEqual(exportRequest.options.query, { model_q: 'Model One', request_type: 'chat', limit: 50000 });
+    assert.equal((await fs.stat(destination)).mode & 0o077, 0, 'export files should not be readable by other users');
+  } finally { await fs.rm(tempDir, { recursive: true, force: true }); }
 });
 
 test('usage custom dates validate dates and send the same interval to stats, latency and message analysis', async () => {
