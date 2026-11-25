@@ -16,6 +16,7 @@ function usagePage(runtime) {
     tabs: [
       { id: 'overview', label: '概览' },
       { id: 'daily', label: '每日' },
+      { id: 'hourly', label: '小时' },
       { id: 'models', label: '模型' },
       { id: 'providers', label: '供应商' },
       { id: 'keys', label: 'API Key' },
@@ -59,6 +60,22 @@ function usagePage(runtime) {
         date: row.date || '未知日期', requests: `${Number(row.requests || 0).toLocaleString()} 次`, input: `${formatBigNumber(row.prompt_tokens)} Token`,
         output: `${formatBigNumber(row.completion_tokens)} Token`, tokens: `${formatBigNumber(row.tokens)} Token`, cost: `${formatCost(row.cost)} 积分`,
       } })) });
+      if (runtime.usageTab === 'hourly') {
+        const hourly = Array.from({ length: 24 }, (_, hour) => {
+          const row = (Array.isArray(stats.hourly) ? stats.hourly : []).find(item => Number(item.hour) === hour) || {};
+          return { hour, requests: Number(row.requests || 0), tokens: Number(row.tokens || 0), cached: Number(row.cached_tokens || 0), cost: Number(row.cost || 0) };
+        });
+        const peak = [...hourly].sort((a, b) => b.requests - a.requests)[0];
+        sections.push({ title: '按小时用量', tab: 'hourly', toolbar: true, tableMinWidth: 104,
+          description: `最近 ${runtime.usageDays} 天 · 按请求发生时的小时汇总 · 高峰时段 ${String(peak.hour).padStart(2, '0')}:00（${peak.requests} 次请求）`,
+          columns: [
+            { key: 'hour', label: '小时', ratio: 0.16 }, { key: 'requests', label: '请求数', ratio: 0.2 },
+            { key: 'tokens', label: 'Token 用量', ratio: 0.22 }, { key: 'cached', label: '缓存 Token', ratio: 0.2 }, { key: 'cost', label: '费用（积分）', ratio: 0.22 },
+          ], rows: hourly.map(item => ({ label: `${String(item.hour).padStart(2, '0')}:00`, cells: {
+            hour: `${String(item.hour).padStart(2, '0')}:00`, requests: `${item.requests.toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`,
+            cached: `${formatBigNumber(item.cached)} Token`, cost: `${formatCost(item.cost)} 积分`,
+          } })) });
+      }
       if (runtime.usageTab === 'models') sections.push({ title: '按模型统计', tab: 'models', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byModel || [], row => row.model_name || row.model_id || '未知模型') });
       if (runtime.usageTab === 'providers') sections.push({ title: '按供应商统计', tab: 'providers', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byProvider || [], row => row.provider_name || row.provider_id || '未知供应商') });
       if (runtime.usageTab === 'keys') sections.push({ title: '按 API Key 统计', tab: 'keys', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byApiKey || [], row => row.key_name || row.key_prefix || '未知 API Key') });
@@ -139,7 +156,17 @@ function usagePage(runtime) {
         sections,
         actions: [
           { label: '查看实时活动快照', tab: 'overview', run: async ctx => { const window = await ctx.choose('活动统计窗口', [{ label: '最近 5 分钟', value: 300 }, { label: '最近 30 分钟', value: 1800 }, { label: '最近 1 小时', value: 3600 }]); if (window === null) return; const live = await api('/api/client-events/live', { query: { window } }); const sources = Array.isArray(live.sources) ? live.sources : []; const machines = Object.values(live.machines || {}); const lines = [`窗口 ${Math.round((live.window || window) / 60)} 分钟`, '', '按客户端：', ...sources.map(source => `${clientDisplay(source.harness)} · ${source.active_sessions || 0} 活跃会话 · ${source.tool_calls || 0} 工具调用 · ${source.failure_count || 0} 错误${source.suspected_offline ? ' · 疑似离线' : ''}`), '', '机器：', ...machines.map(machine => `${machine.name} · ${machine.harness} · ${machine.suspected_offline ? '疑似离线' : '在线'}`)]; if (!sources.length && !machines.length) lines.push('暂无近期客户端事件。'); await ctx.show('实时活动快照（一次性）', lines.join('\\n')); } },
-          { label: '时间范围与筛选', toolbar: true, run: async ctx => { const [filtersData, currentModel, currentProvider, currentSource] = await Promise.all([getStatsFilters(runtime.client), Promise.resolve(filters.model_id || ''), Promise.resolve(filters.provider_id || ''), Promise.resolve(filters.request_source || '')]); const pick = async (title, values, current) => { const value = await ctx.choose(title, [{ label: '全部', value: '' }, ...values.map(item => ({ label: item.name || item.id, value: item.id }))]); return value === null ? current : value; }; const model_id = await pick('模型筛选', filtersData.models || [], currentModel); const provider_id = await pick('供应商筛选', filtersData.providers || [], currentProvider); const request_source = await pick('客户端筛选', filtersData.sources || [], currentSource); runtime.usageFilters = { ...filters, model_id, provider_id, request_source }; await ctx.refresh(); } },
+          { label: '时间范围与筛选', toolbar: true, run: async ctx => {
+            const filtersData = await getStatsFilters(runtime.client);
+            const pick = async (title, values, current) => ctx.choose(title, [{ label: '全部', value: '' }, ...values.map(item => ({ label: item.name || item.id, value: item.id }))], { description: `当前：${current ? values.find(item => String(item.id) === String(current))?.name || current : '全部'}` });
+            const model_id = await pick('模型筛选', filtersData.models || [], filters.model_id || ''); if (model_id === null) return;
+            const provider_id = await pick('供应商筛选', filtersData.providers || [], filters.provider_id || ''); if (provider_id === null) return;
+            const teams = Array.isArray(filtersData.teams) ? filtersData.teams : [];
+            const team_id = await pick('Team 筛选', teams, filters.team_id || ''); if (team_id === null) return;
+            const request_source = await pick('客户端筛选', filtersData.sources || [], filters.request_source || ''); if (request_source === null) return;
+            runtime.usageFilters = Object.fromEntries(Object.entries({ model_id, provider_id, team_id, request_source }).filter(([, value]) => value !== ''));
+            runtime.usageLogPage = 1; await ctx.refresh();
+          } },
           { label: '搜索调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageFilters = { ...filters, q: String(await ctx.ask('搜索模型或用户') || '').trim() }; runtime.usageLogPage = 1; await ctx.refresh(); } },
           { label: '上一页调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageLogPage = Math.max(1, (runtime.usageLogPage || 1) - 1); await ctx.refresh(); } },
           { label: '下一页调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageLogPage = (runtime.usageLogPage || 1) + 1; await ctx.refresh(); } },

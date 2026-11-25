@@ -10,7 +10,7 @@ const page = runtime => buildPages(runtime).find(item => item.id === 'usage');
 test('usage tabs request latency, message and log data with shared filters', async () => {
   const runtime = makeRuntime();
   const calls = [];
-  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [{ date: 'today', requests: 3, prompt_tokens: 10, completion_tokens: 20, tokens: 30, cost: 0.5 }], byModel: [{ model_name: 'Model One', requests: 2, tokens: 10, cost: 0.25 }], byApiKey: [{ key_name: 'Main Key', requests: 1, tokens: 5, cost: 0.1 }], byProvider: [{ provider_name: 'Provider One', requests: 1, tokens: 7, cost: 0.2 }], bySource: [{ request_source: 'codex', requests: 1, tokens: 6, cost: 0.15 }] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; if (path === '/api/user/message-stats') return { summary: { requests: 12, total_tokens: 2000, total_cost: 3, metadata_rate: 0.5, git_rate: 0.25, peak_day: { date: '2026-11-24', requests: 4 } }, by_block: [{ block: 'git_status', requests: 3, occurrences: 4, tokens: 1000, cost: 1.2 }], by_source: [{ request_source: 'codex', requests: 2, messages: 10, characters: 400, tokens: 1000 }] }; if (path === '/api/user/usage-logs') return { page: 1, total: 1, logs: [{ id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', request_source: 'codex', tokens_used: 100, cost: 0.5 }] }; if (path === '/api/user/usage-logs/42') return { log: { id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', upstream_model_id: 'up-1', provider_name: 'Provider One', request_type: 'chat', request_source: 'codex', key_prefix: 'abcd', key_name: 'Main', tokens_used: 100, prompt_tokens: 80, completion_tokens: 20, cached_tokens: 30, latency_ms: 25, is_stream: true, ttft_ms: 10, tpot_ms: 2, output_tps: 12, cost: 0.5 } }; return {}; };
+  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [{ date: 'today', requests: 3, prompt_tokens: 10, completion_tokens: 20, tokens: 30, cost: 0.5 }], hourly: [{ hour: 9, requests: 4, tokens: 120, cached_tokens: 20, cost: 0.4 }, { hour: 10, requests: 2, tokens: 60, cached_tokens: 10, cost: 0.2 }], byModel: [{ model_name: 'Model One', requests: 2, tokens: 10, cost: 0.25 }], byApiKey: [{ key_name: 'Main Key', requests: 1, tokens: 5, cost: 0.1 }], byProvider: [{ provider_name: 'Provider One', requests: 1, tokens: 7, cost: 0.2 }], bySource: [{ request_source: 'codex', requests: 1, tokens: 6, cost: 0.15 }] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; if (path === '/api/user/message-stats') return { summary: { requests: 12, total_tokens: 2000, total_cost: 3, metadata_rate: 0.5, git_rate: 0.25, peak_day: { date: '2026-11-24', requests: 4 } }, by_block: [{ block: 'git_status', requests: 3, occurrences: 4, tokens: 1000, cost: 1.2 }], by_source: [{ request_source: 'codex', requests: 2, messages: 10, characters: 400, tokens: 1000 }] }; if (path === '/api/user/usage-logs') return { page: 1, total: 1, logs: [{ id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', request_source: 'codex', tokens_used: 100, cost: 0.5 }] }; if (path === '/api/user/usage-logs/42') return { log: { id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', upstream_model_id: 'up-1', provider_name: 'Provider One', request_type: 'chat', request_source: 'codex', key_prefix: 'abcd', key_name: 'Main', tokens_used: 100, prompt_tokens: 80, completion_tokens: 20, cached_tokens: 30, latency_ms: 25, is_stream: true, ttft_ms: 10, tpot_ms: 2, output_tps: 12, cost: 0.5 } }; return {}; };
   const usage = page(runtime);
   usage.onTabChange({ id: 'latency' });
   const latencyData = await usage.load();
@@ -23,6 +23,11 @@ test('usage tabs request latency, message and log data with shared filters', asy
   const dailySection = (await usage.load()).sections.find(section => section.tab === 'daily');
   assert.deepEqual(dailySection.columns.map(column => column.label), ['日期', '请求数', '输入 Token', '输出 Token', '总 Token', '费用（积分）']);
   assert.equal(dailySection.rows[0].cells.input, '10 Token');
+  usage.onTabChange({ id: 'hourly' });
+  const hourlySection = (await usage.load()).sections.find(section => section.tab === 'hourly');
+  assert.equal(hourlySection.rows.length, 24);
+  assert.deepEqual(hourlySection.rows[9].cells, { hour: '09:00', requests: '4 次', tokens: '120 Token', cached: '20 Token', cost: '0.4000 积分' });
+  assert.match(hourlySection.description, /高峰时段 09:00（4 次请求）/);
   usage.onTabChange({ id: 'models' });
   const modelData = await usage.load();
   const modelSection = modelData.sections.find(section => section.tab === 'models');
@@ -46,21 +51,27 @@ test('usage tabs request latency, message and log data with shared filters', asy
   assert.doesNotMatch(detail, /"model_name"|"cached_tokens"/);
   assert.deepEqual(calls.map(call => call.path), [
     '/api/user/stats', '/api/user/stats/latency',
-    '/api/user/stats', '/api/user/stats', '/api/user/stats',
+    '/api/user/stats', '/api/user/stats', '/api/user/stats', '/api/user/stats',
     '/api/user/message-stats', '/api/user/stats', '/api/user/usage-logs', '/api/user/usage-logs/42',
   ]);
 });
 
-test('usage filters action stores model/provider/client selections', async () => {
+test('usage filter action mirrors web model, provider, team and client filters', async () => {
   const runtime = makeRuntime();
-  runtime.client.get = async path => path === '/api/user/stats/filters'
-    ? { models: [{ id: 'm1', name: 'Model One' }], providers: [{ id: 'p1', name: 'Provider One' }], sources: [{ id: 'codex', name: 'Codex' }] }
-    : { summary: {}, daily: [], byModel: [], byApiKey: [], byProvider: [], bySource: [] };
+  const calls = [];
+  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats/filters') return { models: [{ id: 'm1', name: 'Model One' }], providers: [{ id: 'p1', name: 'Provider One' }], teams: [{ id: 2, name: 'Team A' }], sources: [{ id: 'codex', name: 'Codex' }] }; return { summary: {}, daily: [], byModel: [], byApiKey: [], byProvider: [], bySource: [] }; };
   const usage = page(runtime);
-  const action = (await usage.load()).actions.find(item => item.label === '时间范围与筛选');
-  const picks = ['m1', 'p1', 'codex'];
+  runtime.usageFilters = { team_id: 'old-team', obsolete: 'stale' };
+  const initial = await usage.load();
+  const action = initial.actions.find(item => item.label === '时间范围与筛选');
+  const picks = ['m1', 'p1', '2', 'codex'];
   let refreshes = 0;
   await action.run({ choose: async () => picks.shift(), refresh: async () => { refreshes++; } });
-  assert.deepEqual(runtime.usageFilters, { model_id: 'm1', provider_id: 'p1', request_source: 'codex' });
+  assert.deepEqual(runtime.usageFilters, { model_id: 'm1', provider_id: 'p1', team_id: '2', request_source: 'codex' });
   assert.equal(refreshes, 1);
+  const refreshed = await usage.load();
+  assert.deepEqual(calls.filter(call => call.path === '/api/user/stats').at(-1).options.query, { days: 30, model_id: 'm1', provider_id: 'p1', team_id: '2', request_source: 'codex' });
+  const picksClear = ['', '', '', ''];
+  await refreshed.actions.find(item => item.label === '时间范围与筛选').run({ choose: async () => picksClear.shift(), refresh: async () => {} });
+  assert.deepEqual(runtime.usageFilters, {});
 });
