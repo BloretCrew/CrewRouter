@@ -17,6 +17,7 @@ function usagePage(runtime) {
     loadOnTabChange: true,
     tabs: [
       { id: 'overview', label: '概览' },
+      { id: 'multi', label: '多维分析' },
       { id: 'daily', label: '每日' },
       { id: 'hourly', label: '小时' },
       { id: 'models', label: '模型' },
@@ -64,7 +65,7 @@ function usagePage(runtime) {
       ];
       const sections = [{
         title: '汇总', toolbar: true,
-        description: `统计周期：${periodLabel}。`,
+        description: `统计周期：${periodLabel}${Object.keys(filters).length ? ` · 已应用筛选 ${Object.keys(filters).length} 项` : ''}。`,
         cards: [
           { label: '请求总数', value: summary.requests.toLocaleString(), detail: '统计周期内' },
           { label: 'Token 总量', value: formatBigNumber(summary.tokens), detail: `缓存命中 ${formatBigNumber(summary.cachedTokens)} Token` },
@@ -79,6 +80,28 @@ function usagePage(runtime) {
           ...(Array.isArray(stats.byPlugin) ? stats.byPlugin : []).filter(row => Number(row.requests || 0) > 0).slice(0, 5).map(row => ({ label: `插件维度：${row.plugin_dim || '未知'} · ${Number(row.requests || 0).toLocaleString()} 次请求` })),
         ],
       }];
+      if (runtime.usageTab === 'multi') {
+        const query = runtime.usageMultiQuery || null;
+        const result = runtime.usageMultiResult || null;
+        if (!query || !result) {
+          sections.push({ title: '自选维度分析', tab: 'multi', description: '选择一个或多个维度，按请求用量、供应商额度或关联分析汇总。', rows: [{ label: '尚未查询', detail: '选择维度与统计指标后，TUI 会按当前日期范围执行分析。' }] });
+        } else if (query.data_source === 'quota') {
+          const quotaMetricLabels = { total: '总额度', used: '已用额度', remaining: '剩余额度', used_percent: '窗口使用率', observed_consumption: '观测消耗', percent_change: '使用率变化（百分点）' };
+          const dimensionLabels = { provider: '供应商', account: '额度账户', kind: '额度类型', unit: '单位', window: '窗口', date: '日期' };
+          const formatQuotaDimension = (dimension, value) => dimension === 'kind' ? ({ balance: '余额额度', window: '周期额度', status: '查询状态' })[value] || value || '未知' : dimension === 'window' ? ({ primary: '主窗口', secondary: '次窗口', daily: '每日', weekly: '每周', monthly: '每月', five_hour: '5 小时', seven_day: '7 天', '5h': '5 小时', '7d': '7 天' })[value] || value || '无窗口' : value || '未知';
+          const quotaRows = arrayOrEmpty(result.rows).map(row => ({ label: arrayOrEmpty(row.labels).map((value, index) => formatQuotaDimension(query.dimensions[index], value)).join(' / ') || '未分类', cells: { dimensions: arrayOrEmpty(row.labels).map((value, index) => formatQuotaDimension(query.dimensions[index], value)).join(' / ') || '未分类', metric: `${row.value == null ? '未知' : Number(row.value).toLocaleString(undefined, { maximumFractionDigits: ['used_percent', 'percent_change'].includes(query.metric) ? 1 : 2 })}${['used_percent', 'percent_change'].includes(query.metric) ? (query.metric === 'used_percent' ? '%' : ' 个百分点') : row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : ''}`, quality: ({ reset: '周期重置', gap: '采样缺口', backfill: '历史回补', adjustment: '额度调整', initial: '首次观测', window_change: '周期窗口变更', success: '正常', partial: '部分成功', failed: '查询失败' })[row.quality?.last_event || row.quality?.event || row.status] || '—' } }));
+          sections.push({ title: '供应商额度多维分析', tab: 'multi', description: `维度：${query.dimensions.map(value => dimensionLabels[value] || value).join('、')} · 指标：${quotaMetricLabels[query.metric] || query.metric} · ${periodLabel}`, tableMinWidth: 100, columns: [{ key: 'dimensions', label: query.dimensions.map(value => dimensionLabels[value] || value).join(' / '), ratio: 0.52 }, { key: 'metric', label: quotaMetricLabels[query.metric] || '额度指标', ratio: 0.28 }, { key: 'quality', label: '数据质量', ratio: 0.2 }], rows: quotaRows.length ? quotaRows : [{ label: '当前范围没有额度数据。' }] });
+        } else {
+          const metricLabels = { requests: '请求数', tokens: 'Token', cost: '积分', remaining: '剩余额度', used: '已用额度', total: '总额度', used_percent: '使用率', observed_consumption: '观测消耗', percent_change: '变化率' };
+          const dimensionLabels = { key: '密钥', project: '项目', source: '客户端', model: '模型', provider: '供应商', account: '额度账户', kind: '额度类型', unit: '单位', window: '窗口', date: '日期' };
+          const formatDimension = (dimension, value) => dimension === 'source' ? clientDisplay(value) : dimension === 'kind' ? ({ balance: '余额额度', window: '周期额度', status: '查询状态' })[value] || value || '未知' : value === '__unknown__' ? '未识别项目' : value || '未知';
+          const dataQuality = row => ({ reset: '周期重置', gap: '采样缺口', backfill: '历史回补', adjustment: '额度调整', initial: '首次观测', window_change: '周期窗口变更', observed_consumption: '观测消耗', success: '正常', partial: '部分成功', failed: '查询失败' })[row.quality?.last_event || row.quality?.event || row.status] || '—';
+          const metricValue = row => query.metric === 'requests' ? `${Number(row.requests || 0).toLocaleString()} 次` : query.metric === 'tokens' ? `${formatBigNumber(row.tokens)} Token` : query.metric === 'cost' ? `${formatCost(row.cost)} 积分` : row.value == null ? '未知' : `${Number(row.value).toLocaleString(undefined, { maximumFractionDigits: ['used_percent', 'percent_change'].includes(query.metric) ? 1 : 2 })}${['used_percent', 'percent_change'].includes(query.metric) ? (query.metric === 'used_percent' ? '%' : ' 个百分点') : row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : ''}`;
+          const multiRows = arrayOrEmpty(result.rows).map(row => ({ label: arrayOrEmpty(row.labels).map((value, index) => formatDimension(query.dimensions[index], value)).join(' / ') || '未分类', cells: { dimensions: arrayOrEmpty(row.labels).map((value, index) => formatDimension(query.dimensions[index], value)).join(' / ') || '未分类', metric: metricValue(row), quality: dataQuality(row) } }));
+          sections.push({ title: query.data_source === 'association' ? '多维关联分析' : '自选维度分析', tab: 'multi', description: `维度：${query.dimensions.map(value => dimensionLabels[value] || value).join('、')} · 指标：${metricLabels[query.metric] || query.metric} · ${periodLabel}`, tableMinWidth: 100, columns: [{ key: 'dimensions', label: query.dimensions.map(value => dimensionLabels[value] || value).join(' / '), ratio: 0.52 }, { key: 'metric', label: metricLabels[query.metric] || '统计指标', ratio: 0.28 }, { key: 'quality', label: '数据质量', ratio: 0.2 }], rows: multiRows.length ? multiRows : [{ label: '当前范围没有符合条件的数据。' }] });
+          if (query.include_quota && result.provider_quota) sections.push({ title: '供应商额度参照', tab: 'multi', description: '额度是独立上游账户观测值，不应与请求消费金额直接相加。', rows: arrayOrEmpty(result.provider_quota.accounts).slice(0, 30).map(account => ({ label: `${account.provider_name || account.provider_id || '未知供应商'} · ${account.label || account.account_id || '额度账户'}`, detail: `${account.used ?? '未知'} / ${account.total ?? '未知'}${account.unit ? ` ${account.unit}` : ''} · ${account.used_percent == null ? '使用率未知' : `${Number(account.used_percent).toFixed(1)}%`}` })) });
+        }
+      }
       if (runtime.usageTab === 'daily') sections.push({ title: '每日用量', tab: 'daily', toolbar: true, tableMinWidth: 112, columns: [
         { key: 'date', label: '日期', ratio: 0.2 }, { key: 'requests', label: '请求数', ratio: 0.16 }, { key: 'input', label: '输入 Token', ratio: 0.16 },
         { key: 'output', label: '输出 Token', ratio: 0.16 }, { key: 'tokens', label: '总 Token', ratio: 0.16 }, { key: 'cost', label: '费用（积分）', ratio: 0.16 },
@@ -189,6 +212,59 @@ function usagePage(runtime) {
       return {
         sections,
         actions: [
+          { label: '设置多维分析', tab: 'multi', toolbar: true, run: async ctx => {
+            const source = await ctx.choose('分析数据源', [
+              { label: '请求用量', value: 'usage' }, { label: '供应商额度', value: 'quota' }, { label: '关联分析', value: 'association' },
+            ], { description: '请求用量统计请求、Token 与积分；额度为供应商上游账户快照；关联分析汇总旧周期数据。' });
+            if (!source) return;
+            const usageDimensions = [['key', '密钥'], ['project', '项目'], ['source', '客户端'], ['model', '模型'], ['provider', '供应商']];
+            const quotaDimensions = [['provider', '供应商'], ['account', '额度账户'], ['kind', '额度类型'], ['unit', '单位'], ['window', '周期窗口'], ['date', '日期']];
+            const choices = source === 'quota' ? quotaDimensions : usageDimensions;
+            const selected = new Set((runtime.usageMultiQuery?.data_source === source ? runtime.usageMultiQuery.dimensions : ['model']).filter(value => choices.some(([id]) => id === value)));
+            while (true) {
+              const value = await ctx.choose('选择统计维度', [
+                ...choices.map(([id, label]) => ({ label: `${selected.has(id) ? '☑' : '☐'} ${label}`, value: id })),
+              ], { description: `当前已选 ${selected.size} 项：${[...selected].map(id => choices.find(([key]) => key === id)?.[1]).filter(Boolean).join('、') || '无'}。选择一项切换勾选；取消或返回即完成，至少选择一项。` });
+              if (value === null) break;
+              if (selected.has(value)) selected.delete(value); else selected.add(value);
+            }
+            if (!selected.size) { await ctx.show('尚未选择维度', '至少选择一个统计维度后才能查询。'); return; }
+            const metricOptions = source === 'quota'
+              ? [['total', '总额度'], ['used', '已用额度'], ['remaining', '剩余额度'], ['used_percent', '窗口使用率'], ['observed_consumption', '观测消耗'], ['percent_change', '使用率变化（百分点）']]
+              : [['requests', '请求数'], ['tokens', 'Token 用量'], ['cost', '积分']];
+            const metric = await ctx.choose('统计指标', metricOptions.map(([value, label]) => ({ label, value })), { description: '选择排序与展示的主要统计指标。' });
+            if (!metric) return;
+            if (source === 'quota' && ['used_percent', 'percent_change'].includes(metric) && !selected.has('account')) { await ctx.show('额度维度无效', '按使用率或变化率分析时，必须同时选择“额度账户”维度，以避免把不同账户的百分比合并。'); return; }
+            const quotaFilters = {};
+            if (source === 'quota') {
+              for (const [key, title, options] of [
+                ['provider_id', '供应商筛选', [['', '全部供应商']]],
+                ['account_id', '额度账户筛选', [['', '全部账户']]],
+                ['kind', '额度类型筛选', [['', '全部类型'], ['balance', '余额额度'], ['window', '周期额度'], ['status', '查询状态']]],
+                ['unit', '额度单位筛选', [['', '全部单位']]],
+                ['window_key', '额度周期筛选', [['', '全部周期'], ['primary', '主窗口'], ['secondary', '次窗口'], ['daily', '每日'], ['weekly', '每周'], ['monthly', '每月'], ['five_hour', '5 小时'], ['seven_day', '7 天'], ['5h', '5 小时'], ['7d', '7 天']]],
+                ['status', '查询状态筛选', [['', '全部状态'], ['success', '正常'], ['partial', '部分成功'], ['failed', '查询失败'], ['stale', '已过期']]],
+              ]) {
+                const defaults = options.map(([value, label]) => ({ label, value }));
+                const quotaSnapshot = key === 'provider_id' || key === 'account_id' || key === 'unit' ? await ctx.api('/api/user/providers/quota') : null;
+                const accounts = arrayOrEmpty(quotaSnapshot?.providers).flatMap(provider => arrayOrEmpty(provider.accounts || provider.keys).map(account => ({ ...account, provider_id: account.provider_id || provider.provider_id || provider.id, provider_name: account.provider_name || provider.provider_name || provider.name })));
+                const dynamic = key === 'provider_id' ? [...new Map(accounts.map(item => [String(item.provider_id), [item.provider_id, item.provider_name]])).values()] : key === 'account_id' ? accounts.map(item => [item.account_id || item.id, item.label || item.name || item.account_id || item.id]) : key === 'unit' ? [...new Set(accounts.map(item => item.unit).filter(Boolean))].map(value => [value, value]) : [];
+                const value = await ctx.choose(title, [...defaults, ...dynamic.filter(([id]) => id != null && !defaults.some(option => String(option.value) === String(id))).map(([value, label]) => ({ label: String(label), value: String(value) }))], { description: '只显示服务端当前快照返回的可选项；空值表示全部。' });
+                if (value === null) return;
+                if (value) quotaFilters[key] = value;
+              }
+            }
+            let includeQuota = false;
+            if (source !== 'quota') includeQuota = await ctx.choose('叠加供应商额度参照？', [{ label: '否，仅展示统计数据', value: false }, { label: '是，增加额度上下文', value: true }], { description: '请求成本与供应商上游账户额度是不同口径，不会相加。' });
+            if (includeQuota === null) return;
+            const query = { ...dateQuery, dimensions: [...selected].join(','), metric, data_source: source, ...(includeQuota ? { include_quota: 'true' } : {}), ...quotaFilters, ...filters };
+            const result = await ctx.api('/api/user/stats/multi-dimension', { query });
+            runtime.usageMultiQuery = { data_source: source, dimensions: [...selected], metric, include_quota: includeQuota === true };
+            runtime.usageMultiResult = result;
+            await ctx.refresh();
+          } },
+          { label: '清除多维分析结果', tab: 'multi', toolbar: true, disabled: !runtime.usageMultiQuery, run: async ctx => { runtime.usageMultiQuery = null; runtime.usageMultiResult = null; await ctx.refresh(); } },
+          { label: '统计日期范围', tab: 'multi', toolbar: true, run: async ctx => { const value = await ctx.choose('多维分析日期范围', [...[7, 30, 90, 180, 365].map(days => ({ label: days === 365 ? '最近 1 年' : `最近 ${days} 天`, value: days })), { label: '自定义日期', value: 'custom' }]); if (value === null) return; if (value === 'custom') { const current = runtime.usageCustomRange || {}; const dates = await ctx.form('多维分析自定义日期', [{ name: 'start', label: '开始日期（YYYY-MM-DD）', value: current.start || '' }, { name: 'end', label: '结束日期（YYYY-MM-DD）', value: current.end || '' }]); if (!dates) return; const validDate = date => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(date || '')) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`)) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date; if (!validDate(dates.start) || !validDate(dates.end) || dates.start > dates.end || (Date.parse(`${dates.end}T00:00:00Z`) - Date.parse(`${dates.start}T00:00:00Z`)) / 86400000 > 364) { await ctx.show('日期范围无效', '请输入有效的起止日期，且开始日期不能晚于结束日期。'); return; } runtime.usageCustomRange = { start: dates.start, end: dates.end }; } else { runtime.usageDays = value; runtime.usageCustomRange = null; } runtime.usageMultiResult = null; await ctx.refresh(); } },
           { label: '查看实时活动快照', tab: 'overview', run: async ctx => { const window = await ctx.choose('活动统计窗口', [{ label: '最近 5 分钟', value: 300 }, { label: '最近 30 分钟', value: 1800 }, { label: '最近 1 小时', value: 3600 }]); if (window === null) return; const live = await api('/api/client-events/live', { query: { window } }); const sources = Array.isArray(live.sources) ? live.sources : []; const machines = Object.values(live.machines || {}); const lines = [`窗口 ${Math.round((live.window || window) / 60)} 分钟`, '', '按客户端：', ...sources.map(source => `${clientDisplay(source.harness)} · ${source.active_sessions || 0} 活跃会话 · ${source.tool_calls || 0} 工具调用 · ${source.failure_count || 0} 错误${source.suspected_offline ? ' · 疑似离线' : ''}`), '', '机器：', ...machines.map(machine => `${machine.name} · ${machine.harness} · ${machine.suspected_offline ? '疑似离线' : '在线'}`)]; if (!sources.length && !machines.length) lines.push('暂无近期客户端事件。'); await ctx.show('实时活动快照（一次性）', lines.join('\\n')); } },
           { label: '自定义日期范围', toolbar: true, run: async ctx => {
             const current = runtime.usageCustomRange || {};
