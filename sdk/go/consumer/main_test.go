@@ -111,6 +111,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatal("API key config secret/model fields were not decoded")
 	}
 
+	var harnessModels crewrouter.ApiKeyHarnessModelsResponse
+	if err := json.Unmarshal([]byte(`{"harness_models":[{"harness":"codex","model_id":"m1","name":"Model","provider_name":"Provider","label":"Codex"}],"available_harnesses":[{"id":"codex","label":"Codex"}]}`), &harnessModels); err != nil {
+		t.Fatalf("decode API key harness models: %v", err)
+	}
+	if len(harnessModels.HarnessModels) != 1 || harnessModels.AvailableHarnesses[0].ID != "codex" {
+		t.Fatalf("unexpected API key harness model response: %#v", harnessModels)
+	}
+
 	var products []crewrouter.UserProduct
 	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"image_url":null,"link":null,"sort_order":0}]`), &products); err != nil {
 		t.Fatalf("decode user products: %v", err)

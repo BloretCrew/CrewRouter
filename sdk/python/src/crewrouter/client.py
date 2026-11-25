@@ -80,6 +80,24 @@ class ApiKeyClaudeConfig(TypedDict):
     effortLevel: str
 
 
+class ApiKeyHarnessModel(TypedDict):
+    harness: str
+    model_id: str
+    name: str
+    provider_name: str
+    label: str
+
+
+class AvailableHarness(TypedDict):
+    id: str
+    label: str
+
+
+class ApiKeyHarnessModelsResponse(TypedDict):
+    harness_models: list[ApiKeyHarnessModel]
+    available_harnesses: list[AvailableHarness]
+
+
 class ApiKeyListItem(TypedDict, total=False):
     id: Union[int, str]
     name: str

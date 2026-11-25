@@ -79,6 +79,7 @@ const keyUsage = await client.keys.getUsage(created.data.id); // ApiKeyDailyUsag
 const claudeConfig = await client.keys.getConfig(created.data.id); // ApiKeyClaudeConfig; contains ANTHROPIC_AUTH_TOKEN (never log/expose)
 const keyModels = await client.keys.getModels(created.data.id); // ApiKeyModelsResponse
 const membership = await client.keys.getMembers(created.data.id); // ApiKeyMembersResponse
+const harnessModels = await client.keys.getHarnessModels(created.data.id); // ApiKeyHarnessModelsResponse
 const schedule = await client.keys.getSchedule(created.data.id); // ApiKeySchedule
 
 const usage = await client.usage.get({ days: 7 }); // DailyUsageItem[]

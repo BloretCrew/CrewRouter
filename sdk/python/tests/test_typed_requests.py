@@ -9,6 +9,7 @@ from crewrouter import (
     ApiKeyClaudeConfig,
     ApiKeyModelsResponse,
     ApiKeyModelsUpdateResponse,
+    ApiKeyHarnessModelsResponse,
     ApiKeyAvailableModel,
     ApiKeyModelQueueItem,
     ApiKeyQueueItem,
@@ -143,6 +144,7 @@ class TypedRequestTests(unittest.TestCase):
         }
         key_models: ApiKeyModelsResponse = {"models": [available_model], "queue": [queue_item]}
         key_models_updated: ApiKeyModelsUpdateResponse = {"success": True, "modelIds": ["m1"], "current_model_id": "m1"}
+        harness_models: ApiKeyHarnessModelsResponse = {"harness_models": [{"harness": "codex", "model_id": "m1", "name": "Model", "provider_name": "Provider", "label": "Codex"}], "available_harnesses": [{"id": "codex", "label": "Codex"}]}
         claude_config: ApiKeyClaudeConfig = {"env": {"ANTHROPIC_BASE_URL": "https://router.example", "ANTHROPIC_AUTH_TOKEN": "sk-test-only", "ANTHROPIC_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-fable-5"}, "model": "claude-fable-5", "effortLevel": "high"}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(claude_config["model"], "claude-fable-5")
@@ -150,6 +152,7 @@ class TypedRequestTests(unittest.TestCase):
         product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)
         self.assertEqual(key_models_updated["current_model_id"], "m1")
+        self.assertEqual(harness_models["available_harnesses"][0]["id"], "codex")
         code_balance: UserCodeBalanceItem = {
             "amount": "2.5", "fee_rate": "0.1", "code": "redeem-1",
             "code_amount": "3", "net_amount": "2.2727",

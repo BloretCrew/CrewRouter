@@ -73,21 +73,59 @@
             "type": "string"
           },
           "name": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "provider_name": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
           }
         },
         "required": [
           "harness",
-          "model_id"
+          "model_id",
+          "name",
+          "provider_name",
+          "label"
+        ],
+        "additionalProperties": true
+      },
+      "AvailableHarness": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyHarnessModelsResponse": {
+        "type": "object",
+        "properties": {
+          "harness_models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyHarnessModel"
+            }
+          },
+          "available_harnesses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailableHarness"
+            }
+          }
+        },
+        "required": [
+          "harness_models",
+          "available_harnesses"
         ],
         "additionalProperties": true
       },
@@ -14383,8 +14421,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyHarnessModelsResponse"
                 }
               }
             }

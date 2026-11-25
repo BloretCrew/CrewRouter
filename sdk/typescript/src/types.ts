@@ -129,6 +129,24 @@ export interface ApiKeyModelsUpdateResponse {
   current_model_id: string | null;
 }
 
+export interface ApiKeyHarnessModel {
+  harness: string;
+  model_id: string;
+  name: string;
+  provider_name: string;
+  label: string;
+}
+
+export interface AvailableHarness {
+  id: string;
+  label: string;
+}
+
+export interface ApiKeyHarnessModelsResponse {
+  harness_models: ApiKeyHarnessModel[];
+  available_harnesses: AvailableHarness[];
+}
+
 export interface ApiKeyClaudeConfig {
   env: {
     ANTHROPIC_BASE_URL: string;

@@ -193,6 +193,27 @@ type ApiKeyModelsResponse struct {
 	Queue  []ApiKeyQueueItem      `json:"queue"`
 }
 
+// ApiKeyHarnessModel is one independently bound API Key model.
+type ApiKeyHarnessModel struct {
+	Harness      string `json:"harness"`
+	ModelID      string `json:"model_id"`
+	Name         string `json:"name"`
+	ProviderName string `json:"provider_name"`
+	Label        string `json:"label"`
+}
+
+// AvailableHarness describes a supported client harness.
+type AvailableHarness struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+// ApiKeyHarnessModelsResponse is returned by GET /api/user/api-keys/:id/harness-models.
+type ApiKeyHarnessModelsResponse struct {
+	HarnessModels      []ApiKeyHarnessModel `json:"harness_models"`
+	AvailableHarnesses []AvailableHarness   `json:"available_harnesses"`
+}
+
 // ApiKeyClaudeConfig contains a generated configuration including the API Key secret.
 // Treat ANTHROPIC_AUTH_TOKEN as a credential: never log, persist, or expose it.
 type ApiKeyClaudeConfig struct {

@@ -391,8 +391,14 @@ function managementSchemas() {
       model_id: { type: 'string' }, name: nullableString, sort_order: { type: 'integer' },
     }, ['model_id']),
     ApiKeyHarnessModel: object({
-      harness: { type: 'string' }, model_id: { type: 'string' }, name: nullableString, provider_name: nullableString,
-    }, ['harness', 'model_id']),
+      harness: { type: 'string' }, model_id: { type: 'string' }, name: { type: 'string' },
+      provider_name: { type: 'string' }, label: { type: 'string' },
+    }, ['harness', 'model_id', 'name', 'provider_name', 'label']),
+    AvailableHarness: object({ id: { type: 'string' }, label: { type: 'string' } }, ['id', 'label']),
+    ApiKeyHarnessModelsResponse: object({
+      harness_models: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyHarnessModel' } },
+      available_harnesses: { type: 'array', items: { $ref: '#/components/schemas/AvailableHarness' } },
+    }, ['harness_models', 'available_harnesses']),
     ApiKeyRequestModelBinding: object({
       request_model_name: { type: 'string' }, harness: nullableString, model_id: { type: 'string' },
       name: nullableString, provider_name: nullableString,
@@ -605,6 +611,7 @@ function managementResponseSchema(operationId) {
     'user.models.byId.uptime.list': { $ref: '#/components/schemas/ModelUptimeDetailResponse' },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
+    'user.apiKeys.byId.harnessModels.list': { $ref: '#/components/schemas/ApiKeyHarnessModelsResponse' },
     'user.apiKeys.byId.models.update': { $ref: '#/components/schemas/ApiKeyModelsUpdateResponse' },
     'user.apiKeys.byId.config.list': { $ref: '#/components/schemas/ApiKeyClaudeConfig' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },

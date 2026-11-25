@@ -84,6 +84,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const apiKeyModels = openapi.paths['/api/user/api-keys/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyModelsUpdate = openapi.paths['/api/user/api-keys/{id}/models']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyConfig = openapi.paths['/api/user/api-keys/{id}/config']?.get;
+  const harnessModels = openapi.paths['/api/user/api-keys/{id}/harness-models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
@@ -120,6 +121,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (apiKeyModelsUpdate?.$ref !== '#/components/schemas/ApiKeyModelsUpdateResponse') throw new Error(`${openapiPath} must define model queue update responses`);
   if (apiKeyConfig?.['x-crewrouter-permission'] !== 'keys.secret' || !apiKeyConfig.description?.includes('Owner-only') || !apiKeyConfig.description.includes('never log or expose')) throw new Error(`${openapiPath} must document the API Key secret exposure boundary`);
   if (!openapi.components.schemas.ApiKeyClaudeConfig?.properties?.env?.properties?.ANTHROPIC_AUTH_TOKEN?.description?.includes('never log or expose')) throw new Error(`${openapiPath} must mark the generated API Key token as sensitive`);
+  if (harnessModels?.$ref !== '#/components/schemas/ApiKeyHarnessModelsResponse') throw new Error(`${openapiPath} must define API Key harness model responses`);
+  if (!openapi.components.schemas.ApiKeyHarnessModelsResponse?.properties?.available_harnesses?.items?.$ref?.endsWith('/AvailableHarness')) throw new Error(`${openapiPath} must define available harness options`);
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {

@@ -157,6 +157,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { env: { ANTHROPIC_BASE_URL: 'http://localhost', ANTHROPIC_AUTH_TOKEN: 'sk-fixture-secret', ANTHROPIC_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_HAIKU_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_SONNET_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_OPUS_MODEL: 'claude-fable-5' }, model: 'claude-fable-5', effortLevel: 'high' });
       return;
     }
+    if (req.url === '/api/user/api-keys/7/harness-models') {
+      json(res, 200, { harness_models: [{ harness: 'codex', model_id: 'm1', name: 'Model', provider_name: 'Provider', label: 'Codex' }], available_harnesses: [{ id: 'codex', label: 'Codex' }] });
+      return;
+    }
     if (req.url === '/api/user/api-keys/7/quota-warning') {
       json(res, 200, { quota_warning_enabled: true });
       return;
@@ -178,6 +182,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
   const keys = await client.keys.list();
   const keyConfig = await client.keys.getConfig(7);
+  const harnessModels = await client.keys.getHarnessModels(7);
   const usage = await client.usage.get();
   const balance = await client.balance.get();
   const models = await client.models.list();
@@ -200,6 +205,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
   assert.equal(keyConfig.data.env.ANTHROPIC_AUTH_TOKEN, 'sk-fixture-secret');
+  assert.equal(harnessModels.data.harness_models[0].harness, 'codex');
   assert.equal(usage.data[0].total_tokens, '12');
   assert.equal(balance.data.refund_balance, 8);
   assert.equal(balance.data.group, null);
