@@ -193,6 +193,18 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: [0, 1, 2, 3, 4, 5, 6], schedule_timezone: 'Asia/Shanghai' });
       return;
     }
+    if (req.url === '/api/user/api-keys/7/enabled') {
+      json(res, 200, { success: true, enabled: true });
+      return;
+    }
+    if (req.url === '/api/user/api-keys/7/swallow-images') {
+      json(res, 200, { success: true, swallow_images: false });
+      return;
+    }
+    if (req.url === '/api/user/api-keys/7/crewrouter-commands') {
+      json(res, 200, { success: true, crewrouter_commands: true });
+      return;
+    }
     if (req.url === '/api/user/current-model') {
       json(res, 200, { currentModel: null });
       return;
@@ -222,6 +234,9 @@ test('management wrappers preserve their documented response payload shapes', as
   const members = await client.keys.getMembers(7);
   const quotaWarning = await client.keys.getQuotaWarning(7);
   const schedule = await client.keys.getSchedule(7);
+  const enabled = await client.keys.setEnabled(7, true);
+  const swallowImages = await client.keys.setSwallowImages(7, false);
+  const commands = await client.keys.setCrewRouterCommands(7, true);
   const currentModel = await client.currentModel.get();
   const usageLogs = await client.usage.logs({ page: 1 });
   const products = await client.products.list();
@@ -257,6 +272,9 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(members.data.members[0].username, 'member');
   assert.equal(quotaWarning.data.quota_warning_enabled, true);
   assert.equal(schedule.data.schedule_on_time, null);
+  assert.equal(enabled.data.enabled, true);
+  assert.equal(swallowImages.data.swallow_images, false);
+  assert.equal(commands.data.crewrouter_commands, true);
   assert.deepEqual(schedule.data.schedule_days, [0, 1, 2, 3, 4, 5, 6]);
   assert.equal(currentModel.data.currentModel, null);
   assert.equal(usageLogs.data.total, 1);

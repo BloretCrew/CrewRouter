@@ -480,6 +480,12 @@ function managementSchemas() {
       fusion_enabled: { type: 'boolean' }, fusion_synthesis_prompt_enabled: { type: 'boolean' },
     }, ['panel_models']),
     ApiKeyActionSuccess: object({ success: { const: true } }),
+    ApiKeyEnabledUpdateResponse: object({ success: { const: true }, enabled: { type: 'boolean' } }),
+    ApiKeySwallowImagesUpdateResponse: object({ success: { const: true }, swallow_images: { type: 'boolean' } }),
+    ApiKeyCommandsUpdateResponse: object({ success: { const: true }, crewrouter_commands: { type: 'boolean' } }),
+    ApiKeyEnabledUpdateResponse: object({ success: { const: true }, enabled: { type: 'boolean' } }),
+    ApiKeySwallowImagesUpdateResponse: object({ success: { const: true }, swallow_images: { type: 'boolean' } }),
+    ApiKeyCommandsUpdateResponse: object({ success: { const: true }, crewrouter_commands: { type: 'boolean' } }),
     ApiKeyClaudeConfig: object({
       env: object({
         ANTHROPIC_BASE_URL: { type: 'string' },
@@ -657,6 +663,9 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.fusionConfig.list': { $ref: '#/components/schemas/ApiKeyFusionConfig' },
     'user.apiKeys.byId.fusionConfig.update': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'user.apiKeys.byId.tags.update': { $ref: '#/components/schemas/ApiKeyTagsResponse' },
+    'user.apiKeys.byId.enabled.update': { $ref: '#/components/schemas/ApiKeyEnabledUpdateResponse' },
+    'user.apiKeys.byId.swallowImages.update': { $ref: '#/components/schemas/ApiKeySwallowImagesUpdateResponse' },
+    'user.apiKeys.byId.crewrouterCommands.update': { $ref: '#/components/schemas/ApiKeyCommandsUpdateResponse' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },

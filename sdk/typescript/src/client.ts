@@ -5,6 +5,9 @@ import type {
   AnthropicMessagesRequest,
   AdminUsersResponse,
   ApiKeyActionSuccess,
+  ApiKeyEnabledUpdateResponse,
+  ApiKeySwallowImagesUpdateResponse,
+  ApiKeyCommandsUpdateResponse,
   ApiKeyClaudeConfig,
   ApiKeyFusionConfig,
   ApiKeyFusionConfigPut,
@@ -201,6 +204,12 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.schedule.list', mergePathParams(options, { id })),
     setTags: <T = ApiKeyTagsResponse>(id: string | number, body: { tagIds: Array<number | string> }, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.tags.update', mergePathParams({ ...options, body }, { id })),
+    setEnabled: <T = ApiKeyEnabledUpdateResponse>(id: string | number, enabled: boolean, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.enabled.update', mergePathParams({ ...options, body: { enabled } }, { id })),
+    setSwallowImages: <T = ApiKeySwallowImagesUpdateResponse>(id: string | number, swallow_images: boolean, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.swallowImages.update', mergePathParams({ ...options, body: { swallow_images } }, { id })),
+    setCrewRouterCommands: <T = ApiKeyCommandsUpdateResponse>(id: string | number, crewrouter_commands: boolean, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.crewrouterCommands.update', mergePathParams({ ...options, body: { crewrouter_commands } }, { id })),
   };
 
   readonly usage = {

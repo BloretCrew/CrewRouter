@@ -85,6 +85,9 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const apiKeyModels = openapi.paths['/api/user/api-keys/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyModelsUpdate = openapi.paths['/api/user/api-keys/{id}/models']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyConfig = openapi.paths['/api/user/api-keys/{id}/config']?.get;
+  const keyEnabled = openapi.paths['/api/user/api-keys/{id}/enabled']?.put?.responses?.[200]?.content?.['application/json']?.schema;
+  const keySwallowImages = openapi.paths['/api/user/api-keys/{id}/swallow-images']?.put?.responses?.[200]?.content?.['application/json']?.schema;
+  const keyCommands = openapi.paths['/api/user/api-keys/{id}/crewrouter-commands']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const keyTagsUpdate = openapi.paths['/api/user/api-keys/{id}/tags']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const fusionConfig = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const fusionConfigPut = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.put;
@@ -129,6 +132,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (apiKeyModelsUpdate?.$ref !== '#/components/schemas/ApiKeyModelsUpdateResponse') throw new Error(`${openapiPath} must define model queue update responses`);
   if (keyTagsUpdate?.$ref !== '#/components/schemas/ApiKeyTagsResponse' || !openapi.components.schemas.ApiKeyTagsResponse?.properties?.tags?.items?.$ref?.endsWith('/ApiKeyTag')) throw new Error(`${openapiPath} must define API Key tag assignment responses`);
   if (apiKeyConfig?.['x-crewrouter-permission'] !== 'keys.secret' || !apiKeyConfig.description?.includes('Owner-only') || !apiKeyConfig.description.includes('never log or expose')) throw new Error(`${openapiPath} must document the API Key secret exposure boundary`);
+  if (keyEnabled?.$ref !== '#/components/schemas/ApiKeyEnabledUpdateResponse' || keySwallowImages?.$ref !== '#/components/schemas/ApiKeySwallowImagesUpdateResponse' || keyCommands?.$ref !== '#/components/schemas/ApiKeyCommandsUpdateResponse') throw new Error(`${openapiPath} must define API Key toggle response schemas`);
   if (!openapi.components.schemas.ApiKeyClaudeConfig?.properties?.env?.properties?.ANTHROPIC_AUTH_TOKEN?.description?.includes('never log or expose')) throw new Error(`${openapiPath} must mark the generated API Key token as sensitive`);
   if (fusionConfig?.$ref !== '#/components/schemas/ApiKeyFusionConfig') throw new Error(`${openapiPath} must define API Key Fusion config responses`);
   if (fusionConfigPut?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/ApiKeyFusionConfigPut' || openapi.components.schemas.ApiKeyFusionConfigPut?.properties?.panel_models?.maxItems !== 10) throw new Error(`${openapiPath} must define bounded Fusion model configuration requests`);

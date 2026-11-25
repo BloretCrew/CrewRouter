@@ -783,6 +783,45 @@
         "required": [],
         "additionalProperties": true
       },
+      "ApiKeyEnabledUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": true
+      },
+      "ApiKeySwallowImagesUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "swallow_images": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": true
+      },
+      "ApiKeyCommandsUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "crewrouter_commands": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": true
+      },
       "ApiKeyClaudeConfig": {
         "type": "object",
         "properties": {
@@ -14539,8 +14578,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyCommandsUpdateResponse"
                 }
               }
             }
@@ -14594,8 +14632,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyEnabledUpdateResponse"
                 }
               }
             }
@@ -15541,8 +15578,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeySwallowImagesUpdateResponse"
                 }
               }
             }

@@ -320,6 +320,24 @@ type ApiKeyClaudeConfigEnv struct {
 	AnthropicDefaultOpusModel   string `json:"ANTHROPIC_DEFAULT_OPUS_MODEL"`
 }
 
+// ApiKeyEnabledUpdateResponse is returned after toggling an API Key.
+type ApiKeyEnabledUpdateResponse struct {
+	Success bool `json:"success"`
+	Enabled bool `json:"enabled"`
+}
+
+// ApiKeySwallowImagesUpdateResponse is returned after changing image forwarding behavior.
+type ApiKeySwallowImagesUpdateResponse struct {
+	Success       bool `json:"success"`
+	SwallowImages bool `json:"swallow_images"`
+}
+
+// ApiKeyCommandsUpdateResponse is returned after changing CrewRouter command access.
+type ApiKeyCommandsUpdateResponse struct {
+	Success            bool `json:"success"`
+	CrewRouterCommands bool `json:"crewrouter_commands"`
+}
+
 // ApiKeyModelsUpdateResponse is returned after replacing an API Key model queue.
 type ApiKeyModelsUpdateResponse struct {
 	Success        bool     `json:"success"`

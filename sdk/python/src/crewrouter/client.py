@@ -123,6 +123,36 @@ class ApiKeyActionSuccess(TypedDict):
     success: bool
 
 
+class ApiKeyEnabledUpdateResponse(TypedDict):
+    success: bool
+    enabled: bool
+
+
+class ApiKeySwallowImagesUpdateResponse(TypedDict):
+    success: bool
+    swallow_images: bool
+
+
+class ApiKeyCommandsUpdateResponse(TypedDict):
+    success: bool
+    crewrouter_commands: bool
+
+
+class ApiKeyEnabledUpdateResponse(TypedDict):
+    success: bool
+    enabled: bool
+
+
+class ApiKeySwallowImagesUpdateResponse(TypedDict):
+    success: bool
+    swallow_images: bool
+
+
+class ApiKeyCommandsUpdateResponse(TypedDict):
+    success: bool
+    crewrouter_commands: bool
+
+
 class ApiKeyClaudeConfigEnv(TypedDict):
     ANTHROPIC_BASE_URL: str
     ANTHROPIC_AUTH_TOKEN: str

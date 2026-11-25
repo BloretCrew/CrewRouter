@@ -63,6 +63,18 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if !warning.QuotaWarningEnabled {
 		t.Fatalf("unexpected quota warning payload: %#v", warning)
 	}
+	var enabledResponse crewrouter.ApiKeyEnabledUpdateResponse
+	if err := json.Unmarshal([]byte(`{"success":true,"enabled":true}`), &enabledResponse); err != nil || !enabledResponse.Enabled {
+		t.Fatalf("decode enabled response: %#v, %v", enabledResponse, err)
+	}
+	var swallowResponse crewrouter.ApiKeySwallowImagesUpdateResponse
+	if err := json.Unmarshal([]byte(`{"success":true,"swallow_images":false}`), &swallowResponse); err != nil || swallowResponse.SwallowImages {
+		t.Fatalf("decode swallow-images response: %#v, %v", swallowResponse, err)
+	}
+	var commandsResponse crewrouter.ApiKeyCommandsUpdateResponse
+	if err := json.Unmarshal([]byte(`{"success":true,"crewrouter_commands":true}`), &commandsResponse); err != nil || !commandsResponse.CrewRouterCommands {
+		t.Fatalf("decode CrewRouter commands response: %#v, %v", commandsResponse, err)
+	}
 
 	var schedule crewrouter.ApiKeySchedule
 	if err := json.Unmarshal([]byte(`{"schedule_enabled":false,"schedule_on_time":null,"schedule_off_time":null,"schedule_days":[0,1,2,3,4,5,6],"schedule_timezone":"Asia/Shanghai"}`), &schedule); err != nil {

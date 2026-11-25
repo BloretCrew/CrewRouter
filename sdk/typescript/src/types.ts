@@ -192,6 +192,21 @@ export interface ApiKeyActionSuccess {
   success: true;
 }
 
+export interface ApiKeyEnabledUpdateResponse {
+  success: true;
+  enabled: boolean;
+}
+
+export interface ApiKeySwallowImagesUpdateResponse {
+  success: true;
+  swallow_images: boolean;
+}
+
+export interface ApiKeyCommandsUpdateResponse {
+  success: true;
+  crewrouter_commands: boolean;
+}
+
 export interface ApiKeyClaudeConfig {
   env: {
     ANTHROPIC_BASE_URL: string;
