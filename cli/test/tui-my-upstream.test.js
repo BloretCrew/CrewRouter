@@ -216,6 +216,6 @@ test('personal Team model edit sends the complete web form and delete warns abou
   assert.equal(update.body.model_multiplier, 1.4);
   let warning = '';
   await row.run({ choose: async () => 'delete', confirm: async (_title, message) => { warning = message; return false; } });
-  assert.match(warning, /清除关联 Team 和 API Key/);
+  assert.match(warning, /清除关联团队和 API Key 模型授权/);
   assert.equal(calls.some(call => call.method === 'DELETE'), false);
 });

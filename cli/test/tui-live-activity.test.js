@@ -16,6 +16,6 @@ test('usage live activity is a one-shot session-authenticated snapshot', async (
   let title = '';
   await action.run({ choose: async () => 300, show: async (label, body) => { title = label; shown = body; } });
   assert.ok(calls.includes('/api/client-events/live'));
-  assert.match(shown, /codex/);
+  assert.match(shown, /Codex/);
   assert.match(title, /一次性/);
 });

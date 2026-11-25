@@ -62,7 +62,7 @@ function usagePage(runtime) {
       if (runtime.usageTab === 'models') sections.push({ title: '按模型统计', tab: 'models', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byModel || [], row => row.model_name || row.model_id || '未知模型') });
       if (runtime.usageTab === 'providers') sections.push({ title: '按供应商统计', tab: 'providers', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byProvider || [], row => row.provider_name || row.provider_id || '未知供应商') });
       if (runtime.usageTab === 'keys') sections.push({ title: '按 API Key 统计', tab: 'keys', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byApiKey || [], row => row.key_name || row.key_prefix || '未知 API Key') });
-      if (runtime.usageTab === 'sources') sections.push({ title: '按客户端统计', tab: 'sources', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.bySource || [], row => row.request_source || '未知来源') });
+      if (runtime.usageTab === 'sources') sections.push({ title: '按客户端统计', tab: 'sources', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.bySource || [], row => clientDisplay(row.request_source)) });
       if (runtime.usageTab === 'latency') {
         const latency = await getLatencyStats(runtime.client, { days: runtime.usageDays, ...filters });
         sections.push({ title: '响应速度与首字延迟', tab: 'latency', toolbar: true, cards: [
@@ -90,7 +90,7 @@ function usagePage(runtime) {
       return {
         sections,
         actions: [
-          { label: '查看实时活动快照', tab: 'overview', run: async ctx => { const window = await ctx.choose('活动统计窗口', [{ label: '最近 5 分钟', value: 300 }, { label: '最近 30 分钟', value: 1800 }, { label: '最近 1 小时', value: 3600 }]); if (window === null) return; const live = await api('/api/client-events/live', { query: { window } }); const sources = Array.isArray(live.sources) ? live.sources : []; const machines = Object.values(live.machines || {}); const lines = [`窗口 ${Math.round((live.window || window) / 60)} 分钟`, '', '按客户端：', ...sources.map(source => `${source.harness} · ${source.active_sessions || 0} 活跃会话 · ${source.tool_calls || 0} 工具调用 · ${source.failure_count || 0} 错误${source.suspected_offline ? ' · 疑似离线' : ''}`), '', '机器：', ...machines.map(machine => `${machine.name} · ${machine.harness} · ${machine.suspected_offline ? '疑似离线' : '在线'}`)]; if (!sources.length && !machines.length) lines.push('暂无近期客户端事件。'); await ctx.show('实时活动快照（一次性）', lines.join('\\n')); } },
+          { label: '查看实时活动快照', tab: 'overview', run: async ctx => { const window = await ctx.choose('活动统计窗口', [{ label: '最近 5 分钟', value: 300 }, { label: '最近 30 分钟', value: 1800 }, { label: '最近 1 小时', value: 3600 }]); if (window === null) return; const live = await api('/api/client-events/live', { query: { window } }); const sources = Array.isArray(live.sources) ? live.sources : []; const machines = Object.values(live.machines || {}); const lines = [`窗口 ${Math.round((live.window || window) / 60)} 分钟`, '', '按客户端：', ...sources.map(source => `${clientDisplay(source.harness)} · ${source.active_sessions || 0} 活跃会话 · ${source.tool_calls || 0} 工具调用 · ${source.failure_count || 0} 错误${source.suspected_offline ? ' · 疑似离线' : ''}`), '', '机器：', ...machines.map(machine => `${machine.name} · ${machine.harness} · ${machine.suspected_offline ? '疑似离线' : '在线'}`)]; if (!sources.length && !machines.length) lines.push('暂无近期客户端事件。'); await ctx.show('实时活动快照（一次性）', lines.join('\\n')); } },
           { label: '时间范围与筛选', toolbar: true, run: async ctx => { const [filtersData, currentModel, currentProvider, currentSource] = await Promise.all([getStatsFilters(runtime.client), Promise.resolve(filters.model_id || ''), Promise.resolve(filters.provider_id || ''), Promise.resolve(filters.request_source || '')]); const pick = async (title, values, current) => { const value = await ctx.choose(title, [{ label: '全部', value: '' }, ...values.map(item => ({ label: item.name || item.id, value: item.id }))]); return value === null ? current : value; }; const model_id = await pick('模型筛选', filtersData.models || [], currentModel); const provider_id = await pick('供应商筛选', filtersData.providers || [], currentProvider); const request_source = await pick('客户端筛选', filtersData.sources || [], currentSource); runtime.usageFilters = { ...filters, model_id, provider_id, request_source }; await ctx.refresh(); } },
           { label: '搜索调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageFilters = { ...filters, q: String(await ctx.ask('搜索模型或用户') || '').trim() }; runtime.usageLogPage = 1; await ctx.refresh(); } },
           { label: '上一页调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageLogPage = Math.max(1, (runtime.usageLogPage || 1) - 1); await ctx.refresh(); } },
@@ -103,12 +103,17 @@ function usagePage(runtime) {
   };
 }
 
+function clientDisplay(value) {
+  const key = String(value || '').toLowerCase();
+  return ({ claude_code: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', grok: 'Grok', qwen_code: 'Qwen Code', deepseek_harness: 'DeepSeek Harness', unknown: '未知客户端' })[key] || (value || '未知客户端');
+}
+
 async function showSessionMessages(ctx, runtime, item) {
   const data = await getSessionMessages(runtime.client, item.sessionKey, { page: 1, pageSize: 30 });
   const records = Array.isArray(data.records) ? data.records : [];
   const lines = [
     `会话标识：${item.sessionKey}`,
-    `客户端类型：${item.harness || '未知客户端'}`,
+    `客户端类型：${clientDisplay(item.harness)}`,
     `请求数：${item.requestCount || 0} · Token 用量：${formatBigNumber(item.totalTokens)} · 工具调用数：${item.toolCallCount || 0}`,
     `首次：${formatTime(item.firstSeen)} · 最后：${formatTime(item.lastSeen)}`,
     item.summary ? `摘要：${text(item.summary)}` : '摘要：无',
@@ -136,9 +141,8 @@ function sessionsPage(runtime) {
         ? await searchSessions(runtime.client, { q: search, days })
         : await listSessions(runtime.client, { days, page: runtime.sessionsPageNumber, pageSize: 30 });
       const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
-      const clientName = value => ({ claude_code: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', grok: 'Grok', qwen_code: 'Qwen Code' })[String(value || '').toLowerCase()] || value || '未知客户端';
       const rows = items.map(item => ({
-        label: `${item.sessionKey || '未知会话'} · ${clientName(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token`,
+        label: `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token`,
         detail: `${item.lastSeen ? `最后活动 ${formatTime(item.lastSeen)}` : ''}${item.models && item.models.length ? ` · 模型 ${item.models.slice(0, 3).join(', ')}` : ''}${item.summary ? ' · 有摘要' : ''}`,
         run: async ctx => {
           const choice = await ctx.choose(`会话 · ${item.sessionKey}`, [{ label: '查看消息', value: 'messages' }, { label: '查看已缓存摘要', value: 'summary' }]);
@@ -153,7 +157,7 @@ function sessionsPage(runtime) {
           rows: rows.length ? rows : [{ label: '暂无会话记录。' }],
         }],
         actions: [
-          { label: search ? '清除搜索' : '搜索会话', run: async ctx => { runtime.sessionsSearch = search ? '' : String(await ctx.ask('搜索会话内容、Harness 或摘要') || '').trim(); runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
+          { label: search ? '清除搜索' : '搜索会话', run: async ctx => { runtime.sessionsSearch = search ? '' : String(await ctx.ask('搜索会话内容、客户端类型或摘要') || '').trim(); runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
           { label: '最近 7 天', run: async ctx => { runtime.sessionsDays = 7; runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
           { label: '最近 30 天', run: async ctx => { runtime.sessionsDays = 30; runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
           { label: '上一页', run: async ctx => { runtime.sessionsPageNumber = Math.max(1, runtime.sessionsPageNumber - 1); await ctx.refresh(); } },

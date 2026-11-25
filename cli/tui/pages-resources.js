@@ -222,7 +222,7 @@ function myUpstreamPage(runtime) {
         }
         const fieldOptions = [
           { label: '设置启用状态', value: 'enabled' }, { label: '设置系列', value: 'series' }, { label: '设置说明', value: 'description' },
-          { label: '设置显示名称/别名', value: 'alias' }, { label: '设置输入价格 / 1K', value: 'input_price_per_1k_tokens' }, { label: '设置输出价格 / 1K', value: 'output_price_per_1k_tokens' },
+          { label: '设置显示名称/别名', value: 'alias' }, { label: '设置输入价格 / 1,000 个 Token', value: 'input_price_per_1k_tokens' }, { label: '设置输出价格 / 1,000 个 Token', value: 'output_price_per_1k_tokens' },
           { label: '完成字段选择', value: '__done__' },
         ];
         const updates = {};
@@ -297,11 +297,11 @@ function myUpstreamPage(runtime) {
               ctx.notify('个人模型已更新。'); await ctx.refresh();
             }
             if (choice === 'delete') {
-              if (!await ctx.confirm('删除个人模型', `确定删除「${item.alias || item.name || item.id}」？删除会同步清除关联 Team 和 API Key 模型授权，且不可恢复。`)) return;
+              if (!await ctx.confirm('删除个人模型', `确定删除「${item.alias || item.name || item.id}」？删除会同步清除关联团队和 API Key 模型授权，且不可恢复。`)) return;
               await runtime.client.delete(`/api/user/models/${encodeURIComponent(item.id)}`);
               ctx.notify('个人模型已删除。'); await ctx.refresh();
             }
-          } })) : [{ label: modelsResult.status === 'rejected' ? modelsResult.reason.message : '暂无个人 Team 模型。' }] },
+          } })) : [{ label: modelsResult.status === 'rejected' ? modelsResult.reason.message : '暂无我的模型。' }] },
         ],
         actions: [
           { label: '搜索我的供应商', toolbar: true, tab: 'providers', run: async ctx => { runtime.myUpstreamProviderSearch = String(await ctx.ask('供应商名称、ID 或地址', { defaultValue: runtime.myUpstreamProviderSearch || '' }) || '').trim(); await ctx.refresh(); } },
