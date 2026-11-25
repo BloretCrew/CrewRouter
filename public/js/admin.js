@@ -10236,7 +10236,7 @@ async function(ctx) {
       return;
     }
 
-    const headers = [t('上游模型ID'), t('名称'), t('别名'), t('供应商'), t('系列'), t('描述'), t('输入价/百万Token'), t('输出价/百万Token'), t('速率限制RPM'), t('速率限制TPM'), t('状态')];
+    const headers = [t('上游模型ID'), t('名称'), t('别名'), t('供应商'), t('系列'), t('描述'), t('输入价/千Token'), t('输出价/千Token'), t('速率限制RPM'), t('速率限制TPM'), t('状态')];
     const rows = data.map(m => [
       m.upstream_model_id || '',
       m.name || '',

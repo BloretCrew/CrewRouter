@@ -2342,11 +2342,11 @@
       <div class="modal-body">
         <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchSetPricesCount">0</strong><span data-i18n="个模型设置以下价格："> 个模型设置以下价格：</span></p>
         <div class="form-group">
-          <label for="batchSetInputPrice"><span data-i18n="输入价格（人民币/百万Token）">输入价格（人民币/百万Token）</span></label>
+          <label for="batchSetInputPrice"><span data-i18n="输入价格（人民币/千Token）">输入价格（人民币/千Token）</span></label>
           <input type="number" id="batchSetInputPrice" class="input" step="0.000001" value="0.01">
         </div>
         <div class="form-group">
-          <label for="batchSetOutputPrice"><span data-i18n="输出价格（人民币/百万Token）">输出价格（人民币/百万Token）</span></label>
+          <label for="batchSetOutputPrice"><span data-i18n="输出价格（人民币/千Token）">输出价格（人民币/千Token）</span></label>
           <input type="number" id="batchSetOutputPrice" class="input" step="0.000001" value="0.01">
         </div>
 
@@ -2365,7 +2365,7 @@
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置不同价格，单位：">使用 JSON 格式为不同模型设置不同价格，单位：</span><strong><span data-i18n="¥/百万Token">¥/百万Token</span></strong></p>
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置不同价格，单位：">使用 JSON 格式为不同模型设置不同价格，单位：</span><strong><span data-i18n="¥/千Token">¥/千Token</span></strong></p>
         <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
           <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);"><span data-i18n="格式说明">格式说明</span></div>
           <code style="display:block;white-space:pre-wrap;line-height:1.6;">{
@@ -2391,7 +2391,7 @@
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置参考价格，单位：">使用 JSON 格式为不同模型设置参考价格，单位：</span><strong><span data-i18n="¥/百万Token">¥/百万Token</span></strong></p>
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置参考价格，单位：">使用 JSON 格式为不同模型设置参考价格，单位：</span><strong><span data-i18n="¥/千Token">¥/千Token</span></strong></p>
         <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
           <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);"><span data-i18n="格式说明">格式说明</span></div>
           <code style="display:block;white-space:pre-wrap;line-height:1.6;">{
@@ -2551,7 +2551,7 @@
 
         </div>
         <div id="batchAdjustByRefPreview" style="display:none;">
-          <h4 style="margin:0 0 8px;color:var(--foreground);font-size:14px;"><span data-i18n="预览（价格单位：¥/百万Token）">预览（价格单位：¥/百万Token）</span></h4>
+          <h4 style="margin:0 0 8px;color:var(--foreground);font-size:14px;"><span data-i18n="预览（价格单位：¥/千Token）">预览（价格单位：¥/千Token）</span></h4>
           <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
               <thead>

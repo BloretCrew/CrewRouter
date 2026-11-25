@@ -216,11 +216,11 @@ function myUpstreamPage(runtime) {
           { name: 'upstream_model_id', label: '上游模型 ID（必填）', value: '' }, { name: 'alias', label: '模型显示名称（可空）', value: '' },
           { name: 'provider', label: '所属供应商', value: providers[0].id, options: providers.map(provider => ({ label: provider.name, value: String(provider.id) })) },
           { name: 'series', label: '模型系列（可空）', value: '' }, { name: 'enabled', label: '启用此模型', type: 'boolean', value: true },
-          { name: 'input_price_per_1k_tokens', label: '输入价格（网页标注：人民币/百万 Token）', value: '0.01' },
-          { name: 'output_price_per_1k_tokens', label: '输出价格（网页标注：人民币/百万 Token）', value: '0.01' },
-          { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格（人民币/百万 Token）', value: '0' },
-          { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格（人民币/百万 Token）', value: '0' },
-          { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格（人民币/百万 Token）', value: '0' },
+          { name: 'input_price_per_1k_tokens', label: '输入价格（人民币/千 Token）', value: '0.01' },
+          { name: 'output_price_per_1k_tokens', label: '输出价格（人民币/千 Token）', value: '0.01' },
+          { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格（人民币/千 Token）', value: '0' },
+          { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格（人民币/千 Token）', value: '0' },
+          { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格（人民币/千 Token）', value: '0' },
           { name: 'description', label: '模型说明（可空）', value: '' },
           { name: 'thinking_model_id', label: '思考模式模型（可选）', value: '', options: modelOptions },
           { name: 'non_thinking_model_id', label: '普通模式模型（可选）', value: '', options: modelOptions },
@@ -240,7 +240,7 @@ function myUpstreamPage(runtime) {
         const provider = providers.find(item => String(item.id) === body.provider);
         if (!provider) { await ctx.show('供应商无效', '请选择当前账号可用的自有供应商。'); return; }
         body.upstream_model_id = String(values.upstream_model_id).trim();
-        const priceSummary = `${body.input_price_per_1k_tokens} 输入 / ${body.output_price_per_1k_tokens} 输出 · 网页表单单位为人民币/百万 Token`;
+        const priceSummary = `${body.input_price_per_1k_tokens} 输入 / ${body.output_price_per_1k_tokens} 输出 · 网页表单单位为人民币/千 Token`;
         if (!await ctx.confirm('确认添加模型', `名称：${values.alias || body.upstream_model_id}\n供应商：${provider.name}\n上游模型 ID：${body.upstream_model_id}\n状态：${body.enabled ? '启用' : '停用'}\n价格：${priceSummary}\n创建后模型会加入个人团队，可供你的 Key 选择。`)) return;
         const result = await runtime.client.post('/api/user/models', body);
         ctx.notify(`模型已添加${result.model_id ? `：${result.model_id}` : ''}。`); await ctx.refresh();
