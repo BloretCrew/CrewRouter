@@ -158,7 +158,8 @@ test('admin Agent Web settings expose web fields with masked keys and validated 
   const calls = [];
   const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
   const agentConfig = { search: { enabled: true, provider: 'brave', apiKey: '[configured]', hasApiKey: true, maxResults: 4, timeoutMs: 6000 }, fetch: { enabled: true, maxBytes: 524288, timeoutMs: 9000 } };
-  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/settings') return {}; if (path === '/api/admin/request-quota-config') return {}; if (path === '/api/admin/agent-web') return agentConfig; if (path === '/api/admin/retention-config') return {}; if (path === '/api/admin/feishu-login') return { enabled: true, appId: 'cli_public_123', appSecret: '[redacted]', hasAppSecret: true, tenantKey: 'tenant-a', redirectUri: 'https://router.example/auth/feishu/callback', source: 'config' }; return {}; };
+  let feishuConfig = { enabled: true, appId: 'cli_public_123', appSecret: '[redacted]', hasAppSecret: true, tenantKey: 'tenant-a', redirectUri: 'https://router.example/auth/feishu/callback', source: 'config' };
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/settings') return {}; if (path === '/api/admin/request-quota-config') return {}; if (path === '/api/admin/agent-web') return agentConfig; if (path === '/api/admin/retention-config') return {}; if (path === '/api/admin/feishu-login' && options.method === 'PUT') { assert.equal(options.body.appSecret, ''); assert.equal(options.body.tenantKey, ''); feishuConfig = { ...feishuConfig, ...options.body, appSecret: '[redacted]', hasAppSecret: true, source: 'settings' }; return { success: true, ...feishuConfig }; } if (path === '/api/admin/feishu-login') return feishuConfig; return {}; };
   const page = buildPages(runtime).find(item => item.id === 'admin-settings');
   const data = await page.load(api);
   const section = data.sections.find(item => item.title === 'Agent Web 资料设置');
@@ -186,6 +187,11 @@ test('admin Agent Web settings expose web fields with masked keys and validated 
   await feishu.rows.find(row => row.label === 'OAuth 回调地址').run({ show: async (_title, body) => { callbackDetails = body; } });
   assert.match(callbackDetails, /https:\/\/router\.example\/auth\/feishu\/callback/);
   assert.doesNotMatch(callbackDetails, /redacted|secret/i);
+  const editFeishu = data.actions.find(action => action.label === '编辑飞书登录');
+  let feishuFields = [];
+  await editFeishu.run({ form: async (_title, fields, options) => { feishuFields = fields; assert.match(options.description, /保存后写入后台数据库/); return { enabled: true, appId: 'cli_public_123', appSecret: '', tenantKey: '' }; }, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.match(feishuFields.find(field => field.name === 'tenantKey').label, /留空表示不限制企业/);
+  assert.deepEqual(calls.find(call => call.path === '/api/admin/feishu-login' && call.options.method === 'PUT').options.body, { enabled: true, appId: 'cli_public_123', appSecret: '', tenantKey: '' });
 });
 
 test('admin proxy pool settings redact credentials and manage subscription/manual proxy drafts safely', async () => {
