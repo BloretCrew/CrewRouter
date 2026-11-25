@@ -47,39 +47,51 @@ function usagePage(runtime) {
       const topHours = (Array.isArray(stats.hourly) ? stats.hourly : []).slice().sort((a, b) => Number(b.requests || 0) - Number(a.requests || 0)).slice(0, 3);
       const sourceRows = (Array.isArray(summary.bySource) ? summary.bySource : []).filter(row => Number(row.requests || 0) > 0);
       const sourceMax = Math.max(1, ...sourceRows.map(row => Number(row.requests || 0)));
-      const recentWeek = summary.daily.slice(-7).reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      const previousWeek = summary.daily.slice(-14, -7).reduce((sum, row) => sum + Number(row.cost || 0), 0);
+      const recentWeekRows = summary.daily.slice(-7);
+      const previousWeekRows = summary.daily.slice(-14, -7);
+      const recentWeek = recentWeekRows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
+      const previousWeek = previousWeekRows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
       const trendPercent = previousWeek > 0 ? (recentWeek - previousWeek) / previousWeek * 100 : null;
-      const overviewRows = [
-        ...topModels.map((row, index) => ({ label: `常用模型 Top ${index + 1}：${row.model_name || '未知模型'}`, detail: `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` })),
-        ...topHours.map((row, index) => ({ label: `高峰时段 Top ${index + 1}：${String(row.hour).padStart(2, '0')}:00–${String((Number(row.hour) + 1) % 24).padStart(2, '0')}:00`, detail: `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })),
-        ...sourceRows.map(row => { const requests = Number(row.requests || 0); const ratio = requests / sourceMax; return { label: `客户端：${clientDisplay(row.request_source)} · ${requests.toLocaleString()} 次 · ${(requests / Math.max(summary.requests, 1) * 100).toFixed(1)}%`, detail: `[${'█'.repeat(Math.round(ratio * 16))}${'░'.repeat(16 - Math.round(ratio * 16))}]` }; }),
-        ...(summary.daily.length >= 14 ? [
-          { label: '最近 7 天积分', detail: `${formatCost(recentWeek)} 积分` }, { label: '前 7 天积分', detail: `${formatCost(previousWeek)} 积分` },
-          { label: '积分环比变化', detail: trendPercent == null ? '前 7 天无积分数据，无法计算环比' : `${trendPercent >= 0 ? '+' : ''}${trendPercent.toFixed(1)}%` },
-        ] : []),
-        { label: '关键指标：日均请求', detail: `${Math.round(summary.requests / Math.max(summary.daily.length, 1)).toLocaleString()} 次` },
-        { label: '关键指标：平均 Token/请求', detail: `${summary.requests ? formatBigNumber(Math.round(summary.tokens / summary.requests)) : '0'} Token` },
-        { label: '关键指标：日均积分', detail: `${formatCost(summary.cost / Math.max(summary.daily.length, 1))} 积分` },
-        { label: '关键指标：平均延迟', detail: `${Math.round(summary.avgLatency)} 毫秒` },
-      ];
+      const todayDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+      const todayInstant = new Date(`${todayDate}T00:00:00Z`);
+      todayInstant.setUTCDate(todayInstant.getUTCDate() - 1);
+      const yesterdayDate = todayInstant.toISOString().slice(0, 10);
+      const todayUsage = summary.daily.find(row => row.date === todayDate) || {};
+      const yesterdayUsage = summary.daily.find(row => row.date === yesterdayDate) || {};
+      const cacheRate = summary.promptTokens > 0 ? summary.cachedTokens / summary.promptTokens * 100 : 0;
+      const progress = value => { const ratio = Math.max(0, Math.min(100, Number(value) || 0)); const filled = Math.round(ratio / 100 * 20); return `[${'█'.repeat(filled)}${'░'.repeat(20 - filled)}] ${ratio.toFixed(1)}%`; };
+      const dailyMaxCost = Math.max(1, ...summary.daily.map(row => Number(row.cost || 0)));
+      const dailyMaxRequests = Math.max(1, ...summary.daily.map(row => Number(row.requests || 0)));
+      const weekDelta = previousWeek > 0 ? `${trendPercent >= 0 ? '+' : ''}${trendPercent.toFixed(1)}%` : '前 7 天无数据，无法计算';
       const sections = [{
-        title: '汇总', toolbar: true,
+        title: '统计概览', toolbar: true,
         description: `统计周期：${periodLabel}${Object.keys(filters).length ? ` · 已应用筛选 ${Object.keys(filters).length} 项` : ''}。`,
         cards: [
-          { label: '请求总数', value: summary.requests.toLocaleString(), detail: '统计周期内' },
-          { label: 'Token 总量', value: formatBigNumber(summary.tokens), detail: `缓存命中 ${formatBigNumber(summary.cachedTokens)} Token` },
-          { label: '费用', value: `${formatCost(summary.cost)} 积分`, detail: '服务端计费合计' },
-          { label: '平均响应时间', value: `${Math.round(summary.avgLatency)} 毫秒` },
-          { label: '客户端识别', value: `${summary.identifiedRate.toFixed(1)}%`, detail: `${formatBigNumber(summary.unknownRequests)} 未识别` },
-          { label: '活跃来源', value: summary.activeSources, detail: `${formatBigNumber(summary.knownRequests)} 已识别请求` },
-        ],
-        rows: [
-          { label: `输入 Token：${formatBigNumber(summary.promptTokens)} · 输出 Token：${formatBigNumber(summary.completionTokens)}` },
-          ...overviewRows,
-          ...(Array.isArray(stats.byPlugin) ? stats.byPlugin : []).filter(row => Number(row.requests || 0) > 0).slice(0, 5).map(row => ({ label: `插件维度：${row.plugin_dim || '未知'} · ${Number(row.requests || 0).toLocaleString()} 次请求` })),
+          { label: '总请求数', value: summary.requests.toLocaleString(), detail: `日均 ${Math.round(summary.requests / Math.max(summary.daily.length, 1)).toLocaleString()} 次` },
+          { label: '总 Token 消耗', value: formatBigNumber(summary.tokens), detail: `输入 ${formatBigNumber(summary.promptTokens)} · 输出 ${formatBigNumber(summary.completionTokens)}` },
+          { label: '总积分消耗', value: `${formatCost(summary.cost)} 积分`, detail: `日均 ${formatCost(summary.cost / Math.max(summary.daily.length, 1))} 积分` },
+          { label: '平均延迟', value: `${Math.round(summary.avgLatency)} 毫秒`, detail: `${summary.requests ? `平均 ${formatBigNumber(Math.round(summary.tokens / summary.requests))} Token/请求` : '暂无请求'}` },
+          { label: '客户端识别率', value: `${summary.identifiedRate.toFixed(1)}%`, detail: `${summary.activeSources} 种来源 · ${formatBigNumber(summary.unknownRequests)} 次未识别` },
         ],
       }];
+      sections.push({ title: 'Prompt 缓存命中', cards: [{ label: '缓存命中率', value: `${cacheRate.toFixed(1)}%`, detail: progress(cacheRate) }, { label: '缓存命中 Token', value: formatBigNumber(summary.cachedTokens) }, { label: '总输入 Token', value: formatBigNumber(summary.promptTokens) }, { label: '节省 Token', value: formatBigNumber(summary.cachedTokens), detail: '缓存命中的 Token 数' }] });
+      sections.push({ title: '今日与昨日对比', cards: [
+        { label: `今日请求 · ${todayDate}`, value: Number(todayUsage.requests || 0).toLocaleString(), detail: `${Number(todayUsage.requests || 0) > Number(yesterdayUsage.requests || 0) ? '↑' : Number(todayUsage.requests || 0) < Number(yesterdayUsage.requests || 0) ? '↓' : '→'} 昨日 ${Number(yesterdayUsage.requests || 0).toLocaleString()} 次` },
+        { label: '今日 Token', value: formatBigNumber(todayUsage.tokens), detail: `昨日 ${formatBigNumber(yesterdayUsage.tokens)} Token` },
+        { label: '今日积分', value: `${formatCost(todayUsage.cost)} 积分`, detail: `昨日 ${formatCost(yesterdayUsage.cost)} 积分` },
+      ] });
+      sections.push({ title: '最常用模型', rows: topModels.length ? topModels.map((row, index) => ({ label: `${['🥇', '🥈', '🥉'][index]} ${row.model_name || '未知模型'}`, detail: `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` })) : [{ label: '暂无模型用量数据。' }] });
+      sections.push({ title: '高峰时段', rows: topHours.length ? topHours.map((row, index) => ({ label: `${['🔥', '⚡', '📊'][index]} ${String(row.hour).padStart(2, '0')}:00–${String((Number(row.hour) + 1) % 24).toString().padStart(2, '0')}:00`, detail: `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })) : [{ label: '暂无时段用量数据。' }] });
+      sections.push({ title: '积分消耗趋势', description: `最近 7 天 ${formatCost(recentWeek)} 积分 · 前 7 天 ${formatCost(previousWeek)} 积分 · 环比 ${weekDelta}`, tableMinWidth: 92, columns: [{ key: 'date', label: '日期', ratio: 0.25 }, { key: 'requests', label: '请求数', ratio: 0.2 }, { key: 'requests_bar', label: '请求趋势', ratio: 0.25 }, { key: 'cost', label: '积分', ratio: 0.15 }, { key: 'cost_bar', label: '积分趋势', ratio: 0.15 }], rows: summary.daily.slice(-14).map(row => { const requestRatio = Number(row.requests || 0) / dailyMaxRequests; const costRatio = Number(row.cost || 0) / dailyMaxCost; return { label: row.date || '未知日期', cells: { date: row.date || '未知日期', requests: Number(row.requests || 0).toLocaleString(), requests_bar: `[${'█'.repeat(Math.round(requestRatio * 10))}${'░'.repeat(10 - Math.round(requestRatio * 10))}]`, cost: formatCost(row.cost), cost_bar: `[${'█'.repeat(Math.round(costRatio * 10))}${'░'.repeat(10 - Math.round(costRatio * 10))}]` } }; }) });
+      sections.push({ title: '关键指标', rows: [
+        { label: '平均 Token/请求', detail: `${summary.requests ? formatBigNumber(Math.round(summary.tokens / summary.requests)) : '0'} Token` },
+        { label: '日均请求数', detail: `${Math.round(summary.requests / Math.max(summary.daily.length, 1)).toLocaleString()} 次` },
+        { label: '日均积分消耗', detail: `${formatCost(summary.cost / Math.max(summary.daily.length, 1))} 积分` },
+        { label: '平均响应延迟', detail: `${Math.round(summary.avgLatency)} 毫秒` },
+      ] });
+      sections.push({ title: '客户端来源', rows: sourceRows.length ? sourceRows.map(row => { const requests = Number(row.requests || 0); const ratio = requests / sourceMax; return { label: `${clientDisplay(row.request_source)} · ${requests.toLocaleString()} 次 · ${(requests / Math.max(summary.requests, 1) * 100).toFixed(1)}%`, detail: `[${'█'.repeat(Math.round(ratio * 20))}${'░'.repeat(20 - Math.round(ratio * 20))}]` }; }) : [{ label: '暂无可识别客户端来源。' }] });
+      const pluginRows = (Array.isArray(stats.byPlugin) ? stats.byPlugin : []).filter(row => Number(row.requests || 0) > 0).slice(0, 10).map(row => ({ label: row.plugin_dim || '未知插件', detail: `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` }));
+      sections.push({ title: '插件维度', rows: pluginRows.length ? pluginRows : [{ label: '暂无插件维度用量数据。' }] });
       if (runtime.usageTab === 'multi') {
         const query = runtime.usageMultiQuery || null;
         const result = runtime.usageMultiResult || null;
@@ -211,8 +223,9 @@ function usagePage(runtime) {
       }
       return {
         sections,
+        pageToolbar: true,
         actions: [
-          { label: '设置多维分析', tab: 'multi', toolbar: true, run: async ctx => {
+          { label: '设置多维分析', tab: 'multi', toolbar: 'page', run: async ctx => {
             const source = await ctx.choose('分析数据源', [
               { label: '请求用量', value: 'usage' }, { label: '供应商额度', value: 'quota' }, { label: '关联分析', value: 'association' },
             ], { description: '请求用量统计请求、Token 与积分；额度为供应商上游账户快照；关联分析汇总旧周期数据。' });
@@ -263,10 +276,10 @@ function usagePage(runtime) {
             runtime.usageMultiResult = result;
             await ctx.refresh();
           } },
-          { label: '清除多维分析结果', tab: 'multi', toolbar: true, disabled: !runtime.usageMultiQuery, run: async ctx => { runtime.usageMultiQuery = null; runtime.usageMultiResult = null; await ctx.refresh(); } },
-          { label: '统计日期范围', tab: 'multi', toolbar: true, run: async ctx => { const value = await ctx.choose('多维分析日期范围', [...[7, 30, 90, 180, 365].map(days => ({ label: days === 365 ? '最近 1 年' : `最近 ${days} 天`, value: days })), { label: '自定义日期', value: 'custom' }]); if (value === null) return; if (value === 'custom') { const current = runtime.usageCustomRange || {}; const dates = await ctx.form('多维分析自定义日期', [{ name: 'start', label: '开始日期（YYYY-MM-DD）', value: current.start || '' }, { name: 'end', label: '结束日期（YYYY-MM-DD）', value: current.end || '' }]); if (!dates) return; const validDate = date => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(date || '')) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`)) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date; if (!validDate(dates.start) || !validDate(dates.end) || dates.start > dates.end || (Date.parse(`${dates.end}T00:00:00Z`) - Date.parse(`${dates.start}T00:00:00Z`)) / 86400000 > 364) { await ctx.show('日期范围无效', '请输入有效的起止日期，且开始日期不能晚于结束日期。'); return; } runtime.usageCustomRange = { start: dates.start, end: dates.end }; } else { runtime.usageDays = value; runtime.usageCustomRange = null; } runtime.usageMultiResult = null; await ctx.refresh(); } },
+          { label: '清除多维分析结果', tab: 'multi', toolbar: 'page', disabled: !runtime.usageMultiQuery, run: async ctx => { runtime.usageMultiQuery = null; runtime.usageMultiResult = null; await ctx.refresh(); } },
+          { label: '统计日期范围', tab: 'multi', toolbar: 'page', run: async ctx => { const value = await ctx.choose('多维分析日期范围', [...[7, 30, 90, 180, 365].map(days => ({ label: days === 365 ? '最近 1 年' : `最近 ${days} 天`, value: days })), { label: '自定义日期', value: 'custom' }]); if (value === null) return; if (value === 'custom') { const current = runtime.usageCustomRange || {}; const dates = await ctx.form('多维分析自定义日期', [{ name: 'start', label: '开始日期（YYYY-MM-DD）', value: current.start || '' }, { name: 'end', label: '结束日期（YYYY-MM-DD）', value: current.end || '' }]); if (!dates) return; const validDate = date => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(date || '')) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`)) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date; if (!validDate(dates.start) || !validDate(dates.end) || dates.start > dates.end || (Date.parse(`${dates.end}T00:00:00Z`) - Date.parse(`${dates.start}T00:00:00Z`)) / 86400000 > 364) { await ctx.show('日期范围无效', '请输入有效的起止日期，且开始日期不能晚于结束日期。'); return; } runtime.usageCustomRange = { start: dates.start, end: dates.end }; } else { runtime.usageDays = value; runtime.usageCustomRange = null; } runtime.usageMultiResult = null; await ctx.refresh(); } },
           { label: '查看实时活动快照', tab: 'overview', run: async ctx => { const window = await ctx.choose('活动统计窗口', [{ label: '最近 5 分钟', value: 300 }, { label: '最近 30 分钟', value: 1800 }, { label: '最近 1 小时', value: 3600 }]); if (window === null) return; const live = await api('/api/client-events/live', { query: { window } }); const sources = Array.isArray(live.sources) ? live.sources : []; const machines = Object.values(live.machines || {}); const lines = [`窗口 ${Math.round((live.window || window) / 60)} 分钟`, '', '按客户端：', ...sources.map(source => `${clientDisplay(source.harness)} · ${source.active_sessions || 0} 活跃会话 · ${source.tool_calls || 0} 工具调用 · ${source.failure_count || 0} 错误${source.suspected_offline ? ' · 疑似离线' : ''}`), '', '机器：', ...machines.map(machine => `${machine.name} · ${machine.harness} · ${machine.suspected_offline ? '疑似离线' : '在线'}`)]; if (!sources.length && !machines.length) lines.push('暂无近期客户端事件。'); await ctx.show('实时活动快照（一次性）', lines.join('\\n')); } },
-          { label: '自定义日期范围', toolbar: true, run: async ctx => {
+          { label: '自定义日期范围', toolbar: 'page', run: async ctx => {
             const current = runtime.usageCustomRange || {};
             const values = await ctx.form('自定义统计日期', [
               { name: 'start', label: '开始日期（YYYY-MM-DD）', value: current.start || '' },
@@ -278,8 +291,8 @@ function usagePage(runtime) {
             runtime.usageCustomRange = { start: values.start, end: values.end };
             runtime.usageLogPage = 1; await ctx.refresh();
           } },
-          { label: '重置筛选与日期', toolbar: true, run: async ctx => { runtime.usageFilters = {}; runtime.usageCustomRange = null; runtime.usageDays = runtime.cfg.tui?.days || 30; runtime.usageLogPage = 1; await ctx.refresh(); } },
-          { label: '时间范围与筛选', toolbar: true, run: async ctx => {
+          { label: '重置筛选与日期', toolbar: 'page', run: async ctx => { runtime.usageFilters = {}; runtime.usageCustomRange = null; runtime.usageDays = runtime.cfg.tui?.days || 30; runtime.usageLogPage = 1; await ctx.refresh(); } },
+          { label: '时间范围与筛选', toolbar: 'page', run: async ctx => {
             const filtersData = await getStatsFilters(runtime.client);
             const pick = async (title, values, current, idKey = 'id') => {
               const getId = item => item[idKey] ?? item.id;

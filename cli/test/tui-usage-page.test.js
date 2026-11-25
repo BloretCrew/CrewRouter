@@ -3,9 +3,28 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buildPages } = require('../tui/pages');
+const { runPagedTui } = require('../tui/engine');
+const { terminal, until } = require('./helpers/tty');
 
 const makeRuntime = () => ({ client: { get: async () => ({ summary: {}, daily: [], byModel: [], byApiKey: [], byProvider: [], bySource: [] }) }, cfg: { tui: { days: 30 } }, profileName: 'test' });
 const page = runtime => buildPages(runtime).find(item => item.id === 'usage');
+
+test('usage overview TUI places date and filter controls before statistics content', { timeout: 15000 }, async () => {
+  const runtime = makeRuntime();
+  const usage = page(runtime);
+  const tty = terminal(160, 48);
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages: [usage], authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('最近 30 天'));
+    const screen = tty.screen();
+    const toolbar = screen.indexOf('筛选与操作');
+    const customRange = screen.indexOf('自定义日期范围');
+    const reset = screen.indexOf('重置筛选与日期');
+    const filters = screen.indexOf('时间范围与筛选');
+    const overview = screen.indexOf('统计概览');
+    assert.ok(toolbar >= 0 && customRange > toolbar && reset > customRange && filters > reset && overview > filters, `overview filter controls must precede statistics sections: ${toolbar},${customRange},${reset},${filters},${overview}`);
+  } finally { tty.input.write('q'); await task; }
+});
 
 test('usage tabs request latency, message and log data with shared filters', async () => {
   const runtime = makeRuntime();
@@ -13,11 +32,16 @@ test('usage tabs request latency, message and log data with shared filters', asy
   runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: { total_requests: 20, total_tokens: 2000, total_prompt_tokens: 1200, total_completion_tokens: 800, total_cached_tokens: 300, total_cost: 10, avg_latency: 40, identified_rate: 0.9, known_requests: 18, unknown_requests: 2, active_sources: 1 }, daily: Array.from({ length: 14 }, (_, index) => ({ date: `2026-11-${String(index + 1).padStart(2, '0')}`, requests: 3, prompt_tokens: 10, completion_tokens: 20, tokens: 30, cost: index < 7 ? 1 : 2 })), hourly: [{ hour: 9, requests: 4, tokens: 120, cached_tokens: 20, cost: 0.4 }, { hour: 10, requests: 2, tokens: 60, cached_tokens: 10, cost: 0.2 }], byModel: [{ model_name: 'Model One', requests: 2, tokens: 10, cost: 0.25 }, { model_name: 'Model Two', requests: 1, tokens: 5, cost: 0.1 }], byApiKey: [{ key_name: 'Main Key', requests: 1, tokens: 5, cost: 0.1 }], byProvider: [{ provider_name: 'Provider One', requests: 1, tokens: 7, cost: 0.2 }], bySource: [{ request_source: 'codex', requests: 12, tokens: 600, cost: 0.15 }, { request_source: 'claude_code', requests: 8, tokens: 400, cost: 0.15 }] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; if (path === '/api/user/message-stats') return { summary: { requests: 12, analyzed_requests: 10, total_tokens: 2000, total_cost: 3, metadata_rate: 0.5, git_rate: 0.25, peak_day: { date: '2026-11-24', requests: 4 }, analysis_status: { pending_requests: 2, enabled: true } }, by_workspace: [{ workspace_path: '/work/repo', requests: 4, tokens: 1500, cost: 2, characters: 900, sources: { codex: 3 } }], daily: [{ date: '2026-11-24', requests: 4, messages: 8, tokens: 1500, git_requests: 2 }], by_block: [{ block: 'git_status', requests: 3, occurrences: 4, tokens: 1000, cost: 1.2 }], by_source: [{ request_source: 'codex', requests: 2, messages: 10, characters: 400, tokens: 1000 }] }; if (path === '/api/user/usage-logs') return { page: 1, total: 1, logs: [{ id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', series: 'S', request_source: 'codex', key_prefix: 'cr_live_', key_name: 'Main', tokens_used: 100, cached_tokens: 15, cost: 0.5 }] }; if (path === '/api/user/usage-logs/42') return { log: { id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', upstream_model_id: 'up-1', provider_name: 'Provider One', request_type: 'chat', request_source: 'codex', key_prefix: 'abcd', key_name: 'Main', tokens_used: 100, prompt_tokens: 80, completion_tokens: 20, cached_tokens: 30, latency_ms: 25, is_stream: true, ttft_ms: 10, tpot_ms: 2, output_tps: 12, cost: 0.5 } }; return {}; };
   const usage = page(runtime);
   const overview = await usage.load();
-  assert.ok(overview.sections[0].rows.some(row => row.label === '常用模型 Top 1：Model One'));
-  assert.ok(overview.sections[0].rows.some(row => row.label.startsWith('高峰时段 Top 1：09:00')));
-  assert.ok(overview.sections[0].rows.some(row => row.label.includes('客户端：Codex') && row.detail.includes('████████████████')));
-  assert.ok(overview.sections[0].rows.some(row => row.label === '积分环比变化' && row.detail === '+100.0%'));
-  assert.ok(overview.sections[0].rows.some(row => row.label === '关键指标：平均 Token/请求'));
+  assert.deepEqual(overview.sections.slice(0, 8).map(section => section.title), ['统计概览', 'Prompt 缓存命中', '今日与昨日对比', '最常用模型', '高峰时段', '积分消耗趋势', '关键指标', '客户端来源']);
+  assert.ok(overview.sections[0].cards.some(card => card.label === '总请求数' && card.detail.startsWith('日均')));
+  assert.ok(overview.sections[1].cards.some(card => card.label === '缓存命中率' && card.value === '25.0%'));
+  assert.ok(overview.sections[2].cards.some(card => card.label.startsWith('今日请求')));
+  assert.ok(overview.sections[3].rows.some(row => row.label.includes('Model One')));
+  assert.ok(overview.sections[4].rows.some(row => row.label.includes('09:00')));
+  assert.ok(overview.sections[5].rows.some(row => row.cells.cost_bar));
+  assert.ok(overview.sections[6].rows.some(row => row.label === '平均 Token/请求'));
+  assert.ok(overview.sections[7].rows.some(row => row.label.includes('Codex') && row.detail.includes('████████████████████')));
+  assert.equal(overview.sections[8].title, '插件维度');
   usage.onTabChange({ id: 'latency' });
   const latencyData = await usage.load();
   const latencySection = latencyData.sections.find(section => section.tab === 'latency');
@@ -38,7 +62,8 @@ test('usage tabs request latency, message and log data with shared filters', asy
   const modelData = await usage.load();
   const modelSection = modelData.sections.find(section => section.tab === 'models');
   assert.deepEqual(modelSection.rows[0].cells, { name: 'Model One', requests: '2 次', tokens: '10 Token', cost: '0.2500 积分' });
-  assert.ok(modelData.actions.some(action => action.label === '时间范围与筛选' && action.toolbar === true));
+  assert.ok(modelData.actions.some(action => action.label === '时间范围与筛选' && action.toolbar === 'page'));
+  assert.ok(modelData.pageToolbar);
   usage.onTabChange({ id: 'messages' });
   const messages = await usage.load();
   const messagesSection = messages.sections.find(section => section.tab === 'messages');
