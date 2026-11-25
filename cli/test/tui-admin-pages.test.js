@@ -76,18 +76,48 @@ test('admin user list mirrors web summary cards, columns, readable details and b
   assert.deepEqual(calls.map(call => call.options.query), [{ page: 1, limit: 30, q: '' }, { page: 3, limit: 30, q: '' }]);
 });
 
-test('admin user edits confirm before sending profile and quota fields', async () => {
+test('admin user edits use named Teams and refundable balances with confirmed net-amount refunds', async () => {
   const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/users') return { items: [{ id: 5, username: 'alice', email: 'a@example.test', is_admin: false, email_verified: false, team_id: 2, rate_limit_rpm: 10, rate_limit_tpm: 100, tags: ['ops'] }], total: 1, page: 1 }; return {}; };
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/admin/users') return { items: [{ id: 5, username: 'alice', email: 'a@example.test', is_admin: false, email_verified: false, balance: 20, team_id: 2, rate_limit_rpm: 10, rate_limit_tpm: 100, tags: ['ops'] }], total: 1, page: 1 };
+    if (path === '/api/admin/teams') return [{ id: 2, name: 'Team Two' }, { id: 3, name: 'Team Three' }];
+    if (path.endsWith('/code-balances')) return [{ code: 'SECRET-CODE-12345', amount: 11, fee_rate: 0.1, net_amount: 10 }, { code: 'ANOTHER-CODE-12345', amount: 5.5, fee_rate: 0, net_amount: 5.5 }];
+    if (path.endsWith('/refund')) return { success: true, actualRefundAmount: 12, grossDeducted: 13.2, newRefundBalance: 2.3 };
+    return {};
+  };
   const page = pageById('admin-users');
   const data = await page.load(api);
   const row = data.sections.find(section => section.title === '用户列表').rows[0];
   const formValues = { email: 'new@example.test', email_verified: true, isAdmin: false, balance: '12', team_id: '3', rate_limit_rpm: '20', rate_limit_tpm: '200', tags: 'ops,urgent' };
-  await row.run({ choose: async () => 'edit', form: async () => formValues, confirm: async () => false, notify() {}, refresh: async () => {} });
+  let fields;
+  await row.run({ choose: async () => 'edit', form: async (_title, formFields) => { fields = formFields; return formValues; }, confirm: async () => false, notify() {}, refresh: async () => {} });
   assert.equal(calls.some(call => call.options.method === 'PUT'), false);
+  const teamField = fields.find(field => field.name === 'team_id');
+  assert.deepEqual(teamField.options, [{ value: '', label: '未指定 Team' }, { value: '2', label: 'Team Two' }, { value: '3', label: 'Team Three' }]);
+  assert.ok(fields.find(field => field.name === 'refund_info').value.includes('15.50 积分'));
   await row.run({ choose: async () => 'edit', form: async () => formValues, confirm: async () => true, notify() {}, refresh: async () => {} });
   const write = calls.find(call => call.options.method === 'PUT');
   assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
+
+  let details = '';
+  await row.run({ choose: async () => 'balance', show: async (_title, body) => { details = body; } });
+  assert.match(details, /SEC…345 · 原余额 11\.00 · 可退净额 10\.00 积分 · 手续费 10\.0%/);
+  assert.doesNotMatch(details, /SECRET-CODE|ANOTHER-CODE/);
+
+  let amountNotice = '';
+  await row.run({ choose: async () => 'refund', ask: async () => '16', show: async (_title, body) => { amountNotice = body; } });
+  assert.match(amountNotice, /不超过可退净额 15\.50/);
+  assert.equal(calls.some(call => call.path.endsWith('/refund')), false);
+  let refundWarning = '';
+  await row.run({ choose: async () => 'refund', ask: async () => '12.00', confirm: async (_title, body) => { refundWarning = body; return false; } });
+  assert.match(refundWarning, /退款净额：12\.00\n可退余额：15\.50/);
+  assert.equal(calls.some(call => call.path.endsWith('/refund')), false, 'declining refund confirmation must not post');
+  let refundResult = '';
+  await row.run({ choose: async () => 'refund', ask: async () => '12.00', confirm: async () => true, show: async (_title, body) => { refundResult = body; }, refresh: async () => {} });
+  const refund = calls.find(call => call.path.endsWith('/refund'));
+  assert.deepEqual(refund.options.body, { refundAmount: 12 });
+  assert.match(refundResult, /实际退款：12\.00/);
 });
 
 test('admin general settings and request capture use readable web fields with validated payloads', async () => {

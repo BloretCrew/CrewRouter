@@ -264,29 +264,51 @@ function createAdminPages(runtime) {
             `标签：${array(item.tags).join('、') || '无'}`,
           ].join('\n'));
           if (choice === 'edit') {
+            const [teamsResult, balancesResult] = await Promise.allSettled([api('/api/admin/teams'), api(`/api/admin/users/${encodeURIComponent(item.id)}/code-balances`)]);
+            if (teamsResult.status === 'rejected') { await ctx.show('Team 列表暂不可用', teamsResult.reason.message || '无法读取 Team 列表，未打开编辑表单。'); return; }
+            const teams = itemsOf(teamsResult.value);
+            const codeBalances = balancesResult.status === 'fulfilled' ? array(balancesResult.value) : [];
+            const availableRefund = codeBalances.reduce((sum, entry) => sum + Number(entry.net_amount || 0), 0);
             const values = await ctx.form('修改用户', [
               { name: 'email', label: '邮箱', value: item.email || '' },
-              { name: 'email_verified', label: '邮箱已验证', type: 'boolean', value: item.email_verified === true },
-              { name: 'isAdmin', label: '管理员', type: 'boolean', value: item.is_admin === true },
-              { name: 'balance', label: '余额（留空不修改）', value: '' },
-              { name: 'team_id', label: '团队 ID（留空不修改）', value: String(item.team_id || '') },
-              { name: 'rate_limit_rpm', label: '每分钟最大请求数（留空不修改）', value: String(item.rate_limit_rpm || '') },
-              { name: 'rate_limit_tpm', label: '每分钟最大 Token 数（留空不修改）', value: String(item.rate_limit_tpm || '') },
-              { name: 'tags', label: '用户标签（逗号分隔；留空不修改）', value: Array.isArray(item.tags) ? item.tags.join(',') : '' },
-            ]);
+              { name: 'email_verified', label: '邮箱验证状态', value: item.email_verified === true, options: [{ value: true, label: '已验证' }, { value: false, label: '未验证' }] },
+              { name: 'isAdmin', label: '管理员权限', value: item.is_admin === true, options: [{ value: false, label: '普通用户' }, { value: true, label: '管理员' }] },
+              { name: 'balance', label: '积分余额（留空不修改）', value: '' },
+              { name: 'team_id', label: '所属 Team', value: item.team_id == null ? '' : String(item.team_id), options: [{ value: '', label: '未指定 Team' }, ...teams.map(team => ({ value: String(team.id), label: team.name }))] },
+              { name: 'refund_info', label: '可退款余额（只读）', value: `${availableRefund.toFixed(2)} 积分 · ${codeBalances.length} 条兑换记录`, disabled: true },
+              { name: 'rate_limit_rpm', label: '每分钟请求数限额（0 表示不限制；留空不修改）', value: '' },
+              { name: 'rate_limit_tpm', label: '每分钟 Token 数限额（0 表示不限制；留空不修改）', value: '' },
+              { name: 'tags', label: '用户标签（逗号分隔）', value: Array.isArray(item.tags) ? item.tags.join(', ') : '' },
+            ], { description: 'Team 从名称列表中选择；留空表示不修改现有积分和速率限额。' });
             if (!values) return;
-            const body = { email: values.email, email_verified: values.email_verified, isAdmin: values.isAdmin };
-            if (values.balance !== '') body.balance = Number(values.balance);
-            if (values.team_id !== '') body.team_id = Number(values.team_id);
-            if (values.rate_limit_rpm !== '') body.rate_limit_rpm = Number(values.rate_limit_rpm);
-            if (values.rate_limit_tpm !== '') body.rate_limit_tpm = Number(values.rate_limit_tpm);
-            if (values.tags !== '') body.tags = values.tags.split(',').map(tag => tag.trim()).filter(Boolean);
-            if (!await ctx.confirm('确认更新用户', `${item.username}\n管理员：${body.isAdmin ? '是' : '否'} · 邮箱验证：${body.email_verified ? '是' : '否'}${body.balance !== undefined ? ` · 余额 ${body.balance}` : ''}${body.team_id !== undefined ? ` · 所属团队编号 ${body.team_id}` : ''}`)) return;
+            const body = { email: values.email, email_verified: values.email_verified === true, isAdmin: values.isAdmin === true, tags: String(values.tags || '').split(',').map(tag => tag.trim()).filter(Boolean) };
+            if (String(values.balance ?? '') !== '') body.balance = Number(values.balance);
+            if (String(values.team_id ?? '') !== '') body.team_id = Number(values.team_id); else if (values.team_id === '') body.team_id = null;
+            if (String(values.rate_limit_rpm ?? '') !== '') body.rate_limit_rpm = Number(values.rate_limit_rpm);
+            if (String(values.rate_limit_tpm ?? '') !== '') body.rate_limit_tpm = Number(values.rate_limit_tpm);
+            if (body.balance !== undefined && (!Number.isFinite(body.balance) || body.balance < 0 || body.balance >= 1000000)) { await ctx.show('积分余额无效', '积分余额必须是 0 到 999999.9999 之间的数字。'); return; }
+            for (const field of ['rate_limit_rpm', 'rate_limit_tpm']) if (body[field] !== undefined && (!Number.isInteger(body[field]) || body[field] < 0)) { await ctx.show('速率限额无效', 'RPM 和 TPM 必须是非负整数；0 表示不限制。'); return; }
+            if (!await ctx.confirm('确认更新用户', `${item.username}\n角色：${body.isAdmin ? '管理员' : '普通用户'} · 邮箱：${body.email_verified ? '已验证' : '未验证'} · Team：${teams.find(team => String(team.id) === String(body.team_id))?.name || (body.team_id == null ? '未指定' : `Team ${body.team_id}`)}${body.balance !== undefined ? ` · 积分 ${body.balance}` : ''}`)) return;
             await api(`/api/admin/users/${encodeURIComponent(item.id)}`, { method: 'PUT', body });
             ctx.notify('用户已更新。'); await ctx.refresh();
           }
-          if (choice === 'balance') { const balances = await api(`/api/admin/users/${encodeURIComponent(item.id)}/code-balances`); await ctx.show('余额记录', JSON.stringify(balances, null, 2)); }
-          if (choice === 'refund') { const amount = await ctx.ask('退款金额', { description: '请确认金额和目标用户。' }); if (!amount || !await ctx.confirm('确认退款', `向 ${item.username} 退款 ${amount}？`)) return; const result = await api(`/api/admin/users/${encodeURIComponent(item.id)}/refund`, { method: 'POST', body: { amount: Number(amount) } }); await ctx.show('退款结果', JSON.stringify(result, null, 2)); await ctx.refresh(); }
+          if (choice === 'balance') {
+            const balances = array(await api(`/api/admin/users/${encodeURIComponent(item.id)}/code-balances`));
+            const rows = balances.map(balance => { const amount = Number(balance.amount || 0); const feeRate = Number(balance.fee_rate || 0); const net = Number(balance.net_amount ?? amount / (1 + feeRate)); const code = String(balance.code || '未知兑换码'); const masked = code.length > 8 ? `${code.slice(0, 3)}…${code.slice(-3)}` : '已隐藏'; return `${masked} · 原余额 ${amount.toFixed(2)} · 可退净额 ${net.toFixed(2)} 积分 · 手续费 ${(feeRate * 100).toFixed(1)}%`; });
+            await ctx.show(`可退款余额 · ${item.username}`, rows.length ? rows.join('\n') : '无可退款兑换码余额。');
+          }
+          if (choice === 'refund') {
+            const balances = array(await api(`/api/admin/users/${encodeURIComponent(item.id)}/code-balances`));
+            const available = balances.reduce((sum, balance) => sum + Number(balance.net_amount ?? Number(balance.amount || 0) / (1 + Number(balance.fee_rate || 0))), 0);
+            if (available <= 0) { await ctx.show('无可退款余额', `${item.username} 当前没有可退兑换码余额。`); return; }
+            const amountText = String(await ctx.ask('退款金额（可退净额）', { description: `最多可退 ${available.toFixed(2)}；服务端将按手续费率从高到低扣除。` }) || '').trim();
+            if (!amountText) return;
+            const amount = Number(amountText);
+            if (!Number.isFinite(amount) || amount <= 0 || amount >= 1000000 || !/^\d+(?:\.\d{1,2})?$/.test(amountText) || amount > available + 0.000001) { await ctx.show('退款金额无效', `请输入最多两位小数且不超过可退净额 ${available.toFixed(2)} 的正数。`); return; }
+            if (!await ctx.confirm('确认退款', `用户：${item.username}\n退款净额：${amount.toFixed(2)}\n可退余额：${available.toFixed(2)}\n服务器将按手续费率从高到低扣除。`)) return;
+            const result = await api(`/api/admin/users/${encodeURIComponent(item.id)}/refund`, { method: 'POST', body: { refundAmount: amount } });
+            await ctx.show('退款结果', `实际退款：${Number(result.actualRefundAmount ?? amount).toFixed(2)}\n总余额扣除：${Number(result.grossDeducted || 0).toFixed(2)}\n剩余可退款余额：${Number(result.newRefundBalance || 0).toFixed(2)}`); await ctx.refresh();
+          }
         } })) : [{ label: '暂无用户', detail: '未找到符合条件的用户。' }] }], actions: [
           { label: '搜索用户', run: async ctx => { runtime.adminUsersSearch = String(await ctx.ask('用户名或邮箱') || '').trim(); runtime.adminUsersPage = 1; await ctx.refresh(); } },
           { label: '上一页', toolbar: true, disabled: currentPage <= 1, run: async ctx => { runtime.adminUsersPage = Math.max(1, currentPage - 1); await ctx.refresh(); } },
