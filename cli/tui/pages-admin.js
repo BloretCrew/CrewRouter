@@ -290,18 +290,59 @@ function createAdminPages(runtime) {
       id: 'admin-models', label: '模型管理', description: '管理员模型的独立管理视图。',
       async load(api) {
         const filters = runtime.adminModelFilters || {};
-        const data = await api('/api/admin/models', { query: { page: runtime.adminModelPage || 1, limit: 30, q: runtime.adminModelSearch || '', ...filters } });
+        const page = runtime.adminModelPage || 1;
+        const data = await api('/api/admin/models', { query: { page, limit: 30, q: runtime.adminModelSearch || '', ...filters } });
         const items = array(data && (data.items || data));
-        return { sections: [{ title: '模型管理', description: `第 ${data.page || runtime.adminModelPage || 1} 页 · 共 ${data.total || items.length} 个`, rows: items.map(item => ({ label: display(item.name, item.alias, item.id), detail: display(item.provider_name || item.provider, item.enabled === false ? '停用' : '启用', item.description), run: async ctx => {
-          const choice = await ctx.choose('模型操作', [{ label: '查看详情', value: 'detail' }, { label: '测试模型', value: 'test' }]);
-          if (choice === 'detail') await ctx.show(`模型 · ${item.name || item.id}`, JSON.stringify(item, null, 2));
-          if (choice === 'test') { if (!await ctx.confirm('测试模型', `将使用当前模型配置对 ${item.name || item.id} 发起一次真实测试请求。继续？`)) return; const result = await api(`/api/admin/models/${encodeURIComponent(item.id)}/test`, { method: 'POST', body: {} }); await ctx.show('模型测试', JSON.stringify(result, null, 2)); }
-        } })) }], actions: [
-          { label: '搜索模型', run: async ctx => { runtime.adminModelSearch = String(await ctx.ask('模型搜索', { defaultValue: runtime.adminModelSearch || '' }) || '').trim(); runtime.adminModelPage = 1; await ctx.refresh(); } },
-          ...[['provider', '供应商'], ['series', '系列']].map(([key, label]) => ({ label: `筛选${label}`, run: async ctx => { const value = await ctx.ask(`${label} ID（留空清除）`, { defaultValue: filters[key] || '' }); if (value !== null) { runtime.adminModelFilters = { ...filters, [key]: String(value).trim() }; runtime.adminModelPage = 1; await ctx.refresh(); } } })),
-          { label: '筛选启用状态', run: async ctx => { const value = await ctx.choose('模型启用状态', [{ label: '全部', value: '' }, { label: '启用', value: 'true' }, { label: '停用', value: 'false' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, enabled: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
-          { label: '筛选测试状态', run: async ctx => { const value = await ctx.choose('模型测试状态', [{ label: '全部', value: '' }, { label: '通过', value: 'pass' }, { label: '失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, test: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
-          { label: '清除筛选', run: async ctx => { runtime.adminModelFilters = {}; runtime.adminModelPage = 1; await ctx.refresh(); } },
+        const providers = array(data && data.providers);
+        const seriesOptions = array(data && data.series);
+        const modelRows = items.map(item => {
+          const input = item.input_price_per_1k_tokens;
+          const output = item.output_price_per_1k_tokens;
+          const cached = item.cached_output_price_per_1k_tokens;
+          const testState = item.test_ok === true ? `通过 · ${Math.round(Number(item.test_latency_ms) || 0)} 毫秒` : item.test_ok === false ? '失败' : '未测试';
+          const details = [
+            `上游模型 ID：${item.upstream_model_id || item.name || item.id}`, `系列：${item.series || '无'}`, `供应商：${item.provider_name || item.provider || '未知供应商'}`,
+            `输入价格：${input ?? '—'} 元/千 Token`, `输出价格：${output ?? '—'} 元/千 Token`, `缓存输出价格：${cached ?? '—'} 元/千 Token`,
+            `参考输入/输出价：${item.reference_input_price_per_1k_tokens ?? '—'} / ${item.reference_output_price_per_1k_tokens ?? '—'} 元/千 Token`,
+            `计费倍率：${Number(item.model_multiplier ?? 1).toFixed(2)} · 完成倍率 ${Number(item.completion_multiplier ?? 1).toFixed(2)}`,
+            `速率限制：${Number(item.rate_limit_rpm || 0) || '不限'} 次/分钟 · ${Number(item.rate_limit_tpm || 0) || '不限'} Token/分钟`,
+            `状态：${item.enabled === false ? '已停用' : '已启用'}`, `接口测试：${testState}`,
+            item.test_error && `测试错误：${String(item.test_error).replace(/\s+/g, ' ').slice(0, 240)}`, item.description && `模型说明：${item.description}`,
+          ].filter(Boolean).join('\n');
+          return { label: display(item.alias || item.name, item.name !== item.alias ? item.name : '', item.id), cells: {
+            name: item.alias || item.name || item.id, provider: item.provider_name || item.provider || '未知', series: item.series || '无',
+            input: `${input ?? '—'} 元`, output: `${output ?? '—'} 元`, cached: `${cached ?? '—'} 元`,
+            limits: `${Number(item.rate_limit_rpm || 0) || '不限'} 次/分 · ${Number(item.rate_limit_tpm || 0) || '不限'} Token/分`,
+            state: `${item.enabled === false ? '已停用' : '已启用'} · ${testState}`,
+          }, detail: details, run: async ctx => {
+            const choice = await ctx.choose('模型操作', [{ label: '查看详情', value: 'detail' }, { label: '测试模型', value: 'test' }]);
+            if (choice === 'detail') await ctx.show(`模型详情 · ${item.alias || item.name || item.id}`, details);
+            if (choice === 'test') {
+              if (!await ctx.confirm('测试模型', `将使用当前模型配置对 ${item.alias || item.name || item.id} 发起一次真实测试请求。继续？`)) return;
+              const result = await api(`/api/admin/models/${encodeURIComponent(item.id)}/test`, { method: 'POST', body: {} });
+              const output = [`结果：${result.ok === false ? '失败' : '完成'}`, result.latency_ms != null && `响应时间：${Math.round(Number(result.latency_ms))} 毫秒`, result.tokens_per_second != null && `输出速度：${Number(result.tokens_per_second).toFixed(1)} Token/秒`, result.error && `错误：${String(result.error).replace(/\s+/g, ' ').slice(0, 400)}`, result.message && `说明：${result.message}`].filter(Boolean).join('\n');
+              await ctx.show(`模型测试 · ${item.alias || item.name || item.id}`, output || '测试请求已完成。');
+            }
+          } };
+        });
+        const stats = data.stats || {};
+        const sections = [{ title: '模型管理', description: `第 ${data.page || page} 页 · 共 ${data.total || items.length} 个模型`, cards: [
+          { label: '当前筛选模型', value: `${data.total || items.length} 个` },
+          { label: '已启用', value: `${stats.enabledCount ?? items.filter(item => item.enabled !== false).length} 个` },
+          { label: '供应商数', value: `${stats.providerCount ?? new Set(items.map(item => item.provider)).size} 个` },
+          { label: '平均输入价', value: `${Number(stats.avgInputPrice || 0).toFixed(4)} 元/千 Token` },
+        ], tableMinWidth: 145, columns: [
+          { key: 'name', label: '模型名称', ratio: 0.2 }, { key: 'provider', label: '供应商', ratio: 0.13 }, { key: 'series', label: '系列', ratio: 0.08 },
+          { key: 'input', label: '输入价/千Token', ratio: 0.12 }, { key: 'output', label: '输出价/千Token', ratio: 0.12 },
+          { key: 'cached', label: '缓存输出价', ratio: 0.1 }, { key: 'limits', label: '请求/Token限额', ratio: 0.1 }, { key: 'state', label: '状态/测试', ratio: 0.15 },
+        ], rows: modelRows.length ? modelRows : [{ label: '没有符合条件的模型。' }] }];
+        return { sections, pageToolbar: true, actions: [
+          { label: '搜索模型', toolbar: 'page', run: async ctx => { runtime.adminModelSearch = String(await ctx.ask('模型名称、别名、上游 ID、系列或说明', { defaultValue: runtime.adminModelSearch || '' }) || '').trim(); runtime.adminModelPage = 1; await ctx.refresh(); } },
+          { label: '筛选供应商', toolbar: 'page', run: async ctx => { const value = await ctx.choose('供应商', [{ label: '全部供应商', value: '' }, ...providers.map(item => ({ label: `${item.name} · ${item.model_count} 个模型`, value: item.id }))]); if (value !== null) { runtime.adminModelFilters = { ...filters, provider: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
+          { label: '筛选系列', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型系列', [{ label: '全部系列', value: '' }, ...seriesOptions.map(item => ({ label: item, value: item }))]); if (value !== null) { runtime.adminModelFilters = { ...filters, series: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
+          { label: '筛选启用状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型启用状态', [{ label: '全部', value: '' }, { label: '已启用', value: 'true' }, { label: '已禁用', value: 'false' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, enabled: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
+          { label: '筛选测试状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型测试状态', [{ label: '全部', value: '' }, { label: '测试通过', value: 'pass' }, { label: '测试失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, test: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
+          { label: '清除筛选', toolbar: 'page', run: async ctx => { runtime.adminModelFilters = {}; runtime.adminModelPage = 1; await ctx.refresh(); } },
           { label: '上一页', run: async ctx => { runtime.adminModelPage = Math.max(1, (runtime.adminModelPage || 1) - 1); await ctx.refresh(); } },
           { label: '下一页', run: async ctx => { runtime.adminModelPage = (runtime.adminModelPage || 1) + 1; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
