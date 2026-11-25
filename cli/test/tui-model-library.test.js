@@ -13,7 +13,7 @@ test('user model library renders teams, provider summaries, stars and searchable
   const calls = [];
   const api = async (path, options = {}) => {
     calls.push({ path, options });
-    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: false, test_error: `HTTP 400\n${'long upstream error '.repeat(100)}` }], available_series: ['S'], total_models: 4 };
+    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, hidden_model_count: 1, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: false, test_error: `HTTP 400\n${'long upstream error '.repeat(100)}` }], available_series: ['S'], total_models: 4 };
     if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main' }];
     if (path === '/api/user/provider-tags') return [{ id: 5, name: 'Featured' }];
     if (path === '/api/user/model-library/order/by-test') return { teams: 1, providers: 2, models: 3 };
@@ -45,6 +45,17 @@ test('user model library renders teams, provider summaries, stars and searchable
   assert.equal(providerSection.cards.length, 1, 'team provider directory uses the responsive card grid');
   assert.equal(providerSection.cards[0].label, 'Provider A');
   assert.match(providerSection.cards[0].detail, /Team A.*测试通过/);
+  let showHidden = await initial.actions.find(action => action.label === '显示已隐藏的项目').run({ refresh: async () => {} });
+  assert.equal(runtime.libraryShowHidden, true);
+  showHidden = await page.load(api);
+  const clearHidden = showHidden.actions.find(action => action.label === '清除所有隐藏偏好');
+  assert.ok(clearHidden, 'show-hidden mode exposes the complete-clear action');
+  await clearHidden.run({ confirm: async () => false });
+  assert.equal(calls.some(call => call.path === '/api/user/model-library/hidden' && call.options.method === 'DELETE'), false);
+  await clearHidden.run({ confirm: async () => true, notify() {}, refresh: async () => {} });
+  const clearCall = calls.find(call => call.path === '/api/user/model-library/hidden' && call.options.method === 'DELETE');
+  assert.deepEqual(clearCall.options.query, { scope: 'all' });
+  assert.equal(runtime.libraryShowHidden, false);
   await initial.actions.find(action => action.label === '选择供应商展开模型').run({ choose: async () => 0, refresh: async () => {} });
   const expanded = await page.load(api);
   assert.ok(expanded.sections.some(section => section.title.includes('模型目录')));

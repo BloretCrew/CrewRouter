@@ -413,6 +413,7 @@ function createAdminPages(runtime) {
             ctx.notify('模型库设置已更新。'); await ctx.refresh();
           } };
         });
+        const hiddenItems = teams.flatMap(team => array(team.providers)).reduce((count, provider) => count + Number(provider.is_hidden === true) + Number(provider.hidden_model_count || 0), 0);
         const sections = [
           { title: '模型库概览', cards: [{ label: '所属团队', value: `${teams.length} 个` }, { label: '可用模型', value: `${library.total_models || 0} 个` }, { label: '模型系列', value: `${array(library.available_series).length} 个` }, { label: '已收藏模型', value: `${stars.length} 个` }] },
           ...(stars.length ? [{ title: '已收藏模型', rows: stars.slice(0, 20).map(item => ({ label: display(item.alias || item.name || item.model_id, item.provider_name, item.series), detail: display(item.is_hidden ? '已隐藏' : '可用', item.test_ok === true ? `测试通过 · 响应时间 ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? `测试失败 · ${shortError(item.test_error)}` : '尚未测试'), run: async ctx => { const choice = await ctx.choose(`收藏模型 · ${item.alias || item.name || item.model_id}`, [{ label: '查看详情', value: 'detail' }, { label: '取消收藏', value: 'unstar' }]); if (choice === 'detail') { const starId = String(item.model_id || item.id); const details = [
@@ -434,6 +435,7 @@ function createAdminPages(runtime) {
           ...(providerEntries.length ? [{ label: '选择供应商展开模型', toolbar: 'page', run: async ctx => { const choice = await ctx.choose('选择团队供应商', providerEntries.map(({ team, provider }, index) => ({ label: `${team.team_name} · ${provider.provider_name} · ${provider.visible_model_count || 0}/${provider.model_count || 0} 个模型`, value: index }))); if (choice === null) return; const entry = providerEntries[choice]; runtime.libraryProvider = { team_id: entry.team.team_id, provider_id: entry.provider.provider_id, provider_name: entry.provider.provider_name }; runtime.libraryPage = 1; await ctx.refresh(); } }] : []),
           { label: '搜索模型/供应商', toolbar: 'page', run: async ctx => { runtime.librarySearch = String(await ctx.ask('搜索模型、供应商或上游 ID', { defaultValue: runtime.librarySearch || '' }) || '').trim(); runtime.libraryPage = 1; await ctx.refresh(); } },
           { label: showHidden ? '隐藏已显示的项目' : '显示已隐藏的项目', toolbar: 'page', run: async ctx => { runtime.libraryShowHidden = !showHidden; runtime.libraryPage = 1; await ctx.refresh(); } },
+          ...(showHidden && hiddenItems > 0 ? [{ label: '清除所有隐藏偏好', toolbar: 'page', run: async ctx => { if (!await ctx.confirm('恢复所有已隐藏项目', `清除 ${hiddenItems} 个供应商/模型的隐藏偏好？这会让全部项目重新显示，且不能撤销这次筛选状态。`)) return; await api('/api/user/model-library/hidden', { method: 'DELETE', query: { scope: 'all' } }); runtime.libraryShowHidden = false; runtime.libraryPage = 1; runtime.libraryProvider = null; ctx.notify('已恢复显示所有隐藏供应商和模型。'); await ctx.refresh(); } }] : []),
           ...(canSaveLibraryOrder ? [{ label: '排序模式：保存测试结果排序', toolbar: 'page', run: async ctx => { const sort = await ctx.choose('选择全库模型排序', [
             { label: '测试通过优先 · 响应时间由快到慢', value: 'test_latency_asc' },
             { label: '测试通过优先 · 响应时间由慢到快', value: 'test_latency_desc' },
