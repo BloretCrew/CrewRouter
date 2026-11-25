@@ -224,11 +224,36 @@ function createAdminPages(runtime) {
         const search = runtime.adminUsersSearch || '';
         const data = await api('/api/admin/users', { query: { page, limit: 30, q: search } });
         const items = array(data && (data.items || data));
-        return { sections: [{ title: '用户管理', description: `第 ${data.page || page} 页 · 共 ${data.total || items.length} 个用户`, rows: items.map(item => ({ label: display(item.username, item.email, item.is_admin ? '管理员' : '用户'), detail: display(item.team_name || item.team_id, item.enabled === false ? '禁用' : '启用', `余额 ${item.balance ?? '—'}`), run: async ctx => {
+        const total = Number(data.total ?? items.length);
+        const currentPage = Number(data.page || page);
+        const pageSize = Number(data.limit || 30);
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const stats = data.stats || {};
+        const adminCount = Number(stats.adminCount ?? items.filter(item => item.is_admin === true).length);
+        const verifiedCount = Number(stats.verifiedCount ?? items.filter(item => item.email_verified === true).length);
+        const totalBalance = Number(stats.totalBalance ?? items.reduce((sum, item) => sum + Number(item.balance || 0), 0));
+        return { sections: [
+          { title: '用户概览', cards: [{ label: '总用户数', value: total.toLocaleString() }, { label: '管理员', value: adminCount.toLocaleString() }, { label: '邮箱已验证', value: verifiedCount.toLocaleString() }, { label: '总积分', value: Math.round(totalBalance).toLocaleString() }] },
+          { title: '用户列表', toolbar: true, description: `第 ${currentPage}/${totalPages} 页 · 共 ${total} 位用户${search ? ` · 搜索“${search}”` : ''}`, tableMinWidth: 120, columns: [
+            { key: 'username', label: '用户名', ratio: 0.15 }, { key: 'email', label: '邮箱', ratio: 0.2 }, { key: 'verified', label: '验证状态', ratio: 0.12 },
+            { key: 'balance', label: '积分', ratio: 0.1 }, { key: 'role', label: '角色', ratio: 0.1 }, { key: 'rate', label: '速率限制', ratio: 0.15 },
+            { key: 'created', label: '注册时间', ratio: 0.1 }, { key: 'actions', label: '操作', ratio: 0.08 },
+          ], rows: items.length ? items.map(item => ({ label: item.username || `用户 ${item.id}`, cells: {
+            username: item.username || `用户 ${item.id}`, email: item.email || '—', verified: item.email_verified ? '已验证' : '未验证',
+            balance: `${Math.round(Number(item.balance || 0))} 积分`, role: item.is_admin ? '管理员' : '普通用户',
+            rate: `${item.rate_limit_rpm || item.rate_limit_tpm ? `${item.rate_limit_rpm || '不限'} 次/分 · ${item.rate_limit_tpm || '不限'} Token/分` : '不限制'}`,
+            created: item.created_at ? formatTime(item.created_at) : '—', actions: 'Enter 管理',
+          }, detail: `邮箱：${item.email || '未设置'} · 验证：${item.email_verified ? '已验证' : '未验证'} · 积分：${Math.round(Number(item.balance || 0))} · 角色：${item.is_admin ? '管理员' : '普通用户'} · Team：${item.team_name || '未分配'}`, run: async ctx => {
           const choice = await ctx.choose(`用户 · ${item.username || item.id}`, [
             { label: '查看详情', value: 'detail' }, { label: '修改用户', value: 'edit' }, { label: '查看余额记录', value: 'balance' }, { label: '退款', value: 'refund' },
           ]);
-          if (choice === 'detail') await ctx.show('用户详情', JSON.stringify(item, null, 2));
+          if (choice === 'detail') await ctx.show(`用户详情 · ${item.username || item.id}`, [
+            `用户编号：${item.id}`, `用户名：${item.username || '未设置'}`, `邮箱：${item.email || '未设置'}`, `邮箱验证：${item.email_verified ? '已验证' : '未验证'}`,
+            `角色：${item.is_admin ? '管理员' : '普通用户'}`, `Team：${item.team_name || (item.team_id ? `Team ${item.team_id}` : '未分配')}`,
+            `积分：${Math.round(Number(item.balance || 0))}`, `注册时间：${item.created_at ? formatTime(item.created_at) : '未知'}`,
+            `速率限制：${item.rate_limit_rpm || item.rate_limit_tpm ? `${item.rate_limit_rpm || '不限'} 次/分 · ${item.rate_limit_tpm || '不限'} Token/分` : '不限制'}`,
+            `标签：${array(item.tags).join('、') || '无'}`,
+          ].join('\n'));
           if (choice === 'edit') {
             const values = await ctx.form('修改用户', [
               { name: 'email', label: '邮箱', value: item.email || '' },
@@ -253,10 +278,11 @@ function createAdminPages(runtime) {
           }
           if (choice === 'balance') { const balances = await api(`/api/admin/users/${encodeURIComponent(item.id)}/code-balances`); await ctx.show('余额记录', JSON.stringify(balances, null, 2)); }
           if (choice === 'refund') { const amount = await ctx.ask('退款金额', { description: '请确认金额和目标用户。' }); if (!amount || !await ctx.confirm('确认退款', `向 ${item.username} 退款 ${amount}？`)) return; const result = await api(`/api/admin/users/${encodeURIComponent(item.id)}/refund`, { method: 'POST', body: { amount: Number(amount) } }); await ctx.show('退款结果', JSON.stringify(result, null, 2)); await ctx.refresh(); }
-        } })) }], actions: [
+        } })) : [{ label: '暂无用户', detail: '未找到符合条件的用户。' }] }], actions: [
           { label: '搜索用户', run: async ctx => { runtime.adminUsersSearch = String(await ctx.ask('用户名或邮箱') || '').trim(); runtime.adminUsersPage = 1; await ctx.refresh(); } },
-          { label: '上一页', run: async ctx => { runtime.adminUsersPage = Math.max(1, page - 1); await ctx.refresh(); } },
-          { label: '下一页', run: async ctx => { runtime.adminUsersPage = page + 1; await ctx.refresh(); } },
+          { label: '上一页', toolbar: true, disabled: currentPage <= 1, run: async ctx => { runtime.adminUsersPage = Math.max(1, currentPage - 1); await ctx.refresh(); } },
+          { label: '下一页', toolbar: true, disabled: currentPage >= totalPages, run: async ctx => { runtime.adminUsersPage = Math.min(totalPages, currentPage + 1); await ctx.refresh(); } },
+          { label: '生成邀请链接', run: async ctx => { await ctx.navigate('admin-invites'); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
@@ -715,11 +741,14 @@ function createAdminPages(runtime) {
         });
         const hiddenItems = teams.flatMap(team => array(team.providers)).reduce((count, provider) => count + Number(provider.is_hidden === true) + Number(provider.hidden_model_count || 0), 0);
         const selectedKey = keys.find(key => String(key.id) === String(keyId));
+        const harnessLabels = { claude_code: 'Claude Code', codex: 'Codex', grok: 'Grok', opencode: 'OpenCode', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw', deepseek_harness: 'DeepSeek Harness' };
         const bindingRows = [
-          { label: `当前 API Key：${selectedKey?.name || selectedKey?.key_prefix || (keyId ? `Key ${keyId}` : '未选择')}`, detail: `供应商：${selectedKey?.current_provider_name || '未选择'} · 模型：${selectedKey?.current_model_name || selectedKey?.current_model_id || '未选择'}` },
-          { label: `绑定模型队列：${array(assignedData.queue).length} 个`, detail: array(assignedData.queue).map(item => item.name || item.model_name || item.model_id || item.id).filter(Boolean).join(' · ') || '尚未绑定模型' },
+          { label: `当前 Key：${selectedKey?.name || selectedKey?.key_prefix || (keyId ? `Key ${keyId}` : '未选择')}`, detail: `${selectedKey?.current_model_provider_name ? `供应商：${selectedKey.current_model_provider_name}` : '供应商：未选择'} · 当前模型：${selectedKey?.current_model_name || selectedKey?.current_model_id || '未选择'}` },
+          { label: `默认模型队列：${array(assignedData.queue).length} 个`, detail: array(assignedData.queue).length ? array(assignedData.queue).map((item, index) => `${index + 1}. ${item.name || item.model_id || '未知模型'}`).join(' · ') : '未设置模型队列' },
+          ...array(selectedKey?.harness_models).map(item => ({ label: `${harnessLabels[item.harness] || item.harness || '未知客户端'} 专属模型`, detail: `${item.name || item.model_id || '未指定'}${item.provider_name ? ` · ${item.provider_name}` : ''}` })),
+          ...array(selectedKey?.request_model_bindings).map(item => ({ label: `请求名映射：${item.request_model_name || '未命名'}${item.harness ? ` · ${harnessLabels[item.harness] || item.harness}` : ''}`, detail: `${item.name || item.model_id || '未指定'}${item.provider_name ? ` · ${item.provider_name}` : ''}` })),
         ];
-        const keySelectAction = { label: '选择 API Key', run: async ctx => { if (!keys.length) { await ctx.show('选择 API Key', '当前账户还没有 API Key。'); return; } const choice = await ctx.choose('选择 API Key', keys.map(key => ({ label: `${key.name || key.key_prefix || key.id} · ${key.current_model_name || key.current_model_id || '未绑定'}`, value: key.id }))); if (choice !== null) { runtime.libraryKeyId = choice; await ctx.refresh(); } } };
+        const keySelectAction = { label: '选择 API Key', run: async ctx => { if (!keys.length) { await ctx.show('选择 API Key', '当前账户还没有 API Key。'); return; } const choice = await ctx.choose('选择 API Key', keys.map(key => ({ label: `${key.name || key.key_prefix || key.id} · ${key.current_model_name || key.current_model_id || '未绑定模型'} · 默认队列 ${array(key.model_queue).length} 个${array(key.harness_models).length ? ` · Harness 专属 ${array(key.harness_models).length} 个` : ''}`, value: key.id }))); if (choice !== null) { runtime.libraryKeyId = choice; await ctx.refresh(); } } };
         const quotaRefreshAction = { label: '刷新供应商额度', run: async ctx => { const result = await api('/api/user/providers/quota/refresh', { method: 'POST' }); ctx.notify(`已刷新 ${array(result.providers).length} 个供应商额度。`); await ctx.refresh(); } };
         const filterControls = [
           ...(providerEntries.length ? [{ label: '选择供应商展开模型', run: async ctx => { const choice = await ctx.choose('选择团队供应商', providerEntries.map(({ team, provider }, index) => ({ label: `${team.team_name} · ${provider.provider_name} · ${provider.visible_model_count || 0}/${provider.model_count || 0} 个模型`, value: index }))); if (choice === null) return; const entry = providerEntries[choice]; runtime.libraryProvider = { team_id: entry.team.team_id, provider_id: entry.provider.provider_id, provider_name: entry.provider.provider_name }; runtime.libraryPage = 1; await ctx.refresh(); } }] : []),

@@ -45,12 +45,40 @@ test('user audit log uses web resource filter and renders readable event details
   assert.equal(runtime.userAuditResourceType, 'api_key');
 });
 
+test('admin user list mirrors web summary cards, columns, readable details and bounded pagination', async () => {
+  const calls = [];
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/users') return { items: [{ id: 5, username: 'alice', email: 'a@example.test', is_admin: false, email_verified: false, balance: 12.6, team_id: 2, team_name: 'Team A', rate_limit_rpm: 10, rate_limit_tpm: 100, tags: ['ops'], created_at: '2026-11-25T00:00:00Z' }], total: 61, page: options.query.page, limit: 30, stats: { adminCount: 3, verifiedCount: 45, totalBalance: 1234.5 } }; return {}; };
+  const page = buildPages(runtime).find(item => item.id === 'admin-users');
+  const data = await page.load(api);
+  assert.deepEqual(data.sections.map(section => section.title), ['用户概览', '用户列表']);
+  assert.deepEqual(data.sections[0].cards.map(card => [card.label, card.value]), [['总用户数', '61'], ['管理员', '3'], ['邮箱已验证', '45'], ['总积分', '1,235']]);
+  const table = data.sections[1];
+  assert.deepEqual(table.columns.map(column => column.label), ['用户名', '邮箱', '验证状态', '积分', '角色', '速率限制', '注册时间', '操作']);
+  assert.equal(table.rows[0].cells.verified, '未验证');
+  assert.equal(table.rows[0].cells.rate, '10 次/分 · 100 Token/分');
+  assert.equal(data.actions.find(action => action.label === '上一页').disabled, true);
+  assert.equal(data.actions.find(action => action.label === '下一页').disabled, false);
+  runtime.adminUsersPage = 3;
+  const lastPage = await page.load(api);
+  assert.equal(lastPage.actions.find(action => action.label === '下一页').disabled, true);
+  let detail = '';
+  await lastPage.sections[1].rows[0].run({ choose: async () => 'detail', show: async (_title, body) => { detail = body; } });
+  assert.match(detail, /用户编号：5/);
+  assert.match(detail, /Team：Team A/);
+  assert.doesNotMatch(detail, /"email"|"team_id"/);
+  let destination = '';
+  await lastPage.actions.find(action => action.label === '生成邀请链接').run({ navigate: async pageId => { destination = pageId; } });
+  assert.equal(destination, 'admin-invites');
+  assert.deepEqual(calls.map(call => call.options.query), [{ page: 1, limit: 30, q: '' }, { page: 3, limit: 30, q: '' }]);
+});
+
 test('admin user edits confirm before sending profile and quota fields', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/users') return { items: [{ id: 5, username: 'alice', email: 'a@example.test', is_admin: false, email_verified: false, team_id: 2, rate_limit_rpm: 10, rate_limit_tpm: 100, tags: ['ops'] }], total: 1, page: 1 }; return {}; };
   const page = pageById('admin-users');
   const data = await page.load(api);
-  const row = data.sections[0].rows[0];
+  const row = data.sections.find(section => section.title === '用户列表').rows[0];
   const formValues = { email: 'new@example.test', email_verified: true, isAdmin: false, balance: '12', team_id: '3', rate_limit_rpm: '20', rate_limit_tpm: '200', tags: 'ops,urgent' };
   await row.run({ choose: async () => 'edit', form: async () => formValues, confirm: async () => false, notify() {}, refresh: async () => {} });
   assert.equal(calls.some(call => call.options.method === 'PUT'), false);
