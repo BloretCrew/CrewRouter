@@ -1,6 +1,6 @@
 # CrewRouter Python SDK
 
-Official Python SDK for the CrewRouter AI model gateway. Current planned pre-release: **27.0 Beta** (`27.0.0b2`).
+Official Python SDK for the CrewRouter AI model gateway. Current planned pre-release: **27.0 Beta** (`27.0.0b3`).
 
 
 - OpenAI Chat Completions, Anthropic Messages and OpenAI Responses, including SSE streaming.

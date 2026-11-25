@@ -14,7 +14,7 @@ for (const file of files) {
   if (!doc || typeof doc !== 'object' || !doc.jobs) throw new Error(`${file} did not parse into jobs`);
 }
 const beta = parse(await readFile(files[2], 'utf8'));
-if (JSON.stringify(beta.on.push.tags) !== JSON.stringify(['v27.0.0-beta.2'])) throw new Error('beta workflow must only publish the explicitly versioned candidate tag');
+if (JSON.stringify(beta.on.push.tags) !== JSON.stringify(['v27.0.0-beta.3'])) throw new Error('beta workflow must only publish the explicitly versioned candidate tag');
 const manualDryRun = beta.jobs.desktop.if?.includes('inputs.dry_run') && beta.jobs['npm-beta-candidate'].if?.includes('inputs.dry_run');
 if (!manualDryRun || beta.jobs['npm-beta-candidate'].needs.join(',') !== 'gate,server,desktop') throw new Error('manual dry-run must build server, desktop and npm candidate assets from one SHA');
 const prereleaseDownloadNames = beta.jobs['github-prerelease'].steps.filter(step => step.uses === 'actions/download-artifact@v4').map(step => step.with?.pattern);
@@ -30,9 +30,9 @@ const betaGoClient = await readFile('sdk/go/http.go', 'utf8');
 const betaPythonClient = await readFile('sdk/python/src/crewrouter/_http.py', 'utf8');
 const betaPythonInit = await readFile('sdk/python/src/crewrouter/__init__.py', 'utf8');
 const betaNodeClient = await readFile('sdk/typescript/src/http.ts', 'utf8');
-if (!betaGoModule.includes('27.0.0-beta.2') || !betaGoClient.includes('crewrouter-sdk-go/27.0.0-beta.2') || !betaPythonClient.includes('crewrouter-sdk-python/27.0.0-beta.2') || !betaPythonInit.includes('__version__ = "27.0.0b2"') || !betaNodeClient.includes('crewrouter-sdk-node/27.0.0-beta.2')) throw new Error('Beta SDK module and user-agent versions are not synchronized');
+if (!betaGoModule.includes('27.0.0-beta.3') || !betaGoClient.includes('crewrouter-sdk-go/27.0.0-beta.3') || !betaPythonClient.includes('crewrouter-sdk-python/27.0.0-beta.3') || !betaPythonInit.includes('__version__ = "27.0.0b3"') || !betaNodeClient.includes('crewrouter-sdk-node/27.0.0-beta.3')) throw new Error('Beta SDK module and user-agent versions are not synchronized');
 if (beta.jobs['npm-beta-publish'].steps.find(step => step.name === 'Confirm npm package ownership and publish candidate packages')?.run?.includes('--tag latest')) throw new Error('Beta npm publication must not move the latest dist-tag');
-if (!versionGate?.env?.DISPATCH_VERSION?.endsWith('-beta.2') || beta.env?.PRODUCT_VERSION !== versionGate.env?.DISPATCH_VERSION) throw new Error('Beta release workflow version constants disagree');
+if (!versionGate?.env?.DISPATCH_VERSION?.endsWith('-beta.3') || beta.env?.PRODUCT_VERSION !== versionGate.env?.DISPATCH_VERSION) throw new Error('Beta release workflow version constants disagree');
 if (!beta.jobs['gate'].steps.some(step => step.name === 'Verify npm beta names are unclaimed' && step.if?.includes("github.event_name == 'push'"))) throw new Error('npm package ownership must be checked only on tag publish');
 const desktopWorkflow = parse(await readFile(files[1], 'utf8'));
 for (const event of ['push', 'pull_request']) {

@@ -21,7 +21,7 @@ import type {
 const DEFAULT_MANAGEMENT_TIMEOUT_MS = 30_000;
 const DEFAULT_GATEWAY_TIMEOUT_MS = 600_000;
 const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 120_000;
-const DEFAULT_USER_AGENT = 'crewrouter-sdk-node/27.0.0-beta.2';
+const DEFAULT_USER_AGENT = 'crewrouter-sdk-node/27.0.0-beta.3';
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {

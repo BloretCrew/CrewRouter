@@ -113,7 +113,7 @@ from .errors import (
 )
 from .generated.operations import CONTRACT_VERSION, OPERATIONS, OPERATION_LIST
 
-__version__ = "27.0.0b2"
+__version__ = "27.0.0b3"
 
 __all__ = [
     "AdminUser",

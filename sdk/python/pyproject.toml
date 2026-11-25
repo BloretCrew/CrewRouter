@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crewrouter-sdk"
-version = "27.0.0b2"
+version = "27.0.0b3"
 description = "CrewRouter SDK for the OpenAI/Anthropic-compatible gateway and management API"
 readme = "README.md"
 requires-python = ">=3.9"
