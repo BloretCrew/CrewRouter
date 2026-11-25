@@ -158,13 +158,25 @@ function createAdminPages(runtime) {
         const sort = runtime.leaderboardSort || 'tokens';
         const data = await api('/api/user/leaderboard', { query: { days, sort } });
         const items = array(data && data.leaderboard);
-        return { sections: [{ title: '排行榜', toolbar: true, tableMinWidth: 114, columns: [
-          { key: 'rank', label: '排名', ratio: 0.1 }, { key: 'username', label: '用户', ratio: 0.21 }, { key: 'requests', label: '请求次数', ratio: 0.16 },
-          { key: 'tokens', label: 'Token 用量', ratio: 0.18 }, { key: 'points', label: '消费积分', ratio: 0.14 }, { key: 'cache', label: '缓存命中率', ratio: 0.11 }, { key: 'balance', label: '余额积分', ratio: 0.1 },
-        ], description: `最近 ${days} 天 · 按 ${sort === 'tokens' ? 'Token 用量' : sort === 'requests' ? '请求次数' : sort === 'points' ? '消费积分' : sort === 'cache' ? '缓存命中率' : '余额积分'} 排序`, rows: items.length ? items.map((item, index) => ({ label: item.username || '未知用户', cells: {
-          rank: `#${index + 1}`, username: item.username || '未知用户', requests: `${Number(item.totalRequests || 0).toLocaleString()} 次`,
-          tokens: `${formatBigNumber(item.totalTokens)} Token`, points: `${Number(item.totalPoints || 0).toFixed(2)} 积分`, cache: `${item.cacheHitRate || 0}%`, balance: `${Number(item.balance || 0).toFixed(2)} 积分`,
-        } })) : [{ label: '暂无排行数据。' }] }], actions: [
+        const sortLabels = { tokens: 'Token 数', requests: '请求数', points: '消耗积分', cache: '缓存命中率', balance: '当前余额' };
+        const currentUserRank = Number(data && data.currentUserRank) || 0;
+        const totalUsers = Number(data && data.totalUsers) || items.length;
+        return { sections: [
+          { title: '排行榜', toolbar: true, tableMinWidth: 114, columns: [
+            { key: 'rank', label: '排名', ratio: 0.1 }, { key: 'username', label: '用户', ratio: 0.21 }, { key: 'requests', label: '请求数', ratio: 0.16 },
+            { key: 'tokens', label: 'Token 数', ratio: 0.18 }, { key: 'points', label: '消耗积分', ratio: 0.14 }, { key: 'cache', label: '缓存命中率', ratio: 0.11 }, { key: 'balance', label: '当前余额', ratio: 0.1 },
+          ], description: `最近 ${days} 天 · 按 ${sortLabels[sort] || sortLabels.tokens} 排序`, rows: items.length ? items.map((item, index) => {
+            const rank = Number(item.rank) > 0 ? Number(item.rank) : index + 1;
+            return { label: item.username || '未知用户', cells: {
+              rank: `#${rank}`, username: `${item.username || '未知用户'}${item.isCurrentUser ? ' · 我' : ''}`, requests: Number(item.totalRequests || 0).toLocaleString(),
+              tokens: formatBigNumber(item.totalTokens), points: Number(item.totalPoints || 0).toFixed(2), cache: `${Number(item.cacheHitRate || 0).toFixed(1)}%`, balance: Number(item.balance || 0).toFixed(2),
+            } };
+          }) : [{ label: '暂无排行数据。' }] },
+          { title: '排行榜汇总', rows: [
+            { label: `共 ${totalUsers.toLocaleString()} 名活跃用户` },
+            ...(currentUserRank > 0 ? [{ label: `您的排名：第 ${currentUserRank} 名` }] : []),
+          ] },
+        ], actions: [
           ...[7, 30, 90, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.leaderboardDays = value; await ctx.refresh(); } })),
           ...[['tokens', '按 Token 用量排序'], ['requests', '按请求次数排序'], ['points', '按消费积分排序'], ['cache', '按缓存命中率排序'], ['balance', '按余额积分排序']].map(([value, label]) => ({ label, toolbar: true, run: async ctx => { runtime.leaderboardSort = value; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },

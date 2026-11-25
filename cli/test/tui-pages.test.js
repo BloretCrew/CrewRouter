@@ -3,6 +3,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buildPages, WEB_PAGE_MAP, navGroups, navAreas, PAGE_CAPABILITIES } = require('../tui/pages');
+const { runPagedTui } = require('../tui/engine');
+const { terminal, until } = require('./helpers/tty');
 
 function runtime(isAdmin = true) {
   return { client: { isAdmin }, cfg: { tui: { days: 30 } }, profileName: 'test', baseUrl: 'http://localhost' };
@@ -144,12 +146,31 @@ test('project date query sends the web API range parameters', async () => {
   assert.equal(projectSection.rows[0].cells.tokens, '100 Token');
 });
 
+test('leaderboard renders web column order, current-user marker and footer totals', { timeout: 15000 }, async () => {
+  const page = buildPages(runtime(false)).find(item => item.id === 'leaderboard');
+  const tty = terminal(160, 36);
+  const api = async path => path === '/api/user/leaderboard' ? { totalUsers: 23, currentUserRank: 4, leaderboard: [{ rank: 4, username: 'alice', isCurrentUser: true, totalRequests: 12, totalTokens: 2400, totalPoints: 3.25, cacheHitRate: 20, balance: 9.5 }] } : {};
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api, pages: [page], authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('当前余额'));
+    const screen = tty.screen();
+    const headerLine = screen.split('\n').find(line => ['排名', '用户', '请求数', 'Token 数', '消耗积分', '缓存命中率', '当前余额'].every(value => line.includes(value)));
+    assert.ok(headerLine, 'expected the complete leaderboard column header row');
+    const positions = ['排名', '用户', '请求数', 'Token 数', '消耗积分', '缓存命中率', '当前余额'].map(value => headerLine.indexOf(value));
+    assert.ok(positions.every((value, index) => index === 0 || positions[index - 1] < value), `unexpected leaderboard column order: ${positions.join(',')}`);
+    assert.ok(screen.includes('alice · 我'));
+    assert.ok(screen.includes('20.0%'));
+    assert.ok(screen.includes('共 23 名活跃用户'));
+    assert.ok(screen.includes('您的排名：第 4 名'));
+  } finally { tty.input.write('q'); await task; }
+});
+
 test('leaderboard presents token, request, points, cache and balance fields as web columns', async () => {
   const page = buildPages(runtime(false)).find(item => item.id === 'leaderboard');
-  const data = await page.load(async () => ({ leaderboard: [{ username: 'alice', totalRequests: 12, totalTokens: 2400, totalPoints: 3.25, cacheHitRate: 20, balance: 9.5 }] }));
+  const data = await page.load(async () => ({ totalUsers: 23, currentUserRank: 4, leaderboard: [{ rank: 4, username: 'alice', isCurrentUser: true, totalRequests: 12, totalTokens: 2400, totalPoints: 3.25, cacheHitRate: 20, balance: 9.5 }] }));
   const section = data.sections[0];
-  assert.deepEqual(section.columns.map(column => column.label), ['排名', '用户', '请求次数', 'Token 用量', '消费积分', '缓存命中率', '余额积分']);
-  assert.equal(section.rows[0].cells.tokens, '2.4K Token');
-  assert.equal(section.rows[0].cells.balance, '9.50 积分');
+  assert.deepEqual(section.columns.map(column => column.label), ['排名', '用户', '请求数', 'Token 数', '消耗积分', '缓存命中率', '当前余额']);
+  assert.deepEqual(section.rows[0].cells, { rank: '#4', username: 'alice · 我', requests: '12', tokens: '2.4K', points: '3.25', cache: '20.0%', balance: '9.50' });
+  assert.deepEqual(data.sections[1].rows.map(row => row.label), ['共 23 名活跃用户', '您的排名：第 4 名']);
   assert.ok(data.actions.some(action => action.label === '最近 30 天' && action.toolbar));
 });
