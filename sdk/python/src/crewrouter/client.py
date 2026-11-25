@@ -444,6 +444,20 @@ class UserUsageLog(TypedDict, total=False):
     provider_name: Optional[str]
 
 
+class AdminStatsFilterOption(TypedDict):
+    id: Union[int, str]
+    name: str
+
+
+class AdminStatsFiltersResponse(TypedDict):
+    users: list[AdminStatsFilterOption]
+    teams: list[AdminStatsFilterOption]
+    models: list[AdminStatsFilterOption]
+    providers: list[AdminStatsFilterOption]
+    sources: list[AdminStatsFilterOption]
+    projects: list[AdminStatsFilterOption]
+
+
 class AdminUsageLog(UserUsageLog, total=False):
     custom_instruction_count: int
     username: Optional[str]

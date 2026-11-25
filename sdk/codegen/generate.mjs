@@ -540,6 +540,17 @@ function managementSchemas() {
       total: { type: 'integer' }, page: { type: 'integer' },
       logs: { type: 'array', items: { $ref: '#/components/schemas/AdminUsageLog' } },
     }, ['total', 'page', 'logs']),
+    AdminStatsFilterOption: object({
+      id: { oneOf: [{ type: 'integer' }, { type: 'string' }] }, name: { type: 'string' },
+    }, ['id', 'name']),
+    AdminStatsFiltersResponse: object({
+      users: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
+      teams: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
+      models: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
+      providers: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
+      sources: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
+      projects: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
+    }, ['users', 'teams', 'models', 'providers', 'sources', 'projects']),
     AdminProduct: object({
       id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
       price: numberOrString, image_url: nullableString, link: nullableString,
@@ -733,7 +744,7 @@ function managementResponseSchema(operationId) {
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
     'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },
-    'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },
+    'admin.stats.multi.filters.list': { $ref: '#/components/schemas/AdminStatsFiltersResponse' },
     'admin.providerTags.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProviderTag' } },
     'admin.providerTags.create': { $ref: '#/components/schemas/AdminProviderTagUpdateResponse' },
     'admin.providerTags.byId.update': { $ref: '#/components/schemas/AdminProviderTagUpdateResponse' },

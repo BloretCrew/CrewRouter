@@ -43,6 +43,8 @@ export type {
   AdminUsersResponse,
   AdminUsageLog,
   AdminUsageLogsResponse,
+  AdminStatsFilterOption,
+  AdminStatsFiltersResponse,
   ApiKeyTag,
   ApiKeyTagsResponse,
   ApiKeyModelQueueItem,

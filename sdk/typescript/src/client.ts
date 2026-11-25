@@ -5,6 +5,7 @@ import type {
   AnthropicMessagesRequest,
   AdminUsersResponse,
   AdminUsageLogsResponse,
+  AdminStatsFiltersResponse,
   AdminProduct,
   AdminProviderTag,
   AdminProviderTagUpdateResponse,
@@ -297,6 +298,10 @@ export class CrewRouter {
     usageLogs: {
       list: <T = AdminUsageLogsResponse>(query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.usageLogs.list', { ...options, query }),
+    },
+    stats: {
+      filters: <T = AdminStatsFiltersResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.stats.multi.filters.list', options),
     },
     models: {
       list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>

@@ -374,6 +374,20 @@ export interface TeamMember {
   created_at: string;
 }
 
+export interface AdminStatsFilterOption {
+  id: number | string;
+  name: string;
+}
+
+export interface AdminStatsFiltersResponse {
+  users: AdminStatsFilterOption[];
+  teams: AdminStatsFilterOption[];
+  models: AdminStatsFilterOption[];
+  providers: AdminStatsFilterOption[];
+  sources: AdminStatsFilterOption[];
+  projects: AdminStatsFilterOption[];
+}
+
 export interface AdminUsageLog extends UserUsageLog {
   custom_instruction_count: number;
   username: string | null;

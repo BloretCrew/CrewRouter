@@ -17,6 +17,7 @@ from crewrouter import (
     AdminProduct,
     AdminUsageLog,
     AdminUsageLogsResponse,
+    AdminStatsFiltersResponse,
     AdminProviderTag,
     AdminProviderTagUpdateResponse,
     AdminUsersPage,
@@ -186,6 +187,7 @@ class TypedRequestTests(unittest.TestCase):
         admin_user: AdminUser = {"id": 9, "username": "alice", "email": None, "email_verified": False, "avatar": None, "balance": "1.5", "refund_balance": "0", "is_admin": False, "tags": [], "rate_limit_rpm": 0, "rate_limit_tpm": 0, "created_at": "2026-01-01T00:00:00Z", "team_id": None, "team_name": None}
         admin_usage_log: AdminUsageLog = {**usage_log, "username": "alice", "custom_instruction_count": 0}
         admin_usage_logs: AdminUsageLogsResponse = {"total": 1, "page": 1, "logs": [admin_usage_log]}
+        admin_stats_filters: AdminStatsFiltersResponse = {"users": [{"id": 9, "name": "alice"}], "teams": [{"id": 2, "name": "Team"}], "models": [{"id": "m1", "name": "Model"}], "providers": [{"id": "p1", "name": "Provider"}], "sources": [{"id": "claude_code", "name": "Claude Code"}], "projects": [{"id": "/workspace", "name": "/workspace"}]}
         admin_page: AdminUsersPage = {"items": [admin_user], "total": 1, "page": 1, "limit": 50, "stats": {"adminCount": 0, "verifiedCount": 0, "totalBalance": 1.5}}
         team_rule: TeamQuotaRule = {"id": "team-rule-1", "rule_type": "requests", "rule_value": 100, "duration_hours": 24, "description": "daily cap"}
         admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
@@ -202,6 +204,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertTrue(commands_response["crewrouter_commands"])
         self.assertEqual(admin_page["items"][0]["username"], "alice")
         self.assertEqual(admin_usage_logs["logs"][0]["custom_instruction_count"], 0)
+        self.assertEqual(admin_stats_filters["projects"][0]["id"], "/workspace")
         self.assertIsNone(team_member["email"])
         self.assertIsNone(team_model["mapping_id"])
         self.assertEqual(admin_provider_tag["sort_order"], 0)

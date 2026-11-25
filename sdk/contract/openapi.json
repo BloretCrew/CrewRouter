@@ -1148,6 +1148,79 @@
         ],
         "additionalProperties": true
       },
+      "AdminStatsFilterOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "AdminStatsFiltersResponse": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminStatsFilterOption"
+            }
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminStatsFilterOption"
+            }
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminStatsFilterOption"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminStatsFilterOption"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminStatsFilterOption"
+            }
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminStatsFilterOption"
+            }
+          }
+        },
+        "required": [
+          "users",
+          "teams",
+          "models",
+          "providers",
+          "sources",
+          "projects"
+        ],
+        "additionalProperties": true
+      },
       "AdminProduct": {
         "type": "object",
         "properties": {
@@ -10978,8 +11051,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/AdminStatsFiltersResponse"
                 }
               }
             }

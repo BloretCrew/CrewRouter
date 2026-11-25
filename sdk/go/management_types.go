@@ -64,6 +64,22 @@ type TeamMember struct {
 	CreatedAt string  `json:"created_at"`
 }
 
+// AdminStatsFilterOption is a model/provider/source/project filter value.
+type AdminStatsFilterOption struct {
+	ID   any    `json:"id"`
+	Name string `json:"name"`
+}
+
+// AdminStatsFiltersResponse contains the administrator multi-stat filter choices.
+type AdminStatsFiltersResponse struct {
+	Users     []AdminStatsFilterOption `json:"users"`
+	Teams     []AdminStatsFilterOption `json:"teams"`
+	Models    []AdminStatsFilterOption `json:"models"`
+	Providers []AdminStatsFilterOption `json:"providers"`
+	Sources   []AdminStatsFilterOption `json:"sources"`
+	Projects  []AdminStatsFilterOption `json:"projects"`
+}
+
 // AdminUsageLog is a user usage log row enriched with administrator-visible username/count fields.
 type AdminUsageLog struct {
 	UserUsageLog
