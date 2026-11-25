@@ -124,6 +124,32 @@ test('admin general settings and request capture use readable web fields with va
   assert.deepEqual(calls.find(call => call.path === '/api/admin/request-quota-config' && call.options.method === 'PUT').options.body, { enabled: false, mode: 'async', reconciliation_seconds: 0, max_tries: 2, worker_interval_ms: 1000, batch_size: 8, lease_seconds: 90 });
 });
 
+test('admin Agent Web settings expose web fields with masked keys and validated complete updates', async () => {
+  const calls = [];
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const agentConfig = { search: { enabled: true, provider: 'brave', apiKey: '[configured]', hasApiKey: true, maxResults: 4, timeoutMs: 6000 }, fetch: { enabled: true, maxBytes: 524288, timeoutMs: 9000 } };
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/settings') return {}; if (path === '/api/admin/request-quota-config') return {}; if (path === '/api/admin/agent-web') return agentConfig; if (path === '/api/admin/retention-config') return {}; if (path === '/api/admin/feishu-login') return {}; return {}; };
+  const page = buildPages(runtime).find(item => item.id === 'admin-settings');
+  const data = await page.load(api);
+  const section = data.sections.find(item => item.title === 'Agent Web 资料设置');
+  assert.deepEqual(section.cards.map(card => card.label), ['联网搜索', '搜索结果数', '搜索超时', '链接抓取']);
+  assert.match(section.cards[0].detail, /Brave Search.*API Key：已配置（不显示密钥）/);
+  assert.ok(section.rows.some(row => row.label === '抓取内容上限：512 KB'));
+  assert.doesNotMatch(JSON.stringify(section), /\\[configured\\]/);
+  const action = data.actions.find(item => item.label === '编辑 Agent Web 设置');
+  let formFields;
+  const values = { search_enabled: true, provider: 'brave', apiKey: '', clearApiKey: false, maxResults: '6', searchTimeoutMs: '10000', fetch_enabled: true, maxBytes: '1048576', fetchTimeoutMs: '12000' };
+  await action.run({ form: async (_title, fields) => { formFields = fields; return values; }, confirm: async () => false });
+  assert.deepEqual(formFields.map(field => field.name), ['search_enabled', 'provider', 'apiKey', 'clearApiKey', 'maxResults', 'searchTimeoutMs', 'fetch_enabled', 'maxBytes', 'fetchTimeoutMs']);
+  assert.equal(calls.some(call => call.path === '/api/admin/agent-web' && call.options.method === 'PUT'), false);
+  await action.run({ form: async () => values, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path === '/api/admin/agent-web' && call.options.method === 'PUT').options.body, { search: { enabled: true, provider: 'brave', maxResults: 6, timeoutMs: 10000 }, fetch: { enabled: true, maxBytes: 1048576, timeoutMs: 12000 } });
+  let invalidNotice = '';
+  await action.run({ form: async () => ({ ...values, maxResults: '9' }), show: async (_title, message) => { invalidNotice = message; } });
+  assert.match(invalidNotice, /搜索结果数须为 1-8/);
+  assert.equal(calls.filter(call => call.path === '/api/admin/agent-web' && call.options.method === 'PUT').length, 1);
+});
+
 test('admin proxy pool settings redact credentials and manage subscription/manual proxy drafts safely', async () => {
   const calls = [];
   const runtime = { client: { isAdmin: true, baseUrl: 'https://router.example' }, cfg: { tui: { days: 30 } }, profileName: 'test' };

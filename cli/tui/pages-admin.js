@@ -1647,7 +1647,16 @@ function createAdminPages(runtime) {
             { label: `任务租约：${quotaValues.lease_seconds} 秒`, detail: '工作进程处理任务时的锁定时长，超时后任务可重新领取。' },
             ...(quotaResult.status === 'rejected' ? [{ label: `请求额度采集配置读取失败：${quotaResult.reason.message || '未知错误'}` }] : []),
           ] },
-          { title: 'Agent Web（密钥已脱敏）', rows: toRows(agent, agentResult.status === 'rejected' ? agentResult.reason : null) },
+          { title: 'Agent Web 资料设置', cards: [
+            { label: '联网搜索', value: agent.search?.enabled === true ? '已启用' : '已关闭', detail: `服务：${({ brave: 'Brave Search', tavily: 'Tavily', exa: 'Exa', firecrawl: 'Firecrawl', serper: 'Serper' })[agent.search?.provider] || agent.search?.provider || 'Tavily'} · API Key：${agent.search?.hasApiKey || agent.search?.apiKey === '[configured]' ? '已配置（不显示密钥）' : '未配置'}` },
+            { label: '搜索结果数', value: `${Number(agent.search?.maxResults ?? 5)} 条` },
+            { label: '搜索超时', value: `${Number(agent.search?.timeoutMs ?? 8000)} 毫秒` },
+            { label: '链接抓取', value: agent.fetch?.enabled === false ? '已关闭' : '已启用' },
+          ], rows: [
+            { label: `抓取内容上限：${Math.round(Number(agent.fetch?.maxBytes ?? 1048576) / 1024)} KB` },
+            { label: `链接抓取超时：${Number(agent.fetch?.timeoutMs ?? 10000)} 毫秒` },
+            ...(agentResult.status === 'rejected' ? [{ label: `Agent Web 配置读取失败：${agentResult.reason.message || '未知错误'}` }] : []),
+          ] },
           { title: '数据保留', rows: toRows(retention, retentionResult.status === 'rejected' ? retentionResult.reason : null) },
           { title: '飞书登录（密钥已脱敏）', rows: toRows(feishu, feishuResult.status === 'rejected' ? feishuResult.reason : null) },
         ], actions: [
@@ -1700,12 +1709,17 @@ function createAdminPages(runtime) {
             if (!await ctx.confirm('保存请求额度采集', `状态：${body.enabled ? '启用' : '关闭'} · 模式：${body.mode === 'async' ? '异步持久采集' : '请求前后精细采集'}\n对账等待 ${body.reconciliation_seconds} 秒 · 最多尝试 ${body.max_tries} 次\n队列间隔 ${body.worker_interval_ms} 毫秒 · 每批 ${body.batch_size} 个任务 · 占用 ${body.lease_seconds} 秒`)) return;
             await api('/api/admin/request-quota-config', { method: 'PUT', body }); ctx.notify('请求额度采集配置已保存。'); await ctx.refresh();
           } },
-          { label: '编辑 Agent Web 配置', run: async ctx => { const search = agent.search || {}; const fetch = agent.fetch || {}; const values = await ctx.form('编辑 Agent Web 配置', [
+          { label: agentResult.status === 'rejected' ? '编辑 Agent Web 设置（不可用）' : '编辑 Agent Web 设置', disabled: agentResult.status === 'rejected', run: async ctx => { const search = agent.search || {}; const fetch = agent.fetch || {}; const values = await ctx.form('编辑 Agent Web 设置', [
             { name: 'search_enabled', label: '启用联网搜索', type: 'boolean', value: search.enabled === true },
-            { name: 'provider', label: '搜索提供方', value: search.provider || '', options: ['brave', 'tavily', 'exa', 'firecrawl'] },
-            { name: 'apiKey', label: 'API Key（已设密钥留空可保留）', secret: true },
-            { name: 'fetch_enabled', label: '启用链接抓取', type: 'boolean', value: fetch.enabled !== false },
-          ]); if (!values) return; if (!await ctx.confirm('保存 Agent Web 配置', `联网搜索 ${values.search_enabled ? '开启' : '关闭'}\n提供方 ${values.provider}\n链接抓取 ${values.fetch_enabled ? '开启' : '关闭'}\n密钥不会在界面回显。`)) return; await api('/api/admin/agent-web', { method: 'PUT', body: { search: { enabled: values.search_enabled, provider: values.provider, ...(values.apiKey ? { apiKey: values.apiKey } : {}) }, fetch: { enabled: values.fetch_enabled } } }); ctx.notify('Agent Web 配置已保存。'); await ctx.refresh(); } },
+            { name: 'provider', label: '搜索服务', value: search.provider || 'tavily', options: [{ value: 'tavily', label: 'Tavily' }, { value: 'brave', label: 'Brave Search' }, { value: 'serper', label: 'Serper' }] },
+            { name: 'apiKey', label: `搜索服务 API Key（${search.hasApiKey || search.apiKey === '[configured]' ? '留空保留现有密钥' : '未配置'}）`, secret: true },
+            { name: 'clearApiKey', label: '删除已保存的搜索服务 API Key', type: 'boolean', value: false },
+            { name: 'maxResults', label: '最多搜索结果数（1-8）', value: String(search.maxResults ?? 5) },
+            { name: 'searchTimeoutMs', label: '搜索超时（1000-15000 毫秒）', value: String(search.timeoutMs ?? 8000) },
+            { name: 'fetch_enabled', label: '允许抓取链接', type: 'boolean', value: fetch.enabled !== false },
+            { name: 'maxBytes', label: '单页抓取内容上限（65536-8388608 字节）', value: String(fetch.maxBytes ?? 1048576) },
+            { name: 'fetchTimeoutMs', label: '链接抓取超时（1000-30000 毫秒）', value: String(fetch.timeoutMs ?? 10000) },
+          ], { description: '密钥只在输入时发送，界面不会回显。已配置密钥留空表示保留；只有明确勾选“删除密钥”才会移除。' }); if (!values) return; const maxResults = Number(values.maxResults), searchTimeoutMs = Number(values.searchTimeoutMs), maxBytes = Number(values.maxBytes), fetchTimeoutMs = Number(values.fetchTimeoutMs); if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 8 || !Number.isInteger(searchTimeoutMs) || searchTimeoutMs < 1000 || searchTimeoutMs > 15000 || !Number.isInteger(maxBytes) || maxBytes < 65536 || maxBytes > 8388608 || !Number.isInteger(fetchTimeoutMs) || fetchTimeoutMs < 1000 || fetchTimeoutMs > 30000) { await ctx.show('Agent Web 参数无效', '搜索结果数须为 1-8；搜索超时为 1000-15000 毫秒；抓取上限为 65536-8388608 字节；抓取超时为 1000-30000 毫秒。'); return; } if (values.search_enabled && !(values.apiKey || search.hasApiKey || search.apiKey === '[configured]') && !values.clearApiKey) { await ctx.show('缺少搜索 API Key', '启用联网搜索前必须配置所选服务的 API Key。'); return; } if (values.clearApiKey && values.apiKey) { await ctx.show('密钥操作冲突', '请勿同时填写新密钥并勾选删除密钥。'); return; } if (!await ctx.confirm('保存 Agent Web 设置', `联网搜索：${values.search_enabled ? '开启' : '关闭'} · 服务：${values.provider}\n搜索结果：${maxResults} 条 · 搜索超时：${searchTimeoutMs} 毫秒\n链接抓取：${values.fetch_enabled ? '开启' : '关闭'} · 内容上限：${Math.round(maxBytes / 1024)} KB · 超时：${fetchTimeoutMs} 毫秒\nAPI Key：${values.clearApiKey ? '删除已保存密钥' : values.apiKey ? '更新密钥' : '保持现状'}`)) return; await api('/api/admin/agent-web', { method: 'PUT', body: { search: { enabled: values.search_enabled === true, provider: values.provider, maxResults, timeoutMs: searchTimeoutMs, ...(values.apiKey ? { apiKey: values.apiKey } : {}), ...(values.clearApiKey ? { clearApiKey: true } : {}) }, fetch: { enabled: values.fetch_enabled === true, maxBytes, timeoutMs: fetchTimeoutMs } } }); ctx.notify('Agent Web 设置已保存。'); await ctx.refresh(); } },
           { label: '查看弹窗通知', run: async ctx => { await ctx.navigate('admin-popups'); } },
           { label: '查看数据保留', run: async ctx => { await ctx.navigate('admin-retention'); } },
           { label: '编辑飞书登录', run: async ctx => { const values = await ctx.form('编辑飞书登录', [{ name: 'enabled', label: '启用飞书登录', type: 'boolean', value: feishu.enabled === true }, { name: 'appId', label: 'App ID', value: feishu.appId || '' }, { name: 'appSecret', label: 'App Secret（留空保留现有密钥）', secret: true }, { name: 'tenantKey', label: 'Tenant Key', value: feishu.tenantKey || '' }]); if (!values) return; if (values.enabled && (!values.appId || (!values.appSecret && !feishu.hasAppSecret))) { await ctx.show('配置不完整', '启用飞书登录需要 App ID 与 App Secret。'); return; } if (!await ctx.confirm('保存飞书登录配置', `启用：${values.enabled}\nApp ID：${values.appId}\n密钥不会回显。`)) return; await api('/api/admin/feishu-login', { method: 'PUT', body: values }); ctx.notify('飞书登录配置已保存。'); await ctx.refresh(); } },
