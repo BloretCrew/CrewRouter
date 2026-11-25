@@ -130,20 +130,20 @@ function createAdminPages(runtime) {
             { label: 'AI 请求次数', value: text(summary.requests, '0') }, { label: 'Token 用量', value: formatBigNumber(summary.tokens) },
             { label: '最近活动', value: summary.last_activity ? formatTime(summary.last_activity) : '—' },
           ], rows: summary.analysis_status ? [{ label: `待整理请求：${summary.analysis_status.pending_requests || 0}` }] : [] },
-          { title: '最近活跃项目', rows: projects.slice(0, 4).map((item, index) => ({ label: display(`#${index + 1}`, item.workspace_path), detail: display(`${Number(item.requests || 0).toLocaleString()} 次请求`, `${formatBigNumber(item.tokens)} Token`, item.last_activity && formatTime(item.last_activity)), run: async ctx => {
+          { title: '每日活动', description: '按日期查看 AI 请求和活跃工作区数量。', tableMinWidth: 84, columns: [{ key: 'date', label: '日期', ratio: 0.45 }, { key: 'requests', label: '请求数', ratio: 0.3 }, { key: 'projects', label: '活跃项目数', ratio: 0.25 }], rows: array(data.daily).slice(-30).map(item => ({ label: item.date || '未知日期', cells: { date: item.date || '未知日期', requests: `${Number(item.requests || 0).toLocaleString()} 次`, projects: `${Number(item.projects || 0)} 个` } })) },
+          { title: '最近活跃项目', description: '按最近活动排序。选择项目可查看安全引用的切换目录命令。', rows: projects.slice(0, 4).map((item, index) => ({ label: display(`#${index + 1}`, item.workspace_path), detail: display(`${Number(item.requests || 0).toLocaleString()} 次请求`, `${formatBigNumber(item.tokens)} Token`, item.last_activity && formatTime(item.last_activity)), run: async ctx => {
             const workspace = String(item.workspace_path || '');
             if (!workspace) { await ctx.show('工作区路径不可用', '此项目没有记录工作区路径。'); return; }
             const shellPath = `'${workspace.replace(/'/g, `'\\''`)}'`;
             await ctx.show('工作区路径', `项目：${workspace}\n切换目录命令：cd -- ${shellPath}\n\n请使用终端的复制快捷键复制命令或路径；CLI 不会调用系统剪贴板。`);
           } })) },
-          { title: '项目工作台', tableMinWidth: 118, columns: [
-            { key: 'workspace', label: '工作区', ratio: 0.38 }, { key: 'requests', label: '请求数', ratio: 0.15 }, { key: 'tokens', label: 'Token 用量', ratio: 0.16 },
-            { key: 'active_days', label: '活跃天数', ratio: 0.13 }, { key: 'cost', label: '费用（积分）', ratio: 0.18 },
+          { title: '项目工作台', tableMinWidth: 150, columns: [
+            { key: 'workspace', label: '工作区', ratio: 0.3 }, { key: 'requests', label: '请求', ratio: 0.13 }, { key: 'tokens', label: 'Token', ratio: 0.14 },
+            { key: 'active_days', label: '活跃天数', ratio: 0.12 }, { key: 'last_activity', label: '最近活动', ratio: 0.13 }, { key: 'sources', label: '客户端', ratio: 0.1 }, { key: 'cost', label: '费用（积分）', ratio: 0.08 },
           ], rows: projects.length ? projects.map(item => ({ label: item.workspace_path || '未知工作区', cells: {
             workspace: item.workspace_path || '未知工作区', requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`,
-            active_days: `${Number(item.active_days || 0)} 天`, cost: `${formatCost(item.cost)} 积分`,
-          }, detail: Object.keys(item.sources || {}).length ? `客户端：${Object.keys(item.sources).join('、')}` : '' })) : [{ label: '暂无项目活动。' }] },
-          { title: '每日活动', tableMinWidth: 84, columns: [{ key: 'date', label: '日期', ratio: 0.45 }, { key: 'requests', label: '请求数', ratio: 0.3 }, { key: 'projects', label: '活跃项目数', ratio: 0.25 }], rows: array(data.daily).slice(-30).map(item => ({ label: item.date || '未知日期', cells: { date: item.date || '未知日期', requests: `${Number(item.requests || 0).toLocaleString()} 次`, projects: `${Number(item.projects || 0)} 个` } })) },
+            active_days: `${Number(item.active_days || 0)} 天`, last_activity: item.last_activity ? formatTime(item.last_activity) : '—', sources: Object.keys(item.sources || {}).join('、') || '未标记', cost: `${formatCost(item.cost)} 积分`,
+          } })) : [{ label: '暂无项目活动。' }] },
         ], pageToolbar: true, actions: [
           { label: '选择时间范围', toolbar: 'page', run: async ctx => { const range = await ctx.choose('项目统计时间范围', [...[7, 30, 90, 180, 365].map(value => ({ label: value === 365 ? '最近 1 年' : `最近 ${value} 天`, value })), { label: '自定义日期范围', value: 'custom' }]); if (range === null) return; if (range !== 'custom') { runtime.projectDays = range; runtime.projectCustomRange = null; await ctx.refresh(); return; } const dates = await ctx.form('自定义日期范围', [{ name: 'start', label: '开始日期（YYYY-MM-DD）' }, { name: 'end', label: '结束日期（YYYY-MM-DD）' }]); if (!dates) return; const validDate = value => { const valueText = String(value || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(valueText)) return false; const parsed = new Date(`${valueText}T00:00:00Z`); return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === valueText; }; if (!validDate(dates.start) || !validDate(dates.end) || dates.start > dates.end) { await ctx.show('日期范围无效', '请输入有效日期，并确认结束日期不早于开始日期。'); return; } runtime.projectCustomRange = { start: dates.start, end: dates.end }; await ctx.refresh(); } },
           { label: '筛选客户端', toolbar: 'page', run: async ctx => { const options = [['', '全部客户端'], ['claude_code', 'Claude Code'], ['codex', 'Codex'], ['opencode', 'OpenCode'], ['grok', 'Grok'], ['qwen_code', 'Qwen Code'], ['hermes', 'Hermes'], ['openclaw', 'OpenClaw'], ['deepseek_harness', 'DeepSeek Harness'], ['unknown', '未知/其他']]; const value = await ctx.choose('客户端来源', options.map(([id, label]) => ({ label, value: id }))); if (value !== null) { runtime.projectSource = value; await ctx.refresh(); } } },

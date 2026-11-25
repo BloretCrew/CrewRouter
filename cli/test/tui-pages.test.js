@@ -132,6 +132,21 @@ test('error log filters use the actual admin API parameter names', async () => {
   assert.equal(calls.at(-1).options.query.is_final, undefined);
 });
 
+test('project work TUI renders summary, daily activity, recent projects and workspace table in web order', { timeout: 15000 }, async () => {
+  const page = buildPages(runtime(false)).find(item => item.id === 'projects');
+  const tty = terminal(160, 40);
+  const api = async () => ({ summary: { projects: 1, active_days: 2, requests: 3, tokens: 100, cost: 1.25 }, projects: [{ workspace_path: '/work/Example', requests: 3, tokens: 100, active_days: 2, last_activity: '2026-11-24T12:00:00Z', cost: 1.25, sources: { codex: 3 } }], daily: [{ date: '2026-11-24', requests: 3, projects: 1 }] });
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api, pages: [page], authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('/work/Example'));
+    const screen = tty.screen();
+    const positions = ['▸ 项目工作摘要', '▸ 每日活动', '▸ 最近活跃项目', '▸ 项目工作台'].map(value => screen.indexOf(value));
+    assert.ok(positions.every(value => value >= 0), `missing project section: ${positions.join(',')}`);
+    assert.ok(positions.every((value, index) => index === 0 || positions[index - 1] < value), `unexpected project section order: ${positions.join(',')}`);
+    for (const header of ['最近活动', '客户端', '费用（积分）']) assert.ok(screen.includes(header), `missing project table field: ${header}`);
+  } finally { tty.input.write('q'); await task; }
+});
+
 test('project date query sends the web API range parameters', async () => {
   const page = buildPages(runtime(false)).find(item => item.id === 'projects');
   const calls = [];
@@ -141,9 +156,12 @@ test('project date query sends the web API range parameters', async () => {
   await actions.find(action => action.label === '选择时间范围').run({ choose: async (_title, options) => options.find(option => option.value === 'custom').value, form, notify() {}, refresh: async () => {} });
   const data = await page.load(api);
   assert.deepEqual(calls.at(-1).options.query, { start: '2026-11-01', end: '2026-11-07' });
+  assert.deepEqual(data.sections.map(section => section.title), ['项目工作摘要', '每日活动', '最近活跃项目', '项目工作台']);
   const projectSection = data.sections.find(section => section.title === '项目工作台');
-  assert.deepEqual(projectSection.columns.map(column => column.label), ['工作区', '请求数', 'Token 用量', '活跃天数', '费用（积分）']);
+  assert.deepEqual(projectSection.columns.map(column => column.label), ['工作区', '请求', 'Token', '活跃天数', '最近活动', '客户端', '费用（积分）']);
   assert.equal(projectSection.rows[0].cells.tokens, '100 Token');
+  assert.equal(projectSection.rows[0].cells.sources, 'codex');
+  assert.equal(projectSection.rows[0].cells.last_activity, '—');
 });
 
 test('leaderboard renders web column order, current-user marker and footer totals', { timeout: 15000 }, async () => {
