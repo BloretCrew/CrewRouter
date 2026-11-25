@@ -185,7 +185,7 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 2, name: 'gateway', color: '#445566', sort_order: 1 }]);
       return;
     }
-    if (req.url === '/api/user/models/uptime') {
+    if (req.url.startsWith('/api/user/models/uptime') || req.url.startsWith('/api/admin/models/uptime')) {
       json(res, 200, { days: 1, hours: 24, slots: 96, granularity: '15m', items: { m1: { uptime_pct: null, label: 'No data', total_success: 0, total_fail: 0, spark: ['none'] } } });
       return;
     }
@@ -287,6 +287,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const uptime = await client.modelUptime.get();
   const uptimeDetail = await client.modelUptime.getDetail('m1');
   const adminUsageLogs = await client.admin.usageLogs.list({ page: 1 });
+  const adminUptime = await client.admin.models.getUptime({ days: 7 });
   const adminProducts = await client.admin.products.list();
   const teamMembers = await client.admin.teams.getMembers(2);
   const adminProviderTags = await client.admin.providerTags.list();
@@ -341,6 +342,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(uptimeDetail.data.days[0].status, 'none');
   assert.equal(adminUsageLogs.data.logs[0].custom_instruction_count, 0);
   assert.equal(adminUsageLogs.data.logs[0].username, 'alice');
+  assert.equal(adminUptime.data.granularity, '15m');
   assert.equal(adminProducts.data[0].price, '2.5');
   assert.equal(teamMembers.data[0].email, null);
   assert.equal(adminProviderTags.data[0].created_at, '2026-01-01T00:00:00.000Z');

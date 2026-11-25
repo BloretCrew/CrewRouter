@@ -298,6 +298,10 @@ export class CrewRouter {
     models: {
       list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.models.list', options),
+      getUptime: <T = ModelUptimeResponse>(query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.models.uptime.list', { ...options, query }),
+      getUptimeDetail: <T = ModelUptimeDetailResponse>(id: string, query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.models.byId.uptime.list', { ...options, pathParams: { ...(options?.pathParams || {}), id }, query }),
     },
     providers: {
       list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>

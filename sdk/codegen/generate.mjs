@@ -729,6 +729,8 @@ function managementResponseSchema(operationId) {
     'user.codeBalances.list': { type: 'array', items: { $ref: '#/components/schemas/UserCodeBalanceItem' } },
     'user.models.uptime.list': { $ref: '#/components/schemas/ModelUptimeResponse' },
     'user.models.byId.uptime.list': { $ref: '#/components/schemas/ModelUptimeDetailResponse' },
+    'admin.models.uptime.list': { $ref: '#/components/schemas/ModelUptimeResponse' },
+    'admin.models.byId.uptime.list': { $ref: '#/components/schemas/ModelUptimeDetailResponse' },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.apiKeys.byId.harnessModels.list': { $ref: '#/components/schemas/ApiKeyHarnessModelsResponse' },

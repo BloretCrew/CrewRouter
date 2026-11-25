@@ -4312,8 +4312,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ModelUptimeDetailResponse"
                 }
               }
             }
@@ -4945,8 +4944,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ModelUptimeResponse"
                 }
               }
             }

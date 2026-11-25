@@ -79,6 +79,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const providerTags = openapi.paths['/api/user/provider-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const modelUptime = openapi.paths['/api/user/models/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const modelUptimeDetail = openapi.paths['/api/user/models/{id}/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const adminModelUptime = openapi.paths['/api/admin/models/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const adminModelUptimeDetail = openapi.paths['/api/admin/models/{id}/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyUsage = openapi.paths['/api/user/api-keys/{id}/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyTags = openapi.paths['/api/user/key-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const keyTagCreate = openapi.paths['/api/user/key-tags']?.post?.responses?.[201]?.content?.['application/json']?.schema;
@@ -127,6 +129,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (providerTags?.type !== 'array' || providerTags.items?.$ref !== '#/components/schemas/ProviderTag') throw new Error(`${openapiPath} must define provider-tag list responses`);
   if (modelUptime?.$ref !== '#/components/schemas/ModelUptimeResponse' || openapi.components.schemas.ModelUptimeResponse?.oneOf?.length !== 2) throw new Error(`${openapiPath} must define daily and 15-minute uptime variants`);
   if (modelUptimeDetail?.$ref !== '#/components/schemas/ModelUptimeDetailResponse' || openapi.components.schemas.ModelUptimeDetailResponse?.oneOf?.length !== 2) throw new Error(`${openapiPath} must define daily and 15-minute uptime detail variants`);
+  if (adminModelUptime?.$ref !== '#/components/schemas/ModelUptimeResponse' || adminModelUptimeDetail?.$ref !== '#/components/schemas/ModelUptimeDetailResponse') throw new Error(`${openapiPath} must share uptime schemas with administrator endpoints`);
   if (keyUsage?.type !== 'array' || keyUsage.items?.$ref !== '#/components/schemas/ApiKeyDailyUsageItem') throw new Error(`${openapiPath} must define per-key usage responses`);
   for (const field of ['model_id', 'tokens', 'cost', 'requests']) {
     if (!openapi.components.schemas.ApiKeyDailyUsageItem?.properties?.[field]) throw new Error(`${openapiPath} is missing ApiKeyDailyUsageItem.${field}`);
