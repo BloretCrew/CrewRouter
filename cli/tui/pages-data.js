@@ -27,7 +27,10 @@ function usagePage(runtime) {
     ],
     async load(api) {
       const filters = runtime.usageFilters || {};
-      const stats = await getStats(runtime.client, runtime.usageDays, filters);
+      const customRange = runtime.usageCustomRange || null;
+      const dateQuery = customRange ? { start: customRange.start, end: customRange.end } : { days: runtime.usageDays };
+      const stats = await getStats(runtime.client, customRange ? undefined : runtime.usageDays, { ...filters, ...dateQuery });
+      const periodLabel = customRange ? `${customRange.start} 至 ${customRange.end}` : `最近 ${runtime.usageDays} 天`;
       const summary = statsSummary(stats);
       const dimensionColumns = [
         { key: 'name', label: '名称', ratio: 0.34 }, { key: 'requests', label: '请求数', ratio: 0.18 },
@@ -59,7 +62,7 @@ function usagePage(runtime) {
       ];
       const sections = [{
         title: '汇总', toolbar: true,
-        description: `统计周期：最近 ${runtime.usageDays} 天。`,
+        description: `统计周期：${periodLabel}。`,
         cards: [
           { label: '请求总数', value: summary.requests.toLocaleString(), detail: '统计周期内' },
           { label: 'Token 总量', value: formatBigNumber(summary.tokens), detail: `缓存命中 ${formatBigNumber(summary.cachedTokens)} Token` },
@@ -77,7 +80,7 @@ function usagePage(runtime) {
       if (runtime.usageTab === 'daily') sections.push({ title: '每日用量', tab: 'daily', toolbar: true, tableMinWidth: 112, columns: [
         { key: 'date', label: '日期', ratio: 0.2 }, { key: 'requests', label: '请求数', ratio: 0.16 }, { key: 'input', label: '输入 Token', ratio: 0.16 },
         { key: 'output', label: '输出 Token', ratio: 0.16 }, { key: 'tokens', label: '总 Token', ratio: 0.16 }, { key: 'cost', label: '费用（积分）', ratio: 0.16 },
-      ], description: `最近 ${runtime.usageDays} 天`, rows: summary.daily.slice(-30).map(row => ({ label: row.date || '未知日期', cells: {
+      ], description: periodLabel, rows: summary.daily.slice(-30).map(row => ({ label: row.date || '未知日期', cells: {
         date: row.date || '未知日期', requests: `${Number(row.requests || 0).toLocaleString()} 次`, input: `${formatBigNumber(row.prompt_tokens)} Token`,
         output: `${formatBigNumber(row.completion_tokens)} Token`, tokens: `${formatBigNumber(row.tokens)} Token`, cost: `${formatCost(row.cost)} 积分`,
       } })) });
@@ -102,7 +105,7 @@ function usagePage(runtime) {
       if (runtime.usageTab === 'keys') sections.push({ title: '按 API Key 统计', tab: 'keys', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byApiKey || [], row => row.key_name || row.key_prefix || '未知 API Key') });
       if (runtime.usageTab === 'sources') sections.push({ title: '按客户端统计', tab: 'sources', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.bySource || [], row => clientDisplay(row.request_source)) });
       if (runtime.usageTab === 'latency') {
-        const latency = await getLatencyStats(runtime.client, { days: runtime.usageDays, ...filters });
+        const latency = await getLatencyStats(runtime.client, { ...dateQuery, ...filters });
         sections.push({ title: '响应速度与首字延迟', tab: 'latency', toolbar: true, cards: [
           { label: '请求中位延迟（P50）', value: text(latency.p50_ms, '—'), detail: '一半请求不超过此耗时 · 毫秒' },
           { label: '请求95%分位延迟（P95）', value: text(latency.p95_ms, '—'), detail: '95% 请求不超过此耗时 · 毫秒' },
@@ -111,7 +114,8 @@ function usagePage(runtime) {
         ], rows: (latency.daily || []).map(row => ({ label: `${row.date} · ${row.requests || 0} 次请求 · 95%请求延迟 ${row.p95_ms || 0} 毫秒 · 输出速度 ${row.tokens_per_second || 0} Token/秒` })) });
       }
       if (runtime.usageTab === 'messages') {
-        const messageStats = await getMessageStats(runtime.client, { days: runtime.usageDays, ...filters });
+        const messageStats = await getMessageStats(runtime.client, { ...dateQuery, ...filters });
+        const analysisStatus = messageStats.summary?.analysis_status || {};
         const summaryLabels = {
           requests: '请求数', analyzed_requests: '已分析请求数', total_messages: '消息总数', total_characters: '字符总数', total_lines: '行数总计',
           sampled: '是否抽样', sample_size: '样本数', metadata_requests: '包含元数据的请求', workspace_requests: '包含工作区信息的请求',
@@ -133,17 +137,24 @@ function usagePage(runtime) {
         });
         const blockRows = Array.isArray(messageStats.by_block) ? messageStats.by_block.map(item => ({ label: item.block || '未知区块', detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · 出现 ${Number(item.occurrences || 0).toLocaleString()} 次 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分` })) : Object.entries(messageStats.blocks || {}).map(([name, count]) => ({ label: name.replace(/_/g, ' '), detail: `${count} 次` }));
         const sourceRows = Array.isArray(messageStats.by_source) ? messageStats.by_source.map(item => ({ label: clientDisplay(item.request_source), detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · 平均 ${(Number(item.messages || 0) / Math.max(Number(item.requests || 0), 1)).toFixed(1)} 条消息 · 平均 ${Math.round(Number(item.characters || 0) / Math.max(Number(item.requests || 0), 1)).toLocaleString()} 字符 · ${formatBigNumber(item.tokens)} Token` })) : [];
-        sections.push({ title: '消息结构分析', tab: 'messages', toolbar: true, description: `${summaryCards.length} 项统计 · 数据按当前时间范围和筛选条件汇总`, cards: summaryCards, rows: [...blockRows, ...sourceRows] });
+        const workspaceRows = Array.isArray(messageStats.by_workspace) ? messageStats.by_workspace.slice(0, 50).map(item => ({ label: item.workspace_path || '未识别项目', detail: `${Number(item.requests || 0).toLocaleString()} 次活跃请求 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分 · ${Math.round(Number(item.characters || 0)).toLocaleString()} 字符${item.sources ? ` · 客户端 ${Object.keys(item.sources).map(clientDisplay).join('、')}` : ''}` })) : [];
+        const dailyRows = Array.isArray(messageStats.daily) ? messageStats.daily.map(item => ({ label: `每日活动：${item.date || '未知日期'}`, detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.tokens)} Token · ${Number(item.messages || 0).toLocaleString()} 条消息${item.git_requests != null ? ` · 含 Git 状态 ${item.git_requests} 次` : ''}` })) : [];
+        const pendingRows = Number(analysisStatus.pending_requests || 0) > 0 ? [{ label: `后台待分析：${Number(analysisStatus.pending_requests).toLocaleString()} 个请求`, detail: '这些请求尚未完成消息结构扫描。' }] : [];
+        const analysisNote = analysisStatus.enabled === false ? '消息分析功能当前未启用。' : analysisStatus.last_error ? `最近一次后台分析异常：${analysisStatus.last_error}` : '读取请求中的消息内容进行结构分析，不用于推断未出现的区块。';
+        sections.push({ title: '消息结构分析', tab: 'messages', toolbar: true, description: `${summaryCards.length} 项汇总 · 数据按当前时间范围和筛选条件统计 · ${analysisNote}`, cards: summaryCards, rows: [...pendingRows, ...workspaceRows, ...dailyRows, ...blockRows, ...sourceRows] });
       }
       if (runtime.usageTab === 'logs') {
-        const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, limit: 20, days: runtime.usageDays, ...filters });
+        const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, limit: 20, ...(runtime.usageLogFilters || {}) });
+        runtime.usageLogTotal = Number(logs.total || 0);
         const items = Array.isArray(logs.logs) ? logs.logs : Array.isArray(logs.items) ? logs.items : [];
-        sections.push({ title: '调用记录', tab: 'logs', toolbar: true, tableMinWidth: 112, columns: [
-          { key: 'time', label: '时间', ratio: 0.18 }, { key: 'model', label: '模型', ratio: 0.22 }, { key: 'status', label: '结果', ratio: 0.1 },
-          { key: 'tokens', label: 'Token 用量', ratio: 0.14 }, { key: 'cost', label: '费用（积分）', ratio: 0.14 }, { key: 'source', label: '客户端', ratio: 0.12 }, { key: 'detail', label: '详情', ratio: 0.1 },
+        sections.push({ title: '调用记录', tab: 'logs', toolbar: true, tableMinWidth: 124, columns: [
+          { key: 'time', label: '时间', ratio: 0.17 }, { key: 'model', label: '模型', ratio: 0.17 }, { key: 'series', label: '系列', ratio: 0.09 },
+          { key: 'source', label: '客户端', ratio: 0.13 }, { key: 'key', label: 'API Key', ratio: 0.14 }, { key: 'tokens', label: 'Token', ratio: 0.1 },
+          { key: 'cached', label: '缓存命中', ratio: 0.1 }, { key: 'cost', label: '积分', ratio: 0.1 },
         ], description: `第 ${logs.page || runtime.usageLogPage || 1} 页 · 共 ${logs.total || 0} 条`, rows: items.map(item => ({ label: formatTime(item.created_at), cells: {
-          time: formatTime(item.created_at), model: item.model_name || item.model_id || '未知模型', status: item.status_code ? `HTTP ${item.status_code}` : (item.status || '未知'),
-          tokens: `${formatBigNumber(item.tokens_used || item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分`, source: clientDisplay(item.request_source), detail: 'Enter 查看',
+          time: formatTime(item.created_at), model: item.model_name || item.model_id || '未知模型', series: item.series || '无系列',
+          source: clientDisplay(item.request_source), key: `${item.key_prefix ? `${item.key_prefix}••••` : '无前缀'}${item.key_name ? `（${item.key_name}）` : ''}`,
+          tokens: `${formatBigNumber(item.tokens_used || item.tokens)} Token`, cached: `${formatBigNumber(item.cached_tokens || 0)} Token`, cost: `${formatCost(item.cost)} 积分`,
         }, run: async ctx => {
           const data = item.id != null ? await ctx.api(`/api/user/usage-logs/${encodeURIComponent(item.id)}`) : { log: item };
           const log = data.log || item;
@@ -177,21 +188,59 @@ function usagePage(runtime) {
         sections,
         actions: [
           { label: '查看实时活动快照', tab: 'overview', run: async ctx => { const window = await ctx.choose('活动统计窗口', [{ label: '最近 5 分钟', value: 300 }, { label: '最近 30 分钟', value: 1800 }, { label: '最近 1 小时', value: 3600 }]); if (window === null) return; const live = await api('/api/client-events/live', { query: { window } }); const sources = Array.isArray(live.sources) ? live.sources : []; const machines = Object.values(live.machines || {}); const lines = [`窗口 ${Math.round((live.window || window) / 60)} 分钟`, '', '按客户端：', ...sources.map(source => `${clientDisplay(source.harness)} · ${source.active_sessions || 0} 活跃会话 · ${source.tool_calls || 0} 工具调用 · ${source.failure_count || 0} 错误${source.suspected_offline ? ' · 疑似离线' : ''}`), '', '机器：', ...machines.map(machine => `${machine.name} · ${machine.harness} · ${machine.suspected_offline ? '疑似离线' : '在线'}`)]; if (!sources.length && !machines.length) lines.push('暂无近期客户端事件。'); await ctx.show('实时活动快照（一次性）', lines.join('\\n')); } },
+          { label: '自定义日期范围', toolbar: true, run: async ctx => {
+            const current = runtime.usageCustomRange || {};
+            const values = await ctx.form('自定义统计日期', [
+              { name: 'start', label: '开始日期（YYYY-MM-DD）', value: current.start || '' },
+              { name: 'end', label: '结束日期（YYYY-MM-DD）', value: current.end || '' },
+            ]);
+            if (!values) return;
+            const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+            if (!validDate(values.start) || !validDate(values.end) || values.start > values.end) { await ctx.show('日期范围无效', '请输入真实存在的 YYYY-MM-DD 日期，且开始日期不能晚于结束日期。'); return; }
+            runtime.usageCustomRange = { start: values.start, end: values.end };
+            runtime.usageLogPage = 1; await ctx.refresh();
+          } },
+          { label: '重置筛选与日期', toolbar: true, run: async ctx => { runtime.usageFilters = {}; runtime.usageCustomRange = null; runtime.usageDays = runtime.cfg.tui?.days || 30; runtime.usageLogPage = 1; await ctx.refresh(); } },
           { label: '时间范围与筛选', toolbar: true, run: async ctx => {
             const filtersData = await getStatsFilters(runtime.client);
-            const pick = async (title, values, current) => ctx.choose(title, [{ label: '全部', value: '' }, ...values.map(item => ({ label: item.name || item.id, value: item.id }))], { description: `当前：${current ? values.find(item => String(item.id) === String(current))?.name || current : '全部'}` });
-            const model_id = await pick('模型筛选', filtersData.models || [], filters.model_id || ''); if (model_id === null) return;
-            const provider_id = await pick('供应商筛选', filtersData.providers || [], filters.provider_id || ''); if (provider_id === null) return;
+            const pick = async (title, values, current, idKey = 'id') => {
+              const getId = item => item[idKey] ?? item.id;
+              const options = [{ label: '全部', value: '' }, ...values.map(item => ({ label: item.name || getId(item), value: getId(item) }))];
+              const selected = values.find(item => String(getId(item)) === String(current));
+              return ctx.choose(title, options, { description: `当前：${current ? selected?.name || current : '全部'}` });
+            };
+            const model_id = await pick('模型筛选', filtersData.models || [], filters.model_id || '', 'model_id'); if (model_id === null) return;
+            const provider_id = await pick('供应商筛选', filtersData.providers || [], filters.provider_id || '', 'provider_id'); if (provider_id === null) return;
             const teams = Array.isArray(filtersData.teams) ? filtersData.teams : [];
             const team_id = await pick('Team 筛选', teams, filters.team_id || ''); if (team_id === null) return;
             const request_source = await pick('客户端筛选', filtersData.sources || [], filters.request_source || ''); if (request_source === null) return;
-            runtime.usageFilters = Object.fromEntries(Object.entries({ model_id, provider_id, team_id, request_source }).filter(([, value]) => value !== ''));
+            runtime.usageFilters = Object.fromEntries(Object.entries({ model_id, provider_id, team_id, request_source, ...(filters.q ? { q: filters.q } : {}) }).filter(([, value]) => value !== ''));
             runtime.usageLogPage = 1; await ctx.refresh();
           } },
-          { label: '搜索调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageFilters = { ...filters, q: String(await ctx.ask('搜索模型或用户') || '').trim() }; runtime.usageLogPage = 1; await ctx.refresh(); } },
-          { label: '上一页调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageLogPage = Math.max(1, (runtime.usageLogPage || 1) - 1); await ctx.refresh(); } },
-          { label: '下一页调用记录', tab: 'logs', toolbar: true, run: async ctx => { runtime.usageLogPage = (runtime.usageLogPage || 1) + 1; await ctx.refresh(); } },
-          ...[7, 30, 90, 180, 365].map(days => ({ label: `最近 ${days} 天`, toolbar: true, run: async ctx => { runtime.usageDays = days; await ctx.refresh(); } })),
+          { label: '筛选调用记录', tab: 'logs', toolbar: true, run: async ctx => {
+            const current = runtime.usageLogFilters || {};
+            const model_q = await ctx.ask('模型名称或模型 ID（留空不过滤）', { defaultValue: current.model_q || '' }); if (model_q === null) return;
+            const requestType = await ctx.choose('请求类型', [{ label: '全部类型', value: '' }, ...['chat', 'responses', 'fusion', 'playground', 'imagine', 'agent_manage', 'gemini', 'interactions'].map(value => ({ label: value, value }))]); if (requestType === null) return;
+            const requestSource = await ctx.choose('客户端来源', [{ label: '全部客户端', value: '' }, ...['grok', 'codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness', 'unknown'].map(value => ({ label: clientDisplay(value), value }))]); if (requestSource === null) return;
+            const dateRange = await ctx.choose('调用记录日期', [{ label: '不限制日期', value: 'keep' }, { label: '设置自定义起止日期', value: 'custom' }, { label: '清除日期筛选', value: 'clear' }]); if (dateRange === null) return;
+            const next = { ...(model_q.trim() ? { model_q: model_q.trim() } : {}), ...(requestType ? { request_type: requestType } : {}), ...(requestSource ? { request_source: requestSource } : {}) };
+            if (dateRange === 'custom') {
+              const values = await ctx.form('调用记录日期范围', [{ name: 'start_date', label: '开始日期（YYYY-MM-DD）', value: current.start_date || '' }, { name: 'end_date', label: '结束日期（YYYY-MM-DD）', value: current.end_date || '' }]);
+              if (!values) return;
+              const validDate = value => typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+              if (!validDate(values.start_date) || !validDate(values.end_date) || values.start_date > values.end_date) { await ctx.show('调用记录日期无效', '请输入真实存在的日期，且开始日期不得晚于结束日期。'); return; }
+              next.start_date = values.start_date; next.end_date = values.end_date;
+            } else if (dateRange === 'keep') {
+              if (current.start_date) next.start_date = current.start_date;
+              if (current.end_date) next.end_date = current.end_date;
+            }
+            runtime.usageLogFilters = next; runtime.usageLogPage = 1; await ctx.refresh();
+          } },
+          { label: '搜索调用记录模型', tab: 'logs', toolbar: true, run: async ctx => { const value = await ctx.ask('搜索模型名称或上游模型 ID', { defaultValue: runtime.usageLogFilters?.model_q || '' }); if (value === null) return; runtime.usageLogFilters = { ...(runtime.usageLogFilters || {}), ...(String(value).trim() ? { model_q: String(value).trim() } : {}) }; if (!String(value).trim()) delete runtime.usageLogFilters.model_q; runtime.usageLogPage = 1; await ctx.refresh(); } },
+          { label: '上一页调用记录', tab: 'logs', toolbar: true, disabled: (runtime.usageLogPage || 1) <= 1, run: async ctx => { runtime.usageLogPage = Math.max(1, (runtime.usageLogPage || 1) - 1); await ctx.refresh(); } },
+          { label: '下一页调用记录', tab: 'logs', toolbar: true, disabled: (runtime.usageLogPage || 1) * 20 >= Number(runtime.usageLogTotal || 0), run: async ctx => { runtime.usageLogPage = (runtime.usageLogPage || 1) + 1; await ctx.refresh(); } },
+          { label: '导出当前筛选 CSV', tab: 'logs', toolbar: true, run: async ctx => { await ctx.show('CSV 导出不可用', '网页支持下载 CSV；CLI 当前 API 客户端不支持接收二进制响应并写入文件。请在网页调用记录页使用“导出 CSV”。'); } },
+          ...[7, 30, 90, 180, 365].map(days => ({ label: `最近 ${days} 天`, toolbar: true, run: async ctx => { runtime.usageDays = days; runtime.usageCustomRange = null; runtime.usageLogPage = 1; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },
         ],
       };

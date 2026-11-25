@@ -18,7 +18,9 @@ async function getSetupStatus(client) { return client.get('/api/setup/status'); 
 async function getMe(client) { return client.get('/auth/me'); }
 async function getBalance(client) { return client.get('/api/user/balance'); }
 async function getStats(client, days = 30, filters = {}) {
-  return client.get('/api/user/stats', { query: { days, ...filters } });
+  const { start, end, ...otherFilters } = filters;
+  const query = start && end ? { start, end, ...otherFilters } : { days, ...filters };
+  return client.get('/api/user/stats', { query });
 }
 async function getStatsFilters(client) { return client.get('/api/user/stats/filters'); }
 async function getLatencyStats(client, query = {}) { return client.get('/api/user/stats/latency', { query }); }
