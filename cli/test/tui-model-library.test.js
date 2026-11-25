@@ -13,7 +13,7 @@ test('user model library renders teams, provider summaries, stars and searchable
   const calls = [];
   const api = async (path, options = {}) => {
     calls.push({ path, options });
-    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: false, test_error: `HTTP 400 ${'long upstream error '.repeat(100)}` }], available_series: ['S'], total_models: 4 };
+    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: false, test_error: `HTTP 400\n${'long upstream error '.repeat(100)}` }], available_series: ['S'], total_models: 4 };
     if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main' }];
     if (path === '/api/user/provider-tags') return [{ id: 5, name: 'Featured' }];
     if (path === '/api/user/model-library/order/by-test') return { teams: 1, providers: 2, models: 3 };
@@ -35,6 +35,11 @@ test('user model library renders teams, provider summaries, stars and searchable
   assert.ok(initial.sections.some(section => section.title === '已收藏模型'));
   const starRow = initial.sections.find(section => section.title === '已收藏模型').rows[0];
   assert.ok(starRow.detail.length < 140, 'long upstream errors must not expand the list row');
+  assert.ok(!starRow.detail.includes('\n'), 'multiline upstream error must be collapsed into one summary line');
+  let starDetails = '';
+  await starRow.run({ choose: async () => 'detail', show: async (_title, body) => { starDetails = body; } });
+  assert.match(starDetails, /测试失败原因/);
+  assert.ok(!starDetails.includes('input_price_per_1k_tokens') && !starDetails.includes('test_error'), 'details should describe values instead of exposing database field names');
   assert.deepEqual(initial.sections[0].cards.map(card => card.label), ['所属团队', '可用模型', '模型系列', '已收藏模型']);
   const providerSection = initial.sections.find(section => section.title === '团队与供应商目录');
   assert.equal(providerSection.cards.length, 1, 'team provider directory uses the responsive card grid');
