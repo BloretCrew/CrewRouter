@@ -103,13 +103,19 @@ The preview rejects invalid configurations before loading any CrewRouter module:
   `migrate: true`.
 - **Express 4 hosts.** Express 5 is not validated.
 
-## CI-tested baseline (not a support matrix)
+## CI compatibility matrix (candidate; not a GA support promise)
 
-The current embedded CI job runs on `ubuntu-latest` with Node.js 20, the lockfile's
-Express 4.22.3 and `pg` 8.20.0 dependencies, and the embedded test fixtures. The
-PostgreSQL-dependent release checks install the runner's distribution package
-without pinning a server version; there is no version matrix for PostgreSQL or
-Express 5. This records what CI exercises today, not a compatibility promise.
+The embedded integration job runs every Node/PostgreSQL pair below on `ubuntu-latest`
+with the lockfile-pinned Express and `pg` driver. Express 5 is outside the tested set.
+This is the current CI-tested candidate matrix; it becomes an official support
+commitment only after the release owner approves it.
+
+| Node.js | Express | PostgreSQL | `pg` driver | CI |
+| --- | --- | --- | --- | --- |
+| 20 | 4.22.3 | 15 | 8.20.0 | embedded PostgreSQL host integration |
+| 20 | 4.22.3 | 16 | 8.20.0 | embedded PostgreSQL host integration |
+| 22 | 4.22.3 | 15 | 8.20.0 | embedded PostgreSQL host integration |
+| 22 | 4.22.3 | 16 | 8.20.0 | embedded PostgreSQL host integration |
 
 ## GA readiness gate
 

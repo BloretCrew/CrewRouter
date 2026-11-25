@@ -7,6 +7,12 @@ on:
       - 'server/routes/**'
       - 'server/routes/mount-loader.js'
       - 'server/index.js'
+      - 'server/scripts/**'
+      - 'server/models/database.js'
+      - 'server/runtime.js'
+      - 'server/key-refresher.js'
+      - 'server/plugins/**'
+      - 'server/utils/**'
       - 'server/constants/**'
       - 'server/sdk/**'
       - 'server/middleware/request-auth.js'
@@ -29,6 +35,12 @@ on:
       - 'server/routes/**'
       - 'server/routes/mount-loader.js'
       - 'server/index.js'
+      - 'server/scripts/**'
+      - 'server/models/database.js'
+      - 'server/runtime.js'
+      - 'server/key-refresher.js'
+      - 'server/plugins/**'
+      - 'server/utils/**'
       - 'server/constants/**'
       - 'server/sdk/**'
       - 'server/middleware/request-auth.js'
@@ -65,6 +77,43 @@ jobs:
       - run: node server/scripts/test-console-route-auth-coverage.js
       - run: npm run test:embedded-sdk
       - run: npm run docs:check
+
+  embedded-support-matrix:
+    name: Embedded server compatibility (Node ${{ matrix.node-version }}, PostgreSQL ${{ matrix.postgres-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22']
+        postgres-version: ['15', '16']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: crewrouter_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crewrouter_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: node server/scripts/test-embedded-sdk-postgres.js
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGDATABASE: crewrouter_test
+          PGUSER: postgres
+          PGPASSWORD: postgres
 
   node-sdk:
     name: Node/TypeScript SDK

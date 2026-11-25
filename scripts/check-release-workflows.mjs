@@ -211,11 +211,14 @@ const sdkOverview = await readFile('docs/sdk/README.md', 'utf8');
 if (!sdkOverview.includes('Limited preview only; not part of the client SDK stable-release commitment')) throw new Error('SDK overview must keep embedded server SDK outside the stable client commitment');
 const sdkVersioning = await readFile('docs/sdk/versioning.md', 'utf8');
 const embeddedCi = parse(await readFile('.github/workflows/sdk-ci.yml', 'utf8'));
-const embeddedNodeSetup = embeddedCi.jobs.contract.steps.find(step => step.uses === 'actions/setup-node@v4');
+const embeddedMatrixJob = embeddedCi.jobs['embedded-support-matrix'];
+const matrixNodes = embeddedMatrixJob?.strategy?.matrix?.['node-version']?.map(String) || [];
+const matrixPostgres = embeddedMatrixJob?.strategy?.matrix?.['postgres-version']?.map(String) || [];
+const hasPgIntegration = embeddedMatrixJob?.steps?.some(step => step.run === 'node server/scripts/test-embedded-sdk-postgres.js');
 const rootPackage = JSON.parse(await readFile('package.json', 'utf8'));
 const rootLock = JSON.parse(await readFile('package-lock.json', 'utf8'));
-if (embeddedNodeSetup?.with?.['node-version'] !== 20 || rootPackage.dependencies?.express !== '^4.22.3' || rootLock.packages?.['node_modules/express']?.version !== '4.22.3' || rootLock.packages?.['node_modules/pg']?.version !== '8.20.0') throw new Error('Embedded SDK CI baseline changed; update its explicitly non-contractual tested-baseline documentation');
-if (!embeddedSdkDocs.includes('Node.js 20') || !embeddedSdkDocs.includes('Express 4.22.3') || !embeddedSdkDocs.includes('pg` 8.20.0')) throw new Error('Embedded SDK tested baseline documentation is stale');
+if (matrixNodes.join(',') !== '20,22' || matrixPostgres.join(',') !== '15,16' || !hasPgIntegration || rootPackage.dependencies?.express !== '^4.22.3' || rootLock.packages?.['node_modules/express']?.version !== '4.22.3' || rootLock.packages?.['node_modules/pg']?.version !== '8.20.0') throw new Error('Embedded CI support candidate matrix changed; update the compatibility matrix and integration tests');
+if (!['20', '22', '15', '16', '4.22.3', '8.20.0', 'release owner approves it'].every(value => embeddedSdkDocs.includes(value))) throw new Error('Embedded SDK CI compatibility matrix documentation is stale');
 const embeddedLifecycleTests = await readFile('server/scripts/test-embedded-sdk.js', 'utf8');
 for (const required of ['startup failure stops partial initialization', 'concurrent start calls share one listener', 'listener startup failure releases instance']) {
   if (!embeddedLifecycleTests.includes(required)) throw new Error(`Embedded SDK lifecycle coverage omits ${required}`);
