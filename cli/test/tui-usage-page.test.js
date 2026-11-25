@@ -144,6 +144,8 @@ test('usage tabs request latency, message and log data with shared filters', asy
   await filterAction.run({ form: async () => ({ model_q: '', request_type: '', request_source: '', start_date: '2026-11-01', end_date: '' }), show: async (_title, message) => { invalidDateNotice = message; }, refresh: async () => {} });
   assert.match(invalidDateNotice, /必须同时填写/);
   assert.equal(runtime.usageLogFilters.end_date, '2026-11-07', 'invalid query must not replace existing filters');
+  await filterAction.run({ form: async () => ({ model_q: 'Model One', request_type: 'chat', request_source: 'codex', start_date: '', end_date: '', clear_dates: true }), show: async () => {}, refresh: async () => {} });
+  assert.deepEqual(runtime.usageLogFilters, { model_q: 'Model One', request_type: 'chat', request_source: 'codex' }, 'clearing dates should preserve the other filters');
   const refreshedLogData = await usage.load();
   const clearAction = refreshedLogData.actions.find(action => action.label === '清除调用记录筛选');
   assert.equal(clearAction.disabled, false);

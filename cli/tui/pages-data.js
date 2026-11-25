@@ -420,8 +420,10 @@ function usagePage(runtime) {
               { name: 'request_source', label: '客户端来源', value: current.request_source || '', options: [{ value: '', label: '全部客户端' }, ...['grok', 'codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness', 'unknown'].map(value => ({ value, label: clientDisplay(value) }))] },
               { name: 'start_date', label: '开始日期（留空不筛选）', value: current.start_date || '' },
               { name: 'end_date', label: '结束日期（留空不筛选）', value: current.end_date || '' },
-            ], { description: '与网页调用记录筛选项相同；开始与结束日期需同时填写或同时留空。' });
+              { name: 'clear_dates', label: '清除日期范围', type: 'boolean', value: false },
+            ], { description: '与网页调用记录筛选项相同；开始与结束日期需同时填写或同时留空。勾选“清除日期范围”会保留其他筛选。' });
             if (!values) return;
+            if (values.clear_dates === true) { runtime.usageLogFilters = { ...(String(values.model_q || '').trim() ? { model_q: String(values.model_q).trim() } : {}), ...(values.request_type ? { request_type: values.request_type } : {}), ...(values.request_source ? { request_source: values.request_source } : {}) }; runtime.usageLogPage = 1; await ctx.refresh(); return; }
             const startDate = String(values.start_date || '').trim(); const endDate = String(values.end_date || '').trim();
             const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
             if (!!startDate !== !!endDate || (startDate && (!validDate(startDate) || !validDate(endDate) || startDate > endDate))) { await ctx.show('调用记录日期无效', '请输入真实存在的开始和结束日期；两者必须同时填写，且开始日期不得晚于结束日期。'); return; }
