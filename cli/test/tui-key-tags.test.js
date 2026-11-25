@@ -15,6 +15,7 @@ function makeRuntime(isOwner = true) {
       if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main', key_prefix: 'cr_x', enabled: true, is_owner: isOwner, total_requests: 2, tags: [{ id: 3, name: 'Ops', color: '#123456' }] }];
       if (path === '/oauth/authorizations') return { authorizations: [] };
       if (path === '/api/user/key-tags') return [{ id: 3, name: 'Ops', color: '#123456' }, { id: 4, name: 'Dev', color: '#654321' }];
+      if (path === '/api/user/api-keys/1/members') return { is_owner: isOwner, members: [{ id: 9, username: 'alice', email: 'alice@example.test', created_at: '2026-11-20T00:00:00Z' }] };
       return {};
     },
     put: async (path, body) => { calls.push({ path, method: 'PUT', body }); return {}; },
@@ -61,6 +62,55 @@ test('API Key page uses web field order and masked values in the wide TUI table'
     assert.ok(screen.includes('cr_live_••••'));
     assert.ok(!screen.includes('secret-key-value'));
   } finally { tty.input.write('q'); await task; }
+});
+
+test('API Key shared member management is owner-only and uses web member endpoints with confirmation', async () => {
+  const { runtime, calls } = makeRuntime(true);
+  const page = buildPages(runtime).find(item => item.id === 'keys');
+  const data = await page.load(async () => ({}));
+  const row = data.sections.find(section => section.title === 'API Key').rows[0];
+  const choices = ['members', 'add', 'done'];
+  await row.run({ choose: async () => choices.shift(), ask: async () => 'alice@example.test', confirm: async () => false, notify() {}, refresh: async () => {} });
+  assert.equal(calls.some(call => call.method === 'POST' && call.path.includes('/members')), false, 'cancelled add must not write');
+  const memberChoices = ['alice@example.test'];
+  let memberLoop = 0;
+  const memberTitles = [];
+  await row.run({ choose: async (title, options) => {
+    memberTitles.push([title, options.map(option => option.value)]);
+    if (title === 'API Key 操作') return 'members';
+    if (title.startsWith('共同成员')) return memberLoop++ === 0 ? 'add' : 'done';
+    return 'done';
+  }, ask: async () => memberChoices.shift(), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(memberTitles.some(([title]) => title.startsWith('共同成员')), JSON.stringify(memberTitles));
+  let removalStep = 0;
+  await row.run({ choose: async (title, options) => {
+    if (title === 'API Key 操作') return 'members';
+    if (title.startsWith('共同成员 ·')) return removalStep++ === 0 ? 'remove' : 'done';
+    if (title === '选择要移除的共同成员') return 9;
+    return 'done';
+  }, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(calls.some(call => call.method === 'POST' && call.path === '/api/user/api-keys/1/members' && call.body.identity === 'alice@example.test'));
+  assert.ok(calls.some(call => call.method === 'DELETE' && call.path === '/api/user/api-keys/1/members/9'));
+
+  const { runtime: sharedRuntime } = makeRuntime(false);
+  const shared = await buildPages(sharedRuntime).find(item => item.id === 'keys').load(async () => ({}));
+  let memberMenu = [];
+  await shared.sections.find(section => section.title === 'API Key').rows[0].run({ choose: async (_title, options) => { memberMenu = options; return 'detail'; }, show: async () => {} });
+  assert.ok(!memberMenu.some(option => option.value === 'members'));
+});
+
+test('API Key detail uses readable labels and discloses shared member count', async () => {
+  const { runtime } = makeRuntime(false);
+  runtime.client.get = async path => path === '/api/user/api-keys' ? [{ id: 1, name: 'Shared', key_prefix: 'cr_shared_', enabled: true, is_owner: false, current_model_name: 'Model One', total_requests: 5, total_tokens: 100, total_cost: 0.25, created_at: '2026-11-20T00:00:00Z', last_used_at: '2026-11-25T00:00:00Z', expires_at: null, permissions: { usage: true }, members: [{ id: 9, username: 'alice', email: 'alice@example.test' }] }] : path === '/oauth/authorizations' ? { authorizations: [] } : [];
+  const page = buildPages(runtime).find(item => item.id === 'keys');
+  const data = await page.load(async () => ({}));
+  const row = data.sections.find(section => section.title === 'API Key').rows[0];
+  assert.match(row.detail, /共同使用的 Key · 1 位共同成员/);
+  let detail = '';
+  await row.run({ choose: async () => 'detail', show: async (_title, body) => { detail = body; } });
+  assert.match(detail, /身份：共同成员访问/);
+  assert.match(detail, /Token 消耗：100 Token/);
+  assert.doesNotMatch(detail, /total_requests|current_model|key_prefix/);
 });
 
 test('API Key tag assignment is owner-only and sends tagIds after confirmation', async () => {

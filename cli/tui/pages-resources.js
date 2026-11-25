@@ -534,23 +534,64 @@ function keysPage(runtime) {
           points: `${formatCost(key.total_cost)} 积分`, expires: key.expires_at ? formatTime(key.expires_at) : '永不过期',
           actions: key.is_owner === true ? 'Enter 管理' : 'Enter 查看',
         },
-        detail: `创建于 ${formatTime(key.created_at)} · 最后使用 ${formatTime(key.last_used_at)}${Array.isArray(key.tags) && key.tags.length ? ` · 标签 ${key.tags.map(tag => tag.name).join('、')}` : ''}`,
+        detail: `创建于 ${formatTime(key.created_at)} · 最后使用 ${formatTime(key.last_used_at)}${key.is_owner === false ? ' · 共同使用的 Key' : ''}${Array.isArray(key.members) && key.members.length ? ` · ${key.members.length} 位共同成员` : ''}${Array.isArray(key.tags) && key.tags.length ? ` · 标签 ${key.tags.map(tag => tag.name).join('、')}` : ''}`,
         run: async ctx => {
           const actions = [
             { label: '查看详情', value: 'detail' },
-            ...(key.is_owner === true ? [{ label: '设置标签', value: 'tags' }] : []),
+            ...(key.is_owner === true ? [{ label: '设置标签', value: 'tags' }, { label: `管理共同成员（${Array.isArray(key.members) ? key.members.length : 0}）`, value: 'members' }] : []),
             { label: '查看 Claude Code 配置', value: 'config' },
             { label: key.enabled === false ? '启用 Key' : '停用 Key', value: 'toggle' },
             { label: '重命名', value: 'rename' },
             { label: '删除 Key', value: 'delete' },
           ];
           const choice = await ctx.choose('API Key 操作', actions, { description: key.name || key.key_prefix || `Key ${key.id}` });
-          if (choice === 'detail') await ctx.show(`API Key · ${key.name || key.id}`, JSON.stringify({
-            id: key.id, name: key.name, prefix: key.key_prefix, enabled: key.enabled, tags: key.tags,
-            current_model: key.current_model_name || key.current_model_id, permissions: key.permissions,
-            total_requests: key.total_requests, total_tokens: key.total_tokens, total_cost: key.total_cost,
-            created_at: key.created_at, last_used_at: key.last_used_at, expires_at: key.expires_at,
-          }, null, 2));
+          if (choice === 'detail') {
+            const permissions = key.permissions;
+            const permissionSummary = Array.isArray(permissions) ? permissions.join('、') : permissions && typeof permissions === 'object' ? Object.entries(permissions).filter(([, enabled]) => enabled === true).map(([name]) => name).join('、') : '';
+            const memberList = Array.isArray(key.members) ? key.members : [];
+            await ctx.show(`API Key 详情 · ${key.name || key.id}`, [
+              `名称：${key.name || '未命名'}`, `Key 掩码：${key.key_prefix ? `${key.key_prefix}••••` : key.is_owner === false ? '仅创建者可查看' : '未返回前缀'}`,
+              `状态：${key.enabled === false ? '已停用' : '已启用'}`, `身份：${key.is_owner === false ? '共同成员访问' : 'Key 发起者'}`,
+              `当前模型：${key.current_model_name || key.current_model_id || '未绑定模型'}`, `权限范围：${permissionSummary || '使用默认权限'}`,
+              `调用次数：${Number(key.total_requests || 0).toLocaleString()} 次`, `Token 消耗：${formatBigNumber(key.total_tokens)} Token`, `积分消耗：${formatCost(key.total_cost)} 积分`,
+              `创建时间：${formatTime(key.created_at)}`, `最后使用：${formatTime(key.last_used_at)}`, `有效期：${key.expires_at ? formatTime(key.expires_at) : '永不过期'}`,
+              `标签：${Array.isArray(key.tags) && key.tags.length ? key.tags.map(tag => tag.name).join('、') : '无'}`,
+              key.is_owner === true && `共同成员：${memberList.length ? memberList.map(member => `${member.username || '未知'}（${member.email || '无邮箱'}）`).join('、') : '无'}`,
+            ].filter(Boolean).join('\\n'));
+          }
+          else if (choice === 'members') {
+            let membersResult = await runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/members`);
+            for (;;) {
+              const members = Array.isArray(membersResult.members) ? membersResult.members : [];
+              const memberChoices = [
+                { label: '查看成员列表', value: 'list' },
+                { label: '添加共同成员', value: 'add' },
+                ...(members.length ? [{ label: '移除共同成员', value: 'remove' }] : []),
+                { label: '完成', value: 'done' },
+              ];
+              const memberAction = await ctx.choose(`共同成员 · ${key.name || key.key_prefix}`, memberChoices, { description: members.length ? `${members.length} 位成员：${members.map(member => member.username).join('、')}` : '目前没有共同成员。只有 Key 发起者可以添加或移除成员。' });
+              if (!memberAction || memberAction === 'done') break;
+              if (memberAction === 'list') {
+                await ctx.show('共同成员列表', members.length ? members.map((member, index) => `${index + 1}. ${member.username || '未知用户'} · ${member.email || '无邮箱'} · ${formatTime(member.created_at)}`).join('\n') : '暂无共同成员。');
+              } else if (memberAction === 'add') {
+                const identity = String(await ctx.ask('完整用户名或邮箱') || '').trim();
+                if (!identity || !await ctx.confirm('添加共同成员', `${key.name || key.key_prefix}\n成员：${identity}\n该成员将能查看并使用此 Key。`)) continue;
+                await runtime.client.post(`/api/user/api-keys/${encodeURIComponent(key.id)}/members`, { identity });
+                ctx.notify('共同成员已添加。');
+                membersResult = await runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/members`);
+                await ctx.refresh();
+              } else if (memberAction === 'remove') {
+                const selected = await ctx.choose('选择要移除的共同成员', members.map(member => ({ label: `${member.username || '未知用户'} · ${member.email || '无邮箱'}`, value: member.id })));
+                if (selected === null) continue;
+                const target = members.find(member => String(member.id) === String(selected));
+                if (!target || !await ctx.confirm('移除共同成员', `移除 ${target.username || target.id} 后，其对该 API Key 的访问将立即失效。`)) continue;
+                await runtime.client.delete(`/api/user/api-keys/${encodeURIComponent(key.id)}/members/${encodeURIComponent(selected)}`);
+                ctx.notify('共同成员已移除。');
+                membersResult = await runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/members`);
+                await ctx.refresh();
+              }
+            }
+          }
           else if (choice === 'tags') {
             const current = new Set((key.tags || []).map(tag => Number(tag.id)));
             const value = await ctx.ask('标签 ID（逗号分隔；清空表示移除所有标签）', { defaultValue: [...current].join(','), description: tags.map(tag => `${tag.id}: ${tag.name}`).join(' · ') || '暂无标签，可从页面操作创建。' });
