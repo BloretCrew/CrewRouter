@@ -37,7 +37,7 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   const api = async (path, options = {}) => {
     calls.push({ path, options });
     if (path === '/api/admin/stats') return { daily: [] };
-    if (path === '/api/admin/stats/multi' && options.query?.data_source === 'quota') return { data_source: 'quota', dimensions: ['provider', 'account'], metric: 'remaining', rows: [{ labels: ['Provider One', 'Main Account'], values: ['p1', 'a1'], value: 4.5, unit: 'credits', kind: 'balance', total: 10, used: 5.5, remaining: 4.5, status: 'success', observed_at: '2026-11-25T00:00:00Z', account_ids: ['a1'], coverage: { start: '2026-11-01', end: '2026-11-25' } }], coverage: { start: '2026-11-01', end: '2026-11-25', samples: 12, caveats: ['额度是上游独立观测值。'] }, provider_quota: { summary: { accounts: 1 }, coverage: { start: '2026-11-01', end: '2026-11-25', samples: 12, caveats: ['额度是上游独立观测值。'] } } };
+    if (path === '/api/admin/stats/multi' && options.query?.data_source === 'quota') return { data_source: 'quota', dimensions: ['provider', 'account'], metric: 'remaining', rows: [{ labels: ['Provider One', 'Main Account'], values: ['p1', 'a1'], value: 4.5, unit: 'credits', kind: 'balance', status: 'success', observed_at: '2026-11-25T00:00:00Z', account_ids: ['a1'], coverage: { start: '2026-11-01', end: '2026-11-25' } }], coverage: { start: '2026-11-01', end: '2026-11-25', samples: 12, caveats: ['额度是上游独立观测值。'] }, provider_quota: { summary: { accounts: 1 }, accounts: [{ provider_id: 'p1', provider_name: 'Provider One', account_id: 'a1', label: 'Main Account', kind: 'balance', unit: 'credits', total: 10, used: 5.5, remaining: 4.5, status: 'success', observed_at: '2026-11-25T00:00:00Z' }], coverage: { start: '2026-11-01', end: '2026-11-25', samples: 12, caveats: ['额度是上游独立观测值。'] } } };
     if (path === '/api/admin/stats/multi') return { summary: { requests: 10, tokens: 200, cost: 3, active_users: 2, active_projects: 1, active_models: 3, active_providers: 2 }, relationships: { user_project: [{ left: 'alice', right: '/work/a', requests: 8, tokens: 160, cost: 2 }] }, caveats: ['Team 按当前归属统计。'] };
     if (path === '/api/admin/stats/multi/filters') return { users: [{ id: 9, name: 'alice' }], teams: [{ id: 2, name: 'Team A' }], models: [{ id: 'm1', name: 'Model One' }], providers: [{ id: 'p1', name: 'Provider One' }], sources: [{ id: 'codex', name: 'Codex' }], projects: [{ id: '/work/a', name: '/work/a' }] };
     if (path === '/api/admin/message-stats') return { summary: { requests: 5, analyzed_requests: 4, total_messages: 12, total_tokens: 250, total_cost: 2.5, metadata_rate: 0.5 }, by_block: [{ block: 'git_status', requests: 2, occurrences: 3, tokens: 100, cost: 1 }], by_source: [{ request_source: 'codex', requests: 2, messages: 6, tokens: 120 }] };
@@ -54,13 +54,13 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   await filterAction.run({ api, choose: async () => choices.shift(), refresh: async () => {} });
   assert.equal(runtime.adminStatsMultiFilters.team_id, '2');
   const dimAction = multi.actions.find(action => action.label === '选择维度与指标');
-  const dimensions = ['model', '__done__', 'tokens'];
-  await dimAction.run({ choose: async (title, options) => {
+  const dimensions = ['model', '__done__'];
+  await dimAction.run({ choose: async title => {
     if (title.startsWith('统计维度')) return dimensions.shift();
+    if (title === '分析数据源') return 'usage';
     if (title === '统计指标') return 'tokens';
     if (title.includes('叠加供应商额度')) return false;
-    if (title === '统计数据来源') return 'usage';
-    return options[0]?.value;
+    return null;
   }, refresh: async () => {} });
   assert.deepEqual(runtime.adminStatsDimensionQuery, { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 });
   await page.load(api);
@@ -87,9 +87,15 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   runtime.adminStatsDimensionQuery = { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 };
   const limitedPage = await page.load(async (path, options = {}) => { if (path === '/api/admin/stats/multi-dimension') throw new Error('企业版功能不可用'); return api(path, options); });
   assert.ok(limitedPage.sections[0].rows.some(row => /自选维度分析不可用/.test(row.label)));
-  const quotaChoices = ['provider', 'account', '__done__', 'remaining'];
-  const quotaAction = multi.actions.find(action => action.label === '查询供应商额度维度');
-  await quotaAction.run({ confirm: async () => true, choose: async () => quotaChoices.shift(), refresh: async () => {} });
+  const quotaAction = multi.actions.find(action => action.label === '选择维度与指标');
+  let usageDimensionChoice = 0; const quotaDimensions = ['provider', 'account', '__done__'];
+  await quotaAction.run({ confirm: async () => true, choose: async title => {
+    if (title.startsWith('统计维度')) return usageDimensionChoice++ === 0 ? 'provider' : '__done__';
+    if (title === '分析数据源') return 'quota';
+    if (title.startsWith('额度维度')) return quotaDimensions.shift();
+    if (title === '额度统计指标') return 'remaining';
+    return null;
+  }, refresh: async () => {} });
   assert.deepEqual(runtime.adminStatsQuotaQuery, { dimensions: 'provider,account', metric: 'remaining', data_source: 'quota', days: 30 });
   const quotaPage = await page.load(api);
   assert.equal(quotaPage.sections[0].title, '供应商额度多维分析');

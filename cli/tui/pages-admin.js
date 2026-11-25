@@ -790,10 +790,22 @@ function createAdminPages(runtime) {
             const quotaRows = array(multi.rows).map(row => {
               const amount = row.value == null ? '未知' : `${Number(row.value).toLocaleString('zh-CN', { maximumFractionDigits: 6 })}${row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : ''}`;
               const dimensionLabel = array(row.labels).filter(Boolean).join(' · ') || '未分类';
+              const dimensionKeys = Array.isArray(multi.dimensions) ? multi.dimensions : String(quotaQuery?.dimensions || 'provider').split(',');
+              const dimensionValue = key => { const index = dimensionKeys.indexOf(key); return index >= 0 ? row.values?.[index] : undefined; };
+              const snapshot = array(multi.provider_quota?.accounts).find(account =>
+                (dimensionValue('provider') === undefined || String(dimensionValue('provider')) === String(account.provider_id)) &&
+                (dimensionValue('account') === undefined || String(dimensionValue('account')) === String(account.account_id)) &&
+                (dimensionValue('kind') === undefined || String(dimensionValue('kind')) === String(account.kind)) &&
+                (dimensionValue('unit') === undefined || String(dimensionValue('unit')) === String(account.unit)) &&
+                (dimensionValue('window') === undefined || String(dimensionValue('window')) === String(account.window_key))
+              );
               const kindLabel = row.kind === 'balance' ? '余额额度' : row.kind === 'window' ? '周期额度' : row.kind === 'status' ? '状态额度' : row.kind || '额度';
-              const percent = row.kind === 'window' || row.unit === 'percent' ? Number(row.value) : Number(row.total) > 0 && row.used != null ? Number(row.used) / Number(row.total) * 100 : null;
+              const referenceTotal = row.total ?? snapshot?.total;
+              const referenceUsed = row.used ?? snapshot?.used;
+              const referenceRemaining = row.remaining ?? snapshot?.remaining;
+              const percent = row.kind === 'window' || row.unit === 'percent' ? Number(row.value) : Number(referenceTotal) > 0 && referenceUsed != null ? Number(referenceUsed) / Number(referenceTotal) * 100 : null;
               const bar = Number.isFinite(percent) ? `使用率 ${Math.max(0, Math.min(100, percent)).toFixed(1)}% [${'█'.repeat(Math.round(Math.max(0, Math.min(100, percent)) / 10))}${'░'.repeat(10 - Math.round(Math.max(0, Math.min(100, percent)) / 10))}]` : '';
-              const reference = row.total != null || row.used != null || row.remaining != null ? `已用 ${row.used == null ? '未知' : Number(row.used).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} / 总额 ${row.total == null ? '未知' : Number(row.total).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} / 剩余 ${row.remaining == null ? '未知' : Number(row.remaining).toLocaleString('zh-CN', { maximumFractionDigits: 4 })}${row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : ''}` : '';
+              const reference = referenceTotal != null || referenceUsed != null || referenceRemaining != null ? `已用 ${referenceUsed == null ? '未知' : Number(referenceUsed).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} / 总额 ${referenceTotal == null ? '未知' : Number(referenceTotal).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} / 剩余 ${referenceRemaining == null ? '未知' : Number(referenceRemaining).toLocaleString('zh-CN', { maximumFractionDigits: 4 })}${row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : snapshot?.unit ? ` ${snapshot.unit}` : ''}` : '';
               return { label: `${dimensionLabel} · ${kindLabel}${row.window_key ? ` · ${row.window_key}` : ''}`, detail: [
                 `指标：${amount}`, reference, bar, row.status && `查询状态：${row.status}`, row.observed_at && `观测时间：${formatTime(row.observed_at)}`,
                 row.quality?.cached && '使用缓存快照', row.quality?.legacy && '旧格式数据', row.quality?.precision && `精度：${row.quality.precision}`,
@@ -802,6 +814,19 @@ function createAdminPages(runtime) {
             });
             const coverage = multi.coverage || multi.provider_quota?.coverage || {};
             const caveats = array(coverage.caveats);
+            const quotaSnapshots = array(multi.provider_quota?.accounts).filter(account => account.kind !== 'status');
+            const snapshotRows = quotaSnapshots.map(account => {
+              const windowQuota = account.kind === 'window' || account.unit === 'percent';
+              const percent = windowQuota ? Number(account.used_percent) : Number(account.total) > 0 && account.used != null ? Number(account.used) / Number(account.total) * 100 : null;
+              const clamped = percent == null || !Number.isFinite(percent) ? null : Math.max(0, Math.min(100, percent));
+              const bar = clamped == null ? '使用率未知' : `使用率 ${clamped.toFixed(1)}% [${'█'.repeat(Math.round(clamped / 10))}${'░'.repeat(10 - Math.round(clamped / 10))}]`;
+              return { label: `${account.provider_name || account.provider_id || '未知供应商'} · ${account.label || `账户 ${account.account_id}`} · ${windowQuota ? '周期额度' : '余额额度'}${account.window_key ? ` · ${account.window_key}` : ''}`, detail: [
+                `${windowQuota ? '周期使用率' : '额度余额'}：${account.remaining == null ? '未知' : Number(account.remaining).toLocaleString('zh-CN', { maximumFractionDigits: 6 })} / ${account.total == null ? '未知' : Number(account.total).toLocaleString('zh-CN', { maximumFractionDigits: 6 })}${account.unit && account.unit !== 'unknown' ? ` ${account.unit}` : ''}`,
+                windowQuota && account.used_percent != null && `已用百分比：${Number(account.used_percent).toFixed(1)}%`, bar,
+                `查询状态：${account.status || '未知'}`, account.observed_at && `最后观测：${formatTime(account.observed_at)}`,
+                account.quality?.cached && '使用缓存快照', account.quality?.precision && `精度：${account.quality.precision}`,
+              ].filter(Boolean).join(' · ') };
+            });
             sections.push({ title: '供应商额度多维分析', cards: [
               { label: '供应商账户数', value: Number(multi.provider_quota?.summary?.accounts || 0) },
               { label: '数据覆盖', value: coverage.start && coverage.end ? `${coverage.start} 至 ${coverage.end}` : '未知' },
@@ -809,6 +834,8 @@ function createAdminPages(runtime) {
             ], rows: [
               { label: `额度维度：${multi.dimensions || quotaQuery?.dimensions || 'provider'} · 指标：${multi.metric || quotaQuery?.metric || 'remaining'}` },
               ...quotaRows,
+              { label: `账户额度参照：${snapshotRows.length} 个可用额度账户` },
+              ...snapshotRows,
               ...caveats.map(caveat => ({ label: `统计说明：${caveat}` })),
               ...(multiDimensionResult ? array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: `${row.value ?? '未知'}${row.unit ? ` ${row.unit}` : ''} · ${row.status || '未知状态'}` })) : []),
               ...(!quotaRows.length ? [{ label: '当前条件下暂无额度观测数据。' }] : []),
@@ -932,7 +959,7 @@ function createAdminPages(runtime) {
               { label: '清除额度筛选', value: '__clear__' },
             ]);
             if (!key) return;
-            if (key === '__clear__') { runtime.adminStatsQuotaFilters = {}; runtime.adminStatsQuotaQuery = null; await ctx.refresh(); return; }
+            if (key === '__clear__') { runtime.adminStatsQuotaFilters = {}; if (runtime.adminStatsQuotaQuery) { runtime.adminStatsQuotaQuery = { dimensions: runtime.adminStatsQuotaQuery.dimensions, metric: runtime.adminStatsQuotaQuery.metric, data_source: 'quota', days }; } await ctx.refresh(); return; }
             const source = filters.find(([field]) => field === key);
             let value;
             if (source) {
@@ -987,6 +1014,27 @@ function createAdminPages(runtime) {
               dimensions.push(selected);
             }
             if (!dimensions.length) return;
+            const source = await ctx.choose('分析数据源', [{ label: '请求用量', value: 'usage' }, { label: '关联分析', value: 'association' }, { label: '供应商额度（将另选额度维度）', value: 'quota' }], { description: '请求用量与关联分析使用上方所选维度；额度数据源会改为选择额度账户、单位和窗口等专属维度。' });
+            if (!source) return;
+            if (source === 'quota') {
+              const quotaDimensionOptions = [['provider', '供应商'], ['account', '额度账户'], ['kind', '额度类型'], ['unit', '单位'], ['window', '额度窗口'], ['date', '日期']];
+              const quotaDimensions = [];
+              while (quotaDimensions.length < quotaDimensionOptions.length) {
+                const remaining = quotaDimensionOptions.filter(([value]) => !quotaDimensions.includes(value));
+                const selected = await ctx.choose(`额度维度（已选 ${quotaDimensions.length} 项）`, [...remaining.map(([value, label]) => ({ label: `添加：${label}`, value })), { label: '完成维度选择', value: '__done__' }]);
+                if (!selected || selected === '__done__') break;
+                quotaDimensions.push(selected);
+              }
+              if (!quotaDimensions.length) return;
+              const metricOptions = [['total', '总额度'], ['used', '已用额度'], ['remaining', '剩余额度'], ['used_percent', '已用百分比'], ['observed_consumption', '观测消耗'], ['percent_change', '使用率变化（百分点）']];
+              const metric = await ctx.choose('额度统计指标', metricOptions.map(([value, label]) => ({ label, value })));
+              if (!metric) return;
+              if (['used_percent', 'percent_change'].includes(metric) && !quotaDimensions.includes('account')) { await ctx.show('维度组合无效', '使用率和变化率指标必须包含额度账户维度。'); return; }
+              runtime.adminStatsQuotaQuery = { dimensions: quotaDimensions.join(','), metric, data_source: 'quota', days, ...(runtime.adminStatsQuotaFilters || {}) };
+              runtime.adminStatsDimensionQuery = null;
+              await ctx.refresh();
+              return;
+            }
             const metric = await ctx.choose('统计指标', [{ label: '请求数', value: 'requests' }, { label: 'Token 用量', value: 'tokens' }, { label: '消费积分', value: 'cost' }]);
             if (!metric) return;
             const includeQuota = await ctx.choose('是否叠加供应商额度参照', [{ label: '否，仅展示请求统计', value: false }, { label: '是，叠加供应商额度上下文', value: true }]);
@@ -995,9 +1043,8 @@ function createAdminPages(runtime) {
               ? await ctx.choose('成员额度展示方式', [{ label: '仅展示供应商级额度参照', value: 'reference' }, { label: '按供应商内成员请求占比估算', value: 'member_estimate' }])
               : 'reference';
             if (quotaMode === null) return;
-            const source = await ctx.choose('统计数据来源', [{ label: '请求使用统计', value: 'usage' }, { label: '项目关联统计', value: 'association' }]);
-            if (!source) return;
             runtime.adminStatsDimensionQuery = { dimensions: dimensions.join(','), metric, data_source: source, days, ...(includeQuota ? { include_quota: 'true' } : {}), ...(quotaMode === 'member_estimate' ? { quota_mode: 'member_estimate' } : {}) };
+            runtime.adminStatsQuotaQuery = null;
             await ctx.refresh();
           } }, { label: '清除自选维度', toolbar: 'page', run: async ctx => { runtime.adminStatsDimensionQuery = null; await ctx.refresh(); } }, { label: '筛选关联分析', toolbar: 'page', run: async ctx => {
             const options = await api('/api/admin/stats/multi/filters');
