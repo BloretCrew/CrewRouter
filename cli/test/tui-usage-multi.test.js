@@ -19,7 +19,7 @@ function makeRuntime() {
 test('usage page includes the web multi-dimension tab and renders the web result columns', async () => {
   const { runtime, calls } = makeRuntime();
   const page = buildPages(runtime).find(item => item.id === 'usage');
-  assert.deepEqual(page.tabs.map(tab => tab.id), ['overview', 'multi', 'daily', 'hourly', 'models', 'providers', 'keys', 'sources', 'latency', 'messages', 'logs']);
+  assert.deepEqual(page.tabs.map(tab => tab.id), ['overview', 'multi', 'daily', 'hourly', 'models', 'keys', 'sources', 'latency', 'messages', 'logs']);
   page.onTabChange({ id: 'multi' });
   const initial = await page.load();
   const setup = initial.actions.find(action => action.label === '设置多维分析');
