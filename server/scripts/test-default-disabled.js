@@ -76,7 +76,7 @@ test('fresh database, every key creation entry and prompt creation default to di
     assert.equal(statements.length, 1, `${file}: cover each creation statement`);
     const sql = statements[0][1];
     const args = file === 'user.js'
-      ? [1, file, `sk-${file}`, 'prefix', 'fixture', null, 'model', '[]']
+      ? [1, file, `sk-${file}`, 'prefix', 'fixture', null, 'model', '[]', '']
       : [1, file, `sk-${file}`, 'prefix', '[]'];
     await pool.query(sql, args);
     const row = (await pool.query('SELECT * FROM api_keys WHERE key_hash=$1', [file])).rows[0];

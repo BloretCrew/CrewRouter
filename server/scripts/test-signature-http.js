@@ -23,6 +23,7 @@ const pool = { async query(sql, values = []) {
   if (/SELECT m\.id FROM models m/.test(sql)) return { rows: state.queue.includes(values[0]) ? [{ id: values[0] }] : [] };
   if (/SELECT DISTINCT p\.format/.test(sql)) return { rows: [{ format: state.provider.format }] };
   if (/FROM api_key_harness_models/.test(sql)) return { rows: [] };
+  if (/FROM api_key_request_model_bindings/.test(sql)) return { rows: [] };
   if (/FROM api_key_models/.test(sql)) return { rows: state.queue.map(model_id => ({ model_id })) };
   if (/SELECT ak\.current_model_id/.test(sql)) return { rows: [{ current_model_id: state.queue[0], enabled: true, expires_at: null, ...state.user, ...state.key }] };
   if (/SELECT \* FROM models WHERE id/.test(sql)) return { rows: [{ id: values[0], upstream_model_id: 'upstream-route-primary', provider: 'local-provider', enabled: true }] };
