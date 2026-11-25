@@ -43,6 +43,23 @@ test('admin error logs pass user/model/provider/status/date filters to API', asy
   assert.ok(data.actions.some(action => action.label === '筛选供应商'));
 });
 
+test('admin error details use readable basic fields and separate original response', async () => {
+  const page = pageById('admin-error-logs');
+  const api = async () => ({ logs: [{ created_at: '2026-11-25T08:00:00Z', user_id: 7, username: 'alice', model_id: 'm1', upstream_model_id: 'up-model', series: 'Test Series', provider_name: 'Provider', status_code: 500, error_type: 'upstream_timeout', error_message: 'Upstream timed out', error_body: '{"type":"timeout"}', latency_ms: 123, ip_address: '127.0.0.1', key_prefix: 'cr_live_x', key_name: 'Main', is_final: false }], total: 1, page: 1, retention_days: 30 });
+  const data = await page.load(api);
+  const row = data.sections[0].rows[0];
+  let body = '';
+  await row.run({ choose: async () => 'overview', show: async (_title, content) => { body = content; } });
+  assert.match(body, /请求状态码：500/);
+  assert.match(body, /模型：m1/);
+  assert.match(body, /最终失败|中间失败/);
+  assert.match(body, /响应时间：123 毫秒/);
+  assert.match(body, /cr_live_x••••/);
+  assert.doesNotMatch(body, /status_code|api_key_id|error_body/);
+  await row.run({ choose: async () => 'response', show: async (_title, content) => { body = content; } });
+  assert.match(body, /"type": "timeout"/);
+});
+
 test('admin popup notices are read-only and route to the actual list endpoint', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [{ id: 2, title: 'Maintenance', body: 'Service notice', closeText: 'OK', enabled: true, seenCount: 5, createdAt: '2026-11-01' }] }; };

@@ -176,7 +176,26 @@ function createAdminPages(runtime) {
         const filters = runtime.errorFilters || {};
         const data = await api('/api/admin/error-logs', { query: { page, limit: 30, ...filters } });
         const items = array(data && data.logs);
-        return { sections: [{ title: '调用错误', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · 保留 ${data.retention_days || '—'} 天`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.model_name || item.model_id, item.provider_name, `${item.status_code || ''} ${item.error_type || ''}`), detail: display(item.error_message, item.username, item.latency_ms != null && `响应时间 ${item.latency_ms} 毫秒`), run: async ctx => await ctx.show('错误详情', JSON.stringify(item, null, 2)) })) }], actions: [
+        return { sections: [{ title: '调用错误', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · 保留 ${data.retention_days || '—'} 天`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.model_name || item.model_id || '未知模型', item.provider_name || '未知供应商', item.status_code ? `状态码 ${item.status_code}` : '无状态码', item.is_final === false ? '仍在回退' : '最终错误'), detail: display(item.error_message, item.username || (item.user_id ? `用户编号 ${item.user_id}` : ''), item.latency_ms != null && `响应时间 ${item.latency_ms} 毫秒`), run: async ctx => {
+          const choice = await ctx.choose('错误详情', [{ label: '基本信息', value: 'overview' }, { label: '错误信息', value: 'message' }, { label: '原始响应', value: 'response' }], { description: `${item.model_name || item.model_id || '未知模型'} · ${item.provider_name || item.provider_id || '未知供应商'}` });
+          if (choice === 'overview') {
+            const rows = [
+              `时间：${formatTime(item.created_at)}`, `用户：${item.username || (item.user_id ? `用户编号 ${item.user_id}` : '未知')}`,
+              `模型：${item.model_name || item.model_id || '未知模型'}`, item.series && `模型系列：${item.series}`,
+              `上游模型 ID：${item.upstream_model_id || item.model_id || '未知'}`, `供应商：${item.provider_name || item.provider_id || '未知供应商'}`,
+              `请求状态码：${item.status_code ?? '未知'}`, `错误类别：${item.error_type || '未分类'}`,
+              `请求结果：${item.is_final ? '最终失败（已返回客户端）' : '中间失败（系统仍在尝试备用模型）'}`,
+              `响应时间：${item.latency_ms != null ? `${item.latency_ms} 毫秒` : '未知'}`, `请求来源地址：${item.ip_address || '未知'}`,
+              `调用密钥：${item.key_prefix ? `${item.key_prefix}••••${item.key_name ? ` · ${item.key_name}` : ''}` : '未知'}`,
+            ].filter(Boolean).join('\n');
+            await ctx.show('错误详情 · 基本信息', rows);
+          } else if (choice === 'message') await ctx.show('错误信息', item.error_message || '此记录没有详细错误信息。');
+          else if (choice === 'response') {
+            let body = String(item.error_body || '').trim();
+            try { if (body) body = JSON.stringify(JSON.parse(body), null, 2); } catch (_) {}
+            await ctx.show('原始响应', body || '此记录没有原始响应。');
+          }
+        } })) }], actions: [
           { label: '筛选错误类型', run: async ctx => { const value = await ctx.ask('错误类型（留空全部）', { defaultValue: filters.error_type || '' }); if (value !== null) { runtime.errorFilters = { ...filters, error_type: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
           { label: '仅最终错误', run: async ctx => { runtime.errorFilters = { ...filters, final_only: filters.final_only === '1' ? '' : '1' }; runtime.errorPage = 1; await ctx.refresh(); } },
           { label: '筛选状态码', run: async ctx => { const value = await ctx.ask('HTTP 状态码（留空全部）', { defaultValue: filters.status_code || '' }); if (value !== null) { runtime.errorFilters = { ...filters, status_code: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
