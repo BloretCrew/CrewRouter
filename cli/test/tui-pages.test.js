@@ -164,6 +164,46 @@ test('project date query sends the web API range parameters', async () => {
   assert.equal(projectSection.rows[0].cells.last_activity, '—');
 });
 
+test('policy center mirrors the web section order and readable table columns', async () => {
+  const calls = [];
+  const page = buildPages(runtime(false)).find(item => item.id === 'policy-center');
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/user/policies/mine') return { suspension: { suspended: false }, settings: { enforcement_mode: 'enforce', allowlist_dimensions: ['model'] }, bypass: true, bypass_until: '2026-11-27T00:00:00Z', policies: [{ id: 5, name: 'Safe model', scope_type: 'team', effect: 'deny', action: 'block', category: 'content', priority: 20, starts_at: null, ends_at: null, description: 'Block unsafe models', conditions: { models: ['m1'] } }], exemptions: [{ id: 8, policy_id: 5, reason: 'Maintenance', ends_at: '2026-11-26T00:00:00Z', used_count: 1, max_uses: 3 }] };
+    if (path === '/api/user/policies/blocks') return [{ id: 17, policy_id: 5, policy_name: 'Safe model', action: 'block', decision: 'block', request_source: 'codex', requested_model: 'm1', status_code: 403, reason: 'Model is not allowed', created_at: '2026-11-25T08:00:00Z' }];
+    if (path === '/api/user/policy-appeals') return [{ id: 3, policy_id: 5, policy_name: 'Safe model', reason: 'Please review', status: 'pending', resolution: null, created_at: '2026-11-25T09:00:00Z' }];
+    return {};
+  };
+  const data = await page.load(api);
+  assert.deepEqual(data.sections.slice(0, 5).map(section => section.title), ['策略状态', '我的生效策略', '临时豁免', '最近拦截', '我的申诉']);
+  assert.deepEqual(data.sections[1].columns.map(column => column.label), ['名称', '作用域', '效果', '动作', '分类', '有效期']);
+  assert.deepEqual(data.sections[2].columns.map(column => column.label), ['策略', '原因', '到期', '次数']);
+  assert.deepEqual(data.sections[3].columns.map(column => column.label), ['时间', '策略', '客户端', '模型', '原因', '操作']);
+  assert.deepEqual(data.sections[4].columns.map(column => column.label), ['时间', '策略', '原因', '状态', '处理结果']);
+  assert.equal(data.sections[0].cards[0].value, '正常');
+  assert.equal(data.sections[0].cards[1].value, '1 条');
+  assert.ok(data.sections[0].cards[2].detail.includes('账号豁免已开启'));
+  assert.equal(data.sections[4].rows[0].cells.status, '处理中');
+});
+
+test('policy block row submits an appeal linked to that hit after confirmation', async () => {
+  const calls = [];
+  const page = buildPages(runtime(false)).find(item => item.id === 'policy-center');
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/user/policies/mine') return { policies: [], exemptions: [], suspension: {} };
+    if (path === '/api/user/policies/blocks') return [{ id: 17, policy_id: 5, policy_name: 'Safe model', request_source: 'codex', requested_model: 'm1', status_code: 403, reason: 'Not allowed', created_at: '2026-11-25T08:00:00Z' }];
+    if (path === '/api/user/policy-appeals') return [];
+    return {};
+  };
+  const data = await page.load(api);
+  const hit = data.sections.find(section => section.title === '最近拦截').rows[0];
+  let formTitle = '';
+  await hit.run({ form: async title => { formTitle = title; return { reason: 'Please review this block.' }; }, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.equal(formTitle, '提交策略申诉');
+  assert.deepEqual(calls.find(call => call.path === '/api/user/policy-appeals' && call.options.method === 'POST').options.body, { hit_id: 17, policy_id: 5, reason: 'Please review this block.' });
+});
+
 test('leaderboard renders web column order, current-user marker and footer totals', { timeout: 15000 }, async () => {
   const page = buildPages(runtime(false)).find(item => item.id === 'leaderboard');
   const tty = terminal(160, 36);
