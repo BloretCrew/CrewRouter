@@ -3,10 +3,38 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buildPages } = require('../tui/pages');
+const { runPagedTui } = require('../tui/engine');
+const { terminal, until } = require('./helpers/tty');
 
 function makeRuntime() {
   return { client: {}, cfg: { tui: { days: 30 } }, profileName: 'test' };
 }
+
+test('model library TUI renders web sections in binding, quota, filters, stars and directory order', { timeout: 15000 }, async () => {
+  const runtime = makeRuntime();
+  const page = buildPages(runtime).find(item => item.id === 'model-library');
+  const api = async path => {
+    if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 1, visible_model_count: 1 }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: true, test_latency_ms: 100 }], available_series: [], total_models: 1 };
+    if (path === '/api/user/api-keys') return [{ id: 1, name: 'Server CR CLI', current_model_name: 'glm-5.3-flash' }];
+    if (path === '/api/user/providers/quota') return { providers: [{ id: 'q1', name: 'Quota Provider', quota: { total: 10, remaining: 8 }, status: 'success' }] };
+    if (path === '/api/user/provider-tags') return [];
+    if (path === '/api/user/api-keys/1/models') return { queue: [{ model_id: 'star-1', name: 'Starred' }] };
+    return {};
+  };
+  const tty = terminal(120, 45);
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api, pages: [page], authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('Quota Provider'));
+    const screen = tty.screen();
+    const positions = ['当前 Key 绑定', '供应商额度', '搜索与筛选', '已收藏模型'].map(value => screen.indexOf(`▸ ${value}`));
+    positions.push(screen.lastIndexOf('▸ 供应商'));
+    assert.ok(positions.every(value => value >= 0), `missing model-library section: ${positions.join(',')}`);
+    assert.ok(positions.every((value, index) => index === 0 || positions[index - 1] < value), `unexpected model-library section order: ${positions.join(',')}`);
+    assert.ok(screen.includes('当前 API Key：Server CR CLI'));
+    assert.ok(screen.includes('刷新供应商额度'));
+    assert.ok(!screen.includes('模型库概览'));
+  } finally { tty.input.write('q'); await task; }
+});
 
 test('user model library renders teams, provider summaries, stars and searchable details', async () => {
   const runtime = makeRuntime();
@@ -24,16 +52,18 @@ test('user model library renders teams, provider summaries, stars and searchable
   };
   const page = buildPages(runtime).find(item => item.id === 'model-library');
   const initial = await page.load(api);
-  assert.ok(initial.pageToolbar);
-  assert.ok(initial.actions.filter(action => ['搜索模型/供应商', '选择供应商展开模型', '选择 API Key'].includes(action.label)).every(action => action.toolbar === 'page'));
-  const reorderAction = initial.actions.find(action => action.label === '排序模式：保存测试结果排序');
+  assert.equal(initial.pageToolbar, undefined);
+  assert.ok(initial.sections.some(section => section.title === '当前 Key 绑定' && section.actions?.some(action => action.label === '选择 API Key')));
+  assert.ok(initial.sections.some(section => section.title === '搜索与筛选' && section.actions?.some(action => action.label === '搜索模型/供应商')));
+  const reorderAction = initial.sections.find(section => section.title === '搜索与筛选').actions.find(action => action.label === '排序模式：保存测试结果排序');
   assert.ok(reorderAction);
   await reorderAction.run({ choose: async () => 'test_tps_desc', confirm: async () => false });
   assert.equal(calls.some(call => call.path === '/api/user/model-library/order/by-test'), false, 'cancelled sort confirmation must not write');
   await reorderAction.run({ choose: async () => 'test_tps_desc', confirm: async () => true, notify() {}, refresh: async () => {} });
   const orderRequest = calls.find(call => call.path === '/api/user/model-library/order/by-test');
   assert.deepEqual(orderRequest.options.body, { sort: 'test_tps_desc' });
-  assert.ok(initial.sections.some(section => section.title === '模型库概览'));
+  assert.deepEqual(initial.sections.map(section => section.title).slice(0, 5), ['当前 Key 绑定', '供应商额度', '搜索与筛选', '已收藏模型', '供应商']);
+  assert.equal(initial.sections.some(section => section.title === '模型库概览'), false);
   const quotaSection = initial.sections.find(section => section.title === '供应商额度');
   assert.ok(quotaSection);
   assert.match(quotaSection.rows[0].detail, /Pro.*当前周期已用 60%/);
@@ -41,7 +71,7 @@ test('user model library renders teams, provider summaries, stars and searchable
   await quotaSection.rows[0].run({ show: async (_title, body) => { quotaDetail = body; } });
   assert.match(quotaDetail, /本周期：已用 60%/);
   assert.match(quotaDetail, /主 Key：已用 60%/);
-  await initial.actions.find(action => action.label === '刷新供应商额度').run({ notify() {}, refresh: async () => {} });
+  await quotaSection.actions.find(action => action.label === '刷新供应商额度').run({ notify() {}, refresh: async () => {} });
   assert.ok(calls.some(call => call.path === '/api/user/providers/quota/refresh' && call.options.method === 'POST'));
   assert.ok(initial.sections.some(section => section.title === '已收藏模型'));
   const starRow = initial.sections.find(section => section.title === '已收藏模型').rows[0];
@@ -51,15 +81,14 @@ test('user model library renders teams, provider summaries, stars and searchable
   await starRow.run({ choose: async () => 'detail', show: async (_title, body) => { starDetails = body; } });
   assert.match(starDetails, /测试失败原因/);
   assert.ok(!starDetails.includes('input_price_per_1k_tokens') && !starDetails.includes('test_error'), 'details should describe values instead of exposing database field names');
-  assert.deepEqual(initial.sections[0].cards.map(card => card.label), ['所属团队', '可用模型', '模型系列', '已收藏模型']);
-  const providerSection = initial.sections.find(section => section.title === '团队与供应商目录');
+  const providerSection = initial.sections.find(section => section.title === '供应商');
   assert.equal(providerSection.cards.length, 1, 'team provider directory uses the responsive card grid');
   assert.equal(providerSection.cards[0].label, 'Provider A');
   assert.match(providerSection.cards[0].detail, /Team A.*测试通过/);
-  let showHidden = await initial.actions.find(action => action.label === '显示已隐藏的项目').run({ refresh: async () => {} });
+  let showHidden = await initial.sections.find(section => section.title === '搜索与筛选').actions.find(action => action.label === '显示已隐藏的项目').run({ refresh: async () => {} });
   assert.equal(runtime.libraryShowHidden, true);
   showHidden = await page.load(api);
-  const clearHidden = showHidden.actions.find(action => action.label === '清除所有隐藏偏好');
+  const clearHidden = showHidden.sections.find(section => section.title === '搜索与筛选').actions.find(action => action.label === '清除所有隐藏偏好');
   assert.ok(clearHidden, 'show-hidden mode exposes the complete-clear action');
   await clearHidden.run({ confirm: async () => false });
   assert.equal(calls.some(call => call.path === '/api/user/model-library/hidden' && call.options.method === 'DELETE'), false);
@@ -67,7 +96,7 @@ test('user model library renders teams, provider summaries, stars and searchable
   const clearCall = calls.find(call => call.path === '/api/user/model-library/hidden' && call.options.method === 'DELETE');
   assert.deepEqual(clearCall.options.query, { scope: 'all' });
   assert.equal(runtime.libraryShowHidden, false);
-  await initial.actions.find(action => action.label === '选择供应商展开模型').run({ choose: async () => 0, refresh: async () => {} });
+  await initial.sections.find(section => section.title === '搜索与筛选').actions.find(action => action.label === '选择供应商展开模型').run({ choose: async () => 0, refresh: async () => {} });
   const expanded = await page.load(api);
   assert.ok(expanded.sections.some(section => section.title.includes('模型目录')));
   runtime.librarySearch = 'model search';
@@ -77,7 +106,7 @@ test('user model library renders teams, provider summaries, stars and searchable
   await page.load(api);
   const modelSearch = calls.filter(call => call.path === '/api/user/team/2/provider/p1/models').at(-1);
   assert.deepEqual(modelSearch.options.query, { page: 1, limit: 30, search: 'model search', include_hidden: '', series: 'S', test: 'pass', sort: 'test_tps_desc' });
-  const hiddenToggle = expanded.actions.find(action => action.label === '显示已隐藏的项目');
+  const hiddenToggle = expanded.sections.find(section => section.title === '搜索与筛选').actions.find(action => action.label === '显示已隐藏的项目');
   await hiddenToggle.run({ refresh: async () => {} });
   assert.equal(runtime.libraryShowHidden, true);
   await page.load(api);

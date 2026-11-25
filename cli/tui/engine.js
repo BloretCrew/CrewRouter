@@ -289,9 +289,10 @@ async function runPagedTui({
             }
           }
         }
-        if (section.toolbar === true && toolbarActions.length) {
-          addSpans([{ text: '▸ ', fg: 'rose' }, { text: '常用操作', fg: 'dim', bold: true }], 'heading', null, 0);
-          for (const action of toolbarActions) add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
+        const sectionActions = Array.isArray(section.actions) ? section.actions : [];
+        if (section.toolbar === true && toolbarActions.length || sectionActions.length) {
+          addSpans([{ text: '▸ ', fg: 'rose' }, { text: section.title === '搜索与筛选' ? '筛选操作' : '常用操作', fg: 'dim', bold: true }], 'heading', null, 0);
+          for (const action of [...(section.toolbar === true ? toolbarActions : []), ...sectionActions]) add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
         }
         const columns = Array.isArray(section.columns) ? section.columns : [];
         if (columns.length && w >= (Number(section.tableMinWidth) || 92)) {
