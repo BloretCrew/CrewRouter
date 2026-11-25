@@ -442,12 +442,15 @@ test('admin invite page renders readable rows, confirms revoke and creates a one
   const api = async (path, options = {}) => {
     calls.push({ path, options });
     if (path === '/api/auth-invites' && options.method === 'POST') return { id: 5, token: 'one-time-token', url: 'https://router.example/?invite=one-time-token', max_uses: 3, expires_at: '2026-12-02T00:00:00Z', team_name: 'Team Two' };
-    if (path === '/api/auth-invites') return [{ id: 4, status: 'active', max_uses: 5, used_count: 2, expires_at: '2026-12-01T00:00:00Z', team_id: 2, team_name: 'Team Two', created_by_name: 'admin', created_at: '2026-11-20T00:00:00Z', used_by_name: 'alice', used_at: '2026-11-21T00:00:00Z' }];
+    if (path === '/api/auth-invites') return [{ id: 4, status: 'active', max_uses: 5, used_count: 2, expires_at: '2026-12-01T00:00:00Z', team_id: 2, team_name: 'Team Two', created_by_name: 'admin', created_at: '2026-11-20T00:00:00Z', used_by_name: 'alice', used_at: '2026-11-21T00:00:00Z' }, { id: 3, status: 'revoked', max_uses: 1, used_count: 0, created_by_name: 'admin', created_at: '2026-11-19T00:00:00Z' }];
     if (path === '/api/admin/teams') return [{ id: 2, name: 'Team Two' }];
     return {};
   };
   const page = pageById('admin-invites');
   const data = await page.load(api);
+  assert.deepEqual(data.sections[0].columns.map(column => column.label), ['编号', '状态', '使用人数', '有效期', 'Team', '创建人', '创建时间', '最近使用', '操作']);
+  assert.deepEqual(data.sections[0].rows[0].cells, { id: '#4', status: '有效', usage: '2 / 5', expires: data.sections[0].rows[0].cells.expires, team: 'Team Two', creator: 'admin', created: data.sections[0].rows[0].cells.created, last_used: 'alice · 2026/11/21 08:00:00', actions: 'Enter 管理' });
+  assert.equal(data.sections[0].rows[1].cells.status, '已撤销');
   assert.match(data.sections[0].rows[0].detail, /Team：Team Two.*使用 2\/5 次/);
   let inviteDetails = '';
   await data.sections[0].rows[0].run({ choose: async () => 'detail', show: async (_title, body) => { inviteDetails = body; } });

@@ -1379,8 +1379,12 @@ function createAdminPages(runtime) {
       async load(api) {
         const invites = array(await api('/api/auth-invites'));
         const rows = invites.map(invite => {
-          const status = { active: '有效', used: '已用完', expired: '已过期' }[invite.status] || invite.status || '未知';
-          return { label: `邀请 #${invite.id} · ${status}`, detail: `${invite.team_name ? `Team：${invite.team_name}` : '未指定 Team'} · 使用 ${Number(invite.used_count || 0)}/${Number(invite.max_uses || 1)} 次 · ${invite.expires_at ? `到期 ${formatTime(invite.expires_at)}` : '无到期时间'}`, run: async ctx => {
+          const status = { active: '有效', used: '已用完', expired: '已过期', revoked: '已撤销' }[invite.status] || '未知状态';
+          return { label: `邀请 #${invite.id} · ${status}`, cells: {
+            id: `#${invite.id}`, status, usage: `${Number(invite.used_count || 0)} / ${Number(invite.max_uses || 1)}`, expires: invite.expires_at ? formatTime(invite.expires_at) : '—',
+            team: invite.team_name || '未指定', creator: invite.created_by_name || '未知', created: invite.created_at ? formatTime(invite.created_at) : '—',
+            last_used: invite.used_at ? `${invite.used_by_name || '用户'} · ${formatTime(invite.used_at)}` : '尚未使用', actions: invite.status === 'active' ? 'Enter 管理' : '查看详情',
+          }, detail: `${invite.team_name ? `Team：${invite.team_name}` : '未指定 Team'} · 使用 ${Number(invite.used_count || 0)}/${Number(invite.max_uses || 1)} 次 · ${invite.expires_at ? `到期 ${formatTime(invite.expires_at)}` : '无到期时间'}`, run: async ctx => {
             const details = [
               `邀请编号：${invite.id}`, `状态：${status}`, `使用情况：${Number(invite.used_count || 0)} / ${Number(invite.max_uses || 1)} 次`,
               `有效期至：${formatTime(invite.expires_at)}`, `加入 Team：${invite.team_name || '未指定'}`,
@@ -1394,7 +1398,11 @@ function createAdminPages(runtime) {
             if (choice === 'revoke') { if (!await ctx.confirm('撤销邀请链接', `撤销 #${invite.id}？该链接将立即无法注册，且此操作不可撤销。`)) return; await api(`/api/auth-invites/${encodeURIComponent(invite.id)}/revoke`, { method: 'POST', body: {} }); ctx.notify('邀请链接已撤销。'); await ctx.refresh(); }
           } };
         });
-        return { sections: [{ title: '邀请链接', description: `${invites.length} 条 · 列表不含原始 token`, rows: rows.length ? rows : [{ label: '暂无邀请链接。' }] }], actions: [
+        return { sections: [{ title: '邀请链接', tableMinWidth: 136, description: `${invites.length} 条 · 列表不含原始 token`, columns: [
+          { key: 'id', label: '编号', ratio: 0.06 }, { key: 'status', label: '状态', ratio: 0.1 }, { key: 'usage', label: '使用人数', ratio: 0.1 },
+          { key: 'expires', label: '有效期', ratio: 0.15 }, { key: 'team', label: 'Team', ratio: 0.12 }, { key: 'creator', label: '创建人', ratio: 0.1 },
+          { key: 'created', label: '创建时间', ratio: 0.13 }, { key: 'last_used', label: '最近使用', ratio: 0.16 }, { key: 'actions', label: '操作', ratio: 0.08 },
+        ], rows: rows.length ? rows : [{ label: '暂无邀请链接。' }] }], actions: [
           { label: '生成邀请链接', toolbar: true, run: async ctx => {
             const teams = array(await api('/api/admin/teams'));
             const values = await ctx.form('生成邀请链接', [
