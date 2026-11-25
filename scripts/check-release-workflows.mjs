@@ -63,6 +63,7 @@ if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-s
 for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']) {
   const openapi = JSON.parse(await readFile(openapiPath, 'utf8'));
   const adminUsers = openapi.paths['/api/admin/users']?.get;
+  const adminProducts = openapi.paths['/api/admin/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyList = openapi.paths['/api/user/api-keys']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const usage = openapi.paths['/api/user/usage']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const balance = openapi.paths['/api/user/balance']?.get?.responses?.[200]?.content?.['application/json']?.schema;
@@ -97,7 +98,9 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const requestModelBindings = openapi.paths['/api/user/api-keys/{id}/request-model-bindings']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (adminUsers?.['x-crewrouter-permission'] !== 'admin.users.read' || adminUsers.responses?.[200]?.content?.['application/json']?.schema?.oneOf?.length !== 2) throw new Error(`${openapiPath} must document admin user list pagination variants`);
   if (adminUsers.responses[200].content['application/json'].schema.oneOf[0].items?.$ref !== '#/components/schemas/AdminUser' || adminUsers.responses[200].content['application/json'].schema.oneOf[1].$ref !== '#/components/schemas/AdminUsersPage') throw new Error(`${openapiPath} must define admin user list row and page schemas`);
+  if (adminProducts?.type !== 'array' || adminProducts.items?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product list responses`);
   if (openapi.components.schemas.AdminUsersPage?.properties?.stats?.$ref !== '#/components/schemas/AdminUserStats') throw new Error(`${openapiPath} must define paginated admin user stats`);
+  if (adminProducts?.type !== 'array' || adminProducts.items?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product list responses`);
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);

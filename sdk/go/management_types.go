@@ -38,6 +38,20 @@ type AdminUser struct {
 	TeamName      *string `json:"team_name"`
 }
 
+// AdminProduct is one product returned to administrator clients.
+type AdminProduct struct {
+	ID          int64   `json:"id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	Price       any     `json:"price"`
+	ImageURL    *string `json:"image_url"`
+	Link        *string `json:"link"`
+	IsActive    bool    `json:"is_active"`
+	SortOrder   int     `json:"sort_order"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+}
+
 // AdminUserStats summarizes the filtered administrator user list.
 type AdminUserStats struct {
 	AdminCount    int     `json:"adminCount"`

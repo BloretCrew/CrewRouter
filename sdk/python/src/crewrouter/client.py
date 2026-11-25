@@ -31,6 +31,19 @@ class AdminUser(TypedDict, total=False):
     team_name: Optional[str]
 
 
+class AdminProduct(TypedDict, total=False):
+    id: int
+    name: str
+    description: Optional[str]
+    price: Union[float, str]
+    image_url: Optional[str]
+    link: Optional[str]
+    is_active: bool
+    sort_order: int
+    created_at: str
+    updated_at: str
+
+
 class AdminUserStats(TypedDict):
     adminCount: int
     verifiedCount: int

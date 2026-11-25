@@ -312,6 +312,19 @@ export interface AdminUsersPage {
   stats: AdminUserStats;
 }
 
+export interface AdminProduct {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number | string;
+  image_url: string | null;
+  link: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type AdminUsersResponse = AdminUser[] | AdminUsersPage;
 
 export interface UserProduct {

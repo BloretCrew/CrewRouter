@@ -523,6 +523,12 @@ function managementSchemas() {
       total: { type: 'integer' }, page: { type: 'integer' }, limit: { type: 'integer' },
       stats: { $ref: '#/components/schemas/AdminUserStats' },
     }, ['items', 'total', 'page', 'limit', 'stats']),
+    AdminProduct: object({
+      id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
+      price: numberOrString, image_url: nullableString, link: nullableString,
+      is_active: { type: 'boolean' }, sort_order: { type: 'integer' },
+      created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
+    }, ['id', 'name', 'is_active', 'sort_order', 'created_at', 'updated_at']),
     UserUsageLog: object({
       id: { type: 'integer' }, user_id: { type: 'integer' }, model_id: nullableString,
       api_key_id: { type: ['integer', 'null'] }, tokens_used: { type: ['integer', 'string', 'null'] },
@@ -668,6 +674,7 @@ function managementResponseSchema(operationId) {
   const schemas = {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
+    'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },

@@ -31,6 +31,7 @@ export type {
   CallOptions,
   CrewRouterResponse,
   AdminUser,
+  AdminProduct,
   AdminUserStats,
   AdminUsersPage,
   AdminUsersResponse,

@@ -14,6 +14,7 @@ from crewrouter import (
     ApiKeySwallowImagesUpdateResponse,
     ApiKeyCommandsUpdateResponse,
     AdminUser,
+    AdminProduct,
     AdminUsersPage,
     ApiKeyModelsResponse,
     ApiKeyModelsUpdateResponse,
@@ -177,6 +178,7 @@ class TypedRequestTests(unittest.TestCase):
         commands_response: ApiKeyCommandsUpdateResponse = {"success": True, "crewrouter_commands": True}
         admin_user: AdminUser = {"id": 9, "username": "alice", "email": None, "email_verified": False, "avatar": None, "balance": "1.5", "refund_balance": "0", "is_admin": False, "tags": [], "rate_limit_rpm": 0, "rate_limit_tpm": 0, "created_at": "2026-01-01T00:00:00Z", "team_id": None, "team_name": None}
         admin_page: AdminUsersPage = {"items": [admin_user], "total": 1, "page": 1, "limit": 50, "stats": {"adminCount": 0, "verifiedCount": 0, "totalBalance": 1.5}}
+        admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(claude_config["model"], "claude-fable-5")
         self.assertEqual(fusion["panel_models"], fusion_put["panel_models"])

@@ -141,6 +141,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(legacyUsers) != 1 || pagedUsers.Total != 1 || pagedUsers.Stats.TotalBalance != 1.5 {
 		t.Fatalf("unexpected admin user response: %#v / %#v", legacyUsers, pagedUsers)
 	}
+	var adminProducts []crewrouter.AdminProduct
+	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"price":"2.5","image_url":null,"link":null,"is_active":true,"sort_order":0,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}]`), &adminProducts); err != nil {
+		t.Fatalf("decode admin products: %v", err)
+	}
+	if len(adminProducts) != 1 || adminProducts[0].Price != "2.5" || adminProducts[0].Description != nil {
+		t.Fatalf("unexpected admin product response: %#v", adminProducts)
+	}
 
 	var config crewrouter.ApiKeyClaudeConfig
 	if err := json.Unmarshal([]byte(`{"env":{"ANTHROPIC_BASE_URL":"https://router.example","ANTHROPIC_AUTH_TOKEN":"sk-fixture-secret","ANTHROPIC_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_HAIKU_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_SONNET_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_OPUS_MODEL":"claude-fable-5"},"model":"claude-fable-5","effortLevel":"high"}`), &config); err != nil {

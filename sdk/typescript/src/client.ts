@@ -4,6 +4,7 @@ import { HttpClient } from './http.js';
 import type {
   AnthropicMessagesRequest,
   AdminUsersResponse,
+  AdminProduct,
   ApiKeyActionSuccess,
   ApiKeyEnabledUpdateResponse,
   ApiKeySwallowImagesUpdateResponse,
@@ -301,6 +302,10 @@ export class CrewRouter {
     teams: {
       list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.teams.list', options),
+    },
+    products: {
+      list: <T = AdminProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.products.list', options),
     },
   };
 }
