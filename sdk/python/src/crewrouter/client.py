@@ -65,6 +65,26 @@ class ApiKeyModelsUpdateResponse(TypedDict):
     current_model_id: Optional[str]
 
 
+class ApiKeyFusionConfig(TypedDict):
+    panel_models: list[str]
+    judge_model_id: str
+    outer_model_id: str
+    fusion_enabled: bool
+    fusion_synthesis_prompt_enabled: bool
+
+
+class ApiKeyFusionConfigPut(TypedDict, total=False):
+    panel_models: list[str]
+    judge_model_id: str
+    outer_model_id: str
+    fusion_enabled: bool
+    fusion_synthesis_prompt_enabled: bool
+
+
+class ApiKeyActionSuccess(TypedDict):
+    success: bool
+
+
 class ApiKeyClaudeConfigEnv(TypedDict):
     ANTHROPIC_BASE_URL: str
     ANTHROPIC_AUTH_TOKEN: str

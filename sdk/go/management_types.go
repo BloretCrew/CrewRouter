@@ -214,6 +214,29 @@ type ApiKeyHarnessModelsResponse struct {
 	AvailableHarnesses []AvailableHarness   `json:"available_harnesses"`
 }
 
+// ApiKeyFusionConfig is the resolved Fusion setting for an API Key.
+type ApiKeyFusionConfig struct {
+	PanelModels                  []string `json:"panel_models"`
+	JudgeModelID                 string   `json:"judge_model_id"`
+	OuterModelID                 string   `json:"outer_model_id"`
+	FusionEnabled                bool     `json:"fusion_enabled"`
+	FusionSynthesisPromptEnabled bool     `json:"fusion_synthesis_prompt_enabled"`
+}
+
+// ApiKeyFusionConfigPut is the accepted Fusion configuration replacement.
+type ApiKeyFusionConfigPut struct {
+	PanelModels                  []string `json:"panel_models"`
+	JudgeModelID                 string   `json:"judge_model_id,omitempty"`
+	OuterModelID                 string   `json:"outer_model_id,omitempty"`
+	FusionEnabled                *bool    `json:"fusion_enabled,omitempty"`
+	FusionSynthesisPromptEnabled *bool    `json:"fusion_synthesis_prompt_enabled,omitempty"`
+}
+
+// ApiKeyActionSuccess is the standard successful mutation response.
+type ApiKeyActionSuccess struct {
+	Success bool `json:"success"`
+}
+
 // ApiKeyClaudeConfig contains a generated configuration including the API Key secret.
 // Treat ANTHROPIC_AUTH_TOKEN as a credential: never log, persist, or expose it.
 type ApiKeyClaudeConfig struct {

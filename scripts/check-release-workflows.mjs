@@ -84,6 +84,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const apiKeyModels = openapi.paths['/api/user/api-keys/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyModelsUpdate = openapi.paths['/api/user/api-keys/{id}/models']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyConfig = openapi.paths['/api/user/api-keys/{id}/config']?.get;
+  const fusionConfig = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const fusionConfigPut = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.put;
   const harnessModels = openapi.paths['/api/user/api-keys/{id}/harness-models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
@@ -121,6 +123,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (apiKeyModelsUpdate?.$ref !== '#/components/schemas/ApiKeyModelsUpdateResponse') throw new Error(`${openapiPath} must define model queue update responses`);
   if (apiKeyConfig?.['x-crewrouter-permission'] !== 'keys.secret' || !apiKeyConfig.description?.includes('Owner-only') || !apiKeyConfig.description.includes('never log or expose')) throw new Error(`${openapiPath} must document the API Key secret exposure boundary`);
   if (!openapi.components.schemas.ApiKeyClaudeConfig?.properties?.env?.properties?.ANTHROPIC_AUTH_TOKEN?.description?.includes('never log or expose')) throw new Error(`${openapiPath} must mark the generated API Key token as sensitive`);
+  if (fusionConfig?.$ref !== '#/components/schemas/ApiKeyFusionConfig') throw new Error(`${openapiPath} must define API Key Fusion config responses`);
+  if (fusionConfigPut?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/ApiKeyFusionConfigPut' || openapi.components.schemas.ApiKeyFusionConfigPut?.properties?.panel_models?.maxItems !== 10) throw new Error(`${openapiPath} must define bounded Fusion model configuration requests`);
   if (harnessModels?.$ref !== '#/components/schemas/ApiKeyHarnessModelsResponse') throw new Error(`${openapiPath} must define API Key harness model responses`);
   if (!openapi.components.schemas.ApiKeyHarnessModelsResponse?.properties?.available_harnesses?.items?.$ref?.endsWith('/AvailableHarness')) throw new Error(`${openapiPath} must define available harness options`);
 }

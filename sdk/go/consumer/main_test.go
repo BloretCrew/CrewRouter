@@ -110,6 +110,17 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if config.Env.AnthropicAuthToken == "" || config.Model != "claude-fable-5" {
 		t.Fatal("API key config secret/model fields were not decoded")
 	}
+	var fusion crewrouter.ApiKeyFusionConfig
+	if err := json.Unmarshal([]byte(`{"panel_models":["m1"],"judge_model_id":"","outer_model_id":"","fusion_enabled":true,"fusion_synthesis_prompt_enabled":true}`), &fusion); err != nil {
+		t.Fatalf("decode Fusion config: %v", err)
+	}
+	if len(fusion.PanelModels) != 1 || !fusion.FusionEnabled {
+		t.Fatalf("unexpected Fusion config: %#v", fusion)
+	}
+	var action crewrouter.ApiKeyActionSuccess
+	if err := json.Unmarshal([]byte(`{"success":true}`), &action); err != nil || !action.Success {
+		t.Fatalf("decode Fusion update response: %#v, %v", action, err)
+	}
 
 	var harnessModels crewrouter.ApiKeyHarnessModelsResponse
 	if err := json.Unmarshal([]byte(`{"harness_models":[{"harness":"codex","model_id":"m1","name":"Model","provider_name":"Provider","label":"Codex"}],"available_harnesses":[{"id":"codex","label":"Codex"}]}`), &harnessModels); err != nil {

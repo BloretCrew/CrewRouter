@@ -157,6 +157,14 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { env: { ANTHROPIC_BASE_URL: 'http://localhost', ANTHROPIC_AUTH_TOKEN: 'sk-fixture-secret', ANTHROPIC_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_HAIKU_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_SONNET_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_OPUS_MODEL: 'claude-fable-5' }, model: 'claude-fable-5', effortLevel: 'high' });
       return;
     }
+    if (req.url === '/api/user/api-keys/7/fusion-config' && req.method === 'GET') {
+      json(res, 200, { panel_models: ['m1'], judge_model_id: '', outer_model_id: '', fusion_enabled: true, fusion_synthesis_prompt_enabled: true });
+      return;
+    }
+    if (req.url === '/api/user/api-keys/7/fusion-config' && req.method === 'PUT') {
+      json(res, 200, { success: true });
+      return;
+    }
     if (req.url === '/api/user/api-keys/7/harness-models') {
       json(res, 200, { harness_models: [{ harness: 'codex', model_id: 'm1', name: 'Model', provider_name: 'Provider', label: 'Codex' }], available_harnesses: [{ id: 'codex', label: 'Codex' }] });
       return;
@@ -182,6 +190,8 @@ test('management wrappers preserve their documented response payload shapes', as
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
   const keys = await client.keys.list();
   const keyConfig = await client.keys.getConfig(7);
+  const fusionConfig = await client.keys.getFusionConfig(7);
+  const fusionSaved = await client.keys.setFusionConfig(7, { panel_models: ['m1'] });
   const harnessModels = await client.keys.getHarnessModels(7);
   const usage = await client.usage.get();
   const balance = await client.balance.get();
@@ -205,6 +215,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
   assert.equal(keyConfig.data.env.ANTHROPIC_AUTH_TOKEN, 'sk-fixture-secret');
+  assert.deepEqual(fusionConfig.data.panel_models, ['m1']);
+  assert.equal(fusionSaved.data.success, true);
   assert.equal(harnessModels.data.harness_models[0].harness, 'codex');
   assert.equal(usage.data[0].total_tokens, '12');
   assert.equal(balance.data.refund_balance, 8);

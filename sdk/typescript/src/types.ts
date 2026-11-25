@@ -147,6 +147,26 @@ export interface ApiKeyHarnessModelsResponse {
   available_harnesses: AvailableHarness[];
 }
 
+export interface ApiKeyFusionConfig {
+  panel_models: string[];
+  judge_model_id: string;
+  outer_model_id: string;
+  fusion_enabled: boolean;
+  fusion_synthesis_prompt_enabled: boolean;
+}
+
+export interface ApiKeyFusionConfigPut {
+  panel_models: string[];
+  judge_model_id?: string;
+  outer_model_id?: string;
+  fusion_enabled?: boolean;
+  fusion_synthesis_prompt_enabled?: boolean;
+}
+
+export interface ApiKeyActionSuccess {
+  success: true;
+}
+
 export interface ApiKeyClaudeConfig {
   env: {
     ANTHROPIC_BASE_URL: string;

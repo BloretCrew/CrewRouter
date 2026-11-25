@@ -457,6 +457,17 @@ function managementSchemas() {
       members: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyMember' } },
     }, ['is_owner', 'members']),
     ApiKeyQuotaWarning: object({ quota_warning_enabled: { type: 'boolean' } }),
+    ApiKeyFusionConfig: object({
+      panel_models: { type: 'array', items: { type: 'string' } },
+      judge_model_id: { type: 'string' }, outer_model_id: { type: 'string' },
+      fusion_enabled: { type: 'boolean' }, fusion_synthesis_prompt_enabled: { type: 'boolean' },
+    }, ['panel_models', 'judge_model_id', 'outer_model_id', 'fusion_enabled', 'fusion_synthesis_prompt_enabled']),
+    ApiKeyFusionConfigPut: object({
+      panel_models: { type: 'array', maxItems: 10, items: { type: 'string' } },
+      judge_model_id: { type: 'string' }, outer_model_id: { type: 'string' },
+      fusion_enabled: { type: 'boolean' }, fusion_synthesis_prompt_enabled: { type: 'boolean' },
+    }, ['panel_models']),
+    ApiKeyActionSuccess: object({ success: { const: true } }),
     ApiKeyClaudeConfig: object({
       env: object({
         ANTHROPIC_BASE_URL: { type: 'string' },
@@ -614,6 +625,8 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.harnessModels.list': { $ref: '#/components/schemas/ApiKeyHarnessModelsResponse' },
     'user.apiKeys.byId.models.update': { $ref: '#/components/schemas/ApiKeyModelsUpdateResponse' },
     'user.apiKeys.byId.config.list': { $ref: '#/components/schemas/ApiKeyClaudeConfig' },
+    'user.apiKeys.byId.fusionConfig.list': { $ref: '#/components/schemas/ApiKeyFusionConfig' },
+    'user.apiKeys.byId.fusionConfig.update': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },
@@ -716,9 +729,23 @@ function buildOpenApi(operations) {
     if (op.operationId === 'user.apiKeys.byId.config.list') {
       operation.description = 'Owner-only Claude Code configuration. Requires keys.secret and an API Key owned by the caller. The response contains the API Key in ANTHROPIC_AUTH_TOKEN; never log or expose it. Legacy hash-only keys return HTTP 410 and must be regenerated.';
     }
+    if (op.operationId === 'user.apiKeys.byId.fusionConfig.update') {
+      operation.requestBody = {
+        required: true,
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiKeyFusionConfigPut' } } },
+      };
+      operation.responses[400] = {
+        description: 'Invalid Fusion configuration, including a missing/non-array panel_models or more than 10 distinct non-empty panel models.',
+        content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+      };
+      operation.responses[403] = {
+        description: 'The API Key owner is not authorized to use one of the configured models.',
+        content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+      };
+    }
     if (op.aliases.length) operation['x-crewrouter-aliases'] = op.aliases;
     if (op.sdkStatus === 'excluded') operation['x-crewrouter-excluded'] = op.exclusion;
-    if (['POST', 'PUT', 'PATCH'].includes(op.method) && op.request.body === 'json') {
+    if (!operation.requestBody && ['POST', 'PUT', 'PATCH'].includes(op.method) && op.request.body === 'json') {
       operation.requestBody = {
         required: false,
         content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
