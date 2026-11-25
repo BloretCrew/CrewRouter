@@ -129,6 +129,93 @@
         ],
         "additionalProperties": true
       },
+      "RequestModelBinding": {
+        "type": "object",
+        "properties": {
+          "request_model_name": {
+            "type": "string"
+          },
+          "harness": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_model_name",
+          "model_id",
+          "name",
+          "provider_name"
+        ],
+        "additionalProperties": true
+      },
+      "RequestModelBindingTarget": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "alias": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "upstream_model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyRequestModelBindingsResponse": {
+        "type": "object",
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestModelBinding"
+            }
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestModelBindingTarget"
+            }
+          },
+          "available_harnesses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailableHarness"
+            }
+          }
+        },
+        "required": [
+          "bindings",
+          "models",
+          "available_harnesses"
+        ],
+        "additionalProperties": true
+      },
       "ApiKeyRequestModelBinding": {
         "type": "object",
         "properties": {
@@ -14987,8 +15074,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyRequestModelBindingsResponse"
                 }
               }
             }

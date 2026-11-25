@@ -80,6 +80,7 @@ const claudeConfig = await client.keys.getConfig(created.data.id); // ApiKeyClau
 const keyModels = await client.keys.getModels(created.data.id); // ApiKeyModelsResponse
 const membership = await client.keys.getMembers(created.data.id); // ApiKeyMembersResponse
 const harnessModels = await client.keys.getHarnessModels(created.data.id); // ApiKeyHarnessModelsResponse
+const requestBindings = await client.keys.getRequestModelBindings(created.data.id); // ApiKeyRequestModelBindingsResponse
 const schedule = await client.keys.getSchedule(created.data.id); // ApiKeySchedule
 
 const usage = await client.usage.get({ days: 7 }); // DailyUsageItem[]

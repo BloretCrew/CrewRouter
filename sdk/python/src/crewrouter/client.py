@@ -118,6 +118,27 @@ class ApiKeyHarnessModelsResponse(TypedDict):
     available_harnesses: list[AvailableHarness]
 
 
+class RequestModelBinding(TypedDict):
+    request_model_name: str
+    harness: Optional[str]
+    model_id: str
+    name: str
+    provider_name: str
+
+
+class RequestModelBindingTarget(TypedDict, total=False):
+    id: str
+    name: str
+    alias: Optional[str]
+    upstream_model_id: Optional[str]
+
+
+class ApiKeyRequestModelBindingsResponse(TypedDict):
+    bindings: list[RequestModelBinding]
+    models: list[RequestModelBindingTarget]
+    available_harnesses: list[AvailableHarness]
+
+
 class ApiKeyListItem(TypedDict, total=False):
     id: Union[int, str]
     name: str

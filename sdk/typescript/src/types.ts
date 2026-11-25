@@ -147,6 +147,27 @@ export interface ApiKeyHarnessModelsResponse {
   available_harnesses: AvailableHarness[];
 }
 
+export interface RequestModelBinding {
+  request_model_name: string;
+  harness: string | null;
+  model_id: string;
+  name: string;
+  provider_name: string;
+}
+
+export interface RequestModelBindingTarget {
+  id: string;
+  name: string;
+  alias: string | null;
+  upstream_model_id: string | null;
+}
+
+export interface ApiKeyRequestModelBindingsResponse {
+  bindings: RequestModelBinding[];
+  models: RequestModelBindingTarget[];
+  available_harnesses: AvailableHarness[];
+}
+
 export interface ApiKeyFusionConfig {
   panel_models: string[];
   judge_model_id: string;

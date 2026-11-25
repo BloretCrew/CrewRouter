@@ -87,6 +87,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const fusionConfig = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const fusionConfigPut = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.put;
   const harnessModels = openapi.paths['/api/user/api-keys/{id}/harness-models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const requestModelBindings = openapi.paths['/api/user/api-keys/{id}/request-model-bindings']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
@@ -127,6 +128,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (fusionConfigPut?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/ApiKeyFusionConfigPut' || openapi.components.schemas.ApiKeyFusionConfigPut?.properties?.panel_models?.maxItems !== 10) throw new Error(`${openapiPath} must define bounded Fusion model configuration requests`);
   if (harnessModels?.$ref !== '#/components/schemas/ApiKeyHarnessModelsResponse') throw new Error(`${openapiPath} must define API Key harness model responses`);
   if (!openapi.components.schemas.ApiKeyHarnessModelsResponse?.properties?.available_harnesses?.items?.$ref?.endsWith('/AvailableHarness')) throw new Error(`${openapiPath} must define available harness options`);
+  if (requestModelBindings?.$ref !== '#/components/schemas/ApiKeyRequestModelBindingsResponse') throw new Error(`${openapiPath} must define request-model binding responses`);
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {

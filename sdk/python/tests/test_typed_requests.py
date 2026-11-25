@@ -13,6 +13,9 @@ from crewrouter import (
     ApiKeyModelsResponse,
     ApiKeyModelsUpdateResponse,
     ApiKeyHarnessModelsResponse,
+    ApiKeyRequestModelBindingsResponse,
+    RequestModelBinding,
+    RequestModelBindingTarget,
     ApiKeyAvailableModel,
     ApiKeyModelQueueItem,
     ApiKeyQueueItem,
@@ -148,6 +151,9 @@ class TypedRequestTests(unittest.TestCase):
         key_models: ApiKeyModelsResponse = {"models": [available_model], "queue": [queue_item]}
         key_models_updated: ApiKeyModelsUpdateResponse = {"success": True, "modelIds": ["m1"], "current_model_id": "m1"}
         harness_models: ApiKeyHarnessModelsResponse = {"harness_models": [{"harness": "codex", "model_id": "m1", "name": "Model", "provider_name": "Provider", "label": "Codex"}], "available_harnesses": [{"id": "codex", "label": "Codex"}]}
+        binding: RequestModelBinding = {"request_model_name": "fast", "harness": None, "model_id": "m1", "name": "Model", "provider_name": "Provider"}
+        target: RequestModelBindingTarget = {"id": "m1", "name": "Model", "alias": None, "upstream_model_id": "upstream-m1"}
+        request_bindings: ApiKeyRequestModelBindingsResponse = {"bindings": [binding], "models": [target], "available_harnesses": [{"id": "codex", "label": "Codex"}]}
         claude_config: ApiKeyClaudeConfig = {"env": {"ANTHROPIC_BASE_URL": "https://router.example", "ANTHROPIC_AUTH_TOKEN": "sk-test-only", "ANTHROPIC_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-fable-5"}, "model": "claude-fable-5", "effortLevel": "high"}
         fusion: ApiKeyFusionConfig = {"panel_models": ["m1"], "judge_model_id": "", "outer_model_id": "", "fusion_enabled": True, "fusion_synthesis_prompt_enabled": True}
         fusion_put: ApiKeyFusionConfigPut = {"panel_models": ["m1"]}
@@ -161,6 +167,8 @@ class TypedRequestTests(unittest.TestCase):
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)
         self.assertEqual(key_models_updated["current_model_id"], "m1")
         self.assertEqual(harness_models["available_harnesses"][0]["id"], "codex")
+        self.assertIsNone(request_bindings["bindings"][0]["harness"])
+        self.assertEqual(request_bindings["models"][0]["upstream_model_id"], "upstream-m1")
         code_balance: UserCodeBalanceItem = {
             "amount": "2.5", "fee_rate": "0.1", "code": "redeem-1",
             "code_amount": "3", "net_amount": "2.2727",

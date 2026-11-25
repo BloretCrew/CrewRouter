@@ -399,6 +399,18 @@ function managementSchemas() {
       harness_models: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyHarnessModel' } },
       available_harnesses: { type: 'array', items: { $ref: '#/components/schemas/AvailableHarness' } },
     }, ['harness_models', 'available_harnesses']),
+    RequestModelBinding: object({
+      request_model_name: { type: 'string' }, harness: nullableString, model_id: { type: 'string' },
+      name: { type: 'string' }, provider_name: { type: 'string' },
+    }, ['request_model_name', 'model_id', 'name', 'provider_name']),
+    RequestModelBindingTarget: object({
+      id: { type: 'string' }, name: { type: 'string' }, alias: nullableString, upstream_model_id: nullableString,
+    }, ['id', 'name']),
+    ApiKeyRequestModelBindingsResponse: object({
+      bindings: { type: 'array', items: { $ref: '#/components/schemas/RequestModelBinding' } },
+      models: { type: 'array', items: { $ref: '#/components/schemas/RequestModelBindingTarget' } },
+      available_harnesses: { type: 'array', items: { $ref: '#/components/schemas/AvailableHarness' } },
+    }, ['bindings', 'models', 'available_harnesses']),
     ApiKeyRequestModelBinding: object({
       request_model_name: { type: 'string' }, harness: nullableString, model_id: { type: 'string' },
       name: nullableString, provider_name: nullableString,
@@ -623,6 +635,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.apiKeys.byId.harnessModels.list': { $ref: '#/components/schemas/ApiKeyHarnessModelsResponse' },
+    'user.apiKeys.byId.requestModelBindings.list': { $ref: '#/components/schemas/ApiKeyRequestModelBindingsResponse' },
     'user.apiKeys.byId.models.update': { $ref: '#/components/schemas/ApiKeyModelsUpdateResponse' },
     'user.apiKeys.byId.config.list': { $ref: '#/components/schemas/ApiKeyClaudeConfig' },
     'user.apiKeys.byId.fusionConfig.list': { $ref: '#/components/schemas/ApiKeyFusionConfig' },

@@ -130,6 +130,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected API key harness model response: %#v", harnessModels)
 	}
 
+	var requestBindings crewrouter.ApiKeyRequestModelBindingsResponse
+	if err := json.Unmarshal([]byte(`{"bindings":[{"request_model_name":"fast","harness":null,"model_id":"m1","name":"Model","provider_name":"Provider"}],"models":[{"id":"m1","name":"Model","alias":null,"upstream_model_id":"upstream-m1"}],"available_harnesses":[{"id":"codex","label":"Codex"}]}`), &requestBindings); err != nil {
+		t.Fatalf("decode request model bindings: %v", err)
+	}
+	if len(requestBindings.Bindings) != 1 || requestBindings.Bindings[0].Harness != nil || requestBindings.Models[0].UpstreamModelID == nil {
+		t.Fatalf("unexpected request model bindings payload: %#v", requestBindings)
+	}
+
 	var products []crewrouter.UserProduct
 	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"image_url":null,"link":null,"sort_order":0}]`), &products); err != nil {
 		t.Fatalf("decode user products: %v", err)

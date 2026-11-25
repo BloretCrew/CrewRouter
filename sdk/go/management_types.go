@@ -208,6 +208,30 @@ type AvailableHarness struct {
 	Label string `json:"label"`
 }
 
+// RequestModelBinding is one request-model-name mapping for an API Key.
+type RequestModelBinding struct {
+	RequestModelName string  `json:"request_model_name"`
+	Harness          *string `json:"harness"`
+	ModelID          string  `json:"model_id"`
+	Name             string  `json:"name"`
+	ProviderName     string  `json:"provider_name"`
+}
+
+// RequestModelBindingTarget is a model available for request-name mapping.
+type RequestModelBindingTarget struct {
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	Alias           *string `json:"alias"`
+	UpstreamModelID *string `json:"upstream_model_id"`
+}
+
+// ApiKeyRequestModelBindingsResponse is returned by the API Key request-name mapping route.
+type ApiKeyRequestModelBindingsResponse struct {
+	Bindings           []RequestModelBinding       `json:"bindings"`
+	Models             []RequestModelBindingTarget `json:"models"`
+	AvailableHarnesses []AvailableHarness          `json:"available_harnesses"`
+}
+
 // ApiKeyHarnessModelsResponse is returned by GET /api/user/api-keys/:id/harness-models.
 type ApiKeyHarnessModelsResponse struct {
 	HarnessModels      []ApiKeyHarnessModel `json:"harness_models"`
