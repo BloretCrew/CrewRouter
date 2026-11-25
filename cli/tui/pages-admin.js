@@ -1363,13 +1363,47 @@ function createAdminPages(runtime) {
       id: 'admin-updates', label: '版本与更新', description: '检查官方版本与更新任务状态；TUI 不会下载安装或重启服务。',
       async load(api) {
         const [runtimeResult, statusResult] = await Promise.allSettled([api('/api/admin/update/runtime'), api('/api/admin/update/status')]);
-        const runtimeData = runtimeResult.status === 'fulfilled' ? runtimeResult.value : {};
-        const status = statusResult.status === 'fulfilled' ? statusResult.value : runtimeData.status || {};
+        const runtimeData = runtimeResult.status === 'fulfilled' ? runtimeResult.value || {} : {};
+        const status = statusResult.status === 'fulfilled' ? statusResult.value || {} : runtimeData.status || {};
+        const labels = { currentVersion: '当前版本', latestVersion: '最新版本', latestName: '版本名称', hasUpdate: '存在可用更新', canApply: '支持自动更新', isDocker: 'Docker 环境', isDistLayout: '已构建发行版目录', fromSource: '源码运行模式', lastCheckedAt: '上次检查', phase: '任务阶段', state: '任务状态', message: '状态说明', progress: '更新进度', error: '错误信息', reason: '无法自动更新原因', appRoot: '应用目录', platform: '运行平台', arch: '系统架构' };
+        const readable = (key, value) => {
+          if (value == null || value === '') return '—';
+          if (key === 'hasUpdate' || key === 'canApply' || key === 'isDocker' || key === 'isDistLayout' || key === 'fromSource') return value ? '是' : '否';
+          if (key === 'lastCheckedAt') return formatTime(value);
+          if (key === 'progress') return `${Number(value)}%`;
+          if (typeof value === 'object') return Array.isArray(value) ? `${value.length} 项` : '有详细信息';
+          return String(value);
+        };
+        const phaseLabels = { idle: '空闲', checking: '正在检查', up_to_date: '已是最新', downloading: '正在下载', extracting: '正在解压', backing_up: '正在备份', applying: '正在安装', restarting: '正在重启', completed: '已完成', error: '失败' };
+        const phase = status.phase || status.state || runtimeData.phase || 'idle';
+        const currentVersion = runtimeData.currentVersion || status.currentVersion;
+        const latestVersion = status.latestVersion || runtimeData.latestVersion;
+        const hasUpdate = status.hasUpdate ?? runtimeData.hasUpdate;
+        const updateState = status.error || status.phase === 'error' ? '检查或更新失败' : hasUpdate === true ? '发现新版本' : latestVersion ? '已是最新' : status.phase === 'checking' ? '正在检查' : '尚未检查';
+        const applyReason = status.reason || runtimeData.reason;
+        const runtimeRows = [
+          { label: `运行方式：${runtimeData.isDocker ? 'Docker' : runtimeData.fromSource ? '源码开发' : runtimeData.isDistLayout ? '构建后直接运行' : '未识别'}` },
+          { label: `自动更新：${runtimeData.canApply === true ? '支持' : '不支持'}`, detail: applyReason || '此页面仅检查版本；TUI 不会下载文件、替换程序或重启服务。' },
+          ...Object.entries(runtimeData).filter(([key, value]) => !['status', 'versionUrl', 'packageUrl', 'currentVersion', 'canApply', 'reason', 'isDocker', 'isDistLayout', 'fromSource', 'appRoot'].includes(key) && value != null && typeof value !== 'object').map(([key, value]) => ({ label: `${labels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, char => char.toUpperCase())}：${readable(key, value)}` })),
+        ];
+        const statusRows = [
+          { label: `任务阶段：${phaseLabels[phase] || phase}` },
+          { label: `状态：${status.message || updateState}`, detail: status.error || '' },
+          ...(status.progress != null ? [{ label: `更新进度：${readable('progress', status.progress)}` }] : []),
+          ...(status.lastCheckedAt || runtimeData.lastCheckedAt ? [{ label: `上次检查：${readable('lastCheckedAt', status.lastCheckedAt || runtimeData.lastCheckedAt)}` }] : []),
+          ...Object.entries(status).filter(([key, value]) => !['phase', 'state', 'message', 'progress', 'error', 'lastCheckedAt', 'currentVersion', 'latestVersion', 'hasUpdate', 'canApply', 'reason'].includes(key) && value != null && typeof value !== 'object').map(([key, value]) => ({ label: `${labels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, char => char.toUpperCase())}：${readable(key, value)}` })),
+        ];
         return { sections: [
-          { title: '当前版本与运行环境', rows: Object.entries(runtimeData).filter(([key]) => !['status', 'versionUrl', 'packageUrl'].includes(key)).map(([key, value]) => ({ label: `${key}：${typeof value === 'object' ? JSON.stringify(value) : value}` })) },
-          { title: '更新任务状态', rows: Object.entries(status || {}).map(([key, value]) => ({ label: `${key}：${typeof value === 'object' ? JSON.stringify(value) : value}` })) },
+          { title: '版本概览', cards: [
+            { label: '当前版本', value: currentVersion ? `v${currentVersion}` : '—' },
+            { label: '最新版本', value: latestVersion ? `v${latestVersion}` : '未检查' },
+            { label: '更新状态', value: updateState },
+            { label: '上次检查', value: readable('lastCheckedAt', status.lastCheckedAt || runtimeData.lastCheckedAt) },
+          ], rows: [...(runtimeResult.status === 'rejected' ? [{ label: `运行环境读取失败：${runtimeResult.reason.message || '未知错误'}` }] : []), ...(statusResult.status === 'rejected' ? [{ label: `更新状态读取失败：${statusResult.reason.message || '未知错误'}` }] : [])] },
+          { title: '运行环境与更新限制', rows: runtimeRows },
+          { title: '更新任务', rows: statusRows },
         ], actions: [
-          { label: '检查官方更新', run: async ctx => { if (!await ctx.confirm('检查官方版本', '将向配置的官方版本服务发起只读网络请求，不会自动安装或重启。继续？')) return; const result = await api('/api/admin/update/check'); await ctx.show('版本检查结果', JSON.stringify(result, null, 2)); await ctx.refresh(); } },
+          { label: '检查官方更新', toolbar: true, run: async ctx => { if (!await ctx.confirm('检查官方版本', '将向配置的官方版本服务发起只读 HTTPS 请求；此操作不会安装更新或重启服务。继续？')) return; const result = await api('/api/admin/update/check'); await ctx.show('版本检查结果', [`当前版本：${result.currentVersion ? `v${result.currentVersion}` : '未知'}`, `最新版本：${result.latestVersion ? `v${result.latestVersion}` : '未返回'}`, `更新状态：${result.hasUpdate ? '发现新版本' : '已是最新'}`, `自动更新：${result.canApply ? '支持' : '不支持'}`, result.reason && `原因：${result.reason}`, result.lastCheckedAt && `检查时间：${formatTime(result.lastCheckedAt)}`].filter(Boolean).join('\\n')); await ctx.refresh(); } },
           { label: '刷新状态', run: ctx => ctx.refresh() },
         ] };
       },

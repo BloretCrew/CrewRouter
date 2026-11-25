@@ -471,17 +471,33 @@ test('admin invite page renders readable rows, confirms revoke and creates a one
   assert.match(createdDetails, /one-time-token/);
 });
 
-test('admin updates page only performs the confirmed version check and never applies an update', async () => {
+test('admin updates page renders readable version cards and limits actions to safe checks', async () => {
   const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); return path.endsWith('/runtime') ? { currentVersion: '1.0', status: { state: 'idle' } } : { hasUpdate: true, latestVersion: '1.1' }; };
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path.endsWith('/runtime')) return { currentVersion: '1.0', canApply: false, isDocker: true, fromSource: false, isDistLayout: false, reason: 'Docker 请重建镜像更新。', appRoot: '/srv/crewrouter', status: { state: 'idle' } };
+    if (path.endsWith('/status')) return { phase: 'error', message: '版本检查失败', error: '上游暂时不可用', progress: 0, lastCheckedAt: '2026-11-26T10:00:00Z' };
+    if (path.endsWith('/check')) return { currentVersion: '1.0', latestVersion: '1.1', hasUpdate: true, canApply: false, reason: 'Docker 请重建镜像更新。', lastCheckedAt: '2026-11-26T10:01:00Z' };
+    return {};
+  };
   const page = pageById('admin-updates');
   const data = await page.load(api);
   assert.deepEqual(calls.map(call => call.path), ['/api/admin/update/runtime', '/api/admin/update/status']);
+  assert.deepEqual(data.sections[0].cards.map(card => card.label), ['当前版本', '最新版本', '更新状态', '上次检查']);
+  assert.deepEqual(data.sections[0].cards.map(card => card.value.slice(0, 2)), ['v1', '未检', '检查', '20']);
+  assert.match(data.sections[0].cards[2].value, /检查或更新失败/);
+  assert.match(data.sections[1].rows[0].label, /运行方式：Docker/);
+  assert.match(data.sections[1].rows[1].detail, /Docker 请重建镜像更新/);
+  assert.ok(data.sections[2].rows.some(row => row.label === '更新进度：0%'));
+  assert.doesNotMatch(JSON.stringify(data.sections), /\\"currentVersion\\"|\\"lastCheckedAt\\"/);
   const action = data.actions.find(item => item.label === '检查官方更新');
   await action.run({ confirm: async () => false, show: async () => {}, refresh: async () => {} });
   assert.equal(calls.some(call => call.path.endsWith('/check')), false);
-  await action.run({ confirm: async () => true, show: async () => {}, refresh: async () => {} });
+  let checkDetails = '';
+  await action.run({ confirm: async () => true, show: async (_title, body) => { checkDetails = body; }, refresh: async () => {} });
   assert.ok(calls.some(call => call.path.endsWith('/check')));
+  assert.match(checkDetails, /发现新版本/);
+  assert.match(checkDetails, /自动更新：不支持/);
   assert.equal(calls.some(call => call.path.endsWith('/apply')), false);
 });
 
