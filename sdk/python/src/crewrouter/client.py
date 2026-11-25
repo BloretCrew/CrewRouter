@@ -148,6 +148,13 @@ class UserCodeBalanceItem(TypedDict):
     net_amount: Union[float, str]
 
 
+class ProviderTag(TypedDict):
+    id: int
+    name: str
+    color: str
+    sort_order: int
+
+
 class ApiKeyMember(TypedDict):
     id: int
     username: str

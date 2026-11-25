@@ -20,6 +20,7 @@ import type {
   UserModelListItem,
   UserProviderListItem,
   UserProduct,
+  ProviderTag,
   UserCodeBalanceItem,
   UserUsageLogsResponse,
   ModelUptimeResponse,
@@ -227,6 +228,11 @@ export class CrewRouter {
   readonly codeBalances = {
     list: <T = UserCodeBalanceItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.codeBalances.list', options),
+  };
+
+  readonly providerTags = {
+    list: <T = ProviderTag[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.providerTags.list', options),
   };
 
   readonly keyTags = {

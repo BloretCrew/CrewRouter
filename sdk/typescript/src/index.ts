@@ -52,6 +52,7 @@ export type {
   UserProviderListItem,
   UserProduct,
   UserCodeBalanceItem,
+  ProviderTag,
   ModelUptimeSummaryItem,
   ModelUptimeDailyResponse,
   ModelUptimeSlotResponse,

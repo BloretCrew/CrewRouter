@@ -262,6 +262,14 @@ type ModelUptimeResponse struct {
 	Items       map[string]ModelUptimeSummaryItem `json:"items"`
 }
 
+// ProviderTag is one globally defined provider tag visible to signed-in users.
+type ProviderTag struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Color     string `json:"color"`
+	SortOrder int    `json:"sort_order"`
+}
+
 // UserCodeBalanceItem is one refundable redemption-code balance row.
 type UserCodeBalanceItem struct {
 	Amount     any    `json:"amount"`

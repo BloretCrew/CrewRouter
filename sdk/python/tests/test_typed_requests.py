@@ -21,6 +21,7 @@ from crewrouter import (
     UserCodeBalanceItem,
     UserModelListItem,
     UserProviderListItem,
+    ProviderTag,
     UserProduct,
     UserKeyTag,
     UserUsageLog,
@@ -147,12 +148,14 @@ class TypedRequestTests(unittest.TestCase):
             "amount": "2.5", "fee_rate": "0.1", "code": "redeem-1",
             "code_amount": "3", "net_amount": "2.2727",
         }
+        provider_tag: ProviderTag = {"id": 2, "name": "gateway", "color": "#445566", "sort_order": 1}
         self.assertIsNone(product["description"])
         uptime_daily: ModelUptimeDailyResponse = {"days": 7, "granularity": "day", "items": {}}
         uptime_slots: ModelUptimeSlotResponse = {"days": 1, "hours": 24, "slots": 96, "granularity": "15m", "items": {}}
         uptime_point: ModelUptimeDetailPoint = {"date": "2026-01-01T00:00:00.000Z", "status": "none", "success": 0, "fail": 0}
         uptime_detail: ModelUptimeSlotDetail = {"model_id": "m1", "uptime_pct": None, "label": "No data", "total_success": 0, "total_fail": 0, "granularity": "15m", "hours": 24, "slots": 96, "days": [uptime_point]}
         self.assertEqual(code_balance["net_amount"], "2.2727")
+        self.assertEqual(provider_tag["sort_order"], 1)
         self.assertEqual(uptime_daily["granularity"], "day")
         self.assertEqual(uptime_slots["granularity"], "15m")
         self.assertEqual(uptime_detail["days"][0]["status"], "none")

@@ -129,6 +129,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ amount: '2.5', fee_rate: '0.1', code: 'redeem-1', code_amount: '3', net_amount: '2.2727' }]);
       return;
     }
+    if (req.url === '/api/user/provider-tags') {
+      json(res, 200, [{ id: 2, name: 'gateway', color: '#445566', sort_order: 1 }]);
+      return;
+    }
     if (req.url === '/api/user/models/uptime') {
       json(res, 200, { days: 1, hours: 24, slots: 96, granularity: '15m', items: { m1: { uptime_pct: null, label: 'No data', total_success: 0, total_fail: 0, spark: ['none'] } } });
       return;
@@ -179,6 +183,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const usageLogs = await client.usage.logs({ page: 1 });
   const products = await client.products.list();
   const codeBalances = await client.codeBalances.list();
+  const providerTags = await client.providerTags.list();
   const uptime = await client.modelUptime.get();
   const uptimeDetail = await client.modelUptime.getDetail('m1');
 
@@ -205,6 +210,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(usageLogs.data.logs[0].tokens_used, '12');
   assert.equal(products.data[0].description, null);
   assert.equal(codeBalances.data[0].net_amount, '2.2727');
+  assert.equal(providerTags.data[0].sort_order, 1);
   assert.equal(uptime.data.granularity, '15m');
   assert.equal(uptime.data.items.m1.uptime_pct, null);
   assert.equal(uptimeDetail.data.granularity, '15m');

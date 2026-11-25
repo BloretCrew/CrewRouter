@@ -508,6 +508,10 @@ function managementSchemas() {
       id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
       image_url: nullableString, link: nullableString, sort_order: { type: 'integer' },
     }, ['id', 'name', 'sort_order']),
+    ProviderTag: object({
+      id: { type: 'integer' }, name: { type: 'string' }, color: { type: 'string' },
+      sort_order: { type: 'integer' },
+    }, ['id', 'name', 'color', 'sort_order']),
     UserCodeBalanceItem: object({
       amount: numberOrString, fee_rate: numberOrString, code: { type: 'string' },
       code_amount: numberOrString, net_amount: numberOrString,
@@ -580,6 +584,7 @@ function managementResponseSchema(operationId) {
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
     'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
     'user.products.list': { type: 'array', items: { $ref: '#/components/schemas/UserProduct' } },
+    'user.providerTags.list': { type: 'array', items: { $ref: '#/components/schemas/ProviderTag' } },
     'user.codeBalances.list': { type: 'array', items: { $ref: '#/components/schemas/UserCodeBalanceItem' } },
     'user.models.uptime.list': { $ref: '#/components/schemas/ModelUptimeResponse' },
     'user.models.byId.uptime.list': { $ref: '#/components/schemas/ModelUptimeDetailResponse' },

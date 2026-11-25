@@ -107,6 +107,10 @@ codeBalances, err := client.Call(ctx, "user.codeBalances.list", crewrouter.CallO
 var refundableCodes []crewrouter.UserCodeBalanceItem
 if err := codeBalances.JSON(&refundableCodes); err != nil { panic(err) }
 
+providerTagsResponse, err := client.Call(ctx, "user.providerTags.list", crewrouter.CallOptions{})
+var providerTags []crewrouter.ProviderTag
+if err := providerTagsResponse.JSON(&providerTags); err != nil { panic(err) }
+
 membership, err := client.Call(ctx, "user.apiKeys.byId.members.list", crewrouter.CallOptions{PathParams: map[string]any{"id": id}})
 var memberList crewrouter.ApiKeyMembersResponse
 if err := membership.JSON(&memberList); err != nil { panic(err) }

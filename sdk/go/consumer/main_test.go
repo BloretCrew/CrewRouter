@@ -112,6 +112,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected code balances payload: %#v", codeBalances)
 	}
 
+	var providerTags []crewrouter.ProviderTag
+	if err := json.Unmarshal([]byte(`[{"id":2,"name":"gateway","color":"#445566","sort_order":1}]`), &providerTags); err != nil {
+		t.Fatalf("decode provider tags: %v", err)
+	}
+	if len(providerTags) != 1 || providerTags[0].SortOrder != 1 {
+		t.Fatalf("unexpected provider tags payload: %#v", providerTags)
+	}
+
 	var uptime crewrouter.ModelUptimeResponse
 	if err := json.Unmarshal([]byte(`{"days":1,"hours":24,"slots":96,"granularity":"15m","items":{"m1":{"uptime_pct":null,"label":"No data","total_success":0,"total_fail":0,"spark":["none"]}}}`), &uptime); err != nil {
 		t.Fatalf("decode uptime response: %v", err)

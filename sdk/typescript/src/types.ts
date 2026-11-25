@@ -200,6 +200,13 @@ export interface UserCodeBalanceItem {
   net_amount: number | string;
 }
 
+export interface ProviderTag {
+  id: number;
+  name: string;
+  color: string;
+  sort_order: number;
+}
+
 export interface ModelUptimeSummaryItem {
   uptime_pct: number | null;
   label: string;
