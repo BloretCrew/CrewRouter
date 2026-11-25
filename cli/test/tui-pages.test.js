@@ -86,7 +86,7 @@ test('user console pages query matching endpoints and expose equivalent controls
   assert.ok(audit.sections[0].rows[0].label.includes('API Key'));
   assert.ok(audit.actions.some(action => action.label === '下一页'));
   const prompts = await pages.get('prompts').load(api);
-  assert.ok(prompts.sections.some(section => section.title === '历史提示词'));
+  assert.ok(prompts.sections.some(section => section.title === '提示词'));
   assert.ok(prompts.actions.some(action => action.label === '搜索历史提示词'));
   assert.ok(calls.some(call => call.path === '/api/user/custom-instructions' && call.options.query.pageSize === 20));
 });

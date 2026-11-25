@@ -36,10 +36,15 @@ test('prompt history detail uses readable content, occurrence and source labels 
   };
   const page = buildPages(runtime).find(item => item.id === 'prompts');
   const data = await page.load(async (path, options) => runtime.client.get(path, options));
-  assert.ok(data.sections[0].toolbar);
+  assert.deepEqual(data.sections.map(section => section.title), ['注入提示词', '提示词']);
+  assert.ok(data.sections[1].toolbar);
   assert.ok(data.actions.some(action => action.label === '搜索历史提示词' && action.toolbar === true));
+  assert.ok(data.sections[0].actions.some(action => action.label === '新建注入条目'));
+  assert.ok(data.actions.some(action => action.label === '清除提示词筛选'));
+  assert.equal(data.actions.find(action => action.label === '上一页').disabled, true);
+  assert.equal(data.actions.find(action => action.label === '下一页').disabled, true);
   let body = '';
-  await data.sections[0].rows[0].run({ show: async (_title, text) => { body = text; } });
+  await data.sections[1].rows[0].run({ show: async (_title, text) => { body = text; } });
   assert.match(body, /客户端来源：Claude Code/);
   assert.match(body, /出现次数：3 次/);
   assert.match(body, /Full instruction body/);
@@ -71,6 +76,23 @@ test('inject prompt edit validates fields and updates content without changing k
   const invalidPage = await page.load(async path => runtime.client.get(path));
   await invalidPage.sections.find(section => section.title === '注入提示词').rows[0].run({ ...ctx, form: async () => ({ name: '', content: 'body' }), show: async () => {}, api: async (...args) => invalidWrites.push(args) });
   assert.equal(invalidWrites.length, 0);
+});
+
+test('new injected prompt validates the web limits and posts a disabled entry', async () => {
+  const writes = [];
+  const runtime = makeRuntime();
+  runtime.client.get = async path => path === '/api/user/custom-instructions' ? { items: [], total: 0, page: 1, pageSize: 20 } : [];
+  const page = buildPages(runtime).find(item => item.id === 'prompts');
+  const api = async (path, options = {}) => { if (options.method) writes.push({ path, options }); return path === '/api/user/custom-instructions' ? { items: [], total: 0, page: 1, pageSize: 20 } : []; };
+  const data = await page.load(api);
+  const create = data.sections[0].actions.find(action => action.label === '新建注入条目');
+  await create.run({ form: async () => ({ name: '  Context  ', content: 'Prompt body' }), confirm: async () => false, show: async () => {}, notify() {}, refresh: async () => {}, api });
+  assert.equal(writes.length, 0);
+  await create.run({ form: async () => ({ name: 'Context', content: 'Prompt body' }), confirm: async () => true, show: async () => {}, notify() {}, refresh: async () => {}, api });
+  assert.deepEqual(writes[0], { path: '/api/user/inject-prompts', options: { method: 'POST', body: { name: 'Context', content: 'Prompt body' } } });
+  const invalidData = await page.load(api);
+  await invalidData.sections[0].actions.find(action => action.label === '新建注入条目').run({ form: async () => ({ name: 'bad', content: 'x'.repeat(32 * 1024 + 1) }), show: async (_title, message) => { assert.match(message, /32KB/); }, notify() {}, refresh: async () => {}, api });
+  assert.equal(writes.length, 1);
 });
 
 test('injected prompt detail displays its purpose, effective scope and content with labels', async () => {
