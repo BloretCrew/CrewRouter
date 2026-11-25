@@ -31,6 +31,79 @@ test('mouse clicks switch pages and activate action rows', { timeout: 15000 }, a
   assert.equal(tty.input.isRaw, false);
 });
 
+test('console and admin are top-level tabs whose sidebars swap after verified admin auth', { timeout: 15000 }, async () => {
+  const tty = terminal(120, 28);
+  let isAdmin = null;
+  let authenticated;
+  const authReady = new Promise(resolve => { authenticated = resolve; });
+  const pages = [
+    page('admin-last', '最后管理页', async () => ({ sections: [{ title: '最后管理内容', rows: [] }], actions: [] })),
+    page('console-home', '控制台首页', async () => ({ sections: [{ title: '控制台内容', rows: [] }], actions: [] })),
+    page('admin-home', '后台首页', async () => ({ sections: [{ title: '后台内容', rows: [] }], actions: [] })),
+  ];
+  const navGroups = [
+    { id: 'console', label: '控制台', pages: ['console-home'] },
+    { id: 'admin', label: '管理后台', pages: ['admin-home'] },
+    { id: 'admin-subpages', label: '管理子页面', pages: ['admin-last'] },
+  ];
+  const navAreas = [
+    { id: 'console', label: '控制台', groups: ['console'] },
+    { id: 'admin', label: '管理后台', groups: ['admin', 'admin-subpages'], adminOnly: true },
+  ];
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages, navGroups, navAreas, canEnterAdmin: () => isAdmin === true, authenticate: async () => { await authReady; return true; } });
+  try {
+    await until(() => tty.screen().includes('[控制台]'));
+    assert.ok(!tty.screen().includes('管理后台'));
+    isAdmin = true;
+    authenticated();
+    await until(() => tty.screen().includes('管理后台') && tty.screen().includes('控制台首页'));
+    assert.ok(!tty.screen().includes('后台首页'), 'admin children stay hidden while console tab is selected');
+    await clickText(tty, '管理后台');
+    await until(() => tty.screen().includes('[管理后台]') && tty.screen().includes('后台内容'));
+    assert.ok(tty.screen().includes('后台首页'));
+    assert.ok(tty.screen().includes('管理子页面'));
+    assert.ok(!tty.screen().includes('控制台首页'), 'admin tab replaces console children');
+    await clickText(tty, '控制台');
+    await until(() => tty.screen().includes('[控制台]') && tty.screen().includes('控制台内容'));
+    assert.ok(!tty.screen().includes('后台首页'));
+  } finally { tty.input.write('q'); await task; }
+});
+
+test('non-admins cannot display or switch to the admin top-level tab', { timeout: 15000 }, async () => {
+  const tty = terminal(120, 28);
+  const pages = [
+    page('console-home', '控制台首页', async () => ({ sections: [{ title: '用户控制台数据', rows: [] }], actions: [] })),
+    page('admin-home', '后台首页', async () => ({ sections: [{ title: '管理员数据', rows: [] }], actions: [] })),
+  ];
+  const navGroups = [{ id: 'console', pages: ['console-home'] }, { id: 'admin', pages: ['admin-home'] }];
+  const navAreas = [{ id: 'console', label: '控制台', groups: ['console'] }, { id: 'admin', label: '管理后台', groups: ['admin'], adminOnly: true }];
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages, navGroups, navAreas, canEnterAdmin: () => false, authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('用户控制台数据'));
+    assert.ok(tty.screen().includes('[控制台]'));
+    assert.ok(!tty.screen().includes('管理后台'));
+    assert.ok(!tty.screen().includes('管理员数据'));
+  } finally { tty.input.write('q'); await task; }
+});
+
+test('compact menu allows switching top-level areas and their children', { timeout: 15000 }, async () => {
+  const tty = terminal(60, 18);
+  const pages = [
+    page('console-home', '控制台首页', async () => ({ sections: [{ title: '用户控制台数据', rows: [] }], actions: [] })),
+    page('admin-home', '后台首页', async () => ({ sections: [{ title: '管理员后台数据', rows: [] }], actions: [] })),
+  ];
+  const navGroups = [{ id: 'console', label: '控制台', pages: ['console-home'] }, { id: 'admin', label: '管理后台', pages: ['admin-home'] }];
+  const navAreas = [{ id: 'console', label: '控制台', groups: ['console'] }, { id: 'admin', label: '管理后台', groups: ['admin'], adminOnly: true }];
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages, navGroups, navAreas, canEnterAdmin: () => true, authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('用户控制台数据'));
+    await clickText(tty, '[菜单]');
+    await until(() => tty.screen().includes('管理后台'));
+    await clickText(tty, '管理后台');
+    await until(() => tty.screen().includes('管理员后台数据'));
+  } finally { tty.input.write('q'); await task; }
+});
+
 test('vertical navigation follows the displayed navigation groups rather than page registration order', { timeout: 15000 }, async () => {
   const tty = terminal(100, 24);
   const pages = [

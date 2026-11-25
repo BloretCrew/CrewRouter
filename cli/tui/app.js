@@ -314,7 +314,7 @@ function buildRuntime(args) {
 async function runCliTui(args = {}, { input = process.stdin, output = process.stdout, env = process.env } = {}) {
   const runtime = buildRuntime(args);
   const pages = buildPages(runtime);
-  const { navGroups } = require('./pages');
+  const { navGroups, navAreas } = require('./pages');
   const { runPagedTui } = require('./engine');
   const authenticateFn = ctx => authenticate(ctx, runtime);
   const refreshMs = runtime.cfg.tui ? runtime.cfg.tui.refreshMs : 10000;
@@ -336,6 +336,8 @@ async function runCliTui(args = {}, { input = process.stdin, output = process.st
     },
     sidebarFooter: () => [runtime.profileName || 'local', runtime.client.authWarning ? '权限受限' : (runtime.user || runtime.client.username ? '已连接' : '未登录')],
     navGroups,
+    navAreas,
+    canEnterAdmin: () => runtime.client.isAdmin === true,
   });
   return run;
 }

@@ -78,6 +78,8 @@ async function runPagedTui({
   headerRight = null,
   sidebarFooter = null,
   navGroups = null,
+  navAreas = null,
+  canEnterAdmin = () => false,
 } = {}) {
   if (!input.isTTY || !output.isTTY || typeof input.setRawMode !== 'function') throw new Error('TUI 需要交互式终端。');
   if (typeof api !== 'function' || !Array.isArray(pages) || !pages.length) throw new Error('页面或 API 未配置。');
@@ -91,8 +93,11 @@ async function runPagedTui({
     scroll: 0, selected: 0, tabIndex: 0, tabViews: {}, cache: null, version: 0,
   }]));
   let active = 0;
+  let activeArea = Array.isArray(navAreas) && navAreas.length ? navAreas[0].id : null;
+  const areaLastPage = new Map();
   let focus = 'menu';
   let compactMenu = false;
+  let compactMenuIndex = 0;
   let busy = false;
   let closed = false;
   const onSignal = () => { closed = true; };
@@ -102,6 +107,7 @@ async function runPagedTui({
   let status = '正在连接…';
   let modal = null;
   let hit = {};
+  let navHitEntries = [];
   let sequence = 0;
   let rerender = null;
   let pageTimer = null;
@@ -110,13 +116,64 @@ async function runPagedTui({
   function pageIndexesForIds(ids) {
     return (ids || []).map(id => pages.findIndex(page => page.id === id)).filter(index => index >= 0);
   }
-  function navigationPageIndexes() {
-    const grouped = Array.isArray(navGroups) ? navGroups.flatMap(group => pageIndexesForIds(group.pages)) : [];
+  function areaAllowed(area) { return !area?.adminOnly || canEnterAdmin() === true; }
+  function areaById(id) { return Array.isArray(navAreas) ? navAreas.find(area => area.id === id) || null : null; }
+  function visibleAreas() { return Array.isArray(navAreas) ? navAreas.filter(areaAllowed) : []; }
+  function groupsForArea(area = areaById(activeArea)) {
+    if (!Array.isArray(navGroups) || !navGroups.length) return [{ id: 'all', label: '', pages: pages.map(page => page.id) }];
+    if (!Array.isArray(navAreas) || !navAreas.length || !area) return navGroups;
+    const groupIds = new Set(area.groups || []);
+    return navGroups.filter(group => groupIds.has(group.id));
+  }
+  function pageIndexesForArea(area) {
+    const grouped = groupsForArea(area).flatMap(group => pageIndexesForIds(group.pages));
     const ordered = [...new Set(grouped)];
-    for (let index = 0; index < pages.length; index++) if (!ordered.includes(index)) ordered.push(index);
+    if (!Array.isArray(navAreas) || !navAreas.length) for (let index = 0; index < pages.length; index++) if (!ordered.includes(index)) ordered.push(index);
     return ordered;
   }
-
+  function ensureAreaAccess() {
+    const currentArea = areaById(activeArea);
+    if (!Array.isArray(navAreas) || !navAreas.length || areaAllowed(currentArea)) return;
+    const fallback = visibleAreas()[0];
+    if (!fallback) return;
+    const fallbackIndexes = pageIndexesForArea(fallback);
+    const last = areaLastPage.get(fallback.id);
+    activeArea = fallback.id;
+    active = last != null && fallbackIndexes.includes(last) ? last : (fallbackIndexes[0] ?? active);
+    restoreTab(state(), pages[active]);
+    focus = 'menu';
+    compactMenu = false;
+  }
+  function switchArea(id) {
+    const area = areaById(id);
+    if (!area || !areaAllowed(area)) { notify('当前账号无权打开管理后台'); return false; }
+    if (area.id === activeArea) { focus = 'menu'; compactMenu = false; render(); return true; }
+    rememberTab(state());
+    areaLastPage.set(activeArea, active);
+    const allowed = pageIndexesForArea(area);
+    const restored = areaLastPage.get(area.id);
+    activeArea = area.id;
+    active = restored != null && allowed.includes(restored) ? restored : (allowed[0] ?? active);
+    restoreTab(state(), pages[active]);
+    focus = 'menu';
+    compactMenu = false;
+    if (!state().data) void load(active); else render();
+    return true;
+  }
+  function switchAreaDelta(delta) {
+    const areas = visibleAreas();
+    if (areas.length < 2) return false;
+    const index = Math.max(0, areas.findIndex(area => area.id === activeArea));
+    return switchArea(areas[(index + delta + areas.length) % areas.length].id);
+  }
+  function areaForPage(index) {
+    if (!Array.isArray(navAreas) || !navAreas.length) return null;
+    const pageId = pages[index]?.id;
+    return navAreas.find(area => (area.groups || []).some(groupId => navGroups?.find(group => group.id === groupId)?.pages.includes(pageId))) || null;
+  }
+  function navigationPageIndexes() {
+    return pageIndexesForArea(areaById(activeArea));
+  }
   function currentTab(page = pages[active], st = state()) {
     return Array.isArray(page.tabs) && page.tabs.length ? page.tabs[Math.max(0, Math.min(page.tabs.length - 1, st.tabIndex || 0))] : null;
   }
@@ -316,6 +373,7 @@ async function runPagedTui({
 
   function render() {
     if (closed) return;
+    ensureAreaAccess();
     if (rerender) { clearImmediate(rerender); rerender = null; }
     const cols = Math.max(1, output.columns || 80);
     const height = Math.max(1, output.rows || 24);
@@ -351,6 +409,7 @@ async function runPagedTui({
       const navLines = sidebarLines();
       const entry = navLines[lineIndex - 2];
       if (entry) {
+        if (entry.type === 'area') return `${entry.id === activeArea ? '›' : ' '} ${entry.id === activeArea ? `[${entry.label}]` : entry.label}`;
         if (entry.type === 'group') return `  ${entry.label}`;
         return `${entry.index === active ? '›' : ' '} ${entry.page.label}`;
       }
@@ -361,20 +420,26 @@ async function runPagedTui({
     }
     function sidebarLines() {
       const groups = Array.isArray(navGroups) && navGroups.length
-        ? navGroups : [{ id: 'all', label: '', pages: pages.map(page => page.id) }];
+        ? groupsForArea(areaById(activeArea)) : [{ id: 'all', label: '', pages: pages.map(page => page.id) }];
       const entries = [];
+      if (Array.isArray(navAreas) && navAreas.length) entries.push(...visibleAreas().map(area => ({ type: 'area', id: area.id, label: area.label })));
+      const activeAreaConfig = areaById(activeArea);
       for (const group of groups) {
         const members = pageIndexesForIds(group.pages).map(index => ({ page: pages[index], index }));
         if (!members.length) continue;
-        if (group.label) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
+        if (group.label && group.id !== activeAreaConfig?.id) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
         entries.push(...members.map(entry => ({ type: 'page', ...entry })));
       }
-      const activeEntry = entries.findIndex(entry => entry.type === 'page' && entry.index === active);
-      const room = Math.max(1, height - 6);
+      const areaCount = Array.isArray(navAreas) && navAreas.length ? visibleAreas().length : 0;
+      const menuEntries = entries.slice(areaCount);
+      const room = Math.max(1, height - 6 - areaCount);
+      const activeEntry = menuEntries.findIndex(entry => entry.type === 'page' && entry.index === active);
       let start = Math.max(0, activeEntry - room + 1);
-      if (activeEntry >= 0 && start > 0 && entries[start - 1]?.type === 'group') start--;
-      return entries.slice(start, start + room);
+      if (activeEntry >= 0 && start > 0 && menuEntries[start - 1]?.type === 'group') start--;
+      navHitEntries = [...entries.slice(0, areaCount), ...menuEntries.slice(start, start + room)];
+      return navHitEntries;
     }
+
 
     const header = headerChunks(innerW, page);
     const headerSpans = paintSpans(header.spans, header.leftW, ui, 'bg');
@@ -393,6 +458,7 @@ async function runPagedTui({
       nav.forEach((entry, offset) => {
         const lineIndex = 2 + offset;
         if (lineIndex < height - 2 && entry.type === 'page') hit.rows.push({ y: lineIndex + 1, type: 'page', index: entry.index });
+        else if (lineIndex < height - 2 && entry.type === 'area') hit.rows.push({ y: lineIndex + 1, type: 'area', areaId: entry.id });
       });
     }
     put(0, sidebarText(0), leftPad + headerLine + leftPad);
@@ -404,11 +470,15 @@ async function runPagedTui({
       for (let i = contentStart; i < height - 2; i++) {
         const entry = nav[i - contentStart];
         const menuPage = entry && entry.type === 'page' ? entry.page : null;
-        const selected = Boolean(entry && entry.type === 'page' && entry.index === active);
-        const label = !entry ? '' : entry.type === 'group' ? `── ${entry.label} ──` : `${selected ? '›' : ' '} ${menuPage.label}`;
+        const menuEntryIndex = i - contentStart;
+        const selected = compactMenu && compactMenuIndex === menuEntryIndex;
+        const selectedArea = Boolean(entry && entry.type === 'area' && entry.id === activeArea);
+        const selectedPage = Boolean(entry && entry.type === 'page' && entry.index === active);
+        const label = !entry ? '' : entry.type === 'group' ? `── ${entry.label} ──` : entry.type === 'area' ? `${selectedArea ? '›' : ' '} ${entry.label}` : `${selectedPage ? '›' : ' '} ${menuPage.label}`;
         const textLine = pad(label, innerW);
         put(i, sidebarText(i), leftPad + ui(textLine, selected ? 'rose' : entry?.type === 'group' ? 'sage' : 'dim', selected ? 'select' : 'bg', selected) + leftPad);
         if (menuPage) hit.rows.push({ y: i + 1, type: 'page', index: entry.index });
+        else if (entry?.type === 'area') hit.rows.push({ y: i + 1, type: 'area', areaId: entry.id });
       }
     } else {
       const tabs = tabLine(page, st, innerW);
@@ -456,9 +526,9 @@ async function runPagedTui({
     const statusText = [info, freshness].filter(Boolean).join('  ·  ');
     put(height - 2, sidebarText(height - 2), leftPad + ui(pad(statusText, innerW), 'mute', 'bg') + leftPad);
     const hints = [
-      { text: '↑↓ 选择', fg: 'mute' },
-      { text: '  Tab 区域', fg: 'mute' },
-      ...(page.tabs?.length ? [{ text: '  ←→ 子页', fg: 'mute' }] : []),
+      { text: '↑↓ 子页', fg: 'mute' },
+      ...(visibleAreas().length > 1 ? [{ text: `  ←→ ${visibleAreas().map(area => area.label).join('/')}`, fg: 'mute' }] : []),
+      ...(page.tabs?.length ? [{ text: '  Tab 子页标签', fg: 'mute' }] : []),
       { text: '  Enter 打开', fg: 'mute' },
       { text: '  r 刷新', fg: 'mute', action: 'refresh' },
       { text: '  s 服务', fg: 'mute', action: 'service' },
@@ -771,8 +841,12 @@ async function runPagedTui({
   async function navigate(id) {
     const next = pages.findIndex(page => page.id === id);
     if (next < 0) { notify('页面不可用'); return; }
+    const targetArea = areaForPage(next);
+    if (targetArea && !areaAllowed(targetArea)) { notify('当前账号无权打开管理后台'); return; }
     rememberTab(state());
+    if (targetArea && targetArea.id !== activeArea) { areaLastPage.set(activeArea, active); activeArea = targetArea.id; }
     active = next;
+    if (targetArea) areaLastPage.set(targetArea.id, next);
     focus = pages[next].tabs?.length ? 'tabs' : 'content';
     status = '已连接';
     compactMenu = false;
@@ -928,19 +1002,27 @@ async function runPagedTui({
       else focus = 'menu';
     } else if (key.name === 'left') {
       if (focus === 'tabs') switchTab(st.tabIndex - 1);
+      else if (focus === 'menu' && navAreas?.length) switchAreaDelta(-1);
       else if (focus === 'content' && pages[active].tabs?.length) focusTabs();
       else focus = 'menu';
     } else if (key.name === 'right') {
       if (focus === 'tabs') switchTab(st.tabIndex + 1);
+      else if (focus === 'menu' && navAreas?.length) switchAreaDelta(1);
       else if (focus === 'menu') { if (!focusTabs()) focusContent(); }
     } else if (key.name === 'up' || key.name === 'down') {
       const delta = key.name === 'up' ? -1 : 1;
-      if (focus === 'menu') {
+      if (focus === 'menu' && compactMenu) {
+        const entries = sidebarLines();
+        let next = compactMenuIndex;
+        do { next += delta; } while (next >= 0 && next < entries.length && !['area', 'page'].includes(entries[next].type));
+        if (next >= 0 && next < entries.length) compactMenuIndex = next;
+      } else if (focus === 'menu') {
         rememberTab(st);
         const navOrder = navigationPageIndexes();
         const position = navOrder.indexOf(active);
         const nextPosition = Math.max(0, Math.min(navOrder.length - 1, (position < 0 ? 0 : position) + delta));
         active = navOrder[nextPosition] ?? active;
+        areaLastPage.set(activeArea, active);
         const next = state();
         restoreTab(next, pages[active]);
         if (!next.data && !next.loading) void load(active);
@@ -959,7 +1041,11 @@ async function runPagedTui({
       const bodyH = hit.contentRange?.height || 1;
       st.scroll = Math.max(0, st.scroll + (key.name === 'pageup' ? -1 : 1) * Math.max(1, bodyH - 1));
     } else if (key.name === 'return') {
-      if (focus === 'menu') { if (!focusTabs()) focusContent(); }
+      if (focus === 'menu' && compactMenu) {
+        const entry = sidebarLines()[compactMenuIndex];
+        if (entry?.type === 'area') switchArea(entry.id);
+        else if (entry?.type === 'page') activatePage(entry.index);
+      } else if (focus === 'menu') { if (!focusTabs()) focusContent(); }
       else if (focus === 'tabs') focusContent();
       else activateRow(st.selected);
     }
@@ -1060,6 +1146,11 @@ async function runPagedTui({
     if (press && hit.compact && hit.menu && y === 1 && x >= hit.menu.start && x <= hit.menu.end) {
       compactMenu = !compactMenu;
       focus = 'menu';
+      if (compactMenu) {
+        const entries = navHitEntries;
+        const index = entries.findIndex(entry => entry.type === 'page' && entry.index === active);
+        compactMenuIndex = index >= 0 ? index : Math.max(0, entries.findIndex(entry => entry.type === 'area' && entry.id === activeArea));
+      }
       render();
       return;
     }
@@ -1072,17 +1163,20 @@ async function runPagedTui({
       if (hit.footer.service && x >= hit.footer.service.start && x <= hit.footer.service.end) { void navigate('service'); return; }
       if (hit.footer.refresh && x >= hit.footer.refresh.start && x <= hit.footer.refresh.end) { void load(); return; }
     }
-    const row = hit.rows.find(item => item.y === y && (item.type === 'page' ? (hit.compact ? compactMenu : x <= hit.side) : x >= item.start));
+    const row = hit.rows.find(item => item.y === y && (item.type === 'page' || item.type === 'area' ? (hit.compact ? compactMenu : x <= hit.side) : x >= item.start));
     if (wheel) {
       if ((hit.compact && compactMenu) || (!hit.compact && x <= hit.side)) {
-        const next = Math.max(0, Math.min(pages.length - 1, active + direction));
-        activatePage(next);
+        const order = navigationPageIndexes();
+        const position = order.indexOf(active);
+        const nextPosition = Math.max(0, Math.min(order.length - 1, (position < 0 ? 0 : position) + direction));
+        if (order[nextPosition] !== undefined) activatePage(order[nextPosition]);
       } else {
         focus = 'content';
         state().scroll = Math.max(0, state().scroll + direction * 3);
         render();
       }
-    } else if (row?.type === 'page') activatePage(row.index);
+    } else if (row?.type === 'area') switchArea(row.areaId);
+    else if (row?.type === 'page') activatePage(row.index);
     else if (row?.type === 'action') { focus = 'content'; activateRow(row.index); }
     else if (press && y >= 3 && y <= hit.height - 2 && (!hit.side || x > hit.side)) { focus = 'content'; render(); }
   }
