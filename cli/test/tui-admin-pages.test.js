@@ -20,6 +20,31 @@ test('user audit log filters send action/resource_type and page size', async () 
   assert.deepEqual(calls.at(-1).options.query, { page: 1, limit: 50, action: 'provider', resource_type: 'team' });
 });
 
+test('user audit log uses web resource filter and renders readable event details with bounded pagination', async () => {
+  const calls = [];
+  runtime.userAuditAction = '';
+  runtime.userAuditResourceType = '';
+  runtime.userAuditPage = 2;
+  const page = pageById('audit-logs');
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    return { page: 2, limit: 50, total: 51, items: [{ created_at: '2026-11-25T08:00:00Z', action: 'api_key.create', resource_type: 'api_key', resource_id: '17', description: '创建 API Key「Main」', status: 201, duration_ms: 12, ip_address: '127.0.0.1', details: { name: 'Main', enabled: true } }] };
+  };
+  const data = await page.load(api);
+  const section = data.sections[0];
+  assert.match(section.description, /第 2\/2 页.*资源：全部资源/);
+  assert.equal(section.rows[0].label.split(' · ')[1], '创建 API Key');
+  for (const value of ['目标：API Key #17', '结果：HTTP 201', '耗时：12 毫秒', 'IP 地址：127.0.0.1', '详细信息：name=Main · enabled=true']) assert.ok(section.rows[0].detail.includes(value));
+  const resourceAction = data.actions.find(action => action.label === '筛选资源类型');
+  await resourceAction.run({ choose: async (_title, options) => { assert.ok(options.some(option => option.value === 'auth')); return 'api_key'; }, refresh: async () => {} });
+  assert.equal(runtime.userAuditResourceType, 'api_key');
+  assert.equal(runtime.userAuditPage, 1);
+  assert.equal(data.actions.find(action => action.label === '上一页').disabled, false);
+  assert.equal(data.actions.find(action => action.label === '下一页').disabled, true);
+  assert.equal(runtime.userAuditPage, 1, 'choosing a resource filter restarts pagination at page one');
+  assert.equal(runtime.userAuditResourceType, 'api_key');
+});
+
 test('admin user edits confirm before sending profile and quota fields', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/users') return { items: [{ id: 5, username: 'alice', email: 'a@example.test', is_admin: false, email_verified: false, team_id: 2, rate_limit_rpm: 10, rate_limit_tpm: 100, tags: ['ops'] }], total: 1, page: 1 }; return {}; };
