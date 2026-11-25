@@ -90,6 +90,36 @@ test('admin user edits confirm before sending profile and quota fields', async (
   assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
 });
 
+test('admin proxy pool settings redact credentials and manage subscription/manual proxy drafts safely', async () => {
+  const calls = [];
+  const runtime = { client: { isAdmin: true, baseUrl: 'https://router.example' }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/admin/settings') return { proxy_pool_subscription_url: 'https://feed-user:feed-pass@proxy.example/list?token=feed-secret', proxy_pool_manual_proxies: [{ id: 'p1', url: 'socks5://user:pass@proxy.example:1080', enabled: true }] };
+    if (path === '/api/admin/fetch-proxies-url') return { success: true, count: 2, proxies: ['http://proxy-one.example:8080', 'socks5://user:pass@proxy-two.example:1080'] };
+    return {};
+  };
+  const page = buildPages(runtime).find(item => item.id === 'admin-settings');
+  const data = await page.load(api);
+  const proxySection = data.sections.find(section => section.title === '网络与代理池');
+  assert.ok(proxySection.rows.some(row => row.label.includes('•••:•••@proxy.example') && row.label.includes('token=•••')));
+  assert.ok(proxySection.rows.some(row => row.label.includes('•••:•••@proxy.example:1080')));
+  assert.doesNotMatch(JSON.stringify(proxySection), /feed-pass|feed-secret|user:pass/);
+  let importConfirm = '';
+  await data.actions.find(action => action.label === '从公网 URL 导入代理列表').run({ ask: async () => 'https://import.example/proxies?token=secret-import', confirm: async (_title, message) => { importConfirm = message; return false; }, show: async () => {} });
+  assert.match(importConfirm, /token=•••/);
+  assert.equal(calls.some(call => call.path === '/api/admin/fetch-proxies-url'), false, 'declining confirmation must not make the server fetch the URL');
+
+  await data.actions.find(action => action.label === '从公网 URL 导入代理列表').run({ ask: async () => 'https://import.example/proxies', confirm: async () => true, show: async () => {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path === '/api/admin/fetch-proxies-url').options.body, { url: 'https://import.example/proxies' });
+  assert.equal(runtime.adminProxyPoolDraft.length, 3);
+  const save = data.actions.find(action => action.label === '保存代理池设置');
+  await save.run({ confirm: async (_title, message) => { assert.match(message, /手动代理：3 个/); assert.doesNotMatch(message, /user:pass|feed-pass/); return true; }, notify() {}, refresh: async () => {} });
+  const write = calls.find(call => call.path === '/api/admin/settings' && call.options.method === 'PUT');
+  assert.equal(write.options.body.proxy_pool_subscription_url, 'https://feed-user:feed-pass@proxy.example/list?token=feed-secret');
+  assert.equal(write.options.body.proxy_pool_manual_proxies.length, 3);
+});
+
 test('user settings show readable profile/signature fields and edit the complete signature form', async () => {
   const calls = [];
   const api = async (path, options = {}) => {
