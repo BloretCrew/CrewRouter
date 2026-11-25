@@ -168,6 +168,26 @@ test('my provider bulk sync calls web refresh endpoint after confirmation', asyn
   assert.deepEqual(posts, [{ path: '/api/user/providers/p1/refresh-models', body: {} }]);
 });
 
+test('personal model tab creates a model with the web form fields and confirmed unit labels', async () => {
+  const calls = [];
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [] : path === '/api/user/providers' ? [{ id: 'p1', name: 'Personal Provider' }] : [{ id: 'known', name: 'Known Model', provider: 'p1', provider_name: 'Personal Provider' }],
+    post: async (path, body) => { calls.push({ path, body }); return { model_id: 'created-model' }; },
+  });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const data = await page.load();
+  const action = data.actions.find(item => item.label === '添加模型');
+  assert.ok(action.toolbar);
+  let fields = [];
+  const form = async (_title, options) => { fields = options; return { upstream_model_id: 'up-model', alias: 'Friendly Model', provider: 'p1', series: 'S', enabled: true, input_price_per_1k_tokens: '0.01', output_price_per_1k_tokens: '0.02', cached_output_price_per_1k_tokens: '0', reference_input_price_per_1k_tokens: '0', reference_output_price_per_1k_tokens: '0', description: 'description', thinking_model_id: '', non_thinking_model_id: '', rate_limit_rpm: '0', rate_limit_tpm: '0' }; };
+  await action.run({ form, confirm: async () => false });
+  assert.equal(calls.length, 0);
+  await action.run({ form, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(fields.some(field => field.label === '输入价格（网页标注：人民币/百万 Token）'));
+  assert.equal(calls[0].path, '/api/user/models');
+  assert.deepEqual(calls[0].body, { upstream_model_id: 'up-model', alias: 'Friendly Model', provider: 'p1', series: 'S', enabled: true, input_price_per_1k_tokens: 0.01, output_price_per_1k_tokens: 0.02, cached_output_price_per_1k_tokens: 0, reference_input_price_per_1k_tokens: 0, reference_output_price_per_1k_tokens: 0, description: 'description', thinking_model_id: '', non_thinking_model_id: '', rate_limit_rpm: 0, rate_limit_tpm: 0 });
+});
+
 test('my Team model tab clears searches and exposes web-equivalent bulk enable controls', async () => {
   const posts = [];
   const runtime = makeRuntime({

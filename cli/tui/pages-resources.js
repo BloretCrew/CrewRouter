@@ -204,6 +204,47 @@ function myUpstreamPage(runtime) {
         const result = await runtime.client.post(`/api/user/providers/${encodeURIComponent(provider.id)}/models/batch-update`, { modelIds, updates });
         ctx.notify(`已更新 ${result.updated || 0} 个供应商模型。`); await ctx.refresh();
       };
+      const addPersonalModel = async ctx => {
+        const [providersResult, modelsResult] = await Promise.allSettled([
+          runtime.client.get('/api/user/providers'), runtime.client.get('/api/user/models'),
+        ]);
+        const providers = providersResult.status === 'fulfilled' ? (Array.isArray(providersResult.value) ? providersResult.value : []) : [];
+        const models = modelsResult.status === 'fulfilled' ? (Array.isArray(modelsResult.value) ? modelsResult.value : []) : [];
+        if (!providers.length) { await ctx.show('无法添加模型', '当前账号没有可用的自有供应商。请先在“供应商”页签添加供应商。'); return; }
+        const modelOptions = [{ label: '不指定（使用此模型本身）', value: '' }, ...models.map(model => ({ label: `${model.alias || model.name || model.id} · ${model.provider_name || model.provider}`, value: String(model.id) }))];
+        const values = await ctx.form('添加个人模型', [
+          { name: 'upstream_model_id', label: '上游模型 ID（必填）', value: '' }, { name: 'alias', label: '模型显示名称（可空）', value: '' },
+          { name: 'provider', label: '所属供应商', value: providers[0].id, options: providers.map(provider => ({ label: provider.name, value: String(provider.id) })) },
+          { name: 'series', label: '模型系列（可空）', value: '' }, { name: 'enabled', label: '启用此模型', type: 'boolean', value: true },
+          { name: 'input_price_per_1k_tokens', label: '输入价格（网页标注：人民币/百万 Token）', value: '0.01' },
+          { name: 'output_price_per_1k_tokens', label: '输出价格（网页标注：人民币/百万 Token）', value: '0.01' },
+          { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格（人民币/百万 Token）', value: '0' },
+          { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格（人民币/百万 Token）', value: '0' },
+          { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格（人民币/百万 Token）', value: '0' },
+          { name: 'description', label: '模型说明（可空）', value: '' },
+          { name: 'thinking_model_id', label: '思考模式模型（可选）', value: '', options: modelOptions },
+          { name: 'non_thinking_model_id', label: '普通模式模型（可选）', value: '', options: modelOptions },
+          { name: 'rate_limit_rpm', label: '每分钟最大请求数（不限制填 0）', value: '0' },
+          { name: 'rate_limit_tpm', label: '每分钟最大 Token 数（不限制填 0）', value: '0' },
+        ]);
+        if (!values) return;
+        if (!String(values.upstream_model_id || '').trim()) { await ctx.show('缺少上游模型 ID', '请填写供应商提供的模型 ID。'); return; }
+        const numberFields = ['input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'cached_output_price_per_1k_tokens', 'reference_input_price_per_1k_tokens', 'reference_output_price_per_1k_tokens', 'rate_limit_rpm', 'rate_limit_tpm'];
+        const body = { ...values };
+        for (const key of numberFields) {
+          const value = Number(values[key]);
+          if (!Number.isFinite(value) || value < 0) { await ctx.show('数字格式无效', '价格和速率上限必须为大于或等于 0 的数字。'); return; }
+          body[key] = value;
+        }
+        body.provider = String(values.provider || '');
+        const provider = providers.find(item => String(item.id) === body.provider);
+        if (!provider) { await ctx.show('供应商无效', '请选择当前账号可用的自有供应商。'); return; }
+        body.upstream_model_id = String(values.upstream_model_id).trim();
+        const priceSummary = `${body.input_price_per_1k_tokens} 输入 / ${body.output_price_per_1k_tokens} 输出 · 网页表单单位为人民币/百万 Token`;
+        if (!await ctx.confirm('确认添加模型', `名称：${values.alias || body.upstream_model_id}\n供应商：${provider.name}\n上游模型 ID：${body.upstream_model_id}\n状态：${body.enabled ? '启用' : '停用'}\n价格：${priceSummary}\n创建后模型会加入个人团队，可供你的 Key 选择。`)) return;
+        const result = await runtime.client.post('/api/user/models', body);
+        ctx.notify(`模型已添加${result.model_id ? `：${result.model_id}` : ''}。`); await ctx.refresh();
+      };
       const batchAction = async ctx => {
         const modelIds = await selectModels(ctx);
         if (!modelIds.length) return;
@@ -313,6 +354,7 @@ function myUpstreamPage(runtime) {
           ]); if (!values) return; if (!String(values.name || '').trim() || !String(values.base_url || '').trim()) { await ctx.show('供应商信息不完整', '名称和 Base URL 为必填项。'); return; } if (!await ctx.confirm('添加上游供应商', `名称：${values.name}\n地址：${values.base_url}\n格式：${values.format}\n服务器可能会自动导入最多 50 个模型。`)) return; const body = { name: values.name, base_url: values.base_url, format: values.format, ...(values.api_key ? { api_key: values.api_key } : {}), ...(values.models_url ? { models_url: values.models_url } : {}), ...(values.notes ? { notes: values.notes } : {}) }; const result = await runtime.client.post('/api/user/providers', body); ctx.notify(`供应商已添加${result.provider_id ? `：${result.provider_id}` : ''}。`); await ctx.refresh(); } },
           { label: '检测本页供应商', toolbar: true, tab: 'providers', run: async ctx => { const targets = visibleProviders.filter(item => item.enabled !== false); if (!targets.length) { await ctx.show('供应商连通性检测', '当前筛选中没有已启用的供应商。'); return; } const results = await Promise.allSettled(targets.map(item => pingProvider(runtime.client, item.id))); const current = { ...(runtime.myUpstreamPing || {}) }; results.forEach((result, index) => { current[String(targets[index].id)] = result.status === 'fulfilled' ? result.value : { ok: false, error: result.reason?.message || '检测失败' }; }); runtime.myUpstreamPing = current; await ctx.show('供应商连通性结果', targets.map(item => { const result = current[String(item.id)]; return `${item.name} · ${result?.ok ? `连接成功 · 响应时间 ${result.latency_ms ?? '—'} 毫秒` : `连接失败 ${result?.error || '未知错误'}`}`; }).join('\n')); await ctx.refresh(); } },
           { label: '批量管理供应商', toolbar: true, tab: 'providers', run: async ctx => { const selectedIds = new Set(); while (true) { const choices = await ctx.choose('选择我的上游供应商', [...visibleProviders.map(item => ({ label: `${selectedIds.has(String(item.id)) ? '☑' : '☐'} ${item.name} · ${item.model_count || 0} 个模型`, value: String(item.id) })), { label: `全选当前筛选的 ${visibleProviders.length} 个`, value: '__all__' }, { label: '清空选择', value: '__clear__' }, { label: `完成选择（${selectedIds.size} 个）`, value: '__done__' }]); if (choices === null) return; if (choices === '__done__') break; if (choices === '__all__') visibleProviders.forEach(item => selectedIds.add(String(item.id))); else if (choices === '__clear__') selectedIds.clear(); else if (selectedIds.has(choices)) selectedIds.delete(choices); else selectedIds.add(choices); } const targets = visibleProviders.filter(item => selectedIds.has(String(item.id))); if (!targets.length) return; const operation = await ctx.choose('批量供应商操作', [{ label: '批量同步模型', value: 'sync' }, { label: '批量删除供应商', value: 'delete' }], { description: `已选择 ${targets.length} 个供应商` }); if (!operation) return; if (operation === 'sync') { if (!await ctx.confirm('批量同步模型', `从 ${targets.length} 个上游获取模型并导入你的团队。`)) return; let succeeded = 0; for (const item of targets) { try { await runtime.client.post(`/api/user/providers/${encodeURIComponent(item.id)}/refresh-models`, {}); succeeded++; } catch (_) {} } ctx.notify(`模型同步完成：${succeeded}/${targets.length} 个供应商成功。`); await ctx.refresh(); } else { if (!await ctx.confirm('批量删除供应商', `删除 ${targets.length} 个供应商及其所有关联模型？此操作不可撤销。`)) return; let succeeded = 0; for (const item of targets) { try { await runtime.client.delete(`/api/user/providers/${encodeURIComponent(item.id)}`); succeeded++; } catch (_) {} } ctx.notify(`删除完成：${succeeded}/${targets.length} 个供应商。`); await ctx.refresh(); } } },
+          { label: '添加模型', toolbar: true, tab: 'models', run: addPersonalModel },
           { label: '搜索我的模型', toolbar: true, tab: 'models', run: async ctx => { runtime.myUpstreamModelSearch = String(await ctx.ask('模型名称、ID、上游 ID、供应商或系列', { defaultValue: runtime.myUpstreamModelSearch || '' }) || '').trim(); await ctx.refresh(); } },
           { label: '批量管理个人模型', toolbar: true, tab: 'models', run: batchAction },
           { label: '清除模型搜索', toolbar: true, tab: 'models', run: async ctx => { runtime.myUpstreamModelSearch = ''; await ctx.refresh(); } },
