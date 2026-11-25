@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const net = require('node:net');
 const { test } = require('node:test');
 
 const { createCrewRouter } = require('../sdk/embedded');
@@ -53,6 +54,58 @@ test('embedded instance serves /api/version and stops cleanly', async () => {
 
   assert.equal(server.listening, false);
   await assert.rejects(fetch(`${base}/api/version`));
+});
+
+test('startup failure stops partial initialization and releases the singleton', async () => {
+  const app = require('../index');
+  const originalStart = app.startServer;
+  const originalStop = app.stopServer;
+  let cleanupCalls = 0;
+  const startupError = Object.assign(new Error('simulated startup failure'), { code: 'ERR_TEST_STARTUP' });
+  app.startServer = async () => { throw startupError; };
+  app.stopServer = async () => { cleanupCalls += 1; };
+  const cr = createCrewRouter(options());
+  try {
+    await assert.rejects(cr.start(), { code: 'ERR_TEST_STARTUP' });
+    assert.equal(cr.server, null);
+    assert.equal(cleanupCalls, 1);
+    await cr.stop();
+  } finally {
+    app.startServer = originalStart;
+    app.stopServer = originalStop;
+  }
+  const replacement = createCrewRouter(options());
+  await replacement.stop();
+});
+
+test('concurrent start calls share one listener and repeated stop is safe', async () => {
+  const cr = createCrewRouter(options());
+  const [first, second] = await Promise.all([
+    cr.start({ port: 0, host: '127.0.0.1' }),
+    cr.start({ port: 0, host: '127.0.0.1' }),
+  ]);
+  assert.equal(first, second);
+  assert.equal(first.listening, true);
+  await Promise.all([cr.stop(), cr.stop()]);
+  assert.equal(first.listening, false);
+  await assert.rejects(cr.start(), { code: 'ERR_CREWROUTER_STOPPED' });
+});
+
+test('listener startup failure releases instance and can be retried', async () => {
+  const blocker = net.createServer();
+  await new Promise((resolve, reject) => blocker.listen(0, '127.0.0.1', resolve).once('error', reject));
+  const port = blocker.address().port;
+  const cr = createCrewRouter(options());
+  try {
+    await assert.rejects(cr.start({ port, host: '127.0.0.1' }), { code: 'EADDRINUSE' });
+    assert.equal(cr.server, null);
+    await new Promise((resolve) => blocker.close(resolve));
+    const server = await cr.start({ port, host: '127.0.0.1' });
+    assert.equal(server.listening, true);
+  } finally {
+    await cr.stop();
+    if (blocker.listening) await new Promise((resolve) => blocker.close(resolve));
+  }
 });
 
 test('a host can mount the app without CrewRouter listening', async () => {

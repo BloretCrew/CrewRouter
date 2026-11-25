@@ -467,50 +467,66 @@ async function runDailyAggCatchup() {
 }
 
 function scheduleNextDailyAgg() {
+  if (aggSchedulersStopped) return;
   const now = new Date();
   const next = new Date(now);
   // 进程时区已固定为 Asia/Shanghai（utils/timezone），本地 03:05 即上海 03:05
   next.setHours(3, 5, 0, 0);
   if (next <= now) next.setDate(next.getDate() + 1);
   const delay = next.getTime() - now.getTime();
-  setTimeout(async () => {
-    try {
-      await runDailyAggCatchup();
-    } catch (err) {
+  dailyAggSchedulerTimer = setTimeout(() => {
+    dailyAggSchedulerTimer = null;
+    dailyAggRunPromise = runDailyAggCatchup().catch((err) => {
       Logger.warn(`[每日聚合] 执行异常: ${err.message}`);
       logRetention(`[每日聚合] 执行异常: ${err.message}`);
-    }
-    scheduleNextDailyAgg();
+    }).finally(() => {
+      dailyAggRunPromise = null;
+      if (!aggSchedulersStopped) scheduleNextDailyAgg();
+    });
   }, delay);
+  dailyAggSchedulerTimer.unref?.();
   Logger.info(`[每日聚合] 下次执行: ${next.toLocaleString()}`);
 }
 
 /** 调度保留任务：每天 04:05 执行压缩与清除，任务结果统一写 retention.log。 */
 let retentionSchedulerStarted = false;
+let dailyAggSchedulerTimer = null;
+let retentionSchedulerTimer = null;
+let dailyAggRunPromise = null;
+let retentionRunPromise = null;
+let aggSchedulersStopped = false;
 function startRetentionScheduler() {
   if (config.demo || retentionSchedulerStarted) return;
+  aggSchedulersStopped = false;
   retentionSchedulerStarted = true;
   const schedule = () => {
+    if (aggSchedulersStopped) return;
     const now = new Date();
     const next = new Date(now);
     next.setHours(4, 5, 0, 0);
     if (next <= now) next.setDate(next.getDate() + 1);
-    setTimeout(async () => {
-      try {
-        const { runCompressOnce } = require('./usage-compress');
-        const { runPurgeOnce } = require('./usage-purge');
-        const { runExclusive } = require('./retention-runner');
-        const result = await runExclusive('scheduled', async () => {
-          await runCompressOnce();
-          return runPurgeOnce();
-        });
-        logRetention(`[保留调度] 04:05 压缩与清除完成${result?.skipped ? `（${result.skipped}）` : ''}`);
-      } catch (err) {
-        Logger.warn(`[保留调度] 执行异常: ${err.message}`);
-        logRetention(`[保留调度] 执行异常: ${err.message}`);
-      }
-      schedule();
+    retentionSchedulerTimer = setTimeout(async () => {
+      retentionSchedulerTimer = null;
+      retentionRunPromise = (async () => {
+        try {
+          const { runCompressOnce } = require('./usage-compress');
+          const { runPurgeOnce } = require('./usage-purge');
+          const { runExclusive } = require('./retention-runner');
+          const result = await runExclusive('scheduled', async () => {
+            await runCompressOnce();
+            return runPurgeOnce();
+          });
+          logRetention(`[保留调度] 04:05 压缩与清除完成${result?.skipped ? `（${result.skipped}）` : ''}`);
+        } catch (err) {
+          Logger.warn(`[保留调度] 执行异常: ${err.message}`);
+          logRetention(`[保留调度] 执行异常: ${err.message}`);
+        }
+      })().finally(() => {
+        retentionRunPromise = null;
+        if (!aggSchedulersStopped) schedule();
+      });
     }, next.getTime() - now.getTime());
+    retentionSchedulerTimer.unref?.();
     Logger.info(`[保留调度] 下次执行: ${next.toLocaleString()}`);
   };
   schedule();
@@ -519,11 +535,22 @@ function startRetentionScheduler() {
 /** 非 demo 模式：启动即补跑一次（停机错过 03:05 的兜底），随后按日调度 */
 function startDailyAggScheduler() {
   if (config.demo) return;
-  runDailyAggCatchup().catch((err) => {
+  aggSchedulersStopped = false;
+  dailyAggRunPromise = runDailyAggCatchup().catch((err) => {
     Logger.warn(`[每日聚合] 启动补跑失败: ${err.message}`);
     logRetention(`[每日聚合] 启动补跑失败: ${err.message}`);
-  });
+  }).finally(() => { dailyAggRunPromise = null; });
   scheduleNextDailyAgg();
+}
+
+async function stopUsageAggSchedulers() {
+  aggSchedulersStopped = true;
+  retentionSchedulerStarted = false;
+  if (dailyAggSchedulerTimer) clearTimeout(dailyAggSchedulerTimer);
+  if (retentionSchedulerTimer) clearTimeout(retentionSchedulerTimer);
+  dailyAggSchedulerTimer = null;
+  retentionSchedulerTimer = null;
+  await Promise.all([dailyAggRunPromise, retentionRunPromise].filter(Boolean));
 }
 
 // ---------- 双轨查询辅助（/stats、/leaderboard 共用） ----------
@@ -884,6 +911,7 @@ module.exports = {
   runDailyAggCatchup,
   startDailyAggScheduler,
   startRetentionScheduler,
+  stopUsageAggSchedulers,
   fetchAggRows,
   foldAggRows,
   foldAgg,

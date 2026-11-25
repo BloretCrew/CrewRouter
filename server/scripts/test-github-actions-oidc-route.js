@@ -44,6 +44,8 @@ function make({ assertion = 'assertion', verified = { claims: { repository: 'acm
       throw new Error('unexpected require: ' + name);
     },
     module, exports: module.exports,
+    setInterval: () => ({ unref() {} }),
+    clearInterval() {},
   });
   const req = { body: { assertion } };
   const res = response();

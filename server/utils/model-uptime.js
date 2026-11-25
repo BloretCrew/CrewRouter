@@ -19,6 +19,7 @@ const RETENTION_MS = HOURS_WINDOW * 60 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 每小时清一次过期槽
 
 let cleanupTimer = null;
+let initialCleanupTimer = null;
 
 function utcDayString(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -209,9 +210,11 @@ async function cleanupOldSlotRecords() {
 function startUptimeCleanup() {
   if (cleanupTimer) return;
   // 启动后稍晚跑一次，再按小时间隔
-  setTimeout(() => {
+  initialCleanupTimer = setTimeout(() => {
+    initialCleanupTimer = null;
     cleanupOldSlotRecords();
   }, 30 * 1000);
+  initialCleanupTimer.unref?.();
   cleanupTimer = setInterval(() => {
     cleanupOldSlotRecords();
   }, CLEANUP_INTERVAL_MS);
@@ -524,6 +527,12 @@ module.exports = {
   getModelUptimeHourly,
   cleanupOldSlotRecords,
   startUptimeCleanup,
+  stopUptimeCleanup() {
+    if (initialCleanupTimer) clearTimeout(initialCleanupTimer);
+    if (cleanupTimer) clearInterval(cleanupTimer);
+    initialCleanupTimer = null;
+    cleanupTimer = null;
+  },
   utcDayString,
   utcSlotString,
   utcHourString,

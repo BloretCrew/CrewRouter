@@ -17,7 +17,13 @@ function pruneChallenges() {
     const now = Date.now();
     for (const [key, entry] of challenges) if (entry.expiresAt <= now) challenges.delete(key);
 }
-setInterval(pruneChallenges, 60 * 1000).unref?.();
+let challengeCleanupTimer = null;
+function startMaintenanceTimer() {
+    if (challengeCleanupTimer) return;
+    challengeCleanupTimer = setInterval(pruneChallenges, 60 * 1000);
+    challengeCleanupTimer.unref?.();
+}
+startMaintenanceTimer();
 function challengeKey(kind, owner, userId = '') {
     if (!owner || typeof owner !== 'string') throw new Error('缺少挑战会话');
     return `${kind}:${owner}:${userId}`;
@@ -301,3 +307,8 @@ module.exports.getWebAuthnConfig = getWebAuthnConfig;
 module.exports.bufferToBase64url = bufferToBase64url;
 module.exports.base64urlToBuffer = base64urlToBuffer;
 module.exports.normalizePasskeys = normalizePasskeys;
+module.exports.stopMaintenanceTimer = () => {
+    if (challengeCleanupTimer) clearInterval(challengeCleanupTimer);
+    challengeCleanupTimer = null;
+};
+module.exports.startMaintenanceTimer = startMaintenanceTimer;

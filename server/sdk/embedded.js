@@ -106,6 +106,8 @@ function createCrewRouter(options = {}) {
   let currentServer = null;
   let started = false;
   let stopped = false;
+  let startPromise = null;
+  let stopPromise = null;
 
   const api = {
     app,
@@ -119,42 +121,58 @@ function createCrewRouter(options = {}) {
         error.code = 'ERR_CREWROUTER_STOPPED';
         throw error;
       }
-      if (started) return currentServer;
+      if (started) return startPromise || currentServer;
       started = true;
-      currentServer = await app.startServer({
-        embedded: true,
-        listen: startOptions.listen !== false,
-        port: startOptions.port,
-        host: startOptions.host,
-        migrate: startOptions.migrate !== undefined ? startOptions.migrate : options.migrate === true,
-        backgroundTasks: startOptions.backgroundTasks !== undefined
-          ? startOptions.backgroundTasks
-          : options.backgroundTasks === true,
-        plugins: startOptions.plugins !== undefined ? startOptions.plugins : options.plugins === true,
-        store: startOptions.store !== undefined ? startOptions.store : options.store === true,
-        handleSignals: startOptions.handleSignals !== undefined
-          ? startOptions.handleSignals
-          : options.handleSignals === true,
-      });
-      return currentServer;
+      startPromise = (async () => {
+        try {
+          currentServer = await app.startServer({
+            embedded: true,
+            listen: startOptions.listen !== false,
+            port: startOptions.port,
+            host: startOptions.host,
+            migrate: startOptions.migrate !== undefined ? startOptions.migrate : options.migrate === true,
+            backgroundTasks: startOptions.backgroundTasks !== undefined
+              ? startOptions.backgroundTasks
+              : options.backgroundTasks === true,
+            plugins: startOptions.plugins !== undefined ? startOptions.plugins : options.plugins === true,
+            store: startOptions.store !== undefined ? startOptions.store : options.store === true,
+            handleSignals: startOptions.handleSignals !== undefined
+              ? startOptions.handleSignals
+              : options.handleSignals === true,
+          });
+          return currentServer;
+        } catch (error) {
+          try { await app.stopServer(); } catch (_) { /* preserve startup failure */ }
+          currentServer = null;
+          started = false;
+          startPromise = null;
+          throw error;
+        }
+      })();
+      return startPromise;
     },
     async stop() {
+      if (stopPromise) return stopPromise;
       if (stopped) return;
       stopped = true;
-      try {
-        await app.stopServer();
-      } finally {
-        currentServer = null;
-        instance = null;
-        if (tempDir) {
-          try {
-            fs.rmSync(tempDir, { recursive: true, force: true });
-          } catch (_) {
-            // temp directory cleanup is best-effort
+      stopPromise = (async () => {
+        try {
+          if (startPromise) await startPromise.catch(() => {});
+          await app.stopServer();
+        } finally {
+          currentServer = null;
+          instance = null;
+          if (tempDir) {
+            try {
+              fs.rmSync(tempDir, { recursive: true, force: true });
+            } catch (_) {
+              // temp directory cleanup is best-effort
+            }
+            tempDir = null;
           }
-          tempDir = null;
         }
-      }
+      })();
+      return stopPromise;
     },
   };
 

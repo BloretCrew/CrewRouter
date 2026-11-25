@@ -14,6 +14,7 @@ const RETENTION_DAYS = 14;
 
 let tableReady = false;
 let cleanupTimer = null;
+let cleanupStartTimer = null;
 
 function truncate(str, max) {
   if (str == null) return null;
@@ -119,13 +120,15 @@ async function cleanupOldErrorRecords(days = RETENTION_DAYS) {
 function startErrorRecordsCleanup() {
   if (cleanupTimer) return;
   // 启动后延迟 2 分钟再清，之后每 6 小时
-  setTimeout(() => {
+  cleanupStartTimer = setTimeout(() => {
+    cleanupStartTimer = null;
     cleanupOldErrorRecords().catch(() => {});
     cleanupTimer = setInterval(() => {
       cleanupOldErrorRecords().catch(() => {});
     }, 6 * 60 * 60 * 1000);
     if (cleanupTimer.unref) cleanupTimer.unref();
   }, 2 * 60 * 1000);
+  cleanupStartTimer.unref?.();
 }
 
 /**
@@ -252,6 +255,12 @@ module.exports = {
   ensureApiErrorRecordsTable,
   cleanupOldErrorRecords,
   startErrorRecordsCleanup,
+  stopErrorRecordsCleanup() {
+    if (cleanupStartTimer) clearTimeout(cleanupStartTimer);
+    if (cleanupTimer) clearInterval(cleanupTimer);
+    cleanupStartTimer = null;
+    cleanupTimer = null;
+  },
   recordApiError,
   captureCallError,
   clientIp,

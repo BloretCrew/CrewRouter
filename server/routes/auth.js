@@ -54,12 +54,18 @@ function discardFailedLoginSession(req, respond) {
   try { failedSession.destroy(done); } catch (error) { done(error); }
 }
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, item] of loginRateLimits) {
-    if (now - item.startedAt >= LOGIN_WINDOW_MS) loginRateLimits.delete(key);
-  }
-}, LOGIN_WINDOW_MS).unref?.();
+let loginRateLimitCleanupTimer = null;
+function startMaintenanceTimers() {
+  if (loginRateLimitCleanupTimer) return;
+  loginRateLimitCleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, item] of loginRateLimits) {
+      if (now - item.startedAt >= LOGIN_WINDOW_MS) loginRateLimits.delete(key);
+    }
+  }, LOGIN_WINDOW_MS);
+  loginRateLimitCleanupTimer.unref?.();
+}
+startMaintenanceTimers();
 
 // 密码注册/设置/修改路径只更新 password_hash，不写入 users.email；邮箱写入由用户设置、管理员和第三方注册路径处理。
 // 邮箱格式验证
@@ -576,3 +582,8 @@ router.post('/change-password', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.stopMaintenanceTimers = () => {
+  if (loginRateLimitCleanupTimer) clearInterval(loginRateLimitCleanupTimer);
+  loginRateLimitCleanupTimer = null;
+};
+module.exports.startMaintenanceTimers = startMaintenanceTimers;

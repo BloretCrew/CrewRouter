@@ -5,6 +5,7 @@ const Logger = require('../logger');
 const { analyzeMessages } = require('./message-analysis');
 
 let workerTimer = null;
+let workerRunPromise = null;
 let scanRunning = false;
 
 async function ensureWorkspacePathIndex(db = pool) {
@@ -111,11 +112,23 @@ async function scanPendingMessageAnalysis(options = {}) {
 function startMessageAnalysisWorker(options = {}) {
   if (workerTimer) return;
   const intervalMs = Math.max(Number(options.intervalMs) || 5000, 1000);
-  const run = () => scanPendingMessageAnalysis({ batchSize: options.batchSize || 50 }).catch(() => {});
-  run();
+  const run = () => {
+    if (workerRunPromise) return workerRunPromise;
+    workerRunPromise = scanPendingMessageAnalysis({ batchSize: options.batchSize || 50 })
+      .catch(() => {})
+      .finally(() => { workerRunPromise = null; });
+    return workerRunPromise;
+  };
+  void run();
   workerTimer = setInterval(run, intervalMs);
   workerTimer.unref?.();
   Logger.info(`[消息分析] 后台扫描器已启动（每 ${intervalMs}ms 扫描一次）`);
+}
+
+async function stopMessageAnalysisWorker() {
+  if (workerTimer) clearInterval(workerTimer);
+  workerTimer = null;
+  if (workerRunPromise) await workerRunPromise;
 }
 
 async function getMessageAnalysisStatus(userId = null) {
@@ -143,4 +156,4 @@ async function getMessageAnalysisStatus(userId = null) {
   };
 }
 
-module.exports = { scanPendingMessageAnalysis, startMessageAnalysisWorker, getMessageAnalysisStatus, ensureWorkspacePathIndex };
+module.exports = { scanPendingMessageAnalysis, startMessageAnalysisWorker, stopMessageAnalysisWorker, getMessageAnalysisStatus, ensureWorkspacePathIndex };

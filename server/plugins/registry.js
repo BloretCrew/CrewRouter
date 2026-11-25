@@ -39,6 +39,7 @@ const knownManifests = new Map();
 
 // 插件自定义的定时任务：id -> [{ expr, handler, nextTimeout }]
 const cronJobs = new Map();
+const runningCronJobs = new Set();
 const taskHandlers = new Map();
 const taskQueue = require('../utils/plugin-task-queue').createTaskQueue({
   pool,
@@ -208,7 +209,7 @@ async function loadOne(id, manifest, rowConfig) {
 
 function unloadOne(id) {
   const previous = loaded.get(id);
-  taskQueue.cancelPlugin(id).catch(err => Logger.warn(`[plugins] 取消 ${id} 任务失败: ${err.message}`));
+  const cancellation = taskQueue.cancelPlugin(id).catch(err => Logger.warn(`[plugins] 取消 ${id} 任务失败: ${err.message}`));
   if (previous?.manifest?.permissions?.includes('events:subscribe')) {
     require('./events').publish('plugin.lifecycle.v1', { pluginId: id, action: 'unloaded', version: previous.manifest.version || '' });
   }
@@ -220,6 +221,14 @@ function unloadOne(id) {
     if (key.startsWith(`${id} `)) exposedHandlers.delete(key);
   }
   loaded.delete(id);
+  return cancellation;
+}
+
+async function shutdown() {
+  await taskQueue.stop();
+  const pluginIds = [...loaded.keys()];
+  await Promise.all(pluginIds.map(id => Promise.resolve(unloadOne(id))));
+  await Promise.all([...runningCronJobs]);
 }
 
 // ---------- 定时任务（cron 表达式由 host 调度） ----------
@@ -325,13 +334,19 @@ function scheduleNextCron(pluginId, job) {
 async function fireCron(pluginId, job) {
   const p = loaded.get(pluginId);
   if (!p) return;
+  let timeout;
+  const execution = Promise.race([
+    Promise.resolve().then(() => job.handler()),
+    new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('cron 任务执行超时')), host.HOOK_TIMEOUT_MS * 5); }),
+  ]);
+  runningCronJobs.add(execution);
   try {
-    await Promise.race([
-      Promise.resolve(job.handler()),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('cron 任务执行超时')), host.HOOK_TIMEOUT_MS * 5)),
-    ]);
+    await execution;
   } catch (err) {
     Logger.error(`[plugins] 插件 ${pluginId} cron "${job.expr}" 执行失败: ${err.message}`);
+  } finally {
+    clearTimeout(timeout);
+    runningCronJobs.delete(execution);
   }
 }
 
@@ -616,6 +631,7 @@ function findHandler(pluginId, method, reqPath) {
 module.exports = {
   PLUGINS_DIR,
   init,
+  shutdown,
   enable,
   disable,
   reload,

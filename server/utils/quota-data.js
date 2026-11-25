@@ -6,6 +6,7 @@ const quotaBuffer = new Map();
 const userIndex = new Map(); // userId -> Set of buffer keys (performance optimization)
 const FLUSH_INTERVAL = 60000; // 1 minute
 let flushPromise = null;
+let flushTimer = null;
 
 /**
  * Record usage to the quota_data aggregation table.
@@ -86,8 +87,13 @@ async function flushQuotaData() {
 }
 
 // Periodic flush
-const flushTimer = setInterval(flushQuotaData, FLUSH_INTERVAL);
-if (flushTimer.unref) flushTimer.unref();
+function startQuotaDataFlush() {
+  if (flushTimer) return flushTimer;
+  flushTimer = setInterval(() => { void flushQuotaData().catch(() => {}); }, FLUSH_INTERVAL);
+  flushTimer.unref?.();
+  return flushTimer;
+}
+startQuotaDataFlush();
 
 // Graceful shutdown：flush 后必须退出，否则 SIGINT/SIGTERM 处理器会吞掉默认终止行为，
 // 进程带着监听端口继续存活（MCSM 优雅重启卡 busy 的根因）
@@ -109,7 +115,8 @@ if (process.env.CR_EMBEDDED !== '1') {
 }
 
 async function stopQuotaData() {
-  clearInterval(flushTimer);
+  if (flushTimer) clearInterval(flushTimer);
+  flushTimer = null;
   try {
     await flushQuotaData();
   } catch (err) {
@@ -138,4 +145,4 @@ function getUserQuotaBuffer(userId) {
   return entries;
 }
 
-module.exports = { recordQuotaData, flushQuotaData, stopQuotaData, quotaBuffer, getUserQuotaBuffer };
+module.exports = { recordQuotaData, flushQuotaData, startQuotaDataFlush, stopQuotaData, quotaBuffer, getUserQuotaBuffer };

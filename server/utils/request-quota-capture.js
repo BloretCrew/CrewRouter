@@ -14,6 +14,7 @@ const USAGE_FIELDS = ['input_tokens', 'output_tokens', 'cache_read_tokens', 'cac
 const INSTANCE_ID = crypto.randomUUID();
 let heartbeatTimer;
 let timer;
+let workerRunPromise = null;
 let ticking = false;
 
 let configCache = new WeakMap();
@@ -453,30 +454,37 @@ function startWorker(options = {}) {
   heartbeatTimer = setInterval(beat, Math.max(250,options.heartbeatIntervalMs || 10000));
   heartbeatTimer.unref();
   beat();
-  const tick = async () => {
-    if (ticking) return;
+  const tick = () => {
+    if (ticking) return workerRunPromise;
     ticking = true;
-    try {
-      const db = options.pool || getQuotaCapturePool();
-      const config = await getCaptureConfig(db);
-      if (Date.now() < nextRun) return;
-      nextRun = Date.now() + config.worker_interval_ms;
-      await runWorker(options);
-      const cycle = require('./quota-cycle-analysis');
-      if (typeof cycle.markAccountDirty === 'function') await cycle.reconcileCycles(db, { reconciliationSeconds:config.reconciliation_seconds });
-    } catch { Logger.warn('[请求额度] worker 执行失败'); }
-    finally { ticking = false; }
+    workerRunPromise = (async () => {
+      try {
+        const db = options.pool || getQuotaCapturePool();
+        const config = await getCaptureConfig(db);
+        if (Date.now() < nextRun) return;
+        nextRun = Date.now() + config.worker_interval_ms;
+        await runWorker(options);
+        const cycle = require('./quota-cycle-analysis');
+        if (typeof cycle.markAccountDirty === 'function') await cycle.reconcileCycles(db, { reconciliationSeconds:config.reconciliation_seconds });
+      } catch { Logger.warn('[请求额度] worker 执行失败'); }
+      finally {
+        ticking = false;
+        workerRunPromise = null;
+      }
+    })();
+    return workerRunPromise;
   };
   timer = setInterval(tick, 250);
   timer.unref();
   tick();
 }
 
-function stopWorker() {
+async function stopWorker() {
   if (heartbeatTimer) clearInterval(heartbeatTimer);
   heartbeatTimer = null;
   if (timer) clearInterval(timer);
   timer = null;
+  if (workerRunPromise) await workerRunPromise;
 }
 
 module.exports = { beginAttempt, endAttempt, runWorker, ensureRequestQuotaSchema, startWorker, stopWorker,

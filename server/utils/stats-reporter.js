@@ -36,6 +36,9 @@ const SETTINGS_CACHE_TTL_MS = 60000;
 // 上次上报游标落库后，重启不重复上报；窗口上限 30 天，避免长时间宕机后一次上报过多
 const MAX_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_BREAKDOWN_ENTRIES = 100;
+let initialReportTimer = null;
+let reportIntervalTimer = null;
+let scheduledReportPromise = null;
 
 let VERSION = '';
 try {
@@ -304,13 +307,30 @@ function startStatsReporter({ intervalMs } = {}) {
     ? intervalMs
     : ((config.statsReport && config.statsReport.interval) || 3600) * 1000;
   // 首次补报：延迟 5s 让服务完成初始化
-  setTimeout(() => reportNow().catch(() => {}), 5000);
-  setInterval(() => reportNow().catch(() => {}), ms);
+  if (reportIntervalTimer) return;
+  const runScheduledReport = () => {
+    if (scheduledReportPromise) return scheduledReportPromise;
+    scheduledReportPromise = reportNow().catch(() => {}).finally(() => { scheduledReportPromise = null; });
+    return scheduledReportPromise;
+  };
+  initialReportTimer = setTimeout(runScheduledReport, 5000);
+  initialReportTimer.unref?.();
+  reportIntervalTimer = setInterval(runScheduledReport, ms);
+  reportIntervalTimer.unref?.();
   Logger.info(`[统计上报] 定时上报已启动，间隔 ${Math.round(ms / 1000)}s`);
+}
+
+async function stopStatsReporter() {
+  if (initialReportTimer) clearTimeout(initialReportTimer);
+  if (reportIntervalTimer) clearInterval(reportIntervalTimer);
+  initialReportTimer = null;
+  reportIntervalTimer = null;
+  if (scheduledReportPromise) await scheduledReportPromise;
 }
 
 module.exports = {
   reportNow,
   invalidateEnabledCache,
   startStatsReporter,
+  stopStatsReporter,
 };

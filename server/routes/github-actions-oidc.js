@@ -30,14 +30,20 @@ const EXCHANGE_RATE_LIMIT = 20;
 const MAX_RATE_BUCKETS = 10_000;
 const exchangeAttempts = new Map();
 
-setInterval(() => {
-  const cutoff = Date.now() - 60_000;
-  for (const [key, timestamps] of exchangeAttempts) {
-    const current = timestamps.filter(timestamp => timestamp > cutoff);
-    if (current.length) exchangeAttempts.set(key, current);
-    else exchangeAttempts.delete(key);
-  }
-}, 60_000).unref?.();
+let exchangeAttemptsCleanupTimer = null;
+function startMaintenanceTimers() {
+  if (exchangeAttemptsCleanupTimer) return;
+  exchangeAttemptsCleanupTimer = setInterval(() => {
+    const cutoff = Date.now() - 60_000;
+    for (const [key, timestamps] of exchangeAttempts) {
+      const current = timestamps.filter(timestamp => timestamp > cutoff);
+      if (current.length) exchangeAttempts.set(key, current);
+      else exchangeAttempts.delete(key);
+    }
+  }, 60_000);
+  exchangeAttemptsCleanupTimer.unref?.();
+}
+startMaintenanceTimers();
 
 function allowExchange(key) {
   const cutoff = Date.now() - 60_000;
@@ -113,3 +119,8 @@ router.post('/oauth/github-actions', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.stopMaintenanceTimers = () => {
+  if (exchangeAttemptsCleanupTimer) clearInterval(exchangeAttemptsCleanupTimer);
+  exchangeAttemptsCleanupTimer = null;
+};
+module.exports.startMaintenanceTimers = startMaintenanceTimers;

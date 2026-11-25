@@ -204,12 +204,22 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (requestModelBindings?.$ref !== '#/components/schemas/ApiKeyRequestModelBindingsResponse') throw new Error(`${openapiPath} must define request-model binding responses`);
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
-for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {
+for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed', 'Background-task guarantees remain preview-scoped', 'Startup failure', 'repeated start/stop paths']) {
   if (!embeddedSdkDocs.includes(required)) throw new Error(`Embedded SDK release boundary omits ${required}`);
 }
 const sdkOverview = await readFile('docs/sdk/README.md', 'utf8');
 if (!sdkOverview.includes('Limited preview only; not part of the client SDK stable-release commitment')) throw new Error('SDK overview must keep embedded server SDK outside the stable client commitment');
 const sdkVersioning = await readFile('docs/sdk/versioning.md', 'utf8');
+const embeddedCi = parse(await readFile('.github/workflows/sdk-ci.yml', 'utf8'));
+const embeddedNodeSetup = embeddedCi.jobs.contract.steps.find(step => step.uses === 'actions/setup-node@v4');
+const rootPackage = JSON.parse(await readFile('package.json', 'utf8'));
+const rootLock = JSON.parse(await readFile('package-lock.json', 'utf8'));
+if (embeddedNodeSetup?.with?.['node-version'] !== 20 || rootPackage.dependencies?.express !== '^4.22.3' || rootLock.packages?.['node_modules/express']?.version !== '4.22.3' || rootLock.packages?.['node_modules/pg']?.version !== '8.20.0') throw new Error('Embedded SDK CI baseline changed; update its explicitly non-contractual tested-baseline documentation');
+if (!embeddedSdkDocs.includes('Node.js 20') || !embeddedSdkDocs.includes('Express 4.22.3') || !embeddedSdkDocs.includes('pg` 8.20.0')) throw new Error('Embedded SDK tested baseline documentation is stale');
+const embeddedLifecycleTests = await readFile('server/scripts/test-embedded-sdk.js', 'utf8');
+for (const required of ['startup failure stops partial initialization', 'concurrent start calls share one listener', 'listener startup failure releases instance']) {
+  if (!embeddedLifecycleTests.includes(required)) throw new Error(`Embedded SDK lifecycle coverage omits ${required}`);
+}
 if (!sdkVersioning.includes('limited preview; excluded from client SDK stable commitment')) throw new Error('SDK version table must keep embedded server SDK in limited preview');
 for (const required of ['1.0', 'contractVersion', 'Deprecation', 'support matrix']) {
   if (!sdkVersioning.includes(required)) throw new Error(`SDK versioning policy omits ${required}`);

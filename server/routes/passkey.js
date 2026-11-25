@@ -16,7 +16,13 @@ const WINDOW_MS = 5 * 60 * 1000;
 function pruneAttempts() {
   for (const [key, item] of attempts) if (item.expiresAt <= Date.now()) attempts.delete(key);
 }
-setInterval(pruneAttempts, 60 * 1000).unref?.();
+let attemptsCleanupTimer = null;
+function startMaintenanceTimers() {
+  if (attemptsCleanupTimer) return;
+  attemptsCleanupTimer = setInterval(pruneAttempts, 60 * 1000);
+  attemptsCleanupTimer.unref?.();
+}
+startMaintenanceTimers();
 router.use((req, res, next) => {
   const key = req.ip || 'unknown';
   let item = attempts.get(key);
@@ -194,3 +200,8 @@ router.get('/list', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.stopMaintenanceTimers = () => {
+  if (attemptsCleanupTimer) clearInterval(attemptsCleanupTimer);
+  attemptsCleanupTimer = null;
+};
+module.exports.startMaintenanceTimers = startMaintenanceTimers;

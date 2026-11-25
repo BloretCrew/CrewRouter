@@ -2633,12 +2633,18 @@ app.use('/api', require('./middleware/suspension-gate').suspensionGate);
 // 请求日志中间件
 const apiKeyUserCache = new Map(); // key -> { username, ts }
 const KEY_CACHE_TTL = 60_000; // 1 分钟缓存
-setInterval(() => {
-  const cutoff = Date.now() - KEY_CACHE_TTL;
-  for (const [key, item] of apiKeyUserCache) {
-    if (!item || item.ts < cutoff) apiKeyUserCache.delete(key);
-  }
-}, KEY_CACHE_TTL).unref?.();
+let apiKeyUserCacheCleanupTimer = null;
+function startApiKeyUserCacheCleanup() {
+  if (apiKeyUserCacheCleanupTimer) return;
+  apiKeyUserCacheCleanupTimer = setInterval(() => {
+    const cutoff = Date.now() - KEY_CACHE_TTL;
+    for (const [key, item] of apiKeyUserCache) {
+      if (!item || item.ts < cutoff) apiKeyUserCache.delete(key);
+    }
+  }, KEY_CACHE_TTL);
+  apiKeyUserCacheCleanupTimer.unref?.();
+}
+startApiKeyUserCacheCleanup();
 
 // 解析 API Key 对应的用户名（带缓存）
 async function resolveApiKeyUser(apiKey) {
@@ -3016,6 +3022,8 @@ let instanceEdition = null;
 let httpServer = null;
 const backgroundHandles = [];
 let modelTraceInitialized = false;
+let modelTraceSignalHandlers = null;
+let stopServerPromise = null;
 
 async function ensureInstanceEdition() {
   if (isDemo) return null;
@@ -3188,6 +3196,17 @@ async function runPendingMigrations() {
   Logger.info('[启动] 数据库迁移完成');
 }
 
+function startLoadedModule(modulePath, startMethod) {
+  try {
+    const resolved = require.resolve(modulePath);
+    const loaded = require.cache[resolved];
+    const start = loaded?.exports?.[startMethod];
+    if (typeof start === 'function') start();
+  } catch (error) {
+    Logger.warn(`[嵌入式启动] ${modulePath}.${startMethod} 失败: ${error.message}`);
+  }
+}
+
 function isRetryableStartupDbError(err) {
   const msg = String(err && err.message || err || '');
   const code = err && err.code;
@@ -3197,9 +3216,20 @@ function isRetryableStartupDbError(err) {
 
 async function startServer(options = {}) {
   const embedded = process.env.CR_EMBEDDED === '1';
+  stopServerPromise = null;
   const migrate = options.migrate !== false;
   const backgroundTasks = options.backgroundTasks !== false;
   const handleSignals = options.handleSignals !== undefined ? options.handleSignals !== false : !embedded;
+  startApiKeyUserCacheCleanup();
+  for (const [modulePath, startMethod] of [
+    ['./routes/api', 'startMaintenanceTimers'],
+    ['./routes/auth', 'startMaintenanceTimers'],
+    ['./routes/feishu', 'startMaintenanceTimers'],
+    ['./routes/passkey', 'startMaintenanceTimers'],
+    ['./routes/github-actions-oidc', 'startMaintenanceTimers'],
+    ['./utils/PassKey', 'startMaintenanceTimer'],
+    ['./utils/quota-data', 'startQuotaDataFlush'],
+  ]) startLoadedModule(modulePath, startMethod);
 
   if (!isDemo && migrate) {
     // 首次运行必须先完成建表 + 迁移，再对外提供服务（含 OOBE）
@@ -3267,9 +3297,12 @@ async function startServer(options = {}) {
       await require('./routes/model-trace').getRouter().initialize();
       modelTraceInitialized = true;
       if (handleSignals) {
-        const stopModelTrace = () => require('./routes/model-trace').getRouter().shutdown().catch(() => {});
-        process.once('SIGTERM', stopModelTrace);
-        process.once('SIGINT', stopModelTrace);
+        const stopEmbeddedServer = () => {
+          stopServer().catch((error) => Logger.error(`[嵌入式关闭] 信号停机失败: ${error.message}`));
+        };
+        modelTraceSignalHandlers = { SIGTERM: stopEmbeddedServer, SIGINT: stopEmbeddedServer };
+        process.once('SIGTERM', stopEmbeddedServer);
+        process.once('SIGINT', stopEmbeddedServer);
       }
 
       // schema 就绪后再启动依赖表结构的后台任务
@@ -3314,6 +3347,11 @@ async function startServer(options = {}) {
     }
   }
 
+  if (!isDemo) {
+    startLoadedModule('./utils/model-uptime', 'startUptimeCleanup');
+    startLoadedModule('./utils/error-records', 'startErrorRecordsCleanup');
+  }
+
   if (options.listen === false) return null;
 
   const port = options.port !== undefined ? options.port : PORT;
@@ -3343,14 +3381,38 @@ async function startServer(options = {}) {
   });
 }
 
-async function stopServer() {
+async function stopLoadedModule(modulePath, stopMethod) {
+  try {
+    const resolved = require.resolve(modulePath);
+    const loaded = require.cache[resolved];
+    const stop = loaded?.exports?.[stopMethod];
+    if (typeof stop === 'function') {
+      await stop();
+      return null;
+    }
+    return null;
+  } catch (error) {
+    Logger.warn(`[嵌入式关闭] ${modulePath}.${stopMethod} 失败: ${error.message}`);
+    return error;
+  }
+}
+
+function stopServer() {
+  if (stopServerPromise) return stopServerPromise;
+  stopServerPromise = (async () => {
+  if (modelTraceSignalHandlers) {
+    for (const [signal, handler] of Object.entries(modelTraceSignalHandlers)) process.removeListener(signal, handler);
+    modelTraceSignalHandlers = null;
+  }
+  if (apiKeyUserCacheCleanupTimer) clearInterval(apiKeyUserCacheCleanupTimer);
+  apiKeyUserCacheCleanupTimer = null;
   if (httpServer) {
     const server = httpServer;
     httpServer = null;
     if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }
-  try { require('./plugins/registry').stopTaskWorker(); } catch (_) {}
+  try { await stopLoadedModule('./plugins/registry', 'shutdown'); } catch (_) {}
   for (const handle of backgroundHandles.splice(0)) {
     try {
       clearInterval(handle);
@@ -3359,6 +3421,25 @@ async function stopServer() {
       // ignore
     }
   }
+  const stopResults = await Promise.all([
+    stopLoadedModule('./routes/api', 'stopMaintenanceTimers'),
+    stopLoadedModule('./routes/auth', 'stopMaintenanceTimers'),
+    stopLoadedModule('./routes/feishu', 'stopMaintenanceTimers'),
+    stopLoadedModule('./routes/passkey', 'stopMaintenanceTimers'),
+    stopLoadedModule('./routes/github-actions-oidc', 'stopMaintenanceTimers'),
+    stopLoadedModule('./utils/PassKey', 'stopMaintenanceTimer'),
+    stopLoadedModule('./utils/model-uptime', 'stopUptimeCleanup'),
+    stopLoadedModule('./utils/error-records', 'stopErrorRecordsCleanup'),
+    stopLoadedModule('./key-refresher', 'stopAll'),
+    stopLoadedModule('./utils/provider-quota', 'stopQuotaScheduler'),
+    stopLoadedModule('./utils/request-quota-capture', 'stopWorker'),
+    stopLoadedModule('./utils/message-analysis-store', 'stopMessageAnalysisWorker'),
+    stopLoadedModule('./utils/stats-reporter', 'stopStatsReporter'),
+    stopLoadedModule('./utils/plugin-store-updater', 'stop'),
+    stopLoadedModule('./utils/usage-agg', 'stopUsageAggSchedulers'),
+    stopLoadedModule('./utils/policy/scheduler', 'stopPolicyScheduler'),
+  ]);
+  const stopErrors = stopResults.filter(Boolean);
   try {
     if (modelTraceInitialized) {
       await require('./routes/model-trace').getRouter().shutdown();
@@ -3378,9 +3459,13 @@ async function stopServer() {
   }
   try {
     if (database.ownsPool) await pool.end();
-  } catch (_) {
-    // pool may already be closed or owned by the embedded host
+  } catch (error) {
+    Logger.warn(`[嵌入式关闭] 自有连接池关闭失败: ${error.message}`);
+    stopErrors.push(error);
   }
+  if (stopErrors.length) throw new AggregateError(stopErrors, 'One or more embedded shutdown hooks failed');
+  })();
+  return stopServerPromise;
 }
 
 if (!process.env.CR_SKIP_AUTOSTART) {

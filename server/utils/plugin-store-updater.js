@@ -70,7 +70,11 @@ async function checkUpdates() {
   return updatedCount;
 }
 
+let updateTimer = null;
+let updateRunPromise = null;
+
 function start() {
+  if (updateTimer) return updateTimer;
   const cfg = getConfig();
   const sc = (cfg.store && cfg.store.updateCheck) || {};
   if (sc.enabled === false) {
@@ -78,10 +82,24 @@ function start() {
     return;
   }
   const hours = Math.max(1, Number(sc.intervalHours) || 24);
-  const run = () => { checkUpdates().catch((e) => Logger.warn('[plugin-store-updater] 检查失败', e.message)); };
+  const run = () => {
+    if (updateRunPromise) return updateRunPromise;
+    updateRunPromise = checkUpdates()
+      .catch((e) => Logger.warn('[plugin-store-updater] 检查失败', e.message))
+      .finally(() => { updateRunPromise = null; });
+    return updateRunPromise;
+  };
   run();
-  setInterval(run, hours * 3600 * 1000);
+  updateTimer = setInterval(run, hours * 3600 * 1000);
+  updateTimer.unref?.();
   Logger.info(`[plugin-store-updater] 已启动，每 ${hours} 小时检查一次商店插件更新`);
+  return updateTimer;
 }
 
-module.exports = { checkUpdates, start, cmpVersions };
+async function stop() {
+  if (updateTimer) clearInterval(updateTimer);
+  updateTimer = null;
+  if (updateRunPromise) await updateRunPromise;
+}
+
+module.exports = { checkUpdates, start, stop, cmpVersions };

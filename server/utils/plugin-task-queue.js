@@ -36,6 +36,7 @@ function validatePayload(value) {
 
 function createTaskQueue({ pool, isLoaded, getHandlers, getPluginDir = () => null, logger = console }) {
   let timer = null;
+  let tickPromise = null;
   let busy = false;
   const running = new Map();
 
@@ -139,14 +140,20 @@ function createTaskQueue({ pool, isLoaded, getHandlers, getPluginDir = () => nul
     return pool.query(`UPDATE plugin_tasks SET status='cancelled', locked_at=NULL, locked_by=NULL, updated_at=now() WHERE plugin_id=$1 AND status IN ('pending','running')`, [pluginId]);
   }
 
+  function scheduleTick() {
+    if (tickPromise) return tickPromise;
+    tickPromise = tick().finally(() => { tickPromise = null; });
+    return tickPromise;
+  }
   function start() {
-    if (!timer) { timer = setInterval(() => { void tick(); }, 1000); timer.unref?.(); void tick(); }
+    if (!timer) { timer = setInterval(() => { void scheduleTick(); }, 1000); timer.unref?.(); void scheduleTick(); }
     return timer;
   }
-  function stop() {
+  async function stop() {
     if (timer) clearInterval(timer);
     timer = null;
     for (const entry of running.values()) entry.controller.abort(new Error('任务 worker 已停止'));
+    if (tickPromise) await tickPromise;
   }
   return { ensureSchema: () => ensureSchema(pool), enqueue, get, cancel, cancelPlugin, tick, start, stop };
 }

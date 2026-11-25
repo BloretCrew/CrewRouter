@@ -21,11 +21,17 @@ const BIND_TTL_MS = 5 * 60 * 1000;
 const BIND_ATTEMPT_LIMIT = 5;
 const BIND_WINDOW_MS = 15 * 60 * 1000;
 const bindingAttempts = new Map();
-setInterval(() => {
-  for (const [key, value] of bindingAttempts) {
-    if (value.expiresAt <= Date.now()) bindingAttempts.delete(key);
-  }
-}, BIND_WINDOW_MS).unref?.();
+let bindingAttemptsCleanupTimer = null;
+function startMaintenanceTimers() {
+  if (bindingAttemptsCleanupTimer) return;
+  bindingAttemptsCleanupTimer = setInterval(() => {
+    for (const [key, value] of bindingAttempts) {
+      if (value.expiresAt <= Date.now()) bindingAttempts.delete(key);
+    }
+  }, BIND_WINDOW_MS);
+  bindingAttemptsCleanupTimer.unref?.();
+}
+startMaintenanceTimers();
 
 const saveSession = (req) => new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
 const regenerateSession = (req) => new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
@@ -548,3 +554,8 @@ router.post('/feishu/bind', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.stopMaintenanceTimers = () => {
+  if (bindingAttemptsCleanupTimer) clearInterval(bindingAttemptsCleanupTimer);
+  bindingAttemptsCleanupTimer = null;
+};
+module.exports.startMaintenanceTimers = startMaintenanceTimers;

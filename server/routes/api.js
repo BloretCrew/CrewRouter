@@ -847,28 +847,36 @@ async function runWithEndpointFallback(provider, req, res, outerSuppress, client
 const rateLimitStore = new Map();
 
 // 清理过期的速率限制记录（每分钟清理一次）
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, record] of rateLimitStore) {
-    if (now - record.windowStart > 120000) {
-      rateLimitStore.delete(key);
+let rateLimitCleanupTimer = null;
+function startMaintenanceTimers() {
+  if (rateLimitCleanupTimer) return;
+  rateLimitCleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, record] of rateLimitStore) {
+      if (now - record.windowStart > 120000) rateLimitStore.delete(key);
     }
-  }
-}, 60000).unref?.();
+  }, 60000);
+  rateLimitCleanupTimer.unref?.();
+}
+startMaintenanceTimers();
 
 // API Key 验证缓存（性能优化：减少数据库查询）
 const apiKeyCache = new Map();
 const API_KEY_CACHE_TTL = 60000; // 60 秒缓存
 
 // 清理过期的 API Key 缓存（每分钟清理一次）
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of apiKeyCache) {
-    if (now - entry.timestamp > API_KEY_CACHE_TTL * 2) {
-      apiKeyCache.delete(key);
+let apiKeyCleanupTimer = null;
+function startApiKeyCleanupTimer() {
+  if (apiKeyCleanupTimer) return;
+  apiKeyCleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of apiKeyCache) {
+      if (now - entry.timestamp > API_KEY_CACHE_TTL * 2) apiKeyCache.delete(key);
     }
-  }
-}, 60000).unref?.();
+  }, 60000);
+  apiKeyCleanupTimer.unref?.();
+}
+startApiKeyCleanupTimer();
 
 // 获取缓存的 API Key 验证结果
 function getCachedApiKey(apiKey) {
@@ -7611,6 +7619,16 @@ async function handleInteractionsCancel(req, res) {
 
 
 module.exports = router;
+module.exports.stopMaintenanceTimers = () => {
+  if (rateLimitCleanupTimer) clearInterval(rateLimitCleanupTimer);
+  if (apiKeyCleanupTimer) clearInterval(apiKeyCleanupTimer);
+  rateLimitCleanupTimer = null;
+  apiKeyCleanupTimer = null;
+};
+module.exports.startMaintenanceTimers = () => {
+  startMaintenanceTimers();
+  startApiKeyCleanupTimer();
+};
 module.exports.handleGeminiModels = handleGeminiModels;
 module.exports.handleGeminiModelGet = handleGeminiModelGet;
 module.exports.handleGeminiGenerateContent = handleGeminiGenerateContent;

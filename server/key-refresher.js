@@ -516,11 +516,19 @@ function unregisterProvider(providerId) {
   keyCache.delete(providerId);
 }
 
+function stopAll() {
+  for (const cached of keyCache.values()) {
+    if (cached?.timer) clearTimeout(cached.timer);
+    if (cached) cached.timer = null;
+  }
+}
+
 module.exports = {
   ensureFreshKey,
   refreshProviderKey,
   getRefreshStatus,
   registerProvider,
   unregisterProvider,
+  stopAll,
   initAll
 };

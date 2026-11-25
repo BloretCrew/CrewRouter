@@ -40,6 +40,8 @@ const SCHEDULER_TICK_MS = 60 * 1000;
 const CUSTOM_QUOTA_SCRIPTS_ENABLED = process.env.CR_ENABLE_CUSTOM_QUOTA_SCRIPTS === '1';
 
 let schedulerTimer = null;
+let schedulerKickoffTimer = null;
+let schedulerRunPromise = null;
 let schedulerRunning = false;
 let lastHistoryCleanup = 0;
 const quotaInFlight = new Map();
@@ -608,13 +610,24 @@ function startQuotaScheduler() {
         .then(setting => quotaHistory.cleanupQuotaHistory(pool, setting.rows.length ? Number(setting.rows[0].value) : 90))
         .catch(() => Logger.warn('[额度历史] 安全清理失败，保留历史明细'));
     }
-    runDueQuotaSchedules().catch(err => {
+    if (schedulerRunning) return;
+    schedulerRunPromise = runDueQuotaSchedules().catch(err => {
       Logger.warn(`[额度定时查询] tick 失败: ${quotaHistory.safeText(err.message, {})}`);
-    });
+    }).finally(() => { schedulerRunPromise = null; });
   };
   schedulerTimer = setInterval(tick, SCHEDULER_TICK_MS);
-  setTimeout(tick, 8000);
+  schedulerKickoffTimer = setTimeout(tick, 8000);
+  schedulerKickoffTimer.unref?.();
+  schedulerTimer.unref?.();
   Logger.info('[额度定时查询] 调度器已启动');
+}
+
+async function stopQuotaScheduler() {
+  if (schedulerTimer) clearInterval(schedulerTimer);
+  if (schedulerKickoffTimer) clearTimeout(schedulerKickoffTimer);
+  schedulerTimer = null;
+  schedulerKickoffTimer = null;
+  if (schedulerRunPromise) await schedulerRunPromise;
 }
 
 module.exports = {
@@ -628,5 +641,6 @@ module.exports = {
   saveQuotaSnapshot,
   runDueQuotaSchedules,
   startQuotaScheduler,
+  stopQuotaScheduler,
   maskApiKey
 };

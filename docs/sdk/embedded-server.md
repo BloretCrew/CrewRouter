@@ -92,11 +92,24 @@ The preview rejects invalid configurations before loading any CrewRouter module:
   `handleSignals`.
 - **Feature gating is not applied in demo mode.** Demo uses fixture routes for
   the console showcase.
-- **Background task shutdown is partial.** Default is off. If enabled, tracked
-  timers are cleared on `stop()`, but not every subsystem exposes a stop hook.
+- **Background-task guarantees remain preview-scoped.** Default is off. `stop()`
+  clears tracked listener-maintenance timers and invokes stop hooks for built-in key
+  refresh, quota, message-analysis, stats, aggregation, policy, plugin-task and
+  plugin-store workers. It waits for tracked in-flight work where those workers expose
+  completion. Arbitrary plugin code that ignores cancellation is not covered by a
+  shutdown guarantee. Keep plugins and background tasks disabled for
+  the narrowest host lifecycle.
 - **PostgreSQL required** outside demo mode. For a first-time database, pass
   `migrate: true`.
 - **Express 4 hosts.** Express 5 is not validated.
+
+## CI-tested baseline (not a support matrix)
+
+The current embedded CI job runs on `ubuntu-latest` with Node.js 20, the lockfile's
+Express 4.22.3 and `pg` 8.20.0 dependencies, and the embedded test fixtures. The
+PostgreSQL-dependent release checks install the runner's distribution package
+without pinning a server version; there is no version matrix for PostgreSQL or
+Express 5. This records what CI exercises today, not a compatibility promise.
 
 ## GA readiness gate
 
