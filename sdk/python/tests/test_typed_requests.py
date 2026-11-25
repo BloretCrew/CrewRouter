@@ -16,6 +16,7 @@ from crewrouter import (
     AdminUser,
     AdminProduct,
     AdminProviderTag,
+    AdminProviderTagUpdateResponse,
     AdminUsersPage,
     TeamMember,
     ApiKeyModelsResponse,
@@ -183,6 +184,7 @@ class TypedRequestTests(unittest.TestCase):
         admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
         team_member: TeamMember = {"id": 9, "username": "alice", "email": None, "avatar": None, "created_at": "2026-01-01T00:00:00Z"}
         admin_provider_tag: AdminProviderTag = {"id": 4, "name": "global", "color": "#123456", "sort_order": 0, "created_at": "2026-01-01T00:00:00Z"}
+        admin_provider_tag_updated: AdminProviderTagUpdateResponse = {"id": 4, "name": "global", "color": "#123456", "sort_order": 0}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(claude_config["model"], "claude-fable-5")
         self.assertEqual(fusion["panel_models"], fusion_put["panel_models"])
@@ -193,6 +195,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertEqual(admin_page["items"][0]["username"], "alice")
         self.assertIsNone(team_member["email"])
         self.assertEqual(admin_provider_tag["sort_order"], 0)
+        self.assertEqual(admin_provider_tag_updated["id"], 4)
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         self.assertEqual(usage_detail_response["log"]["messages"][0]["content"], "hi")
         self.assertEqual(stats_filters["teams"][0]["id"], 2)

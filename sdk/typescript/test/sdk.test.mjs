@@ -149,8 +149,24 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 9, username: 'alice', email: null, avatar: null, created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
     }
-    if (req.url === '/api/admin/provider-tags') {
+    if (req.url === '/api/admin/provider-tags' && req.method === 'GET') {
       json(res, 200, [{ id: 4, name: 'global', color: '#123456', sort_order: 0, created_at: '2026-01-01T00:00:00.000Z' }]);
+      return;
+    }
+    if (req.url === '/api/admin/provider-tags' && req.method === 'POST') {
+      json(res, 200, { id: 4, name: 'global', color: '#123456', sort_order: 0 });
+      return;
+    }
+    if (req.url === '/api/admin/provider-tags/4' && req.method === 'PUT') {
+      json(res, 200, { id: 4, name: 'global', color: '#123456', sort_order: 0 });
+      return;
+    }
+    if (req.url === '/api/admin/provider-tags/4' && req.method === 'DELETE') {
+      json(res, 200, { success: true });
+      return;
+    }
+    if (req.url === '/api/admin/provider-tags/reorder' && req.method === 'PUT') {
+      json(res, 200, { success: true });
       return;
     }
     if (req.url === '/api/admin/users') {
@@ -269,6 +285,10 @@ test('management wrappers preserve their documented response payload shapes', as
   const adminProducts = await client.admin.products.list();
   const teamMembers = await client.admin.teams.getMembers(2);
   const adminProviderTags = await client.admin.providerTags.list();
+  const createdAdminTag = await client.admin.providerTags.create({ name: 'global' });
+  const updatedAdminTag = await client.admin.providerTags.update(4, { name: 'global' });
+  const deletedAdminTag = await client.admin.providerTags.delete(4);
+  const reorderedAdminTags = await client.admin.providerTags.reorder({ orderedIds: [4] });
   const adminUsersLegacy = await client.admin.users.list();
   const adminUsersPage = await client.admin.users.list({ query: { page: 1 } });
 
@@ -317,6 +337,10 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminProducts.data[0].price, '2.5');
   assert.equal(teamMembers.data[0].email, null);
   assert.equal(adminProviderTags.data[0].created_at, '2026-01-01T00:00:00.000Z');
+  assert.equal(createdAdminTag.data.id, 4);
+  assert.equal(updatedAdminTag.data.sort_order, 0);
+  assert.equal(deletedAdminTag.data.success, true);
+  assert.equal(reorderedAdminTags.data.success, true);
   assert.equal(adminUsersLegacy.data[0].username, 'alice');
   assert.equal(adminUsersPage.data.stats.adminCount, 0);
   assert.equal(adminUsersLegacy.data[0].username, 'alice');

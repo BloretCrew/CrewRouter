@@ -613,7 +613,8 @@ function managementSchemas() {
     AdminProviderTag: object({
       id: { type: 'integer' }, name: { type: 'string' }, color: { type: 'string' },
       sort_order: { type: 'integer' }, created_at: { type: 'string', format: 'date-time' },
-    }, ['id', 'name', 'color', 'sort_order', 'created_at']),
+    }, ['id', 'name', 'color', 'sort_order']),
+    AdminProviderTagUpdateResponse: object({ id: { type: 'integer' }, name: { type: 'string' }, color: { type: 'string' }, sort_order: { type: 'integer' } }, ['id', 'name', 'color', 'sort_order']),
     UserCodeBalanceItem: object({
       amount: numberOrString, fee_rate: numberOrString, code: { type: 'string' },
       code_amount: numberOrString, net_amount: numberOrString,
@@ -684,6 +685,10 @@ function managementResponseSchema(operationId) {
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
     'admin.providerTags.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProviderTag' } },
+    'admin.providerTags.create': { $ref: '#/components/schemas/AdminProviderTagUpdateResponse' },
+    'admin.providerTags.byId.update': { $ref: '#/components/schemas/AdminProviderTagUpdateResponse' },
+    'admin.providerTags.byId.delete': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
+    'admin.providerTags.reorder': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.teams.byId.members.list': { type: 'array', items: { $ref: '#/components/schemas/TeamMember' } },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },

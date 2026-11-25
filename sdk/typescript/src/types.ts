@@ -317,7 +317,14 @@ export interface AdminProviderTag {
   name: string;
   color: string;
   sort_order: number;
-  created_at: string;
+  created_at?: string;
+}
+
+export interface AdminProviderTagUpdateResponse {
+  id: number;
+  name: string;
+  color: string;
+  sort_order: number;
 }
 
 export interface TeamMember {

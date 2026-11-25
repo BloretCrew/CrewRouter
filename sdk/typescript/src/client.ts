@@ -6,6 +6,7 @@ import type {
   AdminUsersResponse,
   AdminProduct,
   AdminProviderTag,
+  AdminProviderTagUpdateResponse,
   TeamMember,
   ApiKeyActionSuccess,
   ApiKeyEnabledUpdateResponse,
@@ -314,6 +315,14 @@ export class CrewRouter {
     providerTags: {
       list: <T = AdminProviderTag[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.providerTags.list', options),
+      create: <T = AdminProviderTagUpdateResponse>(body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.providerTags.create', { ...options, body }),
+      update: <T = AdminProviderTagUpdateResponse>(id: string | number, body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.providerTags.byId.update', mergePathParams({ ...options, body }, { id })),
+      delete: <T = ApiKeyActionSuccess>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.providerTags.byId.delete', mergePathParams(options, { id })),
+      reorder: <T = ApiKeyActionSuccess>(body: { orderedIds: Array<number | string> }, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.providerTags.reorder', { ...options, body }),
     },
   };
 }

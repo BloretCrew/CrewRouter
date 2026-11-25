@@ -38,6 +38,14 @@ type AdminUser struct {
 	TeamName      *string `json:"team_name"`
 }
 
+// AdminProviderTagUpdateResponse is returned after creating or updating a provider tag.
+type AdminProviderTagUpdateResponse struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Color     string `json:"color"`
+	SortOrder int    `json:"sort_order"`
+}
+
 // AdminProviderTag is a global provider tag returned to provider managers.
 type AdminProviderTag struct {
 	ID        int64  `json:"id"`

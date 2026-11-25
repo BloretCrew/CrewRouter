@@ -33,6 +33,7 @@ export type {
   AdminUser,
   AdminProduct,
   AdminProviderTag,
+  AdminProviderTagUpdateResponse,
   TeamMember,
   AdminUserStats,
   AdminUsersPage,
