@@ -204,12 +204,39 @@ function usagePage(runtime) {
       }
       if (runtime.usageTab === 'latency') {
         const latency = await getLatencyStats(runtime.client, { ...dateQuery, ...filters });
-        sections.push({ title: '响应速度与首字延迟', tab: 'latency', toolbar: true, cards: [
-          { label: '请求中位延迟（P50）', value: text(latency.p50_ms, '—'), detail: '一半请求不超过此耗时 · 毫秒' },
-          { label: '请求95%分位延迟（P95）', value: text(latency.p95_ms, '—'), detail: '95% 请求不超过此耗时 · 毫秒' },
-          { label: '请求99%分位延迟（P99）', value: text(latency.p99_ms, '—'), detail: '99% 请求不超过此耗时 · 毫秒' },
-          { label: '请求总数', value: text(latency.total_requests, '0'), detail: '当前筛选范围' },
-        ], rows: (latency.daily || []).map(row => ({ label: `${row.date} · ${row.requests || 0} 次请求 · 95%请求延迟 ${row.p95_ms || 0} 毫秒 · 输出速度 ${row.tokens_per_second || 0} Token/秒` })) });
+        const latencySummary = latency.summary || {};
+        const latencyModelRows = arrayOrEmpty(latency.byModel).map(row => ({ label: row.name || '未知模型', cells: {
+          model: row.name || '未知模型', requests: Number(row.requests || 0).toLocaleString(), measured: `${Number(row.measuredRequests || 0).toLocaleString()} (${(Number(row.coverage || 0) * 100).toFixed(1)}%)`,
+          ttft50: row.ttft?.p50 == null ? '未采集' : `${row.ttft.p50} 毫秒`, ttft75: row.ttft?.p75 == null ? '未采集' : `${row.ttft.p75} 毫秒`,
+          ttft95: row.ttft?.p95 == null ? '未采集' : `${row.ttft.p95} 毫秒`, ttft99: row.ttft?.p99 == null ? '未采集' : `${row.ttft.p99} 毫秒`,
+          tpot50: row.tpot?.p50 == null ? '未采集' : `${Number(row.tpot.p50).toFixed(1)} 毫秒`, tps50: row.outputTps?.p50 == null ? '未采集' : `${Number(row.outputTps.p50).toFixed(2)} Token/秒`,
+          e2e95: row.e2e?.p95 == null ? '未采集' : `${row.e2e.p95} 毫秒`, cache: row.cacheHitRate == null ? '未采集' : `${(Number(row.cacheHitRate) * 100).toFixed(1)}%`,
+        } }));
+        const dailyLatencyRows = arrayOrEmpty(latency.daily).map(row => ({ label: row.date || '未知日期', cells: {
+          date: row.date || '未知日期', requests: Number(row.requests || 0).toLocaleString(), measured: `${Number(row.measuredRequests || 0).toLocaleString()} (${(Number(row.measuredRequests || 0) / Math.max(Number(row.requests || 0), 1) * 100).toFixed(1)}%)`,
+          ttft50: row.ttft?.p50 == null ? '未采集' : `${row.ttft.p50} 毫秒`, ttft95: row.ttft?.p95 == null ? '未采集' : `${row.ttft.p95} 毫秒`,
+          tps50: row.outputTps?.p50 == null ? '未采集' : `${Number(row.outputTps.p50).toFixed(2)} Token/秒`, e2e95: row.e2e?.p95 == null ? '未采集' : `${row.e2e.p95} 毫秒`,
+        } }));
+        const rateLimitRows = arrayOrEmpty(latency.rateLimits).map(row => ({ label: row.providerName || row.providerId || '未知供应商', detail: `采集时间：${row.observedAt ? formatTime(row.observedAt) : '未知'} · 服务层级：${row.serviceTier || '未提供'} · ${row.rateLimit ? Object.entries(row.rateLimit).map(([key, value]) => `${({ requests_remaining: '剩余请求', requests_limit: '请求上限', requests_reset: '请求重置', tokens_remaining: '剩余 Token', tokens_limit: 'Token 上限', tokens_reset: 'Token 重置' })[key] || key.replace(/_/g, ' ')} ${value}`).join(' · ') : '上游未返回限流数据'}` }));
+        sections.push(
+          { title: '延迟指标说明', tab: 'latency', rows: [{ label: '以下为网关实际采集的首字延迟（TTFT）、每 Token 生成耗时（TPOT）、输出速度和端到端延迟（E2E）。' }, { label: `当前范围：${latency.window?.start || '未知'} 至 ${latency.window?.end || '未知'} · 时区 ${latency.window?.timezone || 'Asia/Shanghai'}` }, { label: `已采集 ${Number(latencySummary.measuredRequests || 0).toLocaleString()} / ${Number(latencySummary.requests || 0).toLocaleString()} 条请求（${(Number(latencySummary.coverage || 0) * 100).toFixed(1)}%）` }] },
+          { title: '延迟与吞吐摘要', tab: 'latency', cards: [
+            { label: 'TTFT P50', value: latencySummary.ttft?.p50 == null ? '未采集' : `${latencySummary.ttft.p50} 毫秒` },
+            { label: 'TTFT P95', value: latencySummary.ttft?.p95 == null ? '未采集' : `${latencySummary.ttft.p95} 毫秒` },
+            { label: '输出速度 P50', value: latencySummary.outputTps?.p50 == null ? '未采集' : `${Number(latencySummary.outputTps.p50).toFixed(2)} Token/秒` },
+            { label: 'TPOT P50', value: latencySummary.tpot?.p50 == null ? '未采集' : `${Number(latencySummary.tpot.p50).toFixed(1)} 毫秒` },
+            { label: 'E2E P95', value: latencySummary.e2e?.p95 == null ? '未采集' : `${latencySummary.e2e.p95} 毫秒` },
+            { label: '吞吐达标率', value: `${Number(latencySummary.tpsThresholds?.ge50 || 0).toFixed(1)}%`, detail: '输出速度 ≥ 50 Token/秒' },
+          ] },
+          { title: '每日首字延迟与输出速度', tab: 'latency', rows: dailyLatencyRows.length ? dailyLatencyRows.map(row => ({ label: `${row.cells.date} · ${row.cells.requests} 次请求 · 已采集 ${row.cells.measured}`, detail: `TTFT P50 ${row.cells.ttft50} · P95 ${row.cells.ttft95} · 输出速度 P50 ${row.cells.tps50} · E2E P95 ${row.cells.e2e95}` })) : [{ label: '当前范围没有每日延迟数据。' }] },
+          { title: '模型延迟与吞吐', tab: 'latency', tableMinWidth: 150, columns: [
+            { key: 'model', label: '模型', ratio: 0.15 }, { key: 'requests', label: '请求数', ratio: 0.08 }, { key: 'measured', label: '已采集', ratio: 0.1 },
+            { key: 'ttft50', label: 'TTFT P50', ratio: 0.09 }, { key: 'ttft75', label: 'TTFT P75', ratio: 0.09 }, { key: 'ttft95', label: 'TTFT P95', ratio: 0.09 },
+            { key: 'ttft99', label: 'TTFT P99', ratio: 0.09 }, { key: 'tpot50', label: 'TPOT P50', ratio: 0.08 }, { key: 'tps50', label: '输出 TPS P50', ratio: 0.09 },
+            { key: 'e2e95', label: 'E2E P95', ratio: 0.07 }, { key: 'cache', label: '缓存命中', ratio: 0.07 },
+          ], rows: latencyModelRows.length ? latencyModelRows : [{ label: '当前范围没有按模型采集到的延迟数据。' }] },
+          { title: '最近一次上游限流状态', tab: 'latency', rows: rateLimitRows.length ? rateLimitRows : [{ label: '当前范围没有包含上游限流信息的请求记录。' }] },
+        );
       }
       if (runtime.usageTab === 'messages') {
         const messageStats = await getMessageStats(runtime.client, { ...dateQuery, ...filters });
