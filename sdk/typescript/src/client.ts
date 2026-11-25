@@ -9,6 +9,8 @@ import type {
   AdminProviderTag,
   AdminProviderTagUpdateResponse,
   TeamMember,
+  TeamQuotaRule,
+  TeamRuleDeleteResponse,
   ApiKeyActionSuccess,
   ApiKeyEnabledUpdateResponse,
   ApiKeySwallowImagesUpdateResponse,
@@ -316,6 +318,12 @@ export class CrewRouter {
         this.call<T>('admin.teams.list', options),
       getMembers: <T = TeamMember[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.teams.byId.members.list', mergePathParams(options, { id })),
+      getRules: <T = TeamQuotaRule[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.teams.byId.rules.list', mergePathParams(options, { id })),
+      createRule: <T = TeamQuotaRule>(id: string | number, body: Pick<TeamQuotaRule, 'rule_type' | 'rule_value' | 'duration_hours'> & Partial<Pick<TeamQuotaRule, 'description'>>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.teams.byId.rules.create', mergePathParams({ ...options, body }, { id })),
+      deleteRule: <T = TeamRuleDeleteResponse>(id: string | number, ruleId: string, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.teams.byId.rules.byRuleId.delete', mergePathParams(options, { id, ruleId })),
     },
     products: {
       list: <T = AdminProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>

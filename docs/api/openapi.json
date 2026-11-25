@@ -2281,13 +2281,17 @@
       "TeamQuotaRule": {
         "type": "object",
         "properties": {
-          "rule_type": {
+          "id": {
             "type": "string"
           },
-          "duration_hours": {
-            "type": "number"
+          "rule_type": {
+            "type": "string",
+            "enum": [
+              "requests",
+              "tokens"
+            ]
           },
-          "current": {
+          "rule_value": {
             "oneOf": [
               {
                 "type": "number"
@@ -2296,11 +2300,28 @@
                 "type": "string"
               }
             ]
+          },
+          "duration_hours": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string"
           }
         },
         "required": [
           "rule_type"
         ],
+        "additionalProperties": true,
+        "description": "Legacy Team quota rules may omit id/value fields or carry extension fields; newly created rules populate id, rule_value and duration_hours."
+      },
+      "TeamRuleDeleteResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          }
+        },
+        "required": [],
         "additionalProperties": true
       },
       "BalanceGroup": {
@@ -11515,8 +11536,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamQuotaRule"
+                  }
                 }
               }
             }
@@ -11557,8 +11580,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/TeamQuotaRule"
                 }
               }
             }
@@ -11620,8 +11642,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/TeamRuleDeleteResponse"
                 }
               }
             }

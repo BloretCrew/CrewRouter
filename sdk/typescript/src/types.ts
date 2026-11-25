@@ -327,6 +327,21 @@ export interface AdminProviderTagUpdateResponse {
   sort_order: number;
 }
 
+export interface TeamQuotaRule {
+  id?: string;
+  rule_type: string;
+  rule_value?: number | string;
+  limit_value?: number | string;
+  duration_hours?: number;
+  current?: number | string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export interface TeamRuleDeleteResponse {
+  success: true;
+}
+
 export interface TeamMember {
   id: number;
   username: string;
@@ -574,14 +589,6 @@ export interface UserModelListItem {
   input_price_per_1k_tokens: number | string | null;
   output_price_per_1k_tokens: number | string | null;
   output_kind: string;
-}
-
-export interface TeamQuotaRule {
-  rule_type: string;
-  limit_value?: number | string;
-  duration_hours?: number;
-  current?: number;
-  [key: string]: unknown;
 }
 
 export interface UserBalance {

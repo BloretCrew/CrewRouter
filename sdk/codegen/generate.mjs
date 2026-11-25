@@ -688,9 +688,17 @@ function managementSchemas() {
         { $ref: '#/components/schemas/ModelUptimeSlotResponse' },
       ],
     },
-    TeamQuotaRule: object({
-      rule_type: { type: 'string' }, duration_hours: { type: 'number' }, current: numberOrString,
-    }, ['rule_type']),
+    TeamQuotaRule: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' }, rule_type: { type: 'string', enum: ['requests', 'tokens'] },
+        rule_value: numberOrString, duration_hours: { type: 'number' }, description: { type: 'string' },
+      },
+      required: ['rule_type'],
+      additionalProperties: true,
+      description: 'Legacy Team quota rules may omit id/value fields or carry extension fields; newly created rules populate id, rule_value and duration_hours.',
+    },
+    TeamRuleDeleteResponse: object({ success: { const: true } }),
     BalanceGroup: object({
       id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
       rules: { type: 'array', items: { $ref: '#/components/schemas/TeamQuotaRule' } },
@@ -720,6 +728,9 @@ function managementResponseSchema(operationId) {
     'admin.providerTags.byId.delete': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.providerTags.reorder': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.teams.byId.members.list': { type: 'array', items: { $ref: '#/components/schemas/TeamMember' } },
+    'admin.teams.byId.rules.list': { type: 'array', items: { $ref: '#/components/schemas/TeamQuotaRule' } },
+    'admin.teams.byId.rules.create': { $ref: '#/components/schemas/TeamQuotaRule' },
+    'admin.teams.byId.rules.byRuleId.delete': { $ref: '#/components/schemas/TeamRuleDeleteResponse' },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },

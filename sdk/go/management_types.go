@@ -207,9 +207,12 @@ type DailyUsageItem struct {
 
 // TeamQuotaRule is a quota rule returned with the balance summary.
 type TeamQuotaRule struct {
+	ID            string `json:"id,omitempty"`
 	RuleType      string `json:"rule_type"`
+	RuleValue     any    `json:"rule_value,omitempty"`
 	LimitValue    any    `json:"limit_value,omitempty"`
 	DurationHours int    `json:"duration_hours,omitempty"`
+	Description   string `json:"description,omitempty"`
 	Current       any    `json:"current,omitempty"`
 }
 

@@ -39,6 +39,7 @@ from crewrouter import (
     UserCurrentModel,
     DailyUsageItem,
     UserBalance,
+    TeamQuotaRule,
     UserCodeBalanceItem,
     UserModelListItem,
     UserProviderListItem,
@@ -185,6 +186,7 @@ class TypedRequestTests(unittest.TestCase):
         admin_usage_log: AdminUsageLog = {**usage_log, "username": "alice", "custom_instruction_count": 0}
         admin_usage_logs: AdminUsageLogsResponse = {"total": 1, "page": 1, "logs": [admin_usage_log]}
         admin_page: AdminUsersPage = {"items": [admin_user], "total": 1, "page": 1, "limit": 50, "stats": {"adminCount": 0, "verifiedCount": 0, "totalBalance": 1.5}}
+        team_rule: TeamQuotaRule = {"id": "team-rule-1", "rule_type": "requests", "rule_value": 100, "duration_hours": 24, "description": "daily cap"}
         admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
         team_member: TeamMember = {"id": 9, "username": "alice", "email": None, "avatar": None, "created_at": "2026-01-01T00:00:00Z"}
         admin_provider_tag: AdminProviderTag = {"id": 4, "name": "global", "color": "#123456", "sort_order": 0, "created_at": "2026-01-01T00:00:00Z"}

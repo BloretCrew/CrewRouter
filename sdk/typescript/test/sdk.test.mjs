@@ -153,6 +153,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 9, username: 'alice', email: null, avatar: null, created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
     }
+    if (req.url === '/api/admin/teams/2/rules') {
+      json(res, 200, [{ id: 'team-rule-1', rule_type: 'requests', rule_value: 100, duration_hours: 24, description: 'daily cap' }]);
+      return;
+    }
     if (req.url === '/api/admin/provider-tags' && req.method === 'GET') {
       json(res, 200, [{ id: 4, name: 'global', color: '#123456', sort_order: 0, created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
@@ -290,6 +294,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const adminUptime = await client.admin.models.getUptime({ days: 7 });
   const adminProducts = await client.admin.products.list();
   const teamMembers = await client.admin.teams.getMembers(2);
+  const teamRules = await client.admin.teams.getRules(2);
   const adminProviderTags = await client.admin.providerTags.list();
   const createdAdminTag = await client.admin.providerTags.create({ name: 'global' });
   const updatedAdminTag = await client.admin.providerTags.update(4, { name: 'global' });
@@ -345,6 +350,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminUptime.data.granularity, '15m');
   assert.equal(adminProducts.data[0].price, '2.5');
   assert.equal(teamMembers.data[0].email, null);
+  assert.equal(teamRules.data[0].rule_type, 'requests');
   assert.equal(adminProviderTags.data[0].created_at, '2026-01-01T00:00:00.000Z');
   assert.equal(createdAdminTag.data.id, 4);
   assert.equal(updatedAdminTag.data.sort_order, 0);

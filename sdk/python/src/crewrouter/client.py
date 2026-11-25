@@ -300,12 +300,29 @@ class DailyUsageItem(TypedDict, total=False):
     total_requests: Union[int, str]
 
 
+class TeamQuotaRule(TypedDict, total=False):
+    id: str
+    rule_type: str
+    rule_value: Union[int, float, str]
+    duration_hours: int
+    description: str
+    limit_value: Union[int, float, str]
+    current: Any
+
+
+class BalanceGroup(TypedDict, total=False):
+    id: Union[int, str]
+    name: str
+    description: Optional[str]
+    rules: list[TeamQuotaRule]
+
+
 class UserBalance(TypedDict):
     balance: float
     refund_balance: float
     rate_limit_rpm: int
     rate_limit_tpm: int
-    group: Optional[dict[str, Any]]
+    group: Optional[BalanceGroup]
 
 
 class UserProviderListItem(TypedDict):

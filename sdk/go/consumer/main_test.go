@@ -155,6 +155,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(adminProducts) != 1 || adminProducts[0].Price != "2.5" || adminProducts[0].Description != nil {
 		t.Fatalf("unexpected admin product response: %#v", adminProducts)
 	}
+	var teamRules []crewrouter.TeamQuotaRule
+	if err := json.Unmarshal([]byte(`[{"id":"team-rule-1","rule_type":"requests","rule_value":100,"duration_hours":24,"description":"daily cap"}]`), &teamRules); err != nil {
+		t.Fatalf("decode Team rules: %v", err)
+	}
+	if len(teamRules) != 1 || teamRules[0].RuleType != "requests" || teamRules[0].DurationHours != 24 {
+		t.Fatalf("unexpected Team rules payload: %#v", teamRules)
+	}
+
 	var teamMembers []crewrouter.TeamMember
 	if err := json.Unmarshal([]byte(`[{"id":9,"username":"alice","email":null,"avatar":null,"created_at":"2026-01-01T00:00:00Z"}]`), &teamMembers); err != nil {
 		t.Fatalf("decode team members: %v", err)
