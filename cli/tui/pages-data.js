@@ -174,7 +174,35 @@ function usagePage(runtime) {
           { key: 'tokens', label: 'Token', ratio: 0.16 }, { key: 'cached', label: '缓存命中', ratio: 0.16 }, { key: 'cost', label: '积分', ratio: 0.14 },
         ], description: `${keyRows.length} 个 API Key · ${periodLabel}`, rows: keyRows.length ? keyRows : [{ label: '当前范围没有 API Key 用量。' }] });
       }
-      if (runtime.usageTab === 'sources') sections.push({ title: '按客户端统计', tab: 'sources', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.bySource || [], row => clientDisplay(row.request_source)) });
+      if (runtime.usageTab === 'sources') {
+        const rows = arrayOrEmpty(summary.bySource);
+        const maxRequests = Math.max(1, ...rows.map(row => Number(row.requests || 0)));
+        const bySourceModel = arrayOrEmpty(stats.bySourceModel);
+        const sourceColumns = [
+          { key: 'client', label: '客户端', ratio: 0.14 }, { key: 'requests', label: '请求数', ratio: 0.09 }, { key: 'share', label: '占比', ratio: 0.1 },
+          { key: 'tokens', label: 'Token', ratio: 0.1 }, { key: 'prompt', label: 'Prompt', ratio: 0.1 }, { key: 'completion', label: 'Completion', ratio: 0.1 },
+          { key: 'cached', label: '缓存', ratio: 0.1 }, { key: 'cost', label: '积分', ratio: 0.1 }, { key: 'latency', label: '平均延迟', ratio: 0.1 }, { key: 'actions', label: '操作', ratio: 0.07 },
+        ];
+        const sourceRows = rows.map(row => {
+          const requests = Number(row.requests || 0);
+          const prompt = Number(row.prompt_tokens || 0);
+          const cached = Number(row.cached_tokens || 0);
+          const percentage = Number(row.share_requests ?? (requests / Math.max(summary.requests, 1)) * 100);
+          const barLength = Math.round(requests / maxRequests * 10);
+          const sourceId = String(row.request_source || 'unknown');
+          return { label: clientDisplay(sourceId), cells: { client: clientDisplay(sourceId), requests: requests.toLocaleString(), share: `${percentage.toFixed(1)}% [${'█'.repeat(barLength)}${'░'.repeat(10 - barLength)}]`, tokens: formatBigNumber(row.tokens), prompt: formatBigNumber(prompt), completion: formatBigNumber(row.completion_tokens), cached: formatBigNumber(cached), cost: formatCost(row.cost), latency: row.avg_latency == null ? '—' : `${Math.round(Number(row.avg_latency))} 毫秒`, actions: '筛选 / 记录' }, run: async ctx => { const selected = await ctx.choose(`客户端 · ${clientDisplay(sourceId)}`, [{ label: '按此客户端筛选统计', value: 'filter' }, { label: '查看此客户端调用记录', value: 'logs' }]); if (selected === 'filter') { runtime.usageFilters = { ...(runtime.usageFilters || {}), request_source: sourceId }; runtime.usageLogPage = 1; await ctx.refresh(); } if (selected === 'logs') { runtime.usageLogFilters = { ...(runtime.usageLogFilters || {}), request_source: sourceId }; runtime.usageLogPage = 1; runtime.usageTab = 'logs'; await ctx.refresh(); } } };
+        });
+        const requestMax = Math.max(1, ...bySourceModel.map(row => Number(row.requests || 0)));
+        const sourceModelRows = bySourceModel.map(row => { const requests = Number(row.requests || 0); const barLength = Math.round(requests / requestMax * 12); return { label: `${clientDisplay(row.request_source)} / ${row.model_name || row.model_id || '未知模型'}`, cells: { client: clientDisplay(row.request_source), model: row.model_name || row.model_id || '未知模型', requests: requests.toLocaleString(), requests_bar: `[${'█'.repeat(barLength)}${'░'.repeat(12 - barLength)}]`, tokens: formatBigNumber(row.tokens), cost: formatCost(row.cost) } }; });
+        const maxCost = Math.max(1, ...rows.map(row => Number(row.cost || 0)));
+        const distributionRows = rows.map(row => { const requests = Number(row.requests || 0); const cost = Number(row.cost || 0); const requestLength = Math.round(requests / maxRequests * 20); const costLength = Math.round(cost / maxCost * 20); return { label: clientDisplay(row.request_source), detail: `请求 ${requests.toLocaleString()} 次 [${'█'.repeat(requestLength)}${'░'.repeat(20 - requestLength)}] · 积分 ${formatCost(cost)} [${'█'.repeat(costLength)}${'░'.repeat(20 - costLength)}]` }; });
+        sections.push({ title: '客户端分析说明', tab: 'sources', description: '按 harness 客户端汇总用量。识别依赖 User-Agent、专用请求头和提示词指纹。', rows: [{ label: '自定义 system 提示词或历史请求数据可能显示为“未知/其他”。' }] });
+        sections.push({ title: '请求数 / 积分分布', tab: 'sources', rows: distributionRows.length ? distributionRows : [{ label: '暂无客户端数据。' }] });
+        sections.push({ title: '客户端详细数据', tab: 'sources', toolbar: true, tableMinWidth: 150, columns: sourceColumns, rows: sourceRows.length ? sourceRows : [{ label: '暂无客户端数据。' }] });
+        sections.push({ title: '客户端 × 模型', tab: 'sources', toolbar: true, tableMinWidth: 112, columns: [
+          { key: 'client', label: '客户端', ratio: 0.18 }, { key: 'model', label: '模型', ratio: 0.28 }, { key: 'requests', label: '请求数', ratio: 0.16 }, { key: 'requests_bar', label: '请求分布', ratio: 0.18 }, { key: 'tokens', label: 'Token', ratio: 0.1 }, { key: 'cost', label: '积分', ratio: 0.1 },
+        ], rows: sourceModelRows.length ? sourceModelRows : [{ label: '暂无客户端与模型交叉数据。' }] });
+      }
       if (runtime.usageTab === 'latency') {
         const latency = await getLatencyStats(runtime.client, { ...dateQuery, ...filters });
         sections.push({ title: '响应速度与首字延迟', tab: 'latency', toolbar: true, cards: [
