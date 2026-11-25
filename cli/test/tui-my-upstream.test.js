@@ -101,6 +101,26 @@ test('my upstream provider detail uses readable labels without exposing the API 
   assert.doesNotMatch(detail, /api_key/);
 });
 
+test('my provider additional endpoints are edited in a buffer and only saved after confirmation', async () => {
+  const calls = [];
+  const runtime = makeRuntime({
+    get: async path => path === '/api/user/my-providers' ? [{ id: 'p1', name: 'Personal', base_url: 'https://primary.example/v1', format: 'openai', enabled: true, model_count: 1, endpoints: [{ url: 'https://backup.example/v1', format: 'anthropic', label: '备用', enabled: true }] }] : [],
+    put: async (path, body) => { calls.push({ path, body }); return {}; },
+  });
+  const page = buildPages(runtime).find(item => item.id === 'my-upstream');
+  const row = (await page.load()).sections.find(section => section.title === '供应商').rows[0];
+  const runEndpointEdit = async confirm => {
+    const endpointChoices = ['toggle:0', 'done'];
+    const choose = async (_title, options) => options.some(option => option.value === 'endpoints') ? 'endpoints' : endpointChoices.shift();
+    await row.run({ choose, confirm, notify() {}, refresh: async () => {} });
+  };
+  await runEndpointEdit(async () => false);
+  assert.equal(calls.length, 0, 'cancelled endpoint save must not write');
+  await runEndpointEdit(async () => true);
+  assert.equal(calls[0].path, '/api/user/providers/p1');
+  assert.deepEqual(calls[0].body, { endpoints: [{ url: 'https://backup.example/v1', format: 'anthropic', label: '备用', enabled: false }] });
+});
+
 test('my provider edit confirms and does not overwrite an absent API key', async () => {
   const calls = [];
   const runtime = makeRuntime({

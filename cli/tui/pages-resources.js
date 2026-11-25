@@ -162,6 +162,57 @@ function myUpstreamPage(runtime) {
         runtime.myUpstreamSelectedModels = [...selected];
         return [...selected];
       };
+      const manageProviderEndpoints = async (ctx, provider) => {
+        let endpoints = (Array.isArray(provider.endpoints) ? provider.endpoints : []).map(endpoint => ({ url: String(endpoint.url || '').trim(), format: String(endpoint.format || 'openai'), label: String(endpoint.label || ''), enabled: endpoint.enabled !== false }));
+        while (true) {
+          const options = [
+            ...endpoints.flatMap((endpoint, index) => [
+              { label: `${endpoint.enabled ? '已启用' : '已停用'} · ${endpoint.label || `附加接口 ${index + 1}`} · ${endpoint.url} · ${apiFormatLabel(endpoint.format)}`, value: `edit:${index}` },
+              { label: `${endpoint.enabled ? '停用' : '启用'} ${endpoint.label || `附加接口 ${index + 1}`}`, value: `toggle:${index}` },
+              { label: `删除 ${endpoint.label || `附加接口 ${index + 1}`}`, value: `delete:${index}` },
+            ]),
+            { label: '新增附加接口', value: 'add' }, ...(endpoints.length ? [{ label: '删除所有附加接口', value: 'clear' }] : []), { label: '完成修改并继续保存', value: 'done' },
+          ];
+          const action = await ctx.choose(`备用接口 · ${provider.name}`, options, { description: '主接口地址和当前 API Key 不变；备用接口会在请求失败时按顺序尝试。最多可添加 16 个接口。' });
+          if (action === null) return;
+          if (action === 'done') break;
+          if (action === 'clear') { if (await ctx.confirm('删除全部备用接口', `移除 ${endpoints.length} 个备用接口？主接口 Base URL 保留。`)) endpoints = []; continue; }
+          if (action.startsWith('toggle:')) {
+            const index = Number(action.slice(7));
+            if (endpoints[index]) endpoints[index] = { ...endpoints[index], enabled: endpoints[index].enabled === false };
+            continue;
+          }
+          if (action.startsWith('delete:')) {
+            const index = Number(action.slice(7));
+            const endpoint = endpoints[index];
+            if (endpoint && await ctx.confirm('删除备用接口', `确定删除「${endpoint.label || endpoint.url}」？主接口不变。`)) endpoints.splice(index, 1);
+            continue;
+          }
+          const editing = action.startsWith('edit:');
+          if (!editing && endpoints.length >= 16) { await ctx.show('已达到接口数量上限', '每个供应商最多可配置 16 个附加接口。'); continue; }
+          const index = editing ? Number(action.slice(5)) : -1;
+          const current = index >= 0 ? endpoints[index] : { url: '', format: provider.format || 'openai', label: '', enabled: true };
+          const values = await ctx.form(editing ? `编辑备用接口 ${current.label || index + 1}` : '新增备用接口', [
+            { name: 'url', label: '接口地址（http://或https://）', value: current.url },
+            { name: 'format', label: 'API 格式', value: current.format, options: API_FORMATS },
+            { name: 'label', label: '接口名称（可空）', value: current.label },
+            { name: 'enabled', label: '启用此接口', type: 'boolean', value: current.enabled },
+          ]);
+          if (!values) continue;
+          const url = String(values.url || '').trim().replace(/\/+$/, '');
+          if (!/^https?:\/\//i.test(url) || url.length > 500 || /[\x00-\x1f\x7f]/.test(url)) { await ctx.show('接口地址无效', '请输入不超过 500 字的 HTTP 或 HTTPS 地址。'); continue; }
+          const format = String(values.format || '').trim().toLowerCase();
+          if (!API_FORMATS.some(option => option.value === format)) { await ctx.show('接口格式无效', '请选择 OpenAI 兼容、Anthropic Messages、OpenAI Responses 或 Gemini 格式。'); continue; }
+          const duplicateKey = `${url.toLowerCase()}\0${format}`;
+          const duplicate = (url.toLowerCase() === String(provider.base_url || '').trim().replace(/\/+$/, '').toLowerCase() && format === String(provider.format || 'openai').toLowerCase()) || endpoints.some((endpoint, endpointIndex) => endpointIndex !== index && `${endpoint.url.toLowerCase().replace(/\/+$/, '')}\0${String(endpoint.format).toLowerCase()}` === duplicateKey);
+          if (duplicate) { await ctx.show('接口已重复', '附加接口不得与主接口或其他附加接口使用相同地址和格式。'); continue; }
+          const next = { url, format, label: String(values.label || '').trim().slice(0, 50), enabled: values.enabled !== false };
+          if (editing) endpoints[index] = next; else endpoints.push(next);
+        }
+        if (!await ctx.confirm('保存备用接口配置', `${provider.name}\n主接口不变：${provider.base_url || '未设置'}\n${endpoints.length ? endpoints.map((endpoint, index) => `${index + 1}. ${endpoint.label || '未命名接口'} · ${endpoint.url} · ${apiFormatLabel(endpoint.format)} · ${endpoint.enabled ? '启用' : '停用'}`).join('\n') : '不使用备用接口'}\n该列表会完整替换当前备用接口。`)) return;
+        await runtime.client.put(`/api/user/providers/${encodeURIComponent(provider.id)}`, { endpoints });
+        ctx.notify('备用接口配置已保存。'); await ctx.refresh();
+      };
       const manageProviderModels = async (ctx, provider) => {
         const modelItems = await runtime.client.get(`/api/user/providers/${encodeURIComponent(provider.id)}/models`);
         const selected = new Set();
@@ -302,7 +353,7 @@ function myUpstreamPage(runtime) {
             { label: '我的供应商', value: `${providers.length} 个` }, { label: '已启用', value: `${providers.filter(item => item.enabled !== false).length} 个` },
             { label: '已配置模型', value: `${providers.reduce((sum, item) => sum + Number(item.model_count || 0), 0)} 个` },
             { label: '连通性已测', value: `${providers.filter(item => Object.hasOwn(runtime.myUpstreamPing || {}, String(item.id))).length}/${providers.length}` },
-          ], rows: visibleProviders.length ? visibleProviders.map(item => ({ label: item.name || item.id, cells: { name: item.name || item.id, base_url: item.base_url || '—', format: ({ openai: 'OpenAI 兼容', anthropic: 'Anthropic', responses: 'Responses', gemini: 'Gemini' })[item.format] || item.format || '未指定', status: item.enabled === false ? '已禁用' : '已启用', ping: runtime.myUpstreamPing?.[String(item.id)]?.ok ? `${runtime.myUpstreamPing[String(item.id)].latency_ms ?? '—'} 毫秒` : '未检测', model_count: `${item.model_count || 0} 个`, actions: 'Enter 管理' }, detail: display(item.id, item.notes), run: async ctx => { const choice = await ctx.choose(`供应商 · ${item.name || item.id}`, [{ label: '查看详情', value: 'detail' }, { label: '管理供应商模型', value: 'models' }, { label: '编辑供应商', value: 'edit' }, { label: '同步模型', value: 'sync' }, { label: '检测连通性', value: 'ping' }, { label: '删除供应商', value: 'delete' }], { description: item.base_url || '' }); if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, providerDetail(item)); if (choice === 'models') await manageProviderModels(ctx, item); if (choice === 'edit') { const values = await ctx.form('编辑我的上游供应商', [
+          ], rows: visibleProviders.length ? visibleProviders.map(item => ({ label: item.name || item.id, cells: { name: item.name || item.id, base_url: item.base_url || '—', format: ({ openai: 'OpenAI 兼容', anthropic: 'Anthropic', responses: 'Responses', gemini: 'Gemini' })[item.format] || item.format || '未指定', status: item.enabled === false ? '已禁用' : '已启用', ping: runtime.myUpstreamPing?.[String(item.id)]?.ok ? `${runtime.myUpstreamPing[String(item.id)].latency_ms ?? '—'} 毫秒` : '未检测', model_count: `${item.model_count || 0} 个`, actions: 'Enter 管理' }, detail: display(item.id, item.notes), run: async ctx => { const choice = await ctx.choose(`供应商 · ${item.name || item.id}`, [{ label: '查看详情', value: 'detail' }, { label: '管理供应商模型', value: 'models' }, { label: '管理附加接口', value: 'endpoints' }, { label: '编辑供应商', value: 'edit' }, { label: '同步模型', value: 'sync' }, { label: '检测连通性', value: 'ping' }, { label: '删除供应商', value: 'delete' }], { description: item.base_url || '' }); if (choice === 'detail') await ctx.show(`供应商 · ${item.name || item.id}`, providerDetail(item)); if (choice === 'models') await manageProviderModels(ctx, item); if (choice === 'endpoints') await manageProviderEndpoints(ctx, item); if (choice === 'edit') { const values = await ctx.form('编辑我的上游供应商', [
             { name: 'name', label: '供应商名称', value: item.name || '' }, { name: 'base_url', label: 'Base URL', value: item.base_url || '' },
             { name: 'format', label: 'API 格式', value: item.format || 'openai', options: API_FORMATS },
             { name: 'notes', label: '备注', value: item.notes || '' }, { name: 'enabled', label: '启用', type: 'boolean', value: item.enabled !== false },
