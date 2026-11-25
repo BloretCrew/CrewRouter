@@ -109,23 +109,44 @@ function clientDisplay(value) {
 }
 
 async function showSessionMessages(ctx, runtime, item) {
-  const data = await getSessionMessages(runtime.client, item.sessionKey, { page: 1, pageSize: 30 });
-  const records = Array.isArray(data.records) ? data.records : [];
-  const lines = [
-    `会话标识：${item.sessionKey}`,
-    `客户端类型：${clientDisplay(item.harness)}`,
-    `请求数：${item.requestCount || 0} · Token 用量：${formatBigNumber(item.totalTokens)} · 工具调用数：${item.toolCallCount || 0}`,
-    `首次：${formatTime(item.firstSeen)} · 最后：${formatTime(item.lastSeen)}`,
-    item.summary ? `摘要：${text(item.summary)}` : '摘要：无',
-    '',
-    `最近 ${records.length} 条记录：`,
-  ];
-  for (const record of records.slice(0, 20)) {
-    lines.push(`${formatTime(record.created_at || record.ts || record.time)} · ${record.model_name || record.model_id || record.resolved_model || '未知模型'} · ${formatBigNumber(record.tokens_used || record.tokens || 0)} Token`);
-    if (record.response_preview) lines.push(`  ${String(record.response_preview).slice(0, 240)}`);
+  let cursor = null;
+  let page = 1;
+  while (true) {
+    const data = await getSessionMessages(runtime.client, item.sessionKey, { page, pageSize: 40, ...(cursor || {}) });
+    const records = Array.isArray(data.records) ? data.records : [];
+    const lines = [
+      `会话标识：${item.sessionKey}`,
+      `客户端类型：${clientDisplay(item.harness)}`,
+      `请求数：${item.requestCount || 0} · Token 用量：${formatBigNumber(item.totalTokens)} · 工具调用数：${item.toolCallCount || 0}`,
+      `首次活动：${formatTime(item.firstSeen)} · 最近活动：${formatTime(item.lastSeen)}`,
+      item.summary ? `已生成摘要：${text(item.summary)}` : '尚未生成会话摘要。',
+      '',
+      `当前页：${page} · 本页 ${records.length} 条消息 · 共 ${data.total || item.requestCount || 0} 条`,
+    ];
+    for (const record of records) {
+      const recordTime = formatTime(record.ts || record.created_at || record.time);
+      const model = record.model || record.model_name || record.model_id || record.resolved_model || '未知模型';
+      lines.push('', `${recordTime} · ${model} · ${formatBigNumber(record.tokens || record.tokens_used || 0)} Token${record.cachedTokens ? ` · 缓存 ${formatBigNumber(record.cachedTokens)} Token` : ''}${record.latencyMs != null ? ` · 响应时间 ${record.latencyMs} 毫秒` : ''}`);
+      for (const event of Array.isArray(record.events) ? record.events : []) {
+        if (!event || typeof event !== 'object') continue;
+        if (event.type === 'text' && event.text) lines.push(`${event.role === 'user' ? '用户' : event.role === 'assistant' ? '模型回复' : '系统信息'}：${String(event.text).slice(0, 1200)}`);
+        else if (event.type === 'thinking' && event.preview) lines.push(`思考摘要：${String(event.preview).slice(0, 400)}`);
+        else if (event.type === 'tool_call') lines.push(`调用工具：${event.name || '未知工具'}${event.argsPreview ? ` · 参数摘要 ${String(event.argsPreview).slice(0, 300)}` : ''}`);
+        else if (event.type === 'tool_result') lines.push(`${event.is_error ? '工具执行失败' : '工具返回'}${event.name ? ` · ${event.name}` : ''}：${String(event.resultPreview || '无详细内容').slice(0, 600)}`);
+        else if (event.type === 'subagent' || event.type === 'compact' || event.type === 'session_start' || event.type === 'session_end') lines.push(`会话事件：${event.text || event.type}`);
+        else if (event.type === 'image') lines.push('包含图片附件（请在网页会话详情中查看）。');
+        else if (event.type) lines.push(`其他消息事件：${String(event.type)}`);
+      }
+      if (record.eventsTruncated) lines.push('本条消息中的旧上下文事件已折叠。');
+    }
+    if (!records.length) lines.push('没有可显示的消息记录。');
+    await ctx.show(`会话时间线 · 第 ${page} 页`, lines.join('\n'));
+    if (!data.nextCursor) break;
+    const choice = await ctx.choose('会话时间线', [{ label: '查看更早消息', value: 'more' }, { label: '关闭', value: 'close' }], { description: `还有更早消息 · 已读取 ${records.length} 条` });
+    if (choice !== 'more') break;
+    cursor = data.nextCursor;
+    page++;
   }
-  if (!records.length) lines.push('  （没有可显示的消息记录）');
-  await ctx.show('会话详情', lines.join('\n'));
 }
 
 function sessionsPage(runtime) {

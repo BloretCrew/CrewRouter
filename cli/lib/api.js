@@ -141,8 +141,8 @@ async function testModel(client, id) {
 async function listSessions(client, { days = 30, page = 1, pageSize = 30 } = {}) {
   return client.get('/api/user/sessions', { query: { days, page, pageSize } });
 }
-async function getSessionMessages(client, key, { page = 1, pageSize = 20 } = {}) {
-  return client.get(`/api/user/sessions/${encodeURIComponent(key)}/messages`, { query: { page, pageSize } });
+async function getSessionMessages(client, key, { page = 1, pageSize = 20, beforeCreatedAt, beforeId } = {}) {
+  return client.get(`/api/user/sessions/${encodeURIComponent(key)}/messages`, { query: { page, pageSize, ...(beforeCreatedAt ? { beforeCreatedAt } : {}), ...(beforeId ? { beforeId } : {}) } });
 }
 async function searchSessions(client, { q, days = 30 } = {}) {
   return client.get('/api/user/sessions/search', { query: { q, days } });
