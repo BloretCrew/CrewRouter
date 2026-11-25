@@ -1824,6 +1824,86 @@
         ],
         "additionalProperties": true
       },
+      "ProviderQuotaSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quota": {},
+          "keys": {
+            "type": "array",
+            "items": {}
+          },
+          "aggregated": {},
+          "cached": {
+            "type": "boolean"
+          },
+          "checked_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_attempt_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_valid_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "coverage": {},
+          "stale": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "history": {}
+        },
+        "required": [
+          "id",
+          "name",
+          "quota",
+          "keys",
+          "aggregated",
+          "cached",
+          "checked_at",
+          "last_attempt_at",
+          "last_valid_at",
+          "status",
+          "coverage",
+          "stale"
+        ],
+        "additionalProperties": true,
+        "description": "Outer status fields are stable. Quota, key and coverage payloads are provider-specific and intentionally opaque."
+      },
+      "UserProviderQuotaResponse": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderQuotaSummary"
+            }
+          }
+        },
+        "required": [
+          "providers"
+        ],
+        "additionalProperties": true
+      },
       "ApiKeyQueueItem": {
         "type": "object",
         "properties": {
@@ -20224,8 +20304,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/UserProviderQuotaResponse"
                 }
               }
             }

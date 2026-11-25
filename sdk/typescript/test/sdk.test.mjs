@@ -117,6 +117,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 'shared-provider', name: 'Shared', format: 'openai', created_by: null }]);
       return;
     }
+    if (req.url === '/api/user/providers/quota') {
+      json(res, 200, { providers: [{ id: 'p1', name: 'Provider', quota: { remaining: '3' }, keys: [], aggregated: null, cached: true, checked_at: null, last_attempt_at: null, last_valid_at: null, status: 'success', coverage: null, stale: false }] });
+      return;
+    }
     if (req.url === '/api/user/api-keys/7/usage') {
       json(res, 200, [{ date: '2026-01-01', model_id: 'm1', model_name: null, tokens: '12', cost: '0.1', requests: '2' }]);
       return;
@@ -283,6 +287,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const models = await client.models.list();
   const modelInfo = await client.models.getInfo('m1');
   const providers = await client.providers.list();
+  const providerQuota = await client.providers.getQuota();
   const keyUsage = await client.keys.getUsage(7);
   const keyModels = await client.keys.getModels(7);
   const setKeyModels = await client.keys.setModels(7, { modelIds: ['m1'] });
@@ -333,6 +338,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(models.data[0].input_price_per_1k_tokens, '0.01');
   assert.equal(modelInfo.data.cached_output_price_per_1k_tokens, null);
   assert.equal(providers.data[0].created_by, null);
+  assert.equal(providerQuota.data.providers[0].quota.remaining, '3');
+  assert.equal(providerQuota.data.providers[0].stale, false);
   assert.equal(keyUsage.data[0].model_id, 'm1');
   assert.equal(keyUsage.data[0].model_name, null);
   assert.equal(keyModels.data.queue[0].sort_order, 0);

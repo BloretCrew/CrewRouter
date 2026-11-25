@@ -81,6 +81,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const products = openapi.paths['/api/user/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const codeBalances = openapi.paths['/api/user/code-balances']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const providerTags = openapi.paths['/api/user/provider-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const userProviderQuota = openapi.paths['/api/user/providers/quota']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const modelUptime = openapi.paths['/api/user/models/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const modelUptimeDetail = openapi.paths['/api/user/models/{id}/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminModelUptime = openapi.paths['/api/admin/models/uptime']?.get?.responses?.[200]?.content?.['application/json']?.schema;
@@ -135,6 +136,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (!openapi.components.schemas.UserProduct?.properties?.description?.type?.includes('null') || !openapi.components.schemas.UserProduct?.properties?.link?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable product fields`);
   if (codeBalances?.type !== 'array' || codeBalances.items?.$ref !== '#/components/schemas/UserCodeBalanceItem') throw new Error(`${openapiPath} must define code-balance list responses`);
   if (providerTags?.type !== 'array' || providerTags.items?.$ref !== '#/components/schemas/ProviderTag') throw new Error(`${openapiPath} must define provider-tag list responses`);
+  if (userProviderQuota?.$ref !== '#/components/schemas/UserProviderQuotaResponse' || openapi.components.schemas.ProviderQuotaSummary?.properties?.quota === undefined || openapi.components.schemas.ProviderQuotaSummary?.additionalProperties !== true) throw new Error(`${openapiPath} must define extensible provider quota summaries`);
   if (modelUptime?.$ref !== '#/components/schemas/ModelUptimeResponse' || openapi.components.schemas.ModelUptimeResponse?.oneOf?.length !== 2) throw new Error(`${openapiPath} must define daily and 15-minute uptime variants`);
   if (modelUptimeDetail?.$ref !== '#/components/schemas/ModelUptimeDetailResponse' || openapi.components.schemas.ModelUptimeDetailResponse?.oneOf?.length !== 2) throw new Error(`${openapiPath} must define daily and 15-minute uptime detail variants`);
   if (adminModelUptime?.$ref !== '#/components/schemas/ModelUptimeResponse' || adminModelUptimeDetail?.$ref !== '#/components/schemas/ModelUptimeDetailResponse') throw new Error(`${openapiPath} must share uptime schemas with administrator endpoints`);

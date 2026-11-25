@@ -40,6 +40,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected user model payload: %#v", model)
 	}
 
+	var providerQuota crewrouter.UserProviderQuotaResponse
+	if err := json.Unmarshal([]byte(`{"providers":[{"id":"p1","name":"Provider","quota":{"remaining":"3"},"keys":[],"aggregated":null,"cached":true,"checked_at":null,"last_attempt_at":null,"last_valid_at":null,"status":"success","coverage":null,"stale":false}]}`), &providerQuota); err != nil {
+		t.Fatalf("decode provider quota: %v", err)
+	}
+	if len(providerQuota.Providers) != 1 || !providerQuota.Providers[0].Cached {
+		t.Fatalf("unexpected provider quota response: %#v", providerQuota)
+	}
 	var provider crewrouter.UserProviderListItem
 	if err := json.Unmarshal([]byte(`{"id":"shared-provider","name":"Shared","format":"openai","created_by":null}`), &provider); err != nil {
 		t.Fatalf("decode provider: %v", err)

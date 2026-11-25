@@ -82,6 +82,8 @@ export type {
   UserModelListItem,
   UserModelInfo,
   UserProviderListItem,
+  UserProviderQuotaResponse,
+  ProviderQuotaSummary,
   UserProduct,
   UserCodeBalanceItem,
   ProviderTag,

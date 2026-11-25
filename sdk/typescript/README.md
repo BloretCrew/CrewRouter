@@ -87,6 +87,7 @@ const usage = await client.usage.get({ days: 7 }); // DailyUsageItem[]
 const balance = await client.balance.get(); // UserBalance
 const visibleModels = await client.models.list(); // UserModelListItem[]
 const visibleProviders = await client.providers.list(); // UserProviderListItem[]
+const providerQuota = await client.providers.getQuota(); // UserProviderQuotaResponse; quota payloads are provider-specific
 const refundableCodes = await client.codeBalances.list(); // UserCodeBalanceItem[]
 const providerTags = await client.providerTags.list(); // ProviderTag[]
 const uptime = await client.modelUptime.get({ days: 7 }); // ModelUptimeResponse; day or 15m granularity

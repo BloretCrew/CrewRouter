@@ -623,6 +623,21 @@ function managementSchemas() {
       providers: { type: 'array', items: { $ref: '#/components/schemas/StatsFilterOption' } },
       teams: { type: 'array', items: { $ref: '#/components/schemas/StatsFilterTeam' } },
     }, ['sources', 'models', 'providers', 'teams']),
+    ProviderQuotaSummary: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' }, name: { type: 'string' }, quota: {}, keys: { type: 'array', items: {} },
+        aggregated: {}, cached: { type: 'boolean' }, checked_at: nullableString, last_attempt_at: nullableString,
+        last_valid_at: nullableString, status: { type: 'string' }, coverage: {}, stale: { type: 'boolean' },
+        error: { type: 'string' }, history: {},
+      },
+      required: ['id', 'name', 'quota', 'keys', 'aggregated', 'cached', 'checked_at', 'last_attempt_at', 'last_valid_at', 'status', 'coverage', 'stale'],
+      additionalProperties: true,
+      description: 'Outer status fields are stable. Quota, key and coverage payloads are provider-specific and intentionally opaque.',
+    },
+    UserProviderQuotaResponse: object({
+      providers: { type: 'array', items: { $ref: '#/components/schemas/ProviderQuotaSummary' } },
+    }, ['providers']),
     ApiKeyQueueItem: object({
       model_id: { type: 'string' }, id: { type: 'string' }, name: { type: 'string' },
       provider: nullableString, series: nullableString, icon_url: nullableString, sort_order: { type: 'integer' },
@@ -781,6 +796,7 @@ function managementResponseSchema(operationId) {
     'user.providers.list': { type: 'array', items: { $ref: '#/components/schemas/UserProviderListItem' } },
     'user.products.list': { type: 'array', items: { $ref: '#/components/schemas/UserProduct' } },
     'user.providerTags.list': { type: 'array', items: { $ref: '#/components/schemas/ProviderTag' } },
+    'user.providers.quota.list': { $ref: '#/components/schemas/UserProviderQuotaResponse' },
     'user.codeBalances.list': { type: 'array', items: { $ref: '#/components/schemas/UserCodeBalanceItem' } },
     'user.models.uptime.list': { $ref: '#/components/schemas/ModelUptimeResponse' },
     'user.models.byId.uptime.list': { $ref: '#/components/schemas/ModelUptimeDetailResponse' },
@@ -809,6 +825,7 @@ function managementResponseSchema(operationId) {
     'user.usageLogs.list': { $ref: '#/components/schemas/UserUsageLogsResponse' },
     'user.usageLogs.byId.get': { $ref: '#/components/schemas/UserUsageLogDetailResponse' },
     'user.stats.filters.list': { $ref: '#/components/schemas/UserStatsFiltersResponse' },
+    'user.providers.quota.list': { $ref: '#/components/schemas/UserProviderQuotaResponse' },
   };
   return schemas[operationId] || null;
 }

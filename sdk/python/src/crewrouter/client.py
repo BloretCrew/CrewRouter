@@ -511,6 +511,27 @@ class UserStatsFiltersResponse(TypedDict):
     teams: list[StatsFilterTeam]
 
 
+class ProviderQuotaSummary(TypedDict, total=False):
+    id: str
+    name: str
+    quota: Any
+    keys: list[Any]
+    aggregated: Any
+    cached: bool
+    checked_at: Optional[str]
+    last_attempt_at: Optional[str]
+    last_valid_at: Optional[str]
+    status: str
+    coverage: Any
+    stale: bool
+    error: str
+    history: Any
+
+
+class UserProviderQuotaResponse(TypedDict):
+    providers: list[ProviderQuotaSummary]
+
+
 class ModelUptimeSummaryItem(TypedDict):
     uptime_pct: Optional[float]
     label: str

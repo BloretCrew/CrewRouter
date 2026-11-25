@@ -600,6 +600,28 @@ export interface UserStatsFiltersResponse {
   teams: StatsFilterTeam[];
 }
 
+export interface ProviderQuotaSummary {
+  id: string;
+  name: string;
+  quota: unknown;
+  keys: unknown[];
+  aggregated: unknown;
+  cached: boolean;
+  checked_at: string | null;
+  last_attempt_at: string | null;
+  last_valid_at: string | null;
+  status: string;
+  coverage: unknown;
+  stale: boolean;
+  error?: string;
+  history?: unknown;
+  [key: string]: unknown;
+}
+
+export interface UserProviderQuotaResponse {
+  providers: ProviderQuotaSummary[];
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;

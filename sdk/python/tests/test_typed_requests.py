@@ -119,9 +119,12 @@ class TypedRequestTests(unittest.TestCase):
             "format": "openai",
             "created_by": None,
         }
+        quota_summary: ProviderQuotaSummary = {"id": "p1", "name": "Provider", "quota": {"remaining": "3"}, "keys": [], "aggregated": None, "cached": True, "checked_at": None, "last_attempt_at": None, "last_valid_at": None, "status": "success", "coverage": None, "stale": False}
+        provider_quota: UserProviderQuotaResponse = {"providers": [quota_summary]}
         self.assertIsNone(model["alias"])
         self.assertIsNone(model_info["cached_output_price_per_1k_tokens"])
         self.assertIsNone(provider["created_by"])
+        self.assertTrue(provider_quota["providers"][0]["cached"])
         assigned_tags: ApiKeyTagsResponse = {"tags": [{"id": 2, "name": "prod", "color": "#445566"}]}
         key_tag: UserKeyTag = {
             "id": 3,

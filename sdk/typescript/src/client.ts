@@ -41,6 +41,7 @@ import type {
   UserModelListItem,
   UserModelInfo,
   UserProviderListItem,
+  UserProviderQuotaResponse,
   UserProduct,
   ProviderTag,
   UserCodeBalanceItem,
@@ -267,6 +268,8 @@ export class CrewRouter {
   readonly providers = {
     list: <T = UserProviderListItem[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.providers.list', options),
+    getQuota: <T = UserProviderQuotaResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.providers.quota.list', options),
   };
 
   readonly products = {

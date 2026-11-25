@@ -1,5 +1,28 @@
 package crewrouter
 
+// ProviderQuotaSummary includes stable status metadata and opaque provider-defined quota payloads.
+type ProviderQuotaSummary struct {
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	Quota         any     `json:"quota"`
+	Keys          []any   `json:"keys"`
+	Aggregated    any     `json:"aggregated"`
+	Cached        bool    `json:"cached"`
+	CheckedAt     *string `json:"checked_at"`
+	LastAttemptAt *string `json:"last_attempt_at"`
+	LastValidAt   *string `json:"last_valid_at"`
+	Status        string  `json:"status"`
+	Coverage      any     `json:"coverage"`
+	Stale         bool    `json:"stale"`
+	Error         string  `json:"error,omitempty"`
+	History       any     `json:"history,omitempty"`
+}
+
+// UserProviderQuotaResponse contains provider quota snapshots visible to a user.
+type UserProviderQuotaResponse struct {
+	Providers []ProviderQuotaSummary `json:"providers"`
+}
+
 // StatsFilterOption is a model, provider, or request-source filter choice.
 type StatsFilterOption struct {
 	ID   string `json:"id"`
