@@ -118,18 +118,23 @@ function createAdminPages(runtime) {
       async load(api) {
         const days = runtime.projectDays || 30;
         const source = runtime.projectSource || '';
+        const clientLabels = { claude_code: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', grok: 'Grok', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw', deepseek_harness: 'DeepSeek Harness', unknown: '未知/其他' };
         const customRange = runtime.projectCustomRange || null;
         const rangeLabel = customRange ? `${customRange.start} 至 ${customRange.end}` : `最近 ${days} 天`;
         const query = customRange ? { start: customRange.start, end: customRange.end, ...(source ? { request_source: source } : {}) } : { days, ...(source ? { request_source: source } : {}) };
         const data = await api('/api/user/project-stats', { query });
         const summary = data.summary || {};
         const projects = array(data.projects);
+        const analysisStatus = summary.analysis_status || {};
+        const selectedClient = source ? (clientLabels[source] || source) : '';
+        const formatClients = sources => Object.keys(sources || {}).map(client => clientLabels[client] || client).join('、') || '未标记客户端';
+        const syncDescription = analysisStatus.enabled === false ? '后台项目整理功能未启用' : analysisStatus.last_error ? `最近一次整理失败：${analysisStatus.last_error}` : Number(analysisStatus.pending_requests || 0) ? `后台还有 ${Number(analysisStatus.pending_requests).toLocaleString()} 条记录待整理` : `已同步 · 最近更新 ${analysisStatus.last_scanned_at ? formatTime(analysisStatus.last_scanned_at) : '时间未知'}`;
         return { sections: [
-          { title: '项目工作摘要', toolbar: true, description: `时间范围：${rangeLabel}${source ? ` · 客户端 ${source}` : ''}`, cards: [
+          { title: '项目工作摘要', toolbar: true, description: `时间范围：${rangeLabel}${selectedClient ? ` · 客户端 ${selectedClient}` : ''}`, cards: [
             { label: '活跃项目', value: text(summary.projects, '0') }, { label: '活跃天数', value: text(summary.active_days, '0') },
             { label: 'AI 请求次数', value: text(summary.requests, '0') }, { label: 'Token 用量', value: formatBigNumber(summary.tokens) },
             { label: '最近活动', value: summary.last_activity ? formatTime(summary.last_activity) : '—' },
-          ], rows: summary.analysis_status ? [{ label: `待整理请求：${summary.analysis_status.pending_requests || 0}` }] : [] },
+          ], rows: [{ label: syncDescription }] },
           { title: '每日活动', description: '按日期查看 AI 请求和活跃工作区数量。', tableMinWidth: 84, columns: [{ key: 'date', label: '日期', ratio: 0.45 }, { key: 'requests', label: '请求数', ratio: 0.3 }, { key: 'projects', label: '活跃项目数', ratio: 0.25 }], rows: array(data.daily).slice(-30).map(item => ({ label: item.date || '未知日期', cells: { date: item.date || '未知日期', requests: `${Number(item.requests || 0).toLocaleString()} 次`, projects: `${Number(item.projects || 0)} 个` } })) },
           { title: '最近活跃项目', description: '按最近活动排序。选择项目可查看安全引用的切换目录命令。', rows: projects.slice(0, 4).map((item, index) => ({ label: display(`#${index + 1}`, item.workspace_path), detail: display(`${Number(item.requests || 0).toLocaleString()} 次请求`, `${formatBigNumber(item.tokens)} Token`, item.last_activity && formatTime(item.last_activity)), run: async ctx => {
             const workspace = String(item.workspace_path || '');
@@ -142,7 +147,7 @@ function createAdminPages(runtime) {
             { key: 'active_days', label: '活跃天数', ratio: 0.12 }, { key: 'last_activity', label: '最近活动', ratio: 0.13 }, { key: 'sources', label: '客户端', ratio: 0.1 }, { key: 'cost', label: '费用（积分）', ratio: 0.08 },
           ], rows: projects.length ? projects.map(item => ({ label: item.workspace_path || '未知工作区', cells: {
             workspace: item.workspace_path || '未知工作区', requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`,
-            active_days: `${Number(item.active_days || 0)} 天`, last_activity: item.last_activity ? formatTime(item.last_activity) : '—', sources: Object.keys(item.sources || {}).join('、') || '未标记', cost: `${formatCost(item.cost)} 积分`,
+            active_days: `${Number(item.active_days || 0)} 天`, last_activity: item.last_activity ? formatTime(item.last_activity) : '—', sources: formatClients(item.sources), cost: `${formatCost(item.cost)} 积分`,
           } })) : [{ label: '暂无项目活动。' }] },
         ], pageToolbar: true, actions: [
           { label: '选择时间范围', toolbar: 'page', run: async ctx => { const range = await ctx.choose('项目统计时间范围', [...[7, 30, 90, 180, 365].map(value => ({ label: value === 365 ? '最近 1 年' : `最近 ${value} 天`, value })), { label: '自定义日期范围', value: 'custom' }]); if (range === null) return; if (range !== 'custom') { runtime.projectDays = range; runtime.projectCustomRange = null; await ctx.refresh(); return; } const dates = await ctx.form('自定义日期范围', [{ name: 'start', label: '开始日期（YYYY-MM-DD）' }, { name: 'end', label: '结束日期（YYYY-MM-DD）' }]); if (!dates) return; const validDate = value => { const valueText = String(value || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(valueText)) return false; const parsed = new Date(`${valueText}T00:00:00Z`); return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === valueText; }; if (!validDate(dates.start) || !validDate(dates.end) || dates.start > dates.end) { await ctx.show('日期范围无效', '请输入有效日期，并确认结束日期不早于开始日期。'); return; } runtime.projectCustomRange = { start: dates.start, end: dates.end }; await ctx.refresh(); } },

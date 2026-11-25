@@ -135,7 +135,7 @@ test('error log filters use the actual admin API parameter names', async () => {
 test('project work TUI renders summary, daily activity, recent projects and workspace table in web order', { timeout: 15000 }, async () => {
   const page = buildPages(runtime(false)).find(item => item.id === 'projects');
   const tty = terminal(160, 40);
-  const api = async () => ({ summary: { projects: 1, active_days: 2, requests: 3, tokens: 100, cost: 1.25 }, projects: [{ workspace_path: '/work/Example', requests: 3, tokens: 100, active_days: 2, last_activity: '2026-11-24T12:00:00Z', cost: 1.25, sources: { codex: 3 } }], daily: [{ date: '2026-11-24', requests: 3, projects: 1 }] });
+  const api = async () => ({ summary: { projects: 1, active_days: 2, requests: 3, tokens: 100, cost: 1.25, last_activity: '2026-11-24T12:00:00Z', analysis_status: { pending_requests: 0, last_scanned_at: '2026-11-25T00:00:00Z', enabled: true } }, projects: [{ workspace_path: '/work/Example', requests: 3, tokens: 100, active_days: 2, last_activity: '2026-11-24T12:00:00Z', cost: 1.25, sources: { codex: 3 } }], daily: [{ date: '2026-11-24', requests: 3, projects: 1 }] });
   const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api, pages: [page], authenticate: async () => true });
   try {
     await until(() => tty.screen().includes('/work/Example'));
@@ -144,6 +144,7 @@ test('project work TUI renders summary, daily activity, recent projects and work
     assert.ok(positions.every(value => value >= 0), `missing project section: ${positions.join(',')}`);
     assert.ok(positions.every((value, index) => index === 0 || positions[index - 1] < value), `unexpected project section order: ${positions.join(',')}`);
     for (const header of ['最近活动', '客户端', '费用（积分）']) assert.ok(screen.includes(header), `missing project table field: ${header}`);
+    assert.ok(screen.includes('已同步 · 最近更新'), 'project page should show the web sync status even when no records are pending');
   } finally { tty.input.write('q'); await task; }
 });
 
@@ -160,8 +161,13 @@ test('project date query sends the web API range parameters', async () => {
   const projectSection = data.sections.find(section => section.title === '项目工作台');
   assert.deepEqual(projectSection.columns.map(column => column.label), ['工作区', '请求', 'Token', '活跃天数', '最近活动', '客户端', '费用（积分）']);
   assert.equal(projectSection.rows[0].cells.tokens, '100 Token');
-  assert.equal(projectSection.rows[0].cells.sources, 'codex');
+  assert.equal(projectSection.rows[0].cells.sources, 'Codex');
   assert.equal(projectSection.rows[0].cells.last_activity, '—');
+  const filter = data.actions.find(action => action.label === '筛选客户端');
+  await filter.run({ choose: async (_title, options) => { assert.ok(options.some(option => option.label === 'Codex' && option.value === 'codex')); return 'codex'; }, refresh: async () => {} });
+  const filtered = await page.load(api);
+  assert.ok(filtered.sections[0].description.includes('客户端 Codex'));
+  assert.deepEqual(calls.at(-1).options.query, { start: '2026-11-01', end: '2026-11-07', request_source: 'codex' });
 });
 
 test('policy center mirrors the web section order and readable table columns', async () => {
