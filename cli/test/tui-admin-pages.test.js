@@ -2,6 +2,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const { buildPages } = require('../tui/pages');
 
 const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
@@ -51,6 +54,61 @@ test('admin model management presents web columns, selects web filters and avoid
   assert.match(detail, /上游模型 ID：up-1/);
   assert.match(detail, /输入价格：0.1 元\/千 Token/);
   assert.doesNotMatch(detail, /input_price_per_1k_tokens/);
+});
+
+test('admin model actions create, edit, batch update, delete and export through confirmed routes', async () => {
+  const model = { id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Provider One', series: 'S', enabled: true, input_price_per_1k_tokens: 0.1, output_price_per_1k_tokens: 0.2, cached_output_price_per_1k_tokens: 0.05, reference_input_price_per_1k_tokens: 0.3, reference_output_price_per_1k_tokens: 0.4, reference_cached_output_price_per_1k_tokens: 0.06, model_multiplier: 1.2, completion_multiplier: 1.3, rate_limit_rpm: 10, rate_limit_tpm: 100, thinking_model_id: '', non_thinking_model_id: '' };
+  const calls = [];
+  const api = async (endpoint, options = {}) => { calls.push({ endpoint, options }); if (endpoint === '/api/admin/models') return { items: [model], total: 1, page: options.query?.page || 1, stats: {}, providers: [{ id: 'p1', name: 'Provider One', model_count: 1 }], series: ['S'] }; if (endpoint === '/api/admin/models/batch-update-prices') return { updated: 1 }; return { updated: 1, deleted: 1, cleared_keys: 2 }; };
+  const page = pageById('admin-models');
+  const initial = await page.load(api);
+  const add = initial.actions.find(action => action.label === '添加模型');
+  let addFields = [];
+  const formValues = { upstream_model_id: 'up-new', alias: 'New', provider: 'p1', series: 'S', description: 'desc', enabled: true, input_price_per_1k_tokens: '0.1', output_price_per_1k_tokens: '0.2', cached_output_price_per_1k_tokens: '0.03', reference_input_price_per_1k_tokens: '0', reference_output_price_per_1k_tokens: '0', reference_cached_output_price_per_1k_tokens: '0', rate_limit_rpm: '0', rate_limit_tpm: '0', model_multiplier: '1', completion_multiplier: '1', thinking_model_id: '', non_thinking_model_id: '' };
+  await add.run({ form: async (_title, fields) => { addFields = fields; return formValues; }, confirm: async () => false });
+  assert.equal(calls.some(call => call.options.method === 'POST' && call.endpoint === '/api/admin/models'), false);
+  await add.run({ form: async () => formValues, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(addFields.some(field => field.label === '输入价格（元/千 Token）'));
+  const create = calls.find(call => call.endpoint === '/api/admin/models' && call.options.method === 'POST');
+  assert.equal(create.options.body.upstream_model_id, 'up-new');
+  assert.equal(create.options.body.input_price_per_1k_tokens, 0.1);
+
+  const editCalls = [];
+  const editData = await page.load(async (endpoint, options = {}) => { if (options.method) editCalls.push({ endpoint, options }); return { items: [model], total: 1, providers: [{ id: 'p1', name: 'Provider One' }], series: ['S'] }; });
+  const editRow = editData.sections[0].rows[0];
+  let editForm = {};
+  await editRow.run({ choose: async () => 'edit', form: async (_title, fields) => { editForm = Object.fromEntries(fields.map(field => [field.name, field.value])); return { ...editForm, alias: 'Updated', input_price_per_1k_tokens: '0.5' }; }, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.equal(editCalls[0].endpoint, '/api/admin/models');
+  assert.equal(editCalls[0].options.body.id, 'm1');
+  assert.equal(editCalls[0].options.body.reference_cached_output_price_per_1k_tokens, 0.06);
+
+  const bulkApi = async (endpoint, options = {}) => { calls.push({ endpoint, options }); if (endpoint === '/api/admin/models') return { items: [model], total: 1, providers: [], series: [] }; return { updated: 1, deleted: 1, cleared_keys: 0 }; };
+  const selectable = await page.load(bulkApi);
+  const choices = ['select', 'select'];
+  await selectable.sections[0].rows[0].run({ choose: async () => choices.shift(), refresh: async () => {} });
+  const bulk = (await page.load(bulkApi)).actions.find(action => action.label.startsWith('批量管理'));
+  const bulkChoices = ['prices', 'set', 'set'];
+  await bulk.run({ choose: async (_title, options) => options.some(option => option.value === 'set' || option.value === 'multiply') ? bulkChoices.shift() : bulkChoices.shift(), form: async () => ({ input_price: '1', output_price: '2', cached_output_price: '0.5' }), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.endpoint === '/api/admin/models/batch-update-prices').options.body, { ids: ['m1'], mode: 'set', input_price: 1, output_price: 2, cached_output_price: 0.5 });
+
+  runtime.adminModelSelectedIds = ['m1'];
+  const deleteBulk = (await page.load(bulkApi)).actions.find(action => action.label.startsWith('批量管理'));
+  let warning = '';
+  await deleteBulk.run({ choose: async () => 'delete', confirm: async (_title, message) => { warning = message; return false; } });
+  assert.match(warning, /不可撤销/);
+  assert.equal(calls.some(call => call.endpoint === '/api/admin/models/batch-delete'), false);
+
+  const exportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cr-model-export-'));
+  const exportPath = path.join(exportDir, 'models.csv');
+  const exportAction = initial.actions.find(action => action.label === '导出当前筛选 CSV');
+  await exportAction.run({ ask: async () => exportPath, confirm: async () => true, show: async () => {}, notify() {} });
+  const csv = await fs.readFile(exportPath, 'utf8');
+  assert.match(csv, /模型 ID/);
+  assert.match(csv, /m1/);
+  await fs.writeFile(exportPath, 'KEEP');
+  await exportAction.run({ ask: async () => exportPath, confirm: async () => false, show: async () => {}, notify() {} });
+  assert.equal(await fs.readFile(exportPath, 'utf8'), 'KEEP', 'cancelled overwrite must preserve existing file');
+  await fs.rm(exportDir, { recursive: true, force: true });
 });
 
 test('admin error logs pass user/model/provider/status/date filters to API', async () => {

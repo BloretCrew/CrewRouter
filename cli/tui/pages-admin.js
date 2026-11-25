@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('node:fs/promises');
+const path = require('node:path');
 const { text } = require('./pages-common');
 const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 
@@ -295,6 +297,7 @@ function createAdminPages(runtime) {
         const items = array(data && (data.items || data));
         const providers = array(data && data.providers);
         const seriesOptions = array(data && data.series);
+        const selectedIds = new Set(runtime.adminModelSelectedIds || []);
         const modelRows = items.map(item => {
           const input = item.input_price_per_1k_tokens;
           const output = item.output_price_per_1k_tokens;
@@ -314,9 +317,34 @@ function createAdminPages(runtime) {
             input: `${input ?? '—'} 元`, output: `${output ?? '—'} 元`, cached: `${cached ?? '—'} 元`,
             limits: `${Number(item.rate_limit_rpm || 0) || '不限'} 次/分 · ${Number(item.rate_limit_tpm || 0) || '不限'} Token/分`,
             state: `${item.enabled === false ? '已停用' : '已启用'} · ${testState}`,
-          }, detail: details, run: async ctx => {
-            const choice = await ctx.choose('模型操作', [{ label: '查看详情', value: 'detail' }, { label: '测试模型', value: 'test' }]);
+          }, detail: `${selectedIds.has(String(item.id)) ? '已选中 · ' : ''}${details}`, run: async ctx => {
+            const choice = await ctx.choose('模型操作', [{ label: selectedIds.has(String(item.id)) ? '取消选择' : '加入批量选择', value: 'select' }, { label: '查看详情', value: 'detail' }, { label: '编辑模型', value: 'edit' }, { label: '测试模型', value: 'test' }, { label: '删除模型', value: 'delete' }]);
+            if (choice === 'select') { if (selectedIds.has(String(item.id))) selectedIds.delete(String(item.id)); else selectedIds.add(String(item.id)); runtime.adminModelSelectedIds = [...selectedIds]; await ctx.refresh(); }
             if (choice === 'detail') await ctx.show(`模型详情 · ${item.alias || item.name || item.id}`, details);
+            if (choice === 'edit') {
+              const values = await ctx.form('编辑模型', [
+                { name: 'upstream_model_id', label: '上游模型 ID', value: item.upstream_model_id || item.name || item.id },
+                { name: 'alias', label: '显示名称', value: item.alias || '' },
+                { name: 'provider', label: '供应商', value: item.provider, options: [{ label: providers.find(provider => String(provider.id) === String(item.provider))?.name || item.provider, value: item.provider }, ...providers.filter(provider => String(provider.id) !== String(item.provider)).map(provider => ({ label: provider.name, value: provider.id }))] },
+                { name: 'series', label: '模型系列', value: item.series || '' }, { name: 'description', label: '模型说明', value: item.description || '' },
+                { name: 'enabled', label: '启用模型', type: 'boolean', value: item.enabled !== false },
+                { name: 'forward_reasoning_effort', label: '透传思考强度参数', type: 'boolean', value: item.forward_reasoning_effort === true },
+                ...[['input_price_per_1k_tokens', '输入价格（元/千 Token）'], ['output_price_per_1k_tokens', '输出价格（元/千 Token）'], ['cached_output_price_per_1k_tokens', '缓存输出价格（元/千 Token）'], ['reference_input_price_per_1k_tokens', '参考输入价格（元/千 Token）'], ['reference_output_price_per_1k_tokens', '参考输出价格（元/千 Token）'], ['reference_cached_output_price_per_1k_tokens', '参考缓存输出价格（元/千 Token）'], ['rate_limit_rpm', '每分钟最大请求数（不限制填 0）'], ['rate_limit_tpm', '每分钟最大 Token 数（不限制填 0）'], ['model_multiplier', '计费倍率'], ['completion_multiplier', '输出倍率']].map(([name, label]) => ({ name, label, value: String(item[name] ?? (name.includes('multiplier') ? 1 : 0)) })),
+                { name: 'thinking_model_id', label: '思考模式模型 ID', value: item.thinking_model_id || '', options: [{ label: '使用自身', value: '' }, ...items.map(model => ({ label: model.alias || model.name || model.id, value: model.id }))] }, { name: 'non_thinking_model_id', label: '非思考模式模型 ID', value: item.non_thinking_model_id || '', options: [{ label: '使用自身', value: '' }, ...items.map(model => ({ label: model.alias || model.name || model.id, value: model.id }))] },
+              ]);
+              if (!values || !String(values.provider || '').trim()) return;
+              if (!await ctx.confirm('保存模型修改', `${values.alias || values.upstream_model_id}\n供应商：${providers.find(provider => String(provider.id) === String(values.provider))?.name || values.provider}\n将覆盖该模型的价格、倍率和限额设置。`)) return;
+              const numberFields = ['input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'cached_output_price_per_1k_tokens', 'reference_input_price_per_1k_tokens', 'reference_output_price_per_1k_tokens', 'reference_cached_output_price_per_1k_tokens', 'rate_limit_rpm', 'rate_limit_tpm', 'model_multiplier', 'completion_multiplier'];
+              const body = { id: item.id, ...values };
+              for (const field of numberFields) body[field] = Number(values[field] || 0);
+              await api('/api/admin/models', { method: 'POST', body });
+              ctx.notify('模型已更新。'); await ctx.refresh();
+            }
+            if (choice === 'delete') {
+              if (!await ctx.confirm('删除模型并清理关联', `将删除「${item.alias || item.name || item.id}」及其团队授权、API Key 绑定等关联数据。此操作不可撤销。`)) return;
+              await api(`/api/admin/models/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+              ctx.notify('模型及其关联已删除。'); await ctx.refresh();
+            }
             if (choice === 'test') {
               if (!await ctx.confirm('测试模型', `将使用当前模型配置对 ${item.alias || item.name || item.id} 发起一次真实测试请求。继续？`)) return;
               const result = await api(`/api/admin/models/${encodeURIComponent(item.id)}/test`, { method: 'POST', body: {} });
@@ -337,12 +365,123 @@ function createAdminPages(runtime) {
           { key: 'cached', label: '缓存输出价', ratio: 0.1 }, { key: 'limits', label: '请求/Token限额', ratio: 0.1 }, { key: 'state', label: '状态/测试', ratio: 0.15 },
         ], rows: modelRows.length ? modelRows : [{ label: '没有符合条件的模型。' }] }];
         return { sections, pageToolbar: true, actions: [
+          { label: '添加模型', toolbar: 'page', run: async ctx => {
+            const values = await ctx.form('添加模型', [
+              { name: 'upstream_model_id', label: '上游模型 ID（必填）' }, { name: 'alias', label: '显示名称（可空）' },
+              { name: 'provider', label: '供应商', options: providers.map(provider => ({ label: provider.name, value: provider.id })) },
+              { name: 'series', label: '模型系列' }, { name: 'description', label: '模型说明' }, { name: 'enabled', label: '启用模型', type: 'boolean', value: true },
+              ...[['input_price_per_1k_tokens', '输入价格（元/千 Token）'], ['output_price_per_1k_tokens', '输出价格（元/千 Token）'], ['cached_output_price_per_1k_tokens', '缓存输出价格（元/千 Token）'], ['reference_input_price_per_1k_tokens', '参考输入价格（元/千 Token）'], ['reference_output_price_per_1k_tokens', '参考输出价格（元/千 Token）'], ['reference_cached_output_price_per_1k_tokens', '参考缓存输出价格（元/千 Token）'], ['rate_limit_rpm', '每分钟最大请求数（不限制填 0）'], ['rate_limit_tpm', '每分钟最大 Token 数（不限制填 0）'], ['model_multiplier', '计费倍率'], ['completion_multiplier', '输出倍率']].map(([name, label]) => ({ name, label, value: name.includes('multiplier') ? '1' : '0' })),
+              { name: 'thinking_model_id', label: '思考模式模型 ID（可空）' }, { name: 'non_thinking_model_id', label: '非思考模式模型 ID（可空）' },
+            ]);
+            if (!values || !String(values.upstream_model_id || '').trim() || !String(values.provider || '').trim()) return;
+            if (!await ctx.confirm('创建模型', `${values.alias || values.upstream_model_id}\n供应商：${providers.find(provider => String(provider.id) === String(values.provider))?.name || values.provider}\n该模型将自动加入适用的前沿团队。`)) return;
+            const numberFields = ['input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'cached_output_price_per_1k_tokens', 'reference_input_price_per_1k_tokens', 'reference_output_price_per_1k_tokens', 'reference_cached_output_price_per_1k_tokens', 'rate_limit_rpm', 'rate_limit_tpm', 'model_multiplier', 'completion_multiplier'];
+            const body = { ...values };
+            for (const field of numberFields) body[field] = Number(values[field] || 0);
+            await api('/api/admin/models', { method: 'POST', body });
+            runtime.adminModelPage = 1; ctx.notify('模型已创建。'); await ctx.refresh();
+          } },
+          { label: `批量管理${selectedIds.size ? `（已选 ${selectedIds.size}）` : ''}`, toolbar: 'page', run: async ctx => {
+            if (!selectedIds.size) { await ctx.show('批量管理模型', '先在模型列表中打开模型操作菜单，选择“加入批量选择”。'); return; }
+            const operation = await ctx.choose('批量管理模型', [{ label: '启用所选模型', value: 'enable' }, { label: '禁用所选模型', value: 'disable' }, { label: '设置所选模型价格', value: 'prices' }, { label: '设置所选模型参考价格', value: 'reference-prices' }, { label: '同步缓存价格为输出价格', value: 'sync-cached' }, { label: '设置所选模型速率限制', value: 'limits' }, { label: '修改所选模型说明', value: 'description' }, { label: '设置所选模型系列', value: 'series' }, { label: '删除所选模型', value: 'delete' }, { label: '清空所选', value: 'clear' }]);
+            if (!operation) return;
+            const ids = [...selectedIds];
+            if (operation === 'clear') { runtime.adminModelSelectedIds = []; await ctx.refresh(); return; }
+            if (operation === 'enable' || operation === 'disable') {
+              const enabled = operation === 'enable';
+              if (!await ctx.confirm(enabled ? '批量启用模型' : '批量禁用模型', `将${enabled ? '启用' : '禁用'} ${ids.length} 个模型。禁用时可能清除没有其他团队授权的 API Key 当前模型绑定。`)) return;
+              const result = await api('/api/admin/models/batch-update', { method: 'POST', body: { ids, enabled } });
+              runtime.adminModelSelectedIds = []; ctx.notify(`已更新 ${result.updated || ids.length} 个模型${result.cleared_keys ? `；清除了 ${result.cleared_keys} 个 Key 当前模型绑定` : ''}。`); await ctx.refresh(); return;
+            }
+            if (operation === 'prices') {
+              const mode = await ctx.choose('批量改价方式', [{ label: '设置为指定价格', value: 'set' }, { label: '按百分比调整现有价格', value: 'multiply' }]);
+              if (!mode) return;
+              if (mode === 'multiply') {
+                const percentage = await ctx.ask('价格调整百分比（例如 10 表示上调 10%，-10 表示下调 10%）', { defaultValue: '0' });
+                if (percentage === null || !Number.isFinite(Number(percentage)) || Number(percentage) <= -100) return;
+                if (!await ctx.confirm('确认按比例调整价格', `将对 ${ids.length} 个模型的输入、输出与缓存输出价格分别${Number(percentage) >= 0 ? '上调' : '下调'} ${Math.abs(Number(percentage))}%。`)) return;
+                const result = await api('/api/admin/models/batch-update-prices', { method: 'POST', body: { ids, mode: 'multiply', percentage: Number(percentage) } });
+                runtime.adminModelSelectedIds = []; ctx.notify(`已按比例调整 ${result.updated || ids.length} 个模型价格。`); await ctx.refresh(); return;
+              }
+              const values = await ctx.form('批量设置模型价格', [['input_price', '输入价格（元/千 Token）'], ['output_price', '输出价格（元/千 Token）'], ['cached_output_price', '缓存输出价格（元/千 Token）']].map(([name, label]) => ({ name, label })));
+              if (!values || !await ctx.confirm('确认批量改价', `将覆盖 ${ids.length} 个模型的输入、输出和缓存输出价格。`)) return;
+              for (const key of Object.keys(values)) values[key] = Number(values[key] || 0);
+              const result = await api('/api/admin/models/batch-update-prices', { method: 'POST', body: { ids, mode: 'set', ...values } });
+              runtime.adminModelSelectedIds = []; ctx.notify(`已更新 ${result.updated || ids.length} 个模型价格。`); await ctx.refresh(); return;
+            }
+            if (operation === 'reference-prices') {
+              const values = await ctx.form('批量设置模型参考价格', [['in', '参考输入价格（元/千 Token）'], ['out', '参考输出价格（元/千 Token）']].map(([name, label]) => ({ name, label })));
+              if (!values || (!String(values.in || '').trim() && !String(values.out || '').trim())) return;
+              if (!await ctx.confirm('确认更新参考价格', `将更新所选 ${ids.length} 个模型中已填写的参考价格；留空项保持原值。`)) return;
+              const prices = Object.fromEntries(ids.map(id => [id, { ...(String(values.in || '').trim() ? { in: Number(values.in) } : {}), ...(String(values.out || '').trim() ? { out: Number(values.out) } : {}) }]));
+              await api('/api/admin/models/batch-set-reference-prices', { method: 'POST', body: { prices } });
+              runtime.adminModelSelectedIds = []; ctx.notify('参考价格已更新。'); await ctx.refresh(); return;
+            }
+            if (operation === 'sync-cached') {
+              if (!await ctx.confirm('同步缓存输出价格', `将把 ${ids.length} 个模型的缓存输出价设置为其当前输出价，覆盖既有缓存价格。`)) return;
+              const result = await api('/api/admin/models/batch-sync-cached-price', { method: 'POST', body: { ids } });
+              runtime.adminModelSelectedIds = []; ctx.notify(`已同步 ${result.updated || ids.length} 个模型的缓存输出价格。`); await ctx.refresh(); return;
+            }
+            if (operation === 'limits') {
+              const values = await ctx.form('批量设置模型速率限制', [{ name: 'rate_limit_rpm', label: '每分钟最大请求数（0 表示不限）' }, { name: 'rate_limit_tpm', label: '每分钟最大 Token 数（0 表示不限）' }]);
+              if (!values || !await ctx.confirm('确认批量修改限额', `将修改 ${ids.length} 个模型的每分钟请求与 Token 限额。`)) return;
+              await api('/api/admin/models/batch-update-ratelimit', { method: 'POST', body: { ids, rate_limit_rpm: Number(values.rate_limit_rpm || 0), rate_limit_tpm: Number(values.rate_limit_tpm || 0) } });
+              runtime.adminModelSelectedIds = []; ctx.notify('模型限额已更新。'); await ctx.refresh(); return;
+            }
+            if (operation === 'description' || operation === 'series') {
+              const field = operation === 'description' ? 'description' : 'series';
+              const value = await ctx.ask(operation === 'description' ? '新的模型说明' : '新的模型系列');
+              if (value === null || !await ctx.confirm(operation === 'description' ? '确认修改模型说明' : '确认修改模型系列', `将更新 ${ids.length} 个模型。`)) return;
+              await api(operation === 'description' ? '/api/admin/models/batch-update-description' : '/api/admin/models/batch-update-series', { method: 'POST', body: { ids, [field]: value } });
+              runtime.adminModelSelectedIds = []; ctx.notify('所选模型已更新。'); await ctx.refresh(); return;
+            }
+            if (operation === 'delete') {
+              if (!await ctx.confirm('批量删除模型并清理关联', `将永久删除 ${ids.length} 个模型及其团队授权、API Key 绑定等关联数据。此操作不可撤销。`)) return;
+              const result = await api('/api/admin/models/batch-delete', { method: 'POST', body: { ids } });
+              runtime.adminModelSelectedIds = []; ctx.notify(`已删除 ${result.deleted || ids.length} 个模型及其关联。`); await ctx.refresh();
+            }
+          } },
           { label: '搜索模型', toolbar: 'page', run: async ctx => { runtime.adminModelSearch = String(await ctx.ask('模型名称、别名、上游 ID、系列或说明', { defaultValue: runtime.adminModelSearch || '' }) || '').trim(); runtime.adminModelPage = 1; await ctx.refresh(); } },
           { label: '筛选供应商', toolbar: 'page', run: async ctx => { const value = await ctx.choose('供应商', [{ label: '全部供应商', value: '' }, ...providers.map(item => ({ label: `${item.name} · ${item.model_count} 个模型`, value: item.id }))]); if (value !== null) { runtime.adminModelFilters = { ...filters, provider: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
           { label: '筛选系列', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型系列', [{ label: '全部系列', value: '' }, ...seriesOptions.map(item => ({ label: item, value: item }))]); if (value !== null) { runtime.adminModelFilters = { ...filters, series: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
           { label: '筛选启用状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型启用状态', [{ label: '全部', value: '' }, { label: '已启用', value: 'true' }, { label: '已禁用', value: 'false' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, enabled: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
           { label: '筛选测试状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型测试状态', [{ label: '全部', value: '' }, { label: '测试通过', value: 'pass' }, { label: '测试失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.adminModelFilters = { ...filters, test: value }; runtime.adminModelPage = 1; await ctx.refresh(); } } },
           { label: '清除筛选', toolbar: 'page', run: async ctx => { runtime.adminModelFilters = {}; runtime.adminModelPage = 1; await ctx.refresh(); } },
+          { label: '测试当前筛选模型', toolbar: 'page', run: async ctx => {
+            const total = Number(data.total || items.length);
+            if (!total) { await ctx.show('批量测试模型', '当前筛选结果没有模型。'); return; }
+            if (!await ctx.confirm('测试当前筛选模型', `将逐个对当前筛选的 ${total} 个模型发起真实测试请求；每个测试都可能调用上游服务。继续？`)) return;
+            let completed = 0; let testPage = 1;
+            while (true) {
+              const result = await api('/api/admin/models', { query: { page: testPage, limit: 200, q: runtime.adminModelSearch || '', ...filters } });
+              const pageItems = array(result.items || result);
+              for (const item of pageItems) { await api(`/api/admin/models/${encodeURIComponent(item.id)}/test`, { method: 'POST', body: {} }); completed++; }
+              if (!pageItems.length || completed >= total || pageItems.length < 200) break;
+              testPage++;
+            }
+            ctx.notify(`已完成 ${completed} 个筛选模型的测试。`); await ctx.refresh();
+          } },
+          { label: '导出当前筛选 CSV', toolbar: 'page', run: async ctx => {
+            const all = []; let exportPage = 1;
+            while (true) {
+              const result = await api('/api/admin/models', { query: { page: exportPage, limit: 200, q: runtime.adminModelSearch || '', ...filters } });
+              const pageItems = array(result.items || result); all.push(...pageItems);
+              if (pageItems.length < 200 || all.length >= Number(result.total || pageItems.length)) break;
+              exportPage++;
+            }
+            const columns = [['名称', 'name'], ['别名', 'alias'], ['模型 ID', 'id'], ['上游模型 ID', 'upstream_model_id'], ['供应商', 'provider_name'], ['系列', 'series'], ['输入价（元/千Token）', 'input_price_per_1k_tokens'], ['输出价（元/千Token）', 'output_price_per_1k_tokens'], ['缓存输出价（元/千Token）', 'cached_output_price_per_1k_tokens'], ['请求/分钟', 'rate_limit_rpm'], ['Token/分钟', 'rate_limit_tpm'], ['状态', 'enabled']];
+            const csv = [columns.map(([label]) => label), ...all.map(item => columns.map(([, key]) => String(key === 'provider_name' ? item.provider_name || item.provider || '' : key === 'enabled' ? (item.enabled === false ? '停用' : '启用') : item[key] ?? '').replace(/"/g, '""')))].map(row => row.map(value => `"${value}"`).join(',')).join('\r\n');
+            const destination = String(await ctx.ask('CSV 文件保存路径', { defaultValue: path.join(process.cwd(), 'models-export.csv'), description: '如果文件已存在，将覆盖该路径的文件。' }) || '').trim();
+            if (!destination) return;
+            if (!path.isAbsolute(destination)) { await ctx.show('导出失败', '请填写绝对路径，避免文件保存位置不明确。'); return; }
+            const absolutePath = path.resolve(destination);
+            if (await fs.access(absolutePath).then(() => true).catch(() => false)) {
+              if (!await ctx.confirm('覆盖已有文件', `${absolutePath} 已存在，是否覆盖？`)) return;
+            }
+            await fs.writeFile(absolutePath, `﻿${csv}`, { encoding: 'utf8', flag: 'w', mode: 0o600 });
+            await fs.chmod(absolutePath, 0o600);
+            ctx.notify(`已导出 ${all.length} 个模型：${absolutePath}`);
+          } },
           { label: '上一页', run: async ctx => { runtime.adminModelPage = Math.max(1, (runtime.adminModelPage || 1) - 1); await ctx.refresh(); } },
           { label: '下一页', run: async ctx => { runtime.adminModelPage = (runtime.adminModelPage || 1) + 1; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
