@@ -23,6 +23,7 @@ from crewrouter import (
     ApiKeyMembersResponse,
     ApiKeyQuotaWarning,
     ApiKeySchedule,
+    ApiKeyTagsResponse,
     CurrentModelResponse,
     UserCurrentModel,
     DailyUsageItem,
@@ -101,6 +102,7 @@ class TypedRequestTests(unittest.TestCase):
         }
         self.assertIsNone(model["alias"])
         self.assertIsNone(provider["created_by"])
+        assigned_tags: ApiKeyTagsResponse = {"tags": [{"id": 2, "name": "prod", "color": "#445566"}]}
         key_tag: UserKeyTag = {
             "id": 3,
             "name": "prod",
@@ -114,6 +116,7 @@ class TypedRequestTests(unittest.TestCase):
             "members": [{"id": 9, "username": "member", "email": "member@example.test", "created_at": "2026-01-01T00:00:00.000Z"}],
         }
         self.assertEqual(key_tag["sort_order"], 1)
+        self.assertEqual(assigned_tags["tags"][0]["id"], 2)
         quota_warning: ApiKeyQuotaWarning = {"quota_warning_enabled": True}
         schedule: ApiKeySchedule = {
             "schedule_enabled": False,

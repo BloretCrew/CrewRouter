@@ -7,6 +7,11 @@ type ApiKeyTag struct {
 	Color string `json:"color,omitempty"`
 }
 
+// ApiKeyTagsResponse is returned after assigning tags to an API Key.
+type ApiKeyTagsResponse struct {
+	Tags []ApiKeyTag `json:"tags"`
+}
+
 // ApiKeyModelQueueItem describes an API key's ordered model binding.
 type ApiKeyQueueItem struct {
 	ModelID   string  `json:"model_id"`

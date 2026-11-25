@@ -94,6 +94,10 @@ export interface ApiKeyTag {
   color?: string | null;
 }
 
+export interface ApiKeyTagsResponse {
+  tags: ApiKeyTag[];
+}
+
 export interface ApiKeyModelQueueItem {
   model_id: string;
   id: string;

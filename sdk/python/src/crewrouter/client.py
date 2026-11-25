@@ -20,6 +20,10 @@ class ApiKeyTag(TypedDict, total=False):
     color: Optional[str]
 
 
+class ApiKeyTagsResponse(TypedDict):
+    tags: list[ApiKeyTag]
+
+
 class ApiKeyModelQueueItem(TypedDict, total=False):
     model_id: str
     id: str

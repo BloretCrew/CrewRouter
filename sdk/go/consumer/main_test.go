@@ -161,6 +161,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(providerTags) != 1 || providerTags[0].SortOrder != 1 {
 		t.Fatalf("unexpected provider tags payload: %#v", providerTags)
 	}
+	var assignedTags crewrouter.ApiKeyTagsResponse
+	if err := json.Unmarshal([]byte(`{"tags":[{"id":2,"name":"prod","color":"#445566"}]}`), &assignedTags); err != nil {
+		t.Fatalf("decode assigned API key tags: %v", err)
+	}
+	if len(assignedTags.Tags) != 1 || assignedTags.Tags[0].ID != float64(2) {
+		t.Fatalf("unexpected assigned API key tags payload: %#v", assignedTags)
+	}
 
 	var uptime crewrouter.ModelUptimeResponse
 	if err := json.Unmarshal([]byte(`{"days":1,"hours":24,"slots":96,"granularity":"15m","items":{"m1":{"uptime_pct":null,"label":"No data","total_success":0,"total_fail":0,"spark":["none"]}}}`), &uptime); err != nil {

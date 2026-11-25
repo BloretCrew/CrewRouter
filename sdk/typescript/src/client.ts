@@ -9,6 +9,7 @@ import type {
   ApiKeyFusionConfigPut,
   ApiKeyDailyUsageItem,
   ApiKeyListItem,
+  ApiKeyTagsResponse,
   ApiKeyMembersResponse,
   ApiKeyModelsResponse,
   ApiKeyModelsUpdateResponse,
@@ -197,6 +198,8 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.quotaWarning.update', mergePathParams({ ...options, body }, { id })),
     getSchedule: <T = ApiKeySchedule>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.schedule.list', mergePathParams(options, { id })),
+    setTags: <T = ApiKeyTagsResponse>(id: string | number, body: { tagIds: Array<number | string> }, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.tags.update', mergePathParams({ ...options, body }, { id })),
   };
 
   readonly usage = {

@@ -537,6 +537,7 @@ function managementSchemas() {
       success: { const: true }, modelIds: { type: 'array', items: { type: 'string' } },
       current_model_id: nullableString,
     }, ['success', 'modelIds', 'current_model_id']),
+    ApiKeyTagsResponse: object({ tags: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyTag' } } }, ['tags']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -640,6 +641,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.config.list': { $ref: '#/components/schemas/ApiKeyClaudeConfig' },
     'user.apiKeys.byId.fusionConfig.list': { $ref: '#/components/schemas/ApiKeyFusionConfig' },
     'user.apiKeys.byId.fusionConfig.update': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
+    'user.apiKeys.byId.tags.update': { $ref: '#/components/schemas/ApiKeyTagsResponse' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },

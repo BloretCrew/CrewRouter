@@ -31,6 +31,7 @@ export type {
   CallOptions,
   CrewRouterResponse,
   ApiKeyTag,
+  ApiKeyTagsResponse,
   ApiKeyModelQueueItem,
   ApiKeyAvailableModel,
   ApiKeyModelsResponse,

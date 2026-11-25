@@ -84,6 +84,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const apiKeyModels = openapi.paths['/api/user/api-keys/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyModelsUpdate = openapi.paths['/api/user/api-keys/{id}/models']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyConfig = openapi.paths['/api/user/api-keys/{id}/config']?.get;
+  const keyTagsUpdate = openapi.paths['/api/user/api-keys/{id}/tags']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const fusionConfig = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const fusionConfigPut = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.put;
   const harnessModels = openapi.paths['/api/user/api-keys/{id}/harness-models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
@@ -122,6 +123,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (apiKeyModels?.$ref !== '#/components/schemas/ApiKeyModelsResponse' || openapi.components.schemas.ApiKeyModelsResponse?.properties?.queue?.items?.$ref !== '#/components/schemas/ApiKeyQueueItem') throw new Error(`${openapiPath} must define API Key model queue responses`);
   if (!openapi.components.schemas.ApiKeyQueueItem?.properties?.sort_order || !openapi.components.schemas.ApiKeyModelsResponse?.properties?.models?.items?.$ref?.endsWith('/ApiKeyAvailableModel')) throw new Error(`${openapiPath} must define API Key available models and ordered queue fields`);
   if (apiKeyModelsUpdate?.$ref !== '#/components/schemas/ApiKeyModelsUpdateResponse') throw new Error(`${openapiPath} must define model queue update responses`);
+  if (keyTagsUpdate?.$ref !== '#/components/schemas/ApiKeyTagsResponse' || !openapi.components.schemas.ApiKeyTagsResponse?.properties?.tags?.items?.$ref?.endsWith('/ApiKeyTag')) throw new Error(`${openapiPath} must define API Key tag assignment responses`);
   if (apiKeyConfig?.['x-crewrouter-permission'] !== 'keys.secret' || !apiKeyConfig.description?.includes('Owner-only') || !apiKeyConfig.description.includes('never log or expose')) throw new Error(`${openapiPath} must document the API Key secret exposure boundary`);
   if (!openapi.components.schemas.ApiKeyClaudeConfig?.properties?.env?.properties?.ANTHROPIC_AUTH_TOKEN?.description?.includes('never log or expose')) throw new Error(`${openapiPath} must mark the generated API Key token as sensitive`);
   if (fusionConfig?.$ref !== '#/components/schemas/ApiKeyFusionConfig') throw new Error(`${openapiPath} must define API Key Fusion config responses`);
