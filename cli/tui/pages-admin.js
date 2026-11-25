@@ -176,7 +176,7 @@ function createAdminPages(runtime) {
         const filters = runtime.errorFilters || {};
         const data = await api('/api/admin/error-logs', { query: { page, limit: 30, ...filters } });
         const items = array(data && data.logs);
-        return { sections: [{ title: '调用错误', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · 保留 ${data.retention_days || '—'} 天`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.model_name || item.model_id, item.provider_name, `${item.status_code || ''} ${item.error_type || ''}`), detail: display(item.error_message, item.username, item.latency_ms && `${item.latency_ms} ms`), run: async ctx => await ctx.show('错误详情', JSON.stringify(item, null, 2)) })) }], actions: [
+        return { sections: [{ title: '调用错误', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · 保留 ${data.retention_days || '—'} 天`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.model_name || item.model_id, item.provider_name, `${item.status_code || ''} ${item.error_type || ''}`), detail: display(item.error_message, item.username, item.latency_ms != null && `响应时间 ${item.latency_ms} 毫秒`), run: async ctx => await ctx.show('错误详情', JSON.stringify(item, null, 2)) })) }], actions: [
           { label: '筛选错误类型', run: async ctx => { const value = await ctx.ask('错误类型（留空全部）', { defaultValue: filters.error_type || '' }); if (value !== null) { runtime.errorFilters = { ...filters, error_type: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
           { label: '仅最终错误', run: async ctx => { runtime.errorFilters = { ...filters, final_only: filters.final_only === '1' ? '' : '1' }; runtime.errorPage = 1; await ctx.refresh(); } },
           { label: '筛选状态码', run: async ctx => { const value = await ctx.ask('HTTP 状态码（留空全部）', { defaultValue: filters.status_code || '' }); if (value !== null) { runtime.errorFilters = { ...filters, status_code: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
@@ -431,31 +431,31 @@ function createAdminPages(runtime) {
             await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members/${encodeURIComponent(member.id)}`, { method: 'DELETE' });
             ctx.notify('成员已移出团队。'); await ctx.refresh();
           } }));
-          const modelRows = visibleModels.map(model => ({ label: `${model.name || model.model_id} · ${model.enabled ? '已启用' : '未授权'}`, detail: display(model.provider_name || model.provider, model.series, model.test_ok === true ? `测试 ${model.test_latency_ms || 0} ms` : model.test_error || ''), run: async ctx => { const enabled = model.enabled !== true; const impact = enabled ? '授权此模型给团队成员使用。' : '禁用后，若该成员的 API Key 没有其他 Team 提供此模型，服务端可能清除该 Key 的当前模型绑定。'; if (!await ctx.confirm(enabled ? '启用 Team 模型' : '禁用 Team 模型', `${team.name}\n${model.name || model.model_id}\n${impact}`)) return; const result = await api(`/api/admin/teams/${encodeURIComponent(team.id)}/models/${encodeURIComponent(model.model_id)}`, { method: 'PUT', body: { enabled } }); if (!enabled && result.cleared_keys) ctx.notify(`已禁用；清除了 ${result.cleared_keys} 个 API Key 的当前模型绑定。`); else ctx.notify(`Team 模型已${enabled ? '启用' : '禁用'}。`); await ctx.refresh(); } }));
+          const modelRows = visibleModels.map(model => ({ label: `${model.name || model.model_id} · ${model.enabled ? '已启用' : '未授权'}`, detail: display(model.provider_name || model.provider, model.series, model.test_ok === true ? `测试 ${model.test_latency_ms || 0} ms` : model.test_error || ''), run: async ctx => { const enabled = model.enabled !== true; const impact = enabled ? '授权此模型给团队成员使用。' : '如果没有其他团队继续向该成员提供此模型，服务端可能清除相关 Key 的当前模型绑定。'; if (!await ctx.confirm(enabled ? '启用团队模型' : '停用团队模型', `${team.name}\n${model.name || model.model_id}\n${impact}`)) return; const result = await api(`/api/admin/teams/${encodeURIComponent(team.id)}/models/${encodeURIComponent(model.model_id)}`, { method: 'PUT', body: { enabled } }); if (!enabled && result.cleared_keys) ctx.notify(`已禁用；清除了 ${result.cleared_keys} 个 API Key 的当前模型绑定。`); else ctx.notify(`团队模型已${enabled ? '启用' : '禁用'}。`); await ctx.refresh(); } }));
           const ruleRows = ruleItems.map(rule => ({ label: `${rule.rule_type} ${rule.rule_value} / ${rule.duration_hours} 小时`, detail: rule.description || rule.id, run: async ctx => { if (!await ctx.confirm('删除限额规则', `${team.name} · ${rule.rule_type} ${rule.rule_value}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules/${encodeURIComponent(rule.id)}`, { method: 'DELETE' }); await ctx.refresh(); } }));
           return {
             title: `${team.name} · 团队编号 ${team.id}`,
-            description: display(team.is_default && '默认团队', team.is_frontier && '前沿 Team', `${team.member_count || memberItems.length} 成员`, team.description),
+            description: display(team.is_default && '默认团队', team.is_frontier && '前沿团队', `${team.member_count || memberItems.length} 成员`, team.description),
             cards: [{ label: '成员', value: team.member_count || memberItems.length }, { label: '模型授权', value: modelItems.filter(model => model.enabled).length }, { label: '限额规则', value: ruleItems.length }],
             rows: [
               { label: `成员列表 · ${memberRows.length} 人`, detail: memberRows.length ? '成员在下方独立分区展示' : '暂无成员' },
               ...memberRows.map(row => ({ ...row, label: `成员 · ${row.label}` })),
-              { label: `模型授权 · ${modelRows.length} 个模型`, detail: '单模型启停；禁用可能清除无其他Team授权的Key当前模型绑定' },
+              { label: `模型授权 · ${modelRows.length} 个模型`, detail: '单模型启停；禁用可能清除无其他团队授权的Key当前模型绑定' },
               ...modelRows.map(row => ({ ...row, label: `模型 · ${row.label}` })),
               { label: `限额规则 · ${ruleRows.length} 条` },
               ...ruleRows.map(row => ({ ...row, label: `限额 · ${row.label}` })),
             ],
             actions: [
               { label: `搜索 ${team.name} 模型`, run: async ctx => { runtime[`team_${team.id}_modelSearch`] = String(await ctx.ask('模型名称、ID 或供应商') || '').trim(); await ctx.refresh(); } },
-              { label: `编辑 ${team.name}`, run: async ctx => { const values = await ctx.form('编辑团队', [{ name: 'name', label: '名称', value: team.name }, { name: 'description', label: '说明', value: team.description || '' }, { name: 'is_default', label: '默认团队', type: 'boolean', value: team.is_default === true }, { name: 'is_frontier', label: '前沿 Team', type: 'boolean', value: team.is_frontier === true }]); if (!values) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: 'PUT', body: values }); ctx.notify('Team 已更新。'); await ctx.refresh(); } },
-              { label: `添加成员到团队 ${team.name}`, run: async ctx => { const input = await ctx.ask('用户 ID（多个以逗号分隔）'); if (!input) return; const userIds = String(input).split(',').map(value => Number(value.trim())).filter(Number.isInteger); if (!userIds.length || !await ctx.confirm('添加 Team 成员', `团队：${team.name}\n用户编号：${userIds.join(', ')}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, { method: 'POST', body: { userIds } }); ctx.notify('成员已添加。'); await ctx.refresh(); } },
-              { label: `新增 ${team.name} 限额规则`, run: async ctx => { const values = await ctx.form('新增团队限额规则', [{ name: 'rule_type', label: '类型', value: 'requests', options: ['requests', 'tokens'] }, { name: 'rule_value', label: '限额值' }, { name: 'duration_hours', label: '时间窗口小时数', value: '24' }, { name: 'description', label: '说明' }]); if (!values) return; if (!await ctx.confirm('添加 Team 限额', `${team.name}\n${values.rule_type} ${values.rule_value} / ${values.duration_hours} 小时`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules`, { method: 'POST', body: { ...values, rule_value: Number(values.rule_value), duration_hours: Number(values.duration_hours) } }); await ctx.refresh(); } },
-              { label: `删除 ${team.name}`, run: async ctx => { if (!await ctx.confirm('删除团队', `删除「${team.name}」？若仍有关联成员，服务端会拒绝。`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: 'DELETE' }); ctx.notify('Team 已删除。'); await ctx.refresh(); } },
+              { label: `编辑 ${team.name}`, run: async ctx => { const values = await ctx.form('编辑团队', [{ name: 'name', label: '名称', value: team.name }, { name: 'description', label: '说明', value: team.description || '' }, { name: 'is_default', label: '默认团队', type: 'boolean', value: team.is_default === true }, { name: 'is_frontier', label: '前沿团队', type: 'boolean', value: team.is_frontier === true }]); if (!values) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: 'PUT', body: values }); ctx.notify('团队已更新。'); await ctx.refresh(); } },
+              { label: `添加成员到团队 ${team.name}`, run: async ctx => { const input = await ctx.ask('用户 ID（多个以逗号分隔）'); if (!input) return; const userIds = String(input).split(',').map(value => Number(value.trim())).filter(Number.isInteger); if (!userIds.length || !await ctx.confirm('添加团队成员', `团队：${team.name}\n用户编号：${userIds.join(', ')}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, { method: 'POST', body: { userIds } }); ctx.notify('成员已添加。'); await ctx.refresh(); } },
+              { label: `新增 ${team.name} 限额规则`, run: async ctx => { const values = await ctx.form('新增团队限额规则', [{ name: 'rule_type', label: '类型', value: 'requests', options: ['requests', 'tokens'] }, { name: 'rule_value', label: '限额值' }, { name: 'duration_hours', label: '时间窗口小时数', value: '24' }, { name: 'description', label: '说明' }]); if (!values) return; if (!await ctx.confirm('添加团队限额', `${team.name}\n${values.rule_type} ${values.rule_value} / ${values.duration_hours} 小时`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules`, { method: 'POST', body: { ...values, rule_value: Number(values.rule_value), duration_hours: Number(values.duration_hours) } }); await ctx.refresh(); } },
+              { label: `删除 ${team.name}`, run: async ctx => { if (!await ctx.confirm('删除团队', `删除「${team.name}」？若仍有关联成员，服务端会拒绝。`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: 'DELETE' }); ctx.notify('团队已删除。'); await ctx.refresh(); } },
             ],
           };
         }));
         return { sections: sections.length ? sections : [{ title: '团队管理', rows: [{ label: '暂无团队。' }] }], actions: [
-          { label: '创建团队', run: async ctx => { const values = await ctx.form('创建团队', [{ name: 'name', label: '名称' }, { name: 'description', label: '说明' }]); if (!values || !String(values.name || '').trim()) return; if (!await ctx.confirm('创建 Team', values.name)) return; await api('/api/admin/teams', { method: 'POST', body: values }); ctx.notify('团队已创建。'); await ctx.refresh(); } },
+          { label: '创建团队', run: async ctx => { const values = await ctx.form('创建团队', [{ name: 'name', label: '名称' }, { name: 'description', label: '说明' }]); if (!values || !String(values.name || '').trim()) return; if (!await ctx.confirm('创建团队', values.name)) return; await api('/api/admin/teams', { method: 'POST', body: values }); ctx.notify('团队已创建。'); await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
@@ -580,7 +580,7 @@ function createAdminPages(runtime) {
       id: 'admin-invites', label: '邀请链接', description: '邀请列表不含原始 token；新建一次性凭证请在网页端完成。',
       async load(api) {
         const invites = array(await api('/api/auth-invites'));
-        const rows = invites.map(invite => ({ label: display(`#${invite.id}`, invite.team_name || (invite.team_id ? `Team ${invite.team_id}` : '默认团队'), invite.status, `${invite.used_count || 0}/${invite.max_uses || 1} 次`), detail: display(`创建 ${formatTime(invite.created_at)}`, `到期 ${formatTime(invite.expires_at)}`, invite.created_by_name && `创建者 ${invite.created_by_name}`, invite.used_by_name && `使用者 ${invite.used_by_name}`), run: async ctx => { await ctx.show(`邀请 #${invite.id}`, JSON.stringify(invite, null, 2)); if (invite.status !== 'active') return; if (!await ctx.confirm('撤销邀请链接', `撤销 #${invite.id}？该邀请将立即无法注册，且撤销不可恢复。`)) return; await api(`/api/auth-invites/${encodeURIComponent(invite.id)}/revoke`, { method: 'POST', body: {} }); ctx.notify('邀请链接已撤销。'); await ctx.refresh(); } }));
+        const rows = invites.map(invite => ({ label: display(`#${invite.id}`, invite.team_name || (invite.team_id ? `团队 ${invite.team_id}` : '默认团队'), invite.status, `${invite.used_count || 0}/${invite.max_uses || 1} 次`), detail: display(`创建 ${formatTime(invite.created_at)}`, `到期 ${formatTime(invite.expires_at)}`, invite.created_by_name && `创建者 ${invite.created_by_name}`, invite.used_by_name && `使用者 ${invite.used_by_name}`), run: async ctx => { await ctx.show(`邀请 #${invite.id}`, JSON.stringify(invite, null, 2)); if (invite.status !== 'active') return; if (!await ctx.confirm('撤销邀请链接', `撤销 #${invite.id}？该邀请将立即无法注册，且撤销不可恢复。`)) return; await api(`/api/auth-invites/${encodeURIComponent(invite.id)}/revoke`, { method: 'POST', body: {} }); ctx.notify('邀请链接已撤销。'); await ctx.refresh(); } }));
         return { sections: [{ title: '邀请链接', description: `${invites.length} 条 · 原始邀请 token 不可再次读取`, rows: rows.length ? rows : [{ label: '暂无邀请链接。' }] }], actions: [
           { label: '生成邀请链接', run: async ctx => await ctx.show('邀请链接生成', '生成操作会创建可用于注册的一次性凭证并仅在当次响应显示。为降低误发风险，请在网页管理后台生成。') },
           { label: '刷新', run: ctx => ctx.refresh() },
@@ -674,17 +674,17 @@ function createAdminPages(runtime) {
           return { label: display(member.username, member.email, member.team_name, suspended ? '暂停中' : '正常', member.policy_bypass ? '豁免' : ''), detail: display(`角色 ${member.team_role || 'member'}`, `${member.policy_count || 0} 条成员策略`, `${member.hits_24h || 0} 次/24h 命中`, member.suspended_until && `暂停至 ${formatTime(member.suspended_until)}`), run: async ctx => {
             const choice = await ctx.choose(`成员 · ${member.username}`, [
               { label: '查看详情', value: 'detail' },
-              ...(member.team_id ? [{ label: '修改 Team 角色', value: 'role' }] : []),
+              ...(member.team_id ? [{ label: '修改 团队 角色', value: 'role' }] : []),
               { label: suspended ? '恢复成员' : '暂停成员', value: 'suspension' },
               { label: member.policy_bypass ? '关闭策略豁免' : '开启策略豁免', value: 'bypass' },
               { label: '查看生效策略', value: 'effective' },
             ]);
             if (choice === 'detail') await ctx.show(`成员 · ${member.username}`, JSON.stringify(member, null, 2));
             if (choice === 'role') {
-              const role = await ctx.choose('Team 角色', ['owner', 'admin', 'member', 'viewer'].map(value => ({ label: value, value })));
+              const role = await ctx.choose('团队 角色', ['owner', 'admin', 'member', 'viewer'].map(value => ({ label: value, value })));
               if (!role || !await ctx.confirm('更新成员角色', `${member.username}\n${member.team_name}: ${role}`)) return;
               await api(`/api/admin/policy-members/${member.id}/role`, { method: 'POST', body: { team_id: member.team_id, role } });
-              ctx.notify('Team 角色已更新。'); await ctx.refresh();
+              ctx.notify('团队 角色已更新。'); await ctx.refresh();
             }
             if (choice === 'suspension' && suspended) {
               if (!await ctx.confirm('恢复成员', `恢复 ${member.username} 的访问权限？`)) return;
@@ -756,7 +756,7 @@ function createAdminPages(runtime) {
         const team = data.team || {};
         return { sections: [
           { title: '策略执行', rows: [
-            { label: `作用范围：${runtime.client.isAdmin ? '全局' : `Team #${team.team_id || '未知'}`}` },
+            { label: `作用范围：${runtime.client.isAdmin ? '全局' : `团队 #${team.team_id || '未知'}`}` },
             { label: `执行模式：${settings.enforcement_mode || 'enforce'}` },
             { label: `失败模式：${settings.fail_mode || 'open'}` },
             { label: `命中保留：${settings.hit_retention_days || 90} 天` },
@@ -782,7 +782,7 @@ function createAdminPages(runtime) {
             if (!Number.isInteger(retention) || retention < 1 || retention > 3650) { await ctx.show('保留天数无效', '请输入 1 到 3650 的整数。'); return; }
             const allowlist_dimensions = ['clients', 'models', 'providers', 'ips', 'protocols'].filter(value => values[`dimension_${value}`]);
             const body = { team_id: runtime.client.isAdmin === true ? null : (team.team_id ?? null), enforcement_mode: values.enforcement_mode, fail_mode: values.fail_mode, hit_retention_days: retention, default_timezone: values.default_timezone || 'Asia/Shanghai', allowlist_dimensions, notify_admins: values.notify_admins, notify_member: values.notify_member };
-            if (!await ctx.confirm('保存策略设置', `范围：${body.team_id === null ? '全局' : `Team #${body.team_id}`}\n执行 ${body.enforcement_mode} · 失败 ${body.fail_mode}\n白名单维度：${allowlist_dimensions.join(', ') || '无'}\n注意：未匹配 allow 的请求可能被拦截。`)) return;
+            if (!await ctx.confirm('保存策略设置', `范围：${body.team_id === null ? '全局' : `团队 #${body.team_id}`}\n执行 ${body.enforcement_mode} · 失败 ${body.fail_mode}\n白名单维度：${allowlist_dimensions.join(', ') || '无'}\n注意：未匹配 allow 的请求可能被拦截。`)) return;
             await api('/api/admin/policy-settings', { method: 'PUT', body }); ctx.notify('策略设置已保存。'); await ctx.refresh();
           } },
           { label: '刷新', run: ctx => ctx.refresh() },
