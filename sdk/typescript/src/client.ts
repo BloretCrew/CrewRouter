@@ -3,6 +3,7 @@ import { OPERATIONS, type CrewRouterOperation, type OperationId } from './genera
 import { HttpClient } from './http.js';
 import type {
   AnthropicMessagesRequest,
+  ApiKeyClaudeConfig,
   ApiKeyDailyUsageItem,
   ApiKeyListItem,
   ApiKeyMembersResponse,
@@ -171,7 +172,7 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.models.list', mergePathParams(options, { id })),
     setModels: <T = ApiKeyModelsUpdateResponse>(id: string | number, body: JsonObject, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.models.update', mergePathParams({ ...options, body }, { id })),
-    getConfig: <T = unknown>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+    getConfig: <T = ApiKeyClaudeConfig>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.config.list', mergePathParams(options, { id })),
     getUsage: <T = ApiKeyDailyUsageItem[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.usage.list', mergePathParams(options, { id })),

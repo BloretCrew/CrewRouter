@@ -65,6 +65,21 @@ class ApiKeyModelsUpdateResponse(TypedDict):
     current_model_id: Optional[str]
 
 
+class ApiKeyClaudeConfigEnv(TypedDict):
+    ANTHROPIC_BASE_URL: str
+    ANTHROPIC_AUTH_TOKEN: str
+    ANTHROPIC_MODEL: str
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: str
+    ANTHROPIC_DEFAULT_SONNET_MODEL: str
+    ANTHROPIC_DEFAULT_OPUS_MODEL: str
+
+
+class ApiKeyClaudeConfig(TypedDict):
+    env: ApiKeyClaudeConfigEnv
+    model: str
+    effortLevel: str
+
+
 class ApiKeyListItem(TypedDict, total=False):
     id: Union[int, str]
     name: str

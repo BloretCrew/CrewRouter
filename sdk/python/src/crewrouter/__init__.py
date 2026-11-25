@@ -8,6 +8,8 @@ from ._http import CrewRouterResponse
 from ._sse import AsyncStream, AsyncStreamRequest, Stream, StreamEvent
 from .client import (
     AnthropicMessagesRequest,
+    ApiKeyClaudeConfig,
+    ApiKeyClaudeConfigEnv,
     ApiKeyDailyUsageItem,
     ApiKeyListItem,
     ApiKeyQueueItem,
@@ -73,6 +75,8 @@ __all__ = [
     "OpenAIResponsesRequest",
     "ApiKeyTag",
     "ApiKeyListItem",
+    "ApiKeyClaudeConfig",
+    "ApiKeyClaudeConfigEnv",
     "ApiKeyQueueItem",
     "ApiKeyAvailableModel",
     "ApiKeyModelsResponse",

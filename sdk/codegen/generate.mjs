@@ -451,6 +451,17 @@ function managementSchemas() {
       members: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyMember' } },
     }, ['is_owner', 'members']),
     ApiKeyQuotaWarning: object({ quota_warning_enabled: { type: 'boolean' } }),
+    ApiKeyClaudeConfig: object({
+      env: object({
+        ANTHROPIC_BASE_URL: { type: 'string' },
+        ANTHROPIC_AUTH_TOKEN: { type: 'string', description: 'Contains the API Key secret. Only the key owner can retrieve this configuration; never log or expose it.' },
+        ANTHROPIC_MODEL: { type: 'string' },
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: { type: 'string' },
+        ANTHROPIC_DEFAULT_SONNET_MODEL: { type: 'string' },
+        ANTHROPIC_DEFAULT_OPUS_MODEL: { type: 'string' },
+      }),
+      model: { type: 'string' }, effortLevel: { type: 'string' },
+    }, ['env', 'model', 'effortLevel']),
     ApiKeySchedule: object({
       schedule_enabled: { type: 'boolean' }, schedule_on_time: nullableString,
       schedule_off_time: nullableString, schedule_days: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 } },
@@ -595,6 +606,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.apiKeys.byId.models.update': { $ref: '#/components/schemas/ApiKeyModelsUpdateResponse' },
+    'user.apiKeys.byId.config.list': { $ref: '#/components/schemas/ApiKeyClaudeConfig' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },
@@ -694,6 +706,9 @@ function buildOpenApi(operations) {
       'x-crewrouter-streaming': op.streaming,
       'x-crewrouter-body-limit': op.limits.body,
     };
+    if (op.operationId === 'user.apiKeys.byId.config.list') {
+      operation.description = 'Owner-only Claude Code configuration. Requires keys.secret and an API Key owned by the caller. The response contains the API Key in ANTHROPIC_AUTH_TOKEN; never log or expose it. Legacy hash-only keys return HTTP 410 and must be regenerated.';
+    }
     if (op.aliases.length) operation['x-crewrouter-aliases'] = op.aliases;
     if (op.sdkStatus === 'excluded') operation['x-crewrouter-excluded'] = op.exclusion;
     if (['POST', 'PUT', 'PATCH'].includes(op.method) && op.request.body === 'json') {

@@ -6,6 +6,7 @@ from typing import get_type_hints
 from crewrouter import (
     AnthropicMessagesRequest,
     ApiKeyListItem,
+    ApiKeyClaudeConfig,
     ApiKeyModelsResponse,
     ApiKeyModelsUpdateResponse,
     ApiKeyAvailableModel,
@@ -142,7 +143,9 @@ class TypedRequestTests(unittest.TestCase):
         }
         key_models: ApiKeyModelsResponse = {"models": [available_model], "queue": [queue_item]}
         key_models_updated: ApiKeyModelsUpdateResponse = {"success": True, "modelIds": ["m1"], "current_model_id": "m1"}
+        claude_config: ApiKeyClaudeConfig = {"env": {"ANTHROPIC_BASE_URL": "https://router.example", "ANTHROPIC_AUTH_TOKEN": "sk-test-only", "ANTHROPIC_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-fable-5", "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-fable-5"}, "model": "claude-fable-5", "effortLevel": "high"}
         self.assertEqual(selected_model["id"], "m1")
+        self.assertEqual(claude_config["model"], "claude-fable-5")
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)

@@ -153,6 +153,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { is_owner: true, members: [{ id: 9, username: 'member', email: 'member@example.test', created_at: '2026-01-01T00:00:00.000Z' }] });
       return;
     }
+    if (req.url === '/api/user/api-keys/7/config') {
+      json(res, 200, { env: { ANTHROPIC_BASE_URL: 'http://localhost', ANTHROPIC_AUTH_TOKEN: 'sk-fixture-secret', ANTHROPIC_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_HAIKU_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_SONNET_MODEL: 'claude-fable-5', ANTHROPIC_DEFAULT_OPUS_MODEL: 'claude-fable-5' }, model: 'claude-fable-5', effortLevel: 'high' });
+      return;
+    }
     if (req.url === '/api/user/api-keys/7/quota-warning') {
       json(res, 200, { quota_warning_enabled: true });
       return;
@@ -173,6 +177,7 @@ test('management wrappers preserve their documented response payload shapes', as
   });
   const client = new CrewRouter({ baseUrl, apiKey: 'sk-test' });
   const keys = await client.keys.list();
+  const keyConfig = await client.keys.getConfig(7);
   const usage = await client.usage.get();
   const balance = await client.balance.get();
   const models = await client.models.list();
@@ -194,6 +199,7 @@ test('management wrappers preserve their documented response payload shapes', as
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
+  assert.equal(keyConfig.data.env.ANTHROPIC_AUTH_TOKEN, 'sk-fixture-secret');
   assert.equal(usage.data[0].total_tokens, '12');
   assert.equal(balance.data.refund_balance, 8);
   assert.equal(balance.data.group, null);

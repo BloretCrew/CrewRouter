@@ -36,6 +36,7 @@ export type {
   ApiKeyModelsResponse,
   ApiKeyModelsUpdateResponse,
   ApiKeyListItem,
+  ApiKeyClaudeConfig,
   ApiKeyDailyUsageItem,
   ApiKeyMember,
   ApiKeyMembersResponse,

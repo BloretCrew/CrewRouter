@@ -193,6 +193,24 @@ type ApiKeyModelsResponse struct {
 	Queue  []ApiKeyQueueItem      `json:"queue"`
 }
 
+// ApiKeyClaudeConfig contains a generated configuration including the API Key secret.
+// Treat ANTHROPIC_AUTH_TOKEN as a credential: never log, persist, or expose it.
+type ApiKeyClaudeConfig struct {
+	Env         ApiKeyClaudeConfigEnv `json:"env"`
+	Model       string                `json:"model"`
+	EffortLevel string                `json:"effortLevel"`
+}
+
+// ApiKeyClaudeConfigEnv contains environment variables for Claude Code.
+type ApiKeyClaudeConfigEnv struct {
+	AnthropicBaseURL            string `json:"ANTHROPIC_BASE_URL"`
+	AnthropicAuthToken          string `json:"ANTHROPIC_AUTH_TOKEN"`
+	AnthropicModel              string `json:"ANTHROPIC_MODEL"`
+	AnthropicDefaultHaikuModel  string `json:"ANTHROPIC_DEFAULT_HAIKU_MODEL"`
+	AnthropicDefaultSonnetModel string `json:"ANTHROPIC_DEFAULT_SONNET_MODEL"`
+	AnthropicDefaultOpusModel   string `json:"ANTHROPIC_DEFAULT_OPUS_MODEL"`
+}
+
 // ApiKeyModelsUpdateResponse is returned after replacing an API Key model queue.
 type ApiKeyModelsUpdateResponse struct {
 	Success        bool     `json:"success"`

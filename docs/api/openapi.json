@@ -589,6 +589,49 @@
         "required": [],
         "additionalProperties": true
       },
+      "ApiKeyClaudeConfig": {
+        "type": "object",
+        "properties": {
+          "env": {
+            "type": "object",
+            "properties": {
+              "ANTHROPIC_BASE_URL": {
+                "type": "string"
+              },
+              "ANTHROPIC_AUTH_TOKEN": {
+                "type": "string",
+                "description": "Contains the API Key secret. Only the key owner can retrieve this configuration; never log or expose it."
+              },
+              "ANTHROPIC_MODEL": {
+                "type": "string"
+              },
+              "ANTHROPIC_DEFAULT_HAIKU_MODEL": {
+                "type": "string"
+              },
+              "ANTHROPIC_DEFAULT_SONNET_MODEL": {
+                "type": "string"
+              },
+              "ANTHROPIC_DEFAULT_OPUS_MODEL": {
+                "type": "string"
+              }
+            },
+            "required": [],
+            "additionalProperties": true
+          },
+          "model": {
+            "type": "string"
+          },
+          "effortLevel": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "env",
+          "model",
+          "effortLevel"
+        ],
+        "additionalProperties": true
+      },
       "ApiKeySchedule": {
         "type": "object",
         "properties": {
@@ -14089,8 +14132,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyClaudeConfig"
                 }
               }
             }
@@ -14102,7 +14144,8 @@
           "session"
         ],
         "x-crewrouter-streaming": false,
-        "x-crewrouter-body-limit": "2mb"
+        "x-crewrouter-body-limit": "2mb",
+        "description": "Owner-only Claude Code configuration. Requires keys.secret and an API Key owned by the caller. The response contains the API Key in ANTHROPIC_AUTH_TOKEN; never log or expose it. Legacy hash-only keys return HTTP 410 and must be regenerated."
       }
     },
     "/api/user/api-keys/{id}/crewrouter-commands": {

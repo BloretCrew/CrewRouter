@@ -129,6 +129,20 @@ export interface ApiKeyModelsUpdateResponse {
   current_model_id: string | null;
 }
 
+export interface ApiKeyClaudeConfig {
+  env: {
+    ANTHROPIC_BASE_URL: string;
+    /** Contains the API Key secret; never log or expose it. */
+    ANTHROPIC_AUTH_TOKEN: string;
+    ANTHROPIC_MODEL: string;
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: string;
+    ANTHROPIC_DEFAULT_SONNET_MODEL: string;
+    ANTHROPIC_DEFAULT_OPUS_MODEL: string;
+  };
+  model: string;
+  effortLevel: string;
+}
+
 export interface ApiKeyListItem {
   id: number | string;
   name: string;

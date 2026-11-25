@@ -103,6 +103,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected API key models update payload: %#v", modelsUpdate)
 	}
 
+	var config crewrouter.ApiKeyClaudeConfig
+	if err := json.Unmarshal([]byte(`{"env":{"ANTHROPIC_BASE_URL":"https://router.example","ANTHROPIC_AUTH_TOKEN":"sk-fixture-secret","ANTHROPIC_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_HAIKU_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_SONNET_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_OPUS_MODEL":"claude-fable-5"},"model":"claude-fable-5","effortLevel":"high"}`), &config); err != nil {
+		t.Fatalf("decode API key config: %v", err)
+	}
+	if config.Env.AnthropicAuthToken == "" || config.Model != "claude-fable-5" {
+		t.Fatal("API key config secret/model fields were not decoded")
+	}
+
 	var products []crewrouter.UserProduct
 	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"image_url":null,"link":null,"sort_order":0}]`), &products); err != nil {
 		t.Fatalf("decode user products: %v", err)
