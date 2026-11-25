@@ -16,6 +16,8 @@ test('user model library renders teams, provider summaries, stars and searchable
     if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, hidden_model_count: 1, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: false, test_error: `HTTP 400\n${'long upstream error '.repeat(100)}` }], available_series: ['S'], total_models: 4 };
     if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main' }];
     if (path === '/api/user/provider-tags') return [{ id: 5, name: 'Featured' }];
+    if (path === '/api/user/providers/quota') return { providers: [{ id: 'quota-p1', name: 'Quota Provider', quota: { planName: 'Pro', total: 1000, remaining: 400, periods: [{ key: 'current_period', label: '本周期', percent: 60 }] }, keys: [{ ok: true, label: '主 Key', quota: { total: 1000, remaining: 400, currentPercent: 60 } }], status: 'success', last_valid_at: '2026-11-24T00:00:00Z' }] };
+    if (path === '/api/user/providers/quota/refresh') return { providers: [{ name: 'Quota Provider' }] };
     if (path === '/api/user/model-library/order/by-test') return { teams: 1, providers: 2, models: 3 };
     if (path === '/api/user/team/2/provider/p1/models') return { models: [{ model_id: 'm1', name: 'Model One', provider: 'p1', team_id: 2, team_name: 'Team A', provider_name: 'Provider A', input_price_per_1k_tokens: 0.1, output_price_per_1k_tokens: 0.2, test_ok: true, test_latency_ms: 21, is_starred: false, is_hidden: false }], pagination: { page: 1, total: 1, limit: 30, total_pages: 1, has_prev: false, has_next: false } };
     return {};
@@ -32,6 +34,15 @@ test('user model library renders teams, provider summaries, stars and searchable
   const orderRequest = calls.find(call => call.path === '/api/user/model-library/order/by-test');
   assert.deepEqual(orderRequest.options.body, { sort: 'test_tps_desc' });
   assert.ok(initial.sections.some(section => section.title === '模型库概览'));
+  const quotaSection = initial.sections.find(section => section.title === '供应商额度');
+  assert.ok(quotaSection);
+  assert.match(quotaSection.rows[0].detail, /Pro.*当前周期已用 60%/);
+  let quotaDetail = '';
+  await quotaSection.rows[0].run({ show: async (_title, body) => { quotaDetail = body; } });
+  assert.match(quotaDetail, /本周期：已用 60%/);
+  assert.match(quotaDetail, /主 Key：已用 60%/);
+  await initial.actions.find(action => action.label === '刷新供应商额度').run({ notify() {}, refresh: async () => {} });
+  assert.ok(calls.some(call => call.path === '/api/user/providers/quota/refresh' && call.options.method === 'POST'));
   assert.ok(initial.sections.some(section => section.title === '已收藏模型'));
   const starRow = initial.sections.find(section => section.title === '已收藏模型').rows[0];
   assert.ok(starRow.detail.length < 140, 'long upstream errors must not expand the list row');

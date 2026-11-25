@@ -329,8 +329,8 @@ function createAdminPages(runtime) {
     {
       id: 'model-library', label: '模型库', description: '网页模型库：搜索、查看供应商标签，并管理当前 API Key 的模型队列。',
       async load(api) {
-        const [libraryResult, keysResult, tagsResult] = await Promise.allSettled([
-          api('/api/user/model-library'), api('/api/user/api-keys'), api('/api/user/provider-tags'),
+        const [libraryResult, keysResult, tagsResult, quotaResult] = await Promise.allSettled([
+          api('/api/user/model-library'), api('/api/user/api-keys'), api('/api/user/provider-tags'), api('/api/user/providers/quota'),
         ]);
         const library = libraryResult.status === 'fulfilled' ? libraryResult.value : {};
         const showHidden = runtime.libraryShowHidden === true;
@@ -338,6 +338,7 @@ function createAdminPages(runtime) {
         const stars = array(library && library.starred_models).filter(item => showHidden || item.is_hidden !== true);
         const tags = tagsResult.status === 'fulfilled' ? itemsOf(tagsResult.value) : [];
         const keys = keysResult.status === 'fulfilled' ? itemsOf(keysResult.value) : [];
+        const quotaProviders = quotaResult.status === 'fulfilled' ? array(quotaResult.value?.providers) : [];
         const keyId = runtime.libraryKeyId || (keys[0] && keys[0].id);
         const assignedResult = keyId ? await Promise.allSettled([api(`/api/user/api-keys/${encodeURIComponent(keyId)}/models`)]) : [];
         const assignedData = assignedResult[0]?.status === 'fulfilled' ? assignedResult[0].value : {};
@@ -367,6 +368,28 @@ function createAdminPages(runtime) {
           value: `${provider.visible_model_count || 0}/${provider.model_count || 0}`,
           detail: display(team.team_name, `${provider.test_summary?.success || 0}/${provider.test_summary?.tested || 0} 项测试通过`, formatLatency(provider.test_summary?.avg_latency_ms), provider.is_hidden ? '已隐藏' : ''),
         }));
+        const quotaRows = quotaProviders.map(provider => {
+          const quota = provider.latest_valid_quota || provider.last_valid_quota || provider.latest_valid?.quota || provider.quota || {};
+          const periods = array(quota.periods);
+          const currentPercent = quota.currentPercent ?? periods.find(period => period.key === 'current_period')?.percent;
+          const total = quota.total ?? provider.aggregated?.total;
+          const remaining = quota.remaining ?? provider.aggregated?.remaining;
+          const keys = array(provider.keys).filter(key => key && (key.ok || key.error || key.quota));
+          const state = provider.error || ['failed', 'error'].includes(provider.status) ? (quota.total != null ? '最近查询失败，保留上次有效值' : '查询失败') : provider.status === 'stale' ? '已过期' : provider.status === 'partial' ? '部分成功' : '';
+          return { label: provider.name || '未知供应商', detail: [quota.planName, currentPercent != null ? `当前周期已用 ${Math.round(Number(currentPercent))}%` : total != null ? `剩余 ${remaining ?? '未知'} / ${total}` : '额度未知', keys.length > 1 ? `${keys.length} 个 Key` : '', provider.last_valid_at ? `最后有效观测 ${formatTime(provider.last_valid_at)}` : '', state].filter(Boolean).join(' · '), run: async ctx => {
+            const lines = [
+              `供应商：${provider.name || '未知供应商'}`,
+              quota.planName && `方案：${quota.planName}`,
+              ...periods.map(period => `${period.label || period.key || '额度'}：${period.percent == null ? '未知' : `已用 ${Math.round(Number(period.percent))}%`}${period.startsAt || period.resetsAt ? ` · 周期 ${period.startsAt ? formatTime(period.startsAt) : '未知'} 至 ${period.resetsAt ? formatTime(period.resetsAt) : '未知'}` : ''}`),
+              !periods.length && `剩余额度：${remaining ?? '未知'} / ${total ?? '未知'}`,
+              quota.credits && `Credits：${quota.credits.unlimited ? '无限' : quota.credits.balance ?? '0'}`,
+              ...keys.map((key, index) => `${key.label || key.masked_key || `Key ${index + 1}`}：${key.quota?.currentPercent != null ? `已用 ${Math.round(Number(key.quota.currentPercent))}%` : key.quota ? `剩余 ${key.quota.remaining ?? '未知'} / ${key.quota.total ?? '未知'}` : key.error || '查询失败'}`),
+              state,
+              provider.last_valid_at && `最后有效观测：${formatTime(provider.last_valid_at)}`,
+            ].filter(Boolean).join('\n');
+            await ctx.show(`供应商额度 · ${provider.name || '未知'}`, lines);
+          } };
+        });
         const shortError = (value, max = 72) => { const normalized = String(value || '').replace(/\s+/g, ' ').trim(); return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized; };
         const modelRows = searchedModels.map(item => {
           const id = String(item.model_id || item.id);
@@ -425,6 +448,7 @@ function createAdminPages(runtime) {
               item.test_error && `测试失败原因：${shortError(item.test_error, 500)}`, item.description && `模型说明：${item.description}`,
             ].filter(Boolean).join('\n'); await ctx.show(`模型详情 · ${item.alias || item.name || item.model_id}`, details); } if (choice === 'unstar') { if (!await ctx.confirm('取消模型收藏', `${item.alias || item.name || item.model_id}\n${item.provider_name || ''}`)) return; await api('/api/user/model-library/star', { method: 'PUT', body: { teamId: item.team_id, providerId: item.provider, modelId: item.model_id, starred: false } }); ctx.notify('模型收藏已取消。'); await ctx.refresh(); } } })) }] : []),
           { title: '团队与供应商目录', description: `${providerCards.length} 个供应商 · 网格布局随终端宽度调整；使用“选择供应商”展开模型`, cards: providerCards, rows: providerCards.length ? [] : [{ label: libraryResult.status === 'rejected' ? libraryResult.reason.message : '暂无可用供应商。' }] },
+          ...(quotaProviders.length ? [{ title: '供应商额度', description: '显示服务端缓存的额度快照；刷新会实时查询上游接口。', rows: quotaRows }] : quotaResult.status === 'rejected' ? [{ title: '供应商额度', rows: [{ label: `额度缓存暂不可用：${quotaResult.reason.message || '请求失败'}` }] }] : []),
           ...(selectedProvider ? [{ title: `${selectedProvider.provider_name} · 模型目录`, tableMinWidth: 150, columns: [
             { key: 'name', label: '模型名称', ratio: 0.25 }, { key: 'provider', label: '供应商', ratio: 0.2 }, { key: 'series', label: '系列', ratio: 0.12 },
             { key: 'multiplier', label: '计费倍率', ratio: 0.15 }, { key: 'test', label: '接口测试', ratio: 0.12 }, { key: 'queue', label: 'Key 队列', ratio: 0.08 }, { key: 'actions', label: '操作', ratio: 0.08 },
@@ -449,6 +473,7 @@ function createAdminPages(runtime) {
             { label: '搜索结果下一页', toolbar: 'page', disabled: searchData?.pagination ? !searchData.pagination.has_next : searchedModels.length < 30, run: async ctx => { runtime.libraryPage = (runtime.libraryPage || 1) + 1; await ctx.refresh(); } },
             { label: '返回团队供应商', toolbar: 'page', run: async ctx => { runtime.libraryProvider = null; await ctx.refresh(); } },
           ] : []),
+          ...(quotaProviders.length ? [{ label: '刷新供应商额度', toolbar: 'page', run: async ctx => { const result = await api('/api/user/providers/quota/refresh', { method: 'POST' }); ctx.notify(`已刷新 ${array(result.providers).length} 个供应商额度。`); await ctx.refresh(); } }] : []),
           { label: '选择 API Key', toolbar: 'page', run: async ctx => { if (!keys.length) { await ctx.show('选择 API Key', '当前账户还没有 API Key。'); return; } const choice = await ctx.choose('选择 API Key', keys.map(key => ({ label: `${key.name || key.key_prefix || key.id} · ${key.current_model_name || key.current_model_id || '未绑定'}`, value: key.id }))); if (choice !== null) { runtime.libraryKeyId = choice; await ctx.refresh(); } } },
           ...tags.map(tag => ({ label: `标签：${tag.name}`, toolbar: 'page', run: async ctx => { runtime.libraryTag = String(tag.id); await ctx.refresh(); } })),
           { label: '清除标签筛选', toolbar: 'page', run: async ctx => { runtime.libraryTag = 'all'; await ctx.refresh(); } },
