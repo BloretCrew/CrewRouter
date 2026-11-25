@@ -316,6 +316,7 @@ function createAdminPages(runtime) {
         const assignedData = assignedResult[0]?.status === 'fulfilled' ? assignedResult[0].value : {};
         const assignedIds = new Set(array(assignedData.queue).map(item => String(item.model_id || item.id)));
         const selectedProvider = runtime.libraryProvider || null;
+        const canSaveLibraryOrder = !selectedProvider && !runtime.librarySearch && (!runtime.libraryTag || runtime.libraryTag === 'all') && (!runtime.librarySeries || runtime.librarySeries === 'all') && (!runtime.libraryTest || runtime.libraryTest === 'all') && (!runtime.librarySort || runtime.librarySort === 'default');
         let searchData = null;
         let searchedModels = [];
         if (selectedProvider) {
@@ -397,6 +398,11 @@ function createAdminPages(runtime) {
           ...(providerEntries.length ? [{ label: '选择供应商展开模型', toolbar: 'page', run: async ctx => { const choice = await ctx.choose('选择团队供应商', providerEntries.map(({ team, provider }, index) => ({ label: `${team.team_name} · ${provider.provider_name} · ${provider.visible_model_count || 0}/${provider.model_count || 0} 个模型`, value: index }))); if (choice === null) return; const entry = providerEntries[choice]; runtime.libraryProvider = { team_id: entry.team.team_id, provider_id: entry.provider.provider_id, provider_name: entry.provider.provider_name }; runtime.libraryPage = 1; await ctx.refresh(); } }] : []),
           { label: '搜索模型/供应商', toolbar: 'page', run: async ctx => { runtime.librarySearch = String(await ctx.ask('搜索模型、供应商或上游 ID', { defaultValue: runtime.librarySearch || '' }) || '').trim(); runtime.libraryPage = 1; await ctx.refresh(); } },
           { label: showHidden ? '隐藏已显示的项目' : '显示已隐藏的项目', toolbar: 'page', run: async ctx => { runtime.libraryShowHidden = !showHidden; runtime.libraryPage = 1; await ctx.refresh(); } },
+          ...(canSaveLibraryOrder ? [{ label: '排序模式：保存测试结果排序', toolbar: 'page', run: async ctx => { const sort = await ctx.choose('选择全库模型排序', [
+            { label: '测试通过优先 · 响应时间由快到慢', value: 'test_latency_asc' },
+            { label: '测试通过优先 · 响应时间由慢到快', value: 'test_latency_desc' },
+            { label: '测试通过优先 · 输出速度由高到低', value: 'test_tps_desc' },
+          ], { description: '与网页“排序模式”操作相同，将重写你当前账号的全部团队、供应商及模型自定义顺序。' }); if (!sort) return; if (!await ctx.confirm('确认保存全库排序', '此操作会重写所有团队、供应商和模型的自定义顺序，不会修改模型价格或状态。')) return; const result = await api('/api/user/model-library/order/by-test', { method: 'PUT', body: { sort } }); ctx.notify(`排序已保存：${result.teams || 0} 个团队、${result.providers || 0} 个供应商、${result.models || 0} 个模型。`); await ctx.refresh(); } }] : []),
           ...(selectedProvider ? [
             { label: '筛选模型系列', toolbar: 'page', run: async ctx => { const value = await ctx.choose('模型系列', [{ label: '全部', value: 'all' }, ...array(library.available_series).map(series => ({ label: series, value: series }))]); if (value !== null) { runtime.librarySeries = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
             { label: '筛选测试状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('测试状态', [{ label: '全部', value: 'all' }, { label: '通过', value: 'pass' }, { label: '失败', value: 'fail' }, { label: '未测试', value: 'untested' }]); if (value !== null) { runtime.libraryTest = value; runtime.libraryPage = 1; await ctx.refresh(); } } },
