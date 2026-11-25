@@ -140,8 +140,8 @@ async function testModel(client, id) {
   return client.post(`/api/user/models/${encodeURIComponent(id)}/test`, {}, { timeoutMs: 60000 });
 }
 
-async function listSessions(client, { days = 30, page = 1, pageSize = 30 } = {}) {
-  return client.get('/api/user/sessions', { query: { days, page, pageSize } });
+async function listSessions(client, { days = 7, page = 1, pageSize = 20, source = '' } = {}) {
+  return client.get('/api/user/sessions', { query: { days, page, pageSize, ...(source ? { source } : {}) } });
 }
 async function getSessionMessages(client, key, { page = 1, pageSize = 20, beforeCreatedAt, beforeId } = {}) {
   return client.get(`/api/user/sessions/${encodeURIComponent(key)}/messages`, { query: { page, pageSize, ...(beforeCreatedAt ? { beforeCreatedAt } : {}), ...(beforeId ? { beforeId } : {}) } });

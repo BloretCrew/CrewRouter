@@ -4,6 +4,8 @@ const { getStats, getStatsFilters, getLatencyStats, getMessageStats, getUsageLog
 const { formatBigNumber, formatCost, formatTime } = require('../lib/format');
 const { text } = require('./pages-common');
 
+const arrayOrEmpty = value => Array.isArray(value) ? value : [];
+
 function usagePage(runtime) {
   if (!runtime.usageDays) runtime.usageDays = runtime.cfg.tui ? runtime.cfg.tui.days : 30;
   if (!runtime.usageTab) runtime.usageTab = 'overview';
@@ -274,10 +276,13 @@ async function showSessionMessages(ctx, runtime, item) {
       lines.push('', `${recordTime} · ${model} · ${formatBigNumber(record.tokens || record.tokens_used || 0)} Token${record.cachedTokens ? ` · 缓存 ${formatBigNumber(record.cachedTokens)} Token` : ''}${record.latencyMs != null ? ` · 响应时间 ${record.latencyMs} 毫秒` : ''}`);
       for (const event of Array.isArray(record.events) ? record.events : []) {
         if (!event || typeof event !== 'object') continue;
-        if (event.type === 'text' && event.text) lines.push(`${event.role === 'user' ? '用户' : event.role === 'assistant' ? '模型回复' : '系统信息'}：${String(event.text).slice(0, 1200)}`);
-        else if (event.type === 'thinking' && event.preview) lines.push(`思考摘要：${String(event.preview).slice(0, 400)}`);
-        else if (event.type === 'tool_call') lines.push(`调用工具：${event.name || '未知工具'}${event.argsPreview ? ` · 参数摘要 ${String(event.argsPreview).slice(0, 300)}` : ''}`);
-        else if (event.type === 'tool_result') lines.push(`${event.is_error ? '工具执行失败' : '工具返回'}${event.name ? ` · ${event.name}` : ''}：${String(event.resultPreview || '无详细内容').slice(0, 600)}`);
+        if (event.type === 'text' && event.text) {
+          lines.push(`${event.role === 'user' ? '用户' : event.role === 'assistant' ? '模型回复' : '系统信息'}：${String(event.text).slice(0, 2000)}`);
+          const imageAttachments = arrayOrEmpty(event.attachments).filter(attachment => attachment && attachment.kind === 'image');
+          if (imageAttachments.length) lines.push(`包含 ${imageAttachments.length} 个图片附件（终端不可内嵌显示，请在网页会话详情查看）。`);
+        } else if (event.type === 'thinking' && event.preview) lines.push(`思考摘要：${String(event.preview).slice(0, 300)}`);
+        else if (event.type === 'tool_call') lines.push(`调用工具：${event.name || '未知工具'}${event.argsPreview ? ` · 参数摘要 ${String(event.argsPreview).slice(0, 500)}` : ''}`);
+        else if (event.type === 'tool_result') lines.push(`${event.is_error ? '工具执行失败' : '工具返回'}${event.name ? ` · ${event.name}` : ''}：${String(event.resultPreview || '无详细内容').slice(0, 800)}`);
         else if (event.type === 'subagent' || event.type === 'compact' || event.type === 'session_start' || event.type === 'session_end') lines.push(`会话事件：${event.text || event.type}`);
         else if (event.type === 'image') lines.push('包含图片附件（请在网页会话详情中查看）。');
         else if (event.type) lines.push(`其他消息事件：${String(event.type)}`);
@@ -296,26 +301,28 @@ async function showSessionMessages(ctx, runtime, item) {
 
 function sessionsPage(runtime) {
   if (!runtime.sessionsPageNumber) runtime.sessionsPageNumber = 1;
+  if (!runtime.sessionsDays) runtime.sessionsDays = 7;
   return {
     id: 'sessions',
     label: '会话',
-    description: '查看最近使用会话、客户端类型和消息摘要。',
+    description: '查看最近 1 天或 7 天的会话列表，可按客户端来源筛选、搜索经过网关的消息与回复。',
     async load(api) {
-      const days = runtime.sessionsDays || 30;
+      const days = runtime.sessionsDays || 7;
       const search = runtime.sessionsSearch || '';
+      const source = runtime.sessionsSource || '';
       const data = search
-        ? await searchSessions(runtime.client, { q: search, days })
-        : await listSessions(runtime.client, { days, page: runtime.sessionsPageNumber, pageSize: 30 });
+        ? await searchSessions(runtime.client, { q: search, days: 7 })
+        : await listSessions(runtime.client, { days, page: runtime.sessionsPageNumber, pageSize: 20, source });
       const items = search
         ? (Array.isArray(data.results) ? data.results : [])
         : (Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
       const rows = items.map(item => ({
         label: search
           ? `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.matchCount || 0).toLocaleString()} 条匹配消息`
-          : `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token`,
+          : `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token · 缓存 ${formatBigNumber(item.totalCachedTokens)} Token${item.toolCallCount ? ` · ${item.toolCallCount} 次工具调用` : ''}`,
         detail: search
-          ? `最近匹配：${item.lastSeen ? formatTime(item.lastSeen) : '未知'}${item.previews?.[0]?.excerpt ? ` · 摘要：${String(item.previews[0].excerpt).slice(0, 160)}` : ''}`
-          : `${item.lastSeen ? `最后活动 ${formatTime(item.lastSeen)}` : ''}${item.models && item.models.length ? ` · 模型 ${item.models.slice(0, 3).join(', ')}` : ''}${item.summary ? ' · 有摘要' : ''}`,
+          ? [`最近匹配：${item.lastSeen ? formatTime(item.lastSeen) : '未知'}`, ...arrayOrEmpty(item.previews).slice(0, 3).map(preview => `${formatTime(preview.ts)} · ${String(preview.excerpt || '').replace(/<<<MARK>>>(.*?)<<<END>>>/g, '【命中：$1】')}`)].join('\\n')
+          : [item.cwd && `工作区：${item.cwd}`, item.summary ? `会话摘要：${String(item.summary).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : item.lastMessagePreview ? `最近消息：${String(item.lastMessagePreview).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : '', item.models && item.models.length ? `模型：${item.models.slice(0, 3).join(', ')}` : '', item.lastToolName && `最近工具：${item.lastToolName}`, item.summaryCreatedAt && `摘要更新：${formatTime(item.summaryCreatedAt)}`, item.pressureLevel === 'critical' ? '上下文压力：高' : item.pressureLevel === 'warning' ? '上下文压力：注意' : '上下文压力：正常'].filter(Boolean).join(' · '),
         run: async ctx => {
           const choice = await ctx.choose(`会话 · ${item.sessionKey}`, [{ label: '查看消息', value: 'messages' }, { label: '查看已缓存摘要', value: 'summary' }]);
           if (choice === 'messages') await showSessionMessages(ctx, runtime, item);
@@ -325,16 +332,19 @@ function sessionsPage(runtime) {
       return {
         sections: [{
           title: '会话',
-          description: search ? `最近 ${days} 天 · 搜索“${search}” · 共 ${data.totalSessions ?? items.length} 个匹配会话` : `最近 ${days} 天 · 第 ${data.page || runtime.sessionsPageNumber} 页 · 共 ${data.total || items.length} 个会话`,
+          description: search ? `最近 7 天 · 搜索“${search}” · 共 ${data.totalSessions ?? items.length} 个匹配会话（最多显示 20 个）` : `最近 ${days} 天 · 第 ${data.page || runtime.sessionsPageNumber} / ${Math.ceil(Number(data.total || items.length) / Number(data.pageSize || 20)) || 1} 页 · 共 ${data.total || items.length} 个会话`,
           rows: rows.length ? rows : [{ label: '暂无会话记录。' }],
         }],
+        pageToolbar: true,
         actions: [
-          { label: search ? '清除搜索' : '搜索会话', run: async ctx => { runtime.sessionsSearch = search ? '' : String(await ctx.ask('搜索会话内容、客户端类型或摘要') || '').trim(); runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
-          { label: '最近 7 天', run: async ctx => { runtime.sessionsDays = 7; runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
-          { label: '最近 30 天', run: async ctx => { runtime.sessionsDays = 30; runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
-          { label: '上一页', run: async ctx => { runtime.sessionsPageNumber = Math.max(1, runtime.sessionsPageNumber - 1); await ctx.refresh(); } },
-          { label: '下一页', run: async ctx => { runtime.sessionsPageNumber += 1; await ctx.refresh(); } },
-          { label: '刷新', run: ctx => ctx.refresh() },
+          { label: search ? '清除搜索' : '搜索会话内容', toolbar: 'page', run: async ctx => { runtime.sessionsSearch = search ? '' : String(await ctx.ask('搜索经由网关的消息全文或模型回复', { defaultValue: runtime.sessionsSearch || '' }) || '').trim(); runtime.sessionsPageNumber = 1; await ctx.refresh(); } },
+          ...(!search ? [
+            { label: '筛选客户端', toolbar: 'page', run: async ctx => { const value = await ctx.choose('客户端来源', [{ label: '全部客户端', value: '' }, ...['grok', 'codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness', 'unknown'].map(item => ({ label: clientDisplay(item), value: item }))]); if (value !== null) { runtime.sessionsSource = value; runtime.sessionsPageNumber = 1; await ctx.refresh(); } } },
+            ...[1, 7].map(value => ({ label: `最近 ${value} 天`, toolbar: 'page', run: async ctx => { runtime.sessionsDays = value; runtime.sessionsPageNumber = 1; await ctx.refresh(); } })),
+            { label: '上一页', toolbar: 'page', disabled: (runtime.sessionsPageNumber || 1) <= 1, run: async ctx => { runtime.sessionsPageNumber = Math.max(1, (runtime.sessionsPageNumber || 1) - 1); await ctx.refresh(); } },
+            { label: '下一页', toolbar: 'page', disabled: (runtime.sessionsPageNumber || 1) * 20 >= Number(data.total || 0), run: async ctx => { runtime.sessionsPageNumber = (runtime.sessionsPageNumber || 1) + 1; await ctx.refresh(); } },
+          ] : []),
+          { label: '刷新', toolbar: true, run: ctx => ctx.refresh() },
         ],
       };
     },
