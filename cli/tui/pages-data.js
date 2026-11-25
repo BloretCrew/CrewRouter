@@ -160,7 +160,6 @@ function usagePage(runtime) {
           { key: 'cached', label: '缓存命中', ratio: 0.14 }, { key: 'cost', label: '积分', ratio: 0.1 }, { key: 'latency', label: '平均延迟', ratio: 0.12 },
         ], description: `共 ${modelRows.length} 个模型 · 按请求数排序 · ${periodLabel}`, rows: modelRows.length ? modelRows : [{ label: '当前范围没有模型用量。' }] });
       }
-      if (runtime.usageTab === 'providers') sections.push({ title: '按供应商统计', tab: 'providers', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byProvider || [], row => row.provider_name || row.provider_id || '未知供应商') });
       if (runtime.usageTab === 'keys') {
         const keyRows = (summary.byApiKey || []).map(row => {
           const tokens = Number(row.tokens || 0);
