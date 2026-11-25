@@ -791,8 +791,11 @@ function createAdminPages(runtime) {
               const amount = row.value == null ? '未知' : `${Number(row.value).toLocaleString('zh-CN', { maximumFractionDigits: 6 })}${row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : ''}`;
               const dimensionLabel = array(row.labels).filter(Boolean).join(' · ') || '未分类';
               const kindLabel = row.kind === 'balance' ? '余额额度' : row.kind === 'window' ? '周期额度' : row.kind === 'status' ? '状态额度' : row.kind || '额度';
+              const percent = row.kind === 'window' || row.unit === 'percent' ? Number(row.value) : Number(row.total) > 0 && row.used != null ? Number(row.used) / Number(row.total) * 100 : null;
+              const bar = Number.isFinite(percent) ? `使用率 ${Math.max(0, Math.min(100, percent)).toFixed(1)}% [${'█'.repeat(Math.round(Math.max(0, Math.min(100, percent)) / 10))}${'░'.repeat(10 - Math.round(Math.max(0, Math.min(100, percent)) / 10))}]` : '';
+              const reference = row.total != null || row.used != null || row.remaining != null ? `已用 ${row.used == null ? '未知' : Number(row.used).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} / 总额 ${row.total == null ? '未知' : Number(row.total).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} / 剩余 ${row.remaining == null ? '未知' : Number(row.remaining).toLocaleString('zh-CN', { maximumFractionDigits: 4 })}${row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : ''}` : '';
               return { label: `${dimensionLabel} · ${kindLabel}${row.window_key ? ` · ${row.window_key}` : ''}`, detail: [
-                `指标：${amount}`, row.status && `查询状态：${row.status}`, row.observed_at && `观测时间：${formatTime(row.observed_at)}`,
+                `指标：${amount}`, reference, bar, row.status && `查询状态：${row.status}`, row.observed_at && `观测时间：${formatTime(row.observed_at)}`,
                 row.quality?.cached && '使用缓存快照', row.quality?.legacy && '旧格式数据', row.quality?.precision && `精度：${row.quality.precision}`,
                 row.account_ids?.length > 1 && `${row.account_ids.length} 个账户`, row.coverage?.start && row.coverage?.end && `覆盖：${row.coverage.start} 至 ${row.coverage.end}`,
               ].filter(Boolean).join(' · ') };
@@ -818,13 +821,27 @@ function createAdminPages(runtime) {
             ], rows: [
               { label: multiDimensionQuery ? `自选维度：${multiDimensionQuery.dimensions} · 指标：${multiDimensionQuery.metric} · 数据源：${multiDimensionQuery.data_source}` : '可另选统计维度、指标与数据源，查看自定义组合。' },
               ...(multiDimensionError ? [{ label: `自选维度分析不可用：${multiDimensionError}` }] : multiDimensionResult ? [
-                ...array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: multiDimensionQuery.metric === 'requests' ? `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` : multiDimensionQuery.metric === 'tokens' ? `${formatBigNumber(row.tokens)} Token · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` : `${formatCost(row.cost)} 积分 · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })),
+                ...(() => {
+                  const resultRows = array(multiDimensionResult.rows).slice(0, 30);
+                  const metricValue = row => multiDimensionQuery.metric === 'requests' ? Number(row.requests || 0) : multiDimensionQuery.metric === 'tokens' ? Number(row.tokens || 0) : Number(row.cost || 0);
+                  const maxValue = Math.max(0, ...resultRows.map(metricValue));
+                  return resultRows.map(row => {
+                    const value = metricValue(row);
+                    const bar = maxValue > 0 ? `[${'█'.repeat(Math.round(value / maxValue * 16))}${'░'.repeat(16 - Math.round(value / maxValue * 16))}]` : '[░░░░░░░░░░░░░░░░]';
+                    const amount = multiDimensionQuery.metric === 'requests' ? `${value.toLocaleString()} 次请求` : multiDimensionQuery.metric === 'tokens' ? `${formatBigNumber(value)} Token` : `${formatCost(value)} 积分`;
+                    return { label: `${array(row.labels).join(' · ') || '未分类'} · ${amount}`, detail: `${bar} · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` };
+                  });
+                })(),
                 ...(multiDimensionResult.quota_mode === 'member_estimate' ? [
                   { label: `成员额度估算：${array(multiDimensionResult.quota_estimates).length} 条 · 按同一供应商下的 ${multiDimensionQuery.metric} 占比估算，不是实际个人账单。` },
-                  ...array(multiDimensionResult.quota_estimates).slice(0, 50).map(estimate => ({
-                    label: `${array(estimate.category_labels).join(' · ') || estimate.user_name || '未知成员'} · ${estimate.provider_name || '未知供应商'} · ${estimate.kind === 'window' ? '周期额度' : '余额额度'}${estimate.window_key ? ` · ${estimate.window_key}` : ''}`,
-                    detail: `估算使用 ${Number(estimate.estimated_value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} ${estimate.unit || '未知单位'} · ${Number(estimate.estimated_percent || 0).toFixed(1)}% · 实际额度仅为供应商级参照`,
-                  })),
+                  ...array(multiDimensionResult.quota_estimates).slice(0, 50).map(estimate => {
+                    const pct = Math.max(0, Math.min(100, Number(estimate.estimated_percent || 0)));
+                    const bar = `[${'█'.repeat(Math.round(pct / 10))}${'░'.repeat(10 - Math.round(pct / 10))}]`;
+                    return {
+                      label: `${array(estimate.category_labels).join(' · ') || estimate.user_name || '未知成员'} · ${estimate.provider_name || '未知供应商'} · ${estimate.kind === 'window' ? '周期额度' : '余额额度'}${estimate.window_key ? ` · ${estimate.window_key}` : ''}`,
+                      detail: `估算使用 ${Number(estimate.estimated_value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} ${estimate.unit || '未知单位'} · ${pct.toFixed(1)}% ${bar} · 实际额度仅为供应商级参照`,
+                    };
+                  }),
                   ...(multiDimensionResult.quota_estimate_caveat ? [{ label: `估算范围说明：${multiDimensionResult.quota_estimate_caveat}` }] : []),
                 ] : []),
               ] : relationRows.length ? relationRows : [{ label: '当前筛选范围内暂无关联数据。' }]),
