@@ -90,6 +90,40 @@ test('admin user edits confirm before sending profile and quota fields', async (
   assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
 });
 
+test('admin general settings and request capture use readable web fields with validated payloads', async () => {
+  const calls = [];
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const general = { site_name: 'Router', defaultBalance: 250, defaultKeyExpiry: 90, billing_mode: 'rate', rate_price_per_request: 0.05, stats_refresh_interval_sec: 20, login_report_enabled: false, stats_report_enabled: true, stats_report_granularity: 'counts', model_list: ['fusion', 'model-a'] };
+  const quota = { enabled: true, mode: 'strict', reconciliation_seconds: 90, max_tries: 4, worker_interval_ms: 3000, batch_size: 12, lease_seconds: 180 };
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/settings') return general; if (path === '/api/admin/request-quota-config') return quota; if (path === '/api/admin/agent-web') return {}; if (path === '/api/admin/retention-config') return {}; if (path === '/api/admin/feishu-login') return {}; return {}; };
+  const data = await pageById('admin-settings').load(api);
+  const generalSection = data.sections.find(section => section.title === '常规设置');
+  assert.deepEqual(generalSection.cards.map(card => card.label), ['系统名称', '默认新用户积分', '默认 Key 有效期', '统计刷新间隔']);
+  assert.ok(generalSection.rows.some(row => row.label === '计费模式：按请求计费 · 0.0500 积分/次'));
+  assert.ok(generalSection.rows.some(row => row.label === '匿名统计上报：开启' && row.detail.includes('仅聚合计数')));
+  assert.ok(generalSection.rows.some(row => row.label === '可用模型：2 个' && row.detail === 'fusion、model-a'));
+  const generalAction = data.actions.find(action => action.label === '编辑常规设置');
+  let generalFields;
+  const generalValues = { site_name: 'Router Two', defaultBalance: '300', defaultKeyExpiry: '0', billing_mode: 'rate', rate_price_per_request: '0.08', stats_refresh_interval_sec: '25', login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed', model_list: 'model-b\nmodel-c' };
+  await generalAction.run({ form: async (_title, fields) => { generalFields = fields; return generalValues; }, confirm: async () => false });
+  assert.deepEqual(generalFields.map(field => field.name), ['site_name', 'defaultBalance', 'defaultKeyExpiry', 'billing_mode', 'rate_price_per_request', 'stats_refresh_interval_sec', 'login_report_enabled', 'stats_report_enabled', 'stats_report_granularity', 'model_list']);
+  assert.equal(calls.some(call => call.path === '/api/admin/settings' && call.options.method === 'PUT'), false);
+  await generalAction.run({ form: async () => generalValues, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path === '/api/admin/settings' && call.options.method === 'PUT').options.body, { site_name: 'Router Two', defaultBalance: 300, defaultKeyExpiry: 0, billing_mode: 'rate', rate_price_per_request: 0.08, stats_refresh_interval_sec: 25, login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed', model_list: ['fusion', 'model-b', 'model-c'] });
+
+  const quotaSection = data.sections.find(section => section.title === '请求额度采集');
+  assert.ok(quotaSection.cards.some(card => card.label === '采集模式' && card.value === '请求前后精细采集'));
+  const quotaAction = data.actions.find(action => action.label === '编辑请求额度采集');
+  const quotaValues = { enabled: false, mode: 'async', reconciliation_seconds: '0', max_tries: '2', worker_interval_ms: '1000', batch_size: '8', lease_seconds: '90' };
+  await quotaAction.run({ form: async () => quotaValues, confirm: async () => false });
+  assert.equal(calls.some(call => call.path === '/api/admin/request-quota-config' && call.options.method === 'PUT'), false);
+  let quotaNotice = '';
+  await quotaAction.run({ form: async () => ({ ...quotaValues, batch_size: '101' }), show: async (_title, message) => { quotaNotice = message; } });
+  assert.match(quotaNotice, /batch_size.*1–100/);
+  await quotaAction.run({ form: async () => quotaValues, confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path === '/api/admin/request-quota-config' && call.options.method === 'PUT').options.body, { enabled: false, mode: 'async', reconciliation_seconds: 0, max_tries: 2, worker_interval_ms: 1000, batch_size: 8, lease_seconds: 90 });
+});
+
 test('admin proxy pool settings redact credentials and manage subscription/manual proxy drafts safely', async () => {
   const calls = [];
   const runtime = { client: { isAdmin: true, baseUrl: 'https://router.example' }, cfg: { tui: { days: 30 } }, profileName: 'test' };

@@ -1613,14 +1613,40 @@ function createAdminPages(runtime) {
         const retention = retentionResult.status === 'fulfilled' ? retentionResult.value : {};
         const feishu = feishuResult.status === 'fulfilled' ? feishuResult.value : {};
         const toRows = (object, error) => error ? [{ label: error.message || '读取失败' }] : Object.entries(object || {}).map(([key, value]) => ({ label: `${key}：${typeof value === 'object' ? JSON.stringify(value) : String(value)}` }));
+        const quotaDefaults = { enabled: true, mode: 'async', reconciliation_seconds: 60, max_tries: 5, worker_interval_ms: 2000, batch_size: 10, lease_seconds: 120 };
+        const quotaValues = { ...quotaDefaults, ...quota };
+        const loginReportEnabled = general.login_report_enabled !== false;
+        const statsReportEnabled = general.stats_report_enabled !== false;
+        const statsGranularity = general.stats_report_granularity === 'counts' ? 'counts' : 'detailed';
+        const modelList = Array.isArray(general.model_list) ? general.model_list : [];
         return { sections: [
           { title: '网络与代理池', description: '全局代理仅供选择“代理池”模式且已启用的供应商使用；IP 限速时可自动切换。订阅 URL 和代理凭证在界面中脱敏。', rows: [
             { label: `订阅地址：${subscriptionUrl ? maskProxyUrl(subscriptionUrl) : '未配置'}`, detail: '网页设置每 5 分钟拉取一次订阅内容。' },
             ...proxyEntries.map((entry, index) => ({ label: `手动代理 ${index + 1}：${maskProxyUrl(entry.url) || '地址无效'}`, detail: entry.enabled === false ? '已停用' : '已启用', run: async ctx => { const choice = await ctx.choose(`手动代理 ${index + 1}`, [{ label: '查看脱敏地址', value: 'detail' }, { label: '删除代理', value: 'delete' }]); if (choice === 'detail') await ctx.show('代理地址（已脱敏）', maskProxyUrl(entry.url)); if (choice === 'delete') { if (!await ctx.confirm('删除手动代理', `删除代理 ${index + 1}（${maskProxyUrl(entry.url)}）？保存前不会影响当前生效配置。`)) return; runtime.adminProxyPoolDraft = proxyEntries.filter((_, itemIndex) => itemIndex !== index); await ctx.refresh(); } } })),
             ...(generalResult.status === 'rejected' ? [{ label: `代理设置读取失败：${generalResult.reason.message || '未知错误'}` }] : []),
           ] },
-          { title: '常规设置', rows: toRows({ stats_refresh_interval_sec: general.stats_refresh_interval_sec, model_list: general.model_list, site_name: general.site_name, default_quota: general.default_quota }, generalResult.status === 'rejected' ? generalResult.reason : null) },
-          { title: '请求采集', rows: toRows(quota, quotaResult.status === 'rejected' ? quotaResult.reason : null) },
+          { title: '常规设置', description: '管理站点默认值、计费方式、后台刷新与匿名上报。', cards: [
+            { label: '系统名称', value: general.site_name || '未设置' }, { label: '默认新用户积分', value: general.defaultBalance ?? '默认值' },
+            { label: '默认 Key 有效期', value: general.defaultKeyExpiry == null ? '未设置' : `${general.defaultKeyExpiry} 天` },
+            { label: '统计刷新间隔', value: `${Number(general.stats_refresh_interval_sec || 10)} 秒` },
+          ], rows: [
+            { label: `计费模式：${general.billing_mode === 'rate' ? `按请求计费 · ${Number(general.rate_price_per_request ?? 0.01).toFixed(4)} 积分/次` : '按 Token 用量计费'}` },
+            { label: `登录状态上报：${loginReportEnabled ? '开启' : '关闭'}`, detail: '仅向官方上报匿名登录/退出事件。' },
+            { label: `匿名统计上报：${statsReportEnabled ? '开启' : '关闭'}`, detail: `上报粒度：${statsGranularity === 'counts' ? '仅聚合计数（不含模型/供应商）' : '含模型与供应商明细'}` },
+            { label: `可用模型：${modelList.length} 个`, detail: modelList.join('、') || '未配置模型列表' },
+            ...(generalResult.status === 'rejected' ? [{ label: `系统设置读取失败：${generalResult.reason.message || '未知错误'}` }] : []),
+          ] },
+          { title: '请求额度采集', description: '控制请求额度的异步整理和采集精度；修改后即时更新采集配置。', cards: [
+            { label: '采集状态', value: quotaValues.enabled ? '已启用' : '已关闭' },
+            { label: '采集模式', value: quotaValues.mode === 'strict' ? '请求前后精细采集' : '异步持久采集' },
+            { label: '最大尝试次数', value: quotaValues.max_tries },
+          ], rows: [
+            { label: `对账等待：${quotaValues.reconciliation_seconds} 秒` },
+            { label: `队列处理间隔：${quotaValues.worker_interval_ms} 毫秒` },
+            { label: `每批任务数：${quotaValues.batch_size} 个` },
+            { label: `任务租约：${quotaValues.lease_seconds} 秒`, detail: '工作进程处理任务时的锁定时长，超时后任务可重新领取。' },
+            ...(quotaResult.status === 'rejected' ? [{ label: `请求额度采集配置读取失败：${quotaResult.reason.message || '未知错误'}` }] : []),
+          ] },
           { title: 'Agent Web（密钥已脱敏）', rows: toRows(agent, agentResult.status === 'rejected' ? agentResult.reason : null) },
           { title: '数据保留', rows: toRows(retention, retentionResult.status === 'rejected' ? retentionResult.reason : null) },
           { title: '飞书登录（密钥已脱敏）', rows: toRows(feishu, feishuResult.status === 'rejected' ? feishuResult.reason : null) },
@@ -1633,12 +1659,47 @@ function createAdminPages(runtime) {
           { label: '从公网 URL 导入代理列表', run: async ctx => { const url = String(await ctx.ask('代理列表 URL', { description: '服务器将访问此公网地址；仅允许通过服务端 SSRF 校验的 URL，响应最多 1MB。' }) || '').trim(); if (!url) return; if (!await ctx.confirm('确认服务器访问代理列表 URL', `服务器将向该地址发起请求并读取代理列表：\\n${maskProxyUrl(url)}\\n请确认这是你信任的公网地址。`)) return; const result = await api('/api/admin/fetch-proxies-url', { method: 'POST', body: { url } }); const entries = runtime.adminProxyPoolDraft || proxyEntries; const seen = new Set(entries.map(entry => entry.url)); const imported = array(result.proxies).filter(value => !seen.has(value)); runtime.adminProxyPoolDraft = [...entries, ...imported.map((proxyUrl, index) => ({ id: `import-${Date.now()}-${index}`, url: proxyUrl, enabled: true }))]; await ctx.show('代理列表导入结果', `获取 ${Number(result.count || 0)} 个代理；新增 ${imported.length} 个，重复项已跳过。\n当前草稿共 ${runtime.adminProxyPoolDraft.length} 个。`); await ctx.refresh(); } },
           { label: '检测订阅地址', disabled: !subscriptionUrl && !runtime.adminProxyPoolSubscriptionDraft, run: async ctx => { const url = runtime.adminProxyPoolSubscriptionDraft ?? subscriptionUrl; if (!url) { await ctx.show('尚未配置订阅地址', '先编辑代理池并填写订阅地址。'); return; } if (!await ctx.confirm('确认检测订阅地址', `服务器将访问该地址以检查订阅是否返回代理：\\n${maskProxyUrl(url)}`)) return; const result = await api('/api/admin/fetch-proxies-url', { method: 'POST', body: { url } }); await ctx.show('订阅检测结果', result.count > 0 ? `订阅可用：检测到 ${result.count} 个代理。` : '订阅请求成功，但未找到有效代理。'); } },
           { label: '保存代理池设置', toolbar: true, disabled: generalResult.status === 'rejected', run: async ctx => { const entries = runtime.adminProxyPoolDraft || proxyEntries; const subUrl = runtime.adminProxyPoolSubscriptionDraft ?? subscriptionUrl; if (!await ctx.confirm('保存代理池设置', `订阅地址：${subUrl ? maskProxyUrl(subUrl) : '未配置'}\\n手动代理：${entries.length} 个\\n此全局配置只在供应商选择代理池模式并启用后生效。`)) return; await api('/api/admin/settings', { method: 'PUT', body: { proxy_pool_subscription_url: subUrl, proxy_pool_manual_proxies: entries } }); runtime.adminProxyPoolDraft = null; runtime.adminProxyPoolSubscriptionDraft = null; ctx.notify('代理池设置已保存。'); await ctx.refresh(); } },
-          { label: '编辑常规设置', run: async ctx => { const values = await ctx.form('编辑常规设置', [
-            { name: 'stats_refresh_interval_sec', label: '统计刷新间隔秒数（3-300）', value: String(general.stats_refresh_interval_sec || 10) },
-            { name: 'site_name', label: '系统名称', value: String(general.site_name || '') },
-            { name: 'model_list', label: '模型 ID 列表（逗号分隔）', value: Array.isArray(general.model_list) ? general.model_list.join(',') : '' },
-          ]); if (!values) return; const seconds = Number(values.stats_refresh_interval_sec); if (!Number.isInteger(seconds) || seconds < 3 || seconds > 300) { await ctx.show('刷新间隔无效', '刷新间隔需为 3 到 300 秒的整数。'); return; } const models = values.model_list.split(',').map(value => value.trim()).filter(Boolean); if (models.length && models.every(value => value === 'fusion')) { await ctx.show('模型列表无效', '至少保留一个非 Fusion 模型。'); return; } if (!await ctx.confirm('保存常规设置', `间隔 ${seconds} 秒\n系统名称：${values.site_name || '(空)'}\n模型数：${models.length}`)) return; await api('/api/admin/settings', { method: 'PUT', body: { stats_refresh_interval_sec: seconds, ...(values.site_name ? { site_name: values.site_name } : {}), model_list: models } }); ctx.notify('系统设置已保存。'); await ctx.refresh(); } },
-          { label: '编辑请求采集配置', run: async ctx => { const numericFields = new Set(['reconciliation_seconds', 'max_tries', 'worker_interval_ms', 'batch_size', 'lease_seconds']); const values = await ctx.form('编辑请求采集配置', Object.entries(quota).map(([name, value]) => ({ name, label: name, value: typeof value === 'boolean' ? value : String(value ?? ''), ...(typeof value === 'boolean' ? { type: 'boolean' } : {}) }))); if (!values) return; const body = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, numericFields.has(key) ? Number(value) : value])); if (!await ctx.confirm('保存请求采集配置', JSON.stringify(body))) return; await api('/api/admin/request-quota-config', { method: 'PUT', body }); ctx.notify('请求采集配置已保存。'); await ctx.refresh(); } },
+          { label: generalResult.status === 'rejected' ? '编辑常规设置（不可用）' : '编辑常规设置', disabled: generalResult.status === 'rejected', run: async ctx => {
+            const values = await ctx.form('编辑常规设置', [
+              { name: 'site_name', label: '系统名称', value: String(general.site_name || '') },
+              { name: 'defaultBalance', label: '默认新用户积分', value: String(general.defaultBalance ?? 1000) },
+              { name: 'defaultKeyExpiry', label: '默认 API Key 有效期（天）', value: String(general.defaultKeyExpiry ?? 30) },
+              { name: 'billing_mode', label: '计费模式', value: general.billing_mode || 'token', options: [{ value: 'token', label: '按 Token 用量计费' }, { value: 'rate', label: '按请求计费' }] },
+              { name: 'rate_price_per_request', label: '每次请求价格（积分，仅按请求计费时使用）', value: String(general.rate_price_per_request ?? 0.01) },
+              { name: 'stats_refresh_interval_sec', label: '统计自动刷新间隔（3-300 秒）', value: String(general.stats_refresh_interval_sec ?? 10) },
+              { name: 'login_report_enabled', label: '匿名登录状态上报', type: 'boolean', value: loginReportEnabled },
+              { name: 'stats_report_enabled', label: '匿名使用统计上报', type: 'boolean', value: statsReportEnabled },
+              { name: 'stats_report_granularity', label: '匿名上报粒度', value: statsGranularity, options: [{ value: 'detailed', label: '含模型与供应商明细' }, { value: 'counts', label: '仅聚合计数' }] },
+              { name: 'model_list', label: '可用模型 ID（每行一个；fusion 固定保留）', value: modelList.filter(value => value !== 'fusion').join('\n') },
+            ], { description: '登录/统计上报仅发送匿名数据；仅聚合计数不会包含模型和供应商名称。默认积分须为非负数；有效期填 0 表示不设默认到期时间。' });
+            if (!values) return;
+            const seconds = Number(values.stats_refresh_interval_sec), defaultBalance = Number(values.defaultBalance), defaultKeyExpiry = Number(values.defaultKeyExpiry), ratePrice = Number(values.rate_price_per_request);
+            if (!Number.isInteger(seconds) || seconds < 3 || seconds > 300 || !Number.isFinite(defaultBalance) || defaultBalance < 0 || !Number.isInteger(defaultKeyExpiry) || defaultKeyExpiry < 0 || !Number.isFinite(ratePrice) || ratePrice < 0) { await ctx.show('系统设置无效', '刷新间隔须为 3–300 秒整数；默认积分和请求价格须为非负数；Key 有效期须为非负整数。'); return; }
+            const models = [...new Set(String(values.model_list || '').split(/\r?\n/).map(value => value.trim()).filter(Boolean))];
+            if (models.some(value => value.toLowerCase() === 'fusion')) { await ctx.show('模型列表无效', 'fusion 为固定模型，无需填写；请删除该行后再保存。'); return; }
+            if (!models.length) { await ctx.show('模型列表无效', '至少保留一个非 Fusion 模型 ID。'); return; }
+            const body = { site_name: String(values.site_name || '').trim(), defaultBalance, defaultKeyExpiry, billing_mode: values.billing_mode === 'rate' ? 'rate' : 'token', rate_price_per_request: ratePrice, stats_refresh_interval_sec: seconds, login_report_enabled: values.login_report_enabled === true, stats_report_enabled: values.stats_report_enabled === true, stats_report_granularity: values.stats_report_granularity === 'counts' ? 'counts' : 'detailed', model_list: ['fusion', ...models] };
+            if (!await ctx.confirm('保存常规设置', `系统名称：${body.site_name || '未设置'}\n默认积分：${defaultBalance} · Key 有效期：${defaultKeyExpiry || '不设默认到期'} 天\n计费方式：${body.billing_mode === 'rate' ? `每请求 ${ratePrice} 积分` : '按 Token'}\n统计刷新：${seconds} 秒 · 可用模型 ${models.length} 个\n登录上报：${body.login_report_enabled ? '开启' : '关闭'} · 统计上报：${body.stats_report_enabled ? '开启' : '关闭'}（${body.stats_report_granularity === 'counts' ? '仅计数' : '含模型/供应商'}）`)) return;
+            await api('/api/admin/settings', { method: 'PUT', body }); ctx.notify('常规设置已保存。'); await ctx.refresh();
+          } },
+          { label: quotaResult.status === 'rejected' ? '编辑请求额度采集（不可用）' : '编辑请求额度采集', disabled: quotaResult.status === 'rejected', run: async ctx => {
+            const values = await ctx.form('编辑请求额度采集', [
+              { name: 'enabled', label: '启用逐请求额度采集', type: 'boolean', value: quotaValues.enabled === true },
+              { name: 'mode', label: '采集模式', value: quotaValues.mode, options: [{ value: 'async', label: '异步持久采集（请求返回更快）' }, { value: 'strict', label: '请求前后精细采集（增加查询延迟）' }] },
+              { name: 'reconciliation_seconds', label: '对账等待（秒，0-86400）', value: String(quotaValues.reconciliation_seconds) },
+              { name: 'max_tries', label: '最大采集尝试次数（1-20）', value: String(quotaValues.max_tries) },
+              { name: 'worker_interval_ms', label: '队列处理间隔（毫秒，500-60000）', value: String(quotaValues.worker_interval_ms) },
+              { name: 'batch_size', label: '每批任务数（1-100）', value: String(quotaValues.batch_size) },
+              { name: 'lease_seconds', label: '任务占用时长（秒，30-3600）', value: String(quotaValues.lease_seconds) },
+            ], { description: '异步模式将采集任务放入后台队列；精细模式会在请求前后采集，可能增加请求延迟。' });
+            if (!values) return;
+            const body = { enabled: values.enabled === true, mode: values.mode === 'strict' ? 'strict' : 'async', reconciliation_seconds: Number(values.reconciliation_seconds), max_tries: Number(values.max_tries), worker_interval_ms: Number(values.worker_interval_ms), batch_size: Number(values.batch_size), lease_seconds: Number(values.lease_seconds) };
+            const bounds = [['reconciliation_seconds', 0, 86400], ['max_tries', 1, 20], ['worker_interval_ms', 500, 60000], ['batch_size', 1, 100], ['lease_seconds', 30, 3600]];
+            const invalid = bounds.find(([key, min, max]) => !Number.isInteger(body[key]) || body[key] < min || body[key] > max);
+            if (invalid) { await ctx.show('请求采集配置无效', `${invalid[0]} 的有效范围为 ${invalid[1]}–${invalid[2]}，且必须为整数。`); return; }
+            if (!await ctx.confirm('保存请求额度采集', `状态：${body.enabled ? '启用' : '关闭'} · 模式：${body.mode === 'async' ? '异步持久采集' : '请求前后精细采集'}\n对账等待 ${body.reconciliation_seconds} 秒 · 最多尝试 ${body.max_tries} 次\n队列间隔 ${body.worker_interval_ms} 毫秒 · 每批 ${body.batch_size} 个任务 · 占用 ${body.lease_seconds} 秒`)) return;
+            await api('/api/admin/request-quota-config', { method: 'PUT', body }); ctx.notify('请求额度采集配置已保存。'); await ctx.refresh();
+          } },
           { label: '编辑 Agent Web 配置', run: async ctx => { const search = agent.search || {}; const fetch = agent.fetch || {}; const values = await ctx.form('编辑 Agent Web 配置', [
             { name: 'search_enabled', label: '启用联网搜索', type: 'boolean', value: search.enabled === true },
             { name: 'provider', label: '搜索提供方', value: search.provider || '', options: ['brave', 'tavily', 'exa', 'firecrawl'] },
