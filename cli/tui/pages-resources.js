@@ -731,35 +731,46 @@ function keysPage(runtime) {
         },
       };
       });
-      const totalRequests = allKeys.reduce((sum, key) => sum + Number(key.total_requests || 0), 0);
-      const totalTokens = allKeys.reduce((sum, key) => sum + Number(key.total_tokens || 0), 0);
-      const totalCost = allKeys.reduce((sum, key) => sum + Number(key.total_cost || 0), 0);
+      const ownedKeys = allKeys.filter(key => key.is_owner !== false);
+      const totalRequests = ownedKeys.reduce((sum, key) => sum + Number(key.total_requests || 0), 0);
+      const totalTokens = ownedKeys.reduce((sum, key) => sum + Number(key.total_tokens || 0), 0);
+      const totalCost = ownedKeys.reduce((sum, key) => sum + Number(key.total_cost || 0), 0);
       const tagRows = [{ label: `${activeTag ? '✓ ' : ''}全部标签`, run: async ctx => { runtime.apiKeyTagFilter = ''; await ctx.refresh(); } }, ...tags.map(tag => ({ label: `${String(tag.id) === String(activeTag) ? '✓ ' : ''}${tag.name}`, detail: `颜色 ${tag.color || '默认'}`, run: async ctx => { runtime.apiKeyTagFilter = String(tag.id); await ctx.refresh(); } }))];
+      const ownedRows = rows.filter((row, index) => keys[index]?.is_owner !== false);
+      const coKeyRows = rows.filter((row, index) => keys[index]?.is_owner === false);
+      const keyColumns = [
+        { key: 'name', label: '名称', ratio: 0.12 }, { key: 'masked_key', label: 'Key 掩码', ratio: 0.13 }, { key: 'status', label: '状态', ratio: 0.1 },
+        { key: 'model', label: '当前模型', ratio: 0.14 }, { key: 'requests', label: '请求数', ratio: 0.09 }, { key: 'tokens', label: 'Token 消耗', ratio: 0.1 },
+        { key: 'points', label: '积分消耗', ratio: 0.1 }, { key: 'expires', label: '有效期', ratio: 0.11 }, { key: 'actions', label: '操作', ratio: 0.11 },
+      ];
       return {
         sections: [
-          { title: '我的 Key 用量概览', cards: [
-            { label: '调用次数', value: totalRequests.toLocaleString() },
-            { label: 'Token 消耗', value: formatBigNumber(totalTokens) },
-            { label: '成本', value: formatCost(totalCost) },
+          { title: '我的 Key 用量概览', description: '仅统计由你创建的 API Key；不包含其他用户共享给你的 Co-Key。', cards: [
+            { label: '我的 Key 调用次数', value: totalRequests.toLocaleString() },
+            { label: '我的 Key Token 消耗', value: formatBigNumber(totalTokens) },
+            { label: '我的 Key 积分消耗', value: formatCost(totalCost), detail: '积分' },
           ] },
           { title: '标签筛选', rows: tagRows },
           {
-            title: 'API Key',
+            title: '我创建的 API Key',
             toolbar: true,
             tableMinWidth: 128,
-            columns: [
-              { key: 'name', label: '名称', ratio: 0.12 }, { key: 'masked_key', label: 'Key 掩码', ratio: 0.13 }, { key: 'status', label: '状态', ratio: 0.1 },
-              { key: 'model', label: '当前模型', ratio: 0.14 }, { key: 'requests', label: '请求数', ratio: 0.09 }, { key: 'tokens', label: 'Token 消耗', ratio: 0.1 },
-              { key: 'points', label: '积分消耗', ratio: 0.1 }, { key: 'expires', label: '有效期', ratio: 0.11 }, { key: 'actions', label: '操作', ratio: 0.11 },
-            ],
-            description: `可搜索名称、模型、标签和成员；共享 Key 的原始值受权限限制。显示 ${keys.length}/${allKeys.length}${activeTag ? ` · 标签 ${tags.find(tag => String(tag.id) === String(activeTag))?.name || activeTag}` : ''}${keySearch ? ` · 搜索 ${keySearch}` : ''}`,
+            columns: keyColumns,
+            description: `仅显示由你创建的密钥 · ${ownedRows.length}/${ownedKeys.length}${activeTag ? ` · 标签 ${tags.find(tag => String(tag.id) === String(activeTag))?.name || activeTag}` : ''}${keySearch ? ` · 搜索 ${keySearch}` : ''}`,
             cards: [
-              { label: '总数', value: allKeys.length, detail: '当前账号可见' },
-              { label: '显示', value: keys.length, detail: '当前筛选' },
-              { label: '启用', value: keys.filter(key => key.enabled !== false).length, detail: '可用 Key' },
-              { label: '停用', value: keys.filter(key => key.enabled === false).length, detail: '不可调用' },
+              { label: '创建数', value: ownedKeys.length },
+              { label: '当前显示', value: ownedRows.length, detail: '当前搜索与标签筛选' },
+              { label: '已启用', value: ownedKeys.filter(key => key.enabled !== false).length },
+              { label: '已停用', value: ownedKeys.filter(key => key.enabled === false).length },
             ],
-            rows: rows.length ? rows : [{ label: '暂无 API Key。' }],
+            rows: ownedRows.length ? ownedRows : [{ label: ownedKeys.length ? '没有符合当前搜索或标签条件的 API Key。' : '暂无由你创建的 API Key。' }],
+          },
+          {
+            title: '共享给我的 Co-Key',
+            tableMinWidth: 128,
+            columns: keyColumns,
+            description: `由其他用户创建并共享给你 · ${coKeyRows.length}/${allKeys.filter(key => key.is_owner === false).length}`,
+            rows: coKeyRows.length ? coKeyRows : [{ label: allKeys.some(key => key.is_owner === false) ? '没有符合当前搜索或标签条件的 Co-Key。' : '暂无共享给你的 Co-Key。' }],
           },
           {
             title: 'OAuth 授权',
