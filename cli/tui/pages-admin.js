@@ -1686,7 +1686,16 @@ function createAdminPages(runtime) {
             ...(agentResult.status === 'rejected' ? [{ label: `Agent Web 配置读取失败：${agentResult.reason.message || '未知错误'}` }] : []),
           ] },
           { title: '数据保留', rows: toRows(retention, retentionResult.status === 'rejected' ? retentionResult.reason : null) },
-          { title: '飞书登录（密钥已脱敏）', rows: toRows(feishu, feishuResult.status === 'rejected' ? feishuResult.reason : null) },
+          { title: '飞书登录', description: '使用飞书企业账号登录；App Secret 不会在 TUI 中回显。', cards: [
+            { label: '飞书登录', value: feishu.enabled === true ? '已启用' : '已关闭' },
+            { label: 'App ID', value: feishu.appId || '未配置' },
+            { label: 'App Secret', value: feishu.hasAppSecret ? '已配置（隐藏）' : '未配置' },
+            { label: '企业限制', value: feishu.tenantKey ? '仅允许指定企业' : '不限制企业' },
+          ], rows: [
+            { label: `配置来源：${feishu.source === 'config' ? '配置文件/环境变量（尚未保存到后台）' : feishu.source === 'settings' ? '后台数据库设置' : '未知'}` },
+            { label: 'OAuth 回调地址', detail: feishu.redirectUri || '未生成', run: async ctx => { if (!feishu.redirectUri) return; await ctx.show('飞书 OAuth 回调地址', `${feishu.redirectUri}\n请将此地址配置到飞书开放平台应用的重定向 URL 中；TUI 不访问系统剪贴板。`); } },
+            ...(feishuResult.status === 'rejected' ? [{ label: `飞书配置读取失败：${feishuResult.reason.message || '未知错误'}` }] : []),
+          ] },
         ], actions: [
           { label: generalResult.status === 'rejected' ? '编辑代理池（设置读取失败）' : '编辑代理池', disabled: generalResult.status === 'rejected', run: async ctx => { const values = await ctx.form('编辑代理池', [
             { name: 'subscriptionUrl', label: '订阅地址（留空表示不使用订阅）', value: subscriptionUrl },
