@@ -1253,12 +1253,15 @@ function createAdminPages(runtime) {
     {
       id: 'settings', label: '设置', description: '个人资料、API 签名及网页专属设置状态。',
       async load(api) {
-        const [signature, profile, pluginOptinResult, hookResult] = await Promise.allSettled([api('/api/user/signature'), api('/auth/me'), api('/api/user/plugin-pref-optin'), api('/api/user/hook-notify-rules')]);
+        const [signature, profile, pluginOptinResult, hookResult, notificationResult, notificationsResult] = await Promise.allSettled([api('/api/user/signature'), api('/auth/me'), api('/api/user/plugin-pref-optin'), api('/api/user/hook-notify-rules'), api('/api/user/notification-settings'), api('/api/user/notifications', { query: { limit: 50 } })]);
         const signatureData = signature.status === 'fulfilled' ? signature.value : {};
         const user = profile.status === 'fulfilled' ? profile.value : {};
         const pluginOptedIn = pluginOptinResult.status === 'fulfilled' && pluginOptinResult.value?.optedIn === true;
         const hookSettings = hookResult.status === 'fulfilled' ? hookResult.value : {};
         const hookSelection = hookSettings.selection || { harnesses: [], eventTypes: [] };
+        const notificationSettings = notificationResult.status === 'fulfilled' ? notificationResult.value : {};
+        const notifications = notificationsResult.status === 'fulfilled' ? array(notificationsResult.value) : [];
+        const unreadNotifications = notifications.filter(item => !item.read_at).length;
         const harnessNames = { claude_code: 'Claude Code', codex: 'Codex', grok: 'Grok', opencode: 'OpenCode', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw', deepseek_harness: 'DeepSeek Harness' };
         const hookEventNames = { session_start: '会话开始', session_end: '会话结束', tool_use: '工具调用' };
         return { sections: [
@@ -1268,6 +1271,13 @@ function createAdminPages(runtime) {
             { label: `头像：${user.avatar ? '已设置' : '未设置'}`, detail: '头像上传需要网页文件选择器。' },
             ...(profile.status === 'rejected' ? [{ label: profile.reason.message || '账户资料暂不可用' }] : []),
           ] },
+          { title: '通知', description: '网页端支持 Bark 推送设置和站内通知管理。', rows: [
+            { label: `Bark 通知：${notificationSettings.barkEnabled === true ? '已开启' : '已关闭'}`, detail: `Server Key：${notificationSettings.barkServerKey ? '已配置（不显示密钥）' : '未配置'} · 服务地址：${notificationSettings.barkEndpoint || 'https://api.day.app'}` },
+            { label: `通知偏好：额度不足${notificationSettings.notifyQuota === false ? '关闭' : '开启'} · 请求异常${notificationSettings.notifyErrors === false ? '关闭' : '开启'}` },
+            { label: `站内通知：${notifications.length} 条（未读 ${unreadNotifications} 条）`, detail: notificationsResult.status === 'rejected' ? `通知列表读取失败：${notificationsResult.reason.message || '未知错误'}` : '当前仅汇总最近 50 条。' },
+            ...(notificationResult.status === 'rejected' ? [{ label: `通知设置读取失败：${notificationResult.reason.message || '未知错误'}` }] : []),
+          ] },
+          { title: '我的通知', rows: notifications.length ? notifications.map(item => ({ label: `${item.read_at ? '已读' : '未读'} · ${item.title || '通知'}`, detail: `${item.body || ''}${item.created_at ? ` · ${formatTime(item.created_at)}` : ''}` })) : [{ label: notificationsResult.status === 'rejected' ? '站内通知暂不可用。' : '暂无通知。' }] },
           { title: 'API 签名', description: '签名会按用户设置注入 AI 回复；API Key 可单独继承或覆盖。', rows: [
             { label: `AI 回复签名：${signatureData.enabled ? '已启用' : '已关闭'}` },
             { label: '签名模板', detail: text(signatureData.template, '未设置模板') },
@@ -1292,6 +1302,21 @@ function createAdminPages(runtime) {
           { label: pluginOptedIn ? '关闭插件偏好授权' : '允许插件读取我的偏好', disabled: pluginOptinResult.status === 'rejected', run: async ctx => { if (pluginOptinResult.status === 'rejected') return; const enabled = !pluginOptedIn; if (!await ctx.confirm(enabled ? '允许插件读取偏好' : '撤销插件偏好授权', enabled ? '拥有 preferences:read 权限的已安装插件将可以读取你的界面偏好。' : '插件将立即失去读取界面偏好的权限。')) return; await api('/api/user/plugin-pref-optin', { method: 'PUT', body: { enabled } }); ctx.notify(enabled ? '插件偏好读取已授权。' : '插件偏好授权已撤销。'); await ctx.refresh(); } },
           { label: hookSettings.pushEnabled ? '关闭事件推送' : '开启事件推送', disabled: hookResult.status === 'rejected', run: async ctx => { if (hookResult.status === 'rejected') return; const enabled = hookSettings.pushEnabled !== true; if (!await ctx.confirm(enabled ? '开启事件推送' : '关闭事件推送', enabled ? '已选择的客户端事件将推送到站内通知；Bark 推送还需配置并开启 Bark。' : '客户端上报事件将不再触发通知。')) return; await api('/api/user/hook-notify-rules/push-enabled', { method: 'PUT', body: { enabled } }); ctx.notify(enabled ? '事件推送已开启。' : '事件推送已关闭。'); await ctx.refresh(); } },
           { label: '选择事件推送范围', disabled: hookResult.status === 'rejected', run: async ctx => { if (hookResult.status === 'rejected') return; const harnesses = ['claude_code', 'codex', 'grok', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness']; const events = ['session_start', 'session_end', 'tool_use']; const selectedHarnesses = new Set(hookSelection.harnesses || []); const selectedEvents = new Set(hookSelection.eventTypes || []); const selectSet = async (title, values, selected, labels) => { while (true) { const value = await ctx.choose(title, [...values.map(id => ({ label: `${selected.has(id) ? '☑' : '☐'} ${labels[id] || id}`, value: id })), { label: `完成选择（${selected.size} 项）`, value: '__done__' }], { description: '不选择任何项表示全部。' }); if (value === null) return false; if (value === '__done__') return true; if (selected.has(value)) selected.delete(value); else selected.add(value); } }; if (!await selectSet('选择接收事件的客户端', harnesses, selectedHarnesses, harnessNames)) return; if (!await selectSet('选择要推送的事件', events, selectedEvents, hookEventNames)) return; const nextHarnesses = [...selectedHarnesses]; const nextEvents = [...selectedEvents]; if (!await ctx.confirm('保存事件推送范围', `客户端：${nextHarnesses.length ? nextHarnesses.map(value => harnessNames[value]).join('、') : '全部'}\n事件：${nextEvents.length ? nextEvents.map(value => hookEventNames[value]).join('、') : '全部支持事件'}`)) return; await api('/api/user/hook-notify-rules/selection', { method: 'PUT', body: { harnesses: nextHarnesses, eventTypes: nextEvents } }); ctx.notify('事件推送范围已保存。'); await ctx.refresh(); } },
+          { label: notificationResult.status === 'rejected' ? '编辑通知设置（不可用）' : '编辑通知设置', disabled: notificationResult.status === 'rejected', run: async ctx => {
+            const values = await ctx.form('编辑通知设置', [
+              { name: 'barkEnabled', label: '启用 Bark 通知', type: 'boolean', value: notificationSettings.barkEnabled === true },
+              { name: 'barkServerKey', label: 'Bark Server Key（留空保持现有）', secret: true, value: '' },
+              { name: 'barkEndpoint', label: 'Bark 服务地址', value: notificationSettings.barkEndpoint || 'https://api.day.app' },
+              { name: 'notifyQuota', label: '额度不足通知', type: 'boolean', value: notificationSettings.notifyQuota !== false },
+              { name: 'notifyErrors', label: '请求异常通知', type: 'boolean', value: notificationSettings.notifyErrors !== false },
+            ], { description: `${notificationSettings.barkServerKey ? 'Server Key 已配置；留空会保留现有密钥。' : '尚未配置 Server Key。'}站内通知开关与 Bark 开关分别生效。` });
+            if (!values) return;
+            if (!await ctx.confirm('保存通知设置', `Bark：${values.barkEnabled ? '开启' : '关闭'} · 额度通知：${values.notifyQuota ? '开启' : '关闭'} · 异常通知：${values.notifyErrors ? '开启' : '关闭'}\nServer Key：${values.barkServerKey ? '将更新' : '保持现状'}`)) return;
+            await api('/api/user/notification-settings', { method: 'PUT', body: { barkEnabled: values.barkEnabled === true, ...(values.barkServerKey ? { barkServerKey: values.barkServerKey } : {}), barkEndpoint: values.barkEndpoint, notifyQuota: values.notifyQuota === true, notifyErrors: values.notifyErrors === true } });
+            ctx.notify('通知设置已保存。'); await ctx.refresh();
+          } },
+          { label: '发送测试 Bark 通知', disabled: notificationResult.status === 'rejected' || notificationSettings.barkEnabled !== true || !notificationSettings.barkServerKey, run: async ctx => { if (!await ctx.confirm('发送测试 Bark 通知', `将通过已配置的 Bark 服务发送一条测试消息到设备。\n服务地址：${notificationSettings.barkEndpoint || 'https://api.day.app'}`)) return; const result = await api('/api/user/notification-settings/test', { method: 'POST' }); await ctx.show('测试 Bark 通知', result.message || '测试通知已发送。'); } },
+          { label: '清空站内通知', disabled: notifications.length === 0 || notificationsResult.status === 'rejected', run: async ctx => { if (!await ctx.confirm('清空站内通知', `将删除服务器保存的站内通知（当前最近 50 条中 ${notifications.length} 条）。此操作不可恢复。`)) return; await api('/api/user/notifications', { method: 'DELETE' }); ctx.notify('站内通知已清空。'); await ctx.refresh(); } },
           { label: '编辑 API 签名', run: async ctx => {
             const values = await ctx.form('编辑 API 签名', [
               { name: 'enabled', label: '启用 AI 回复签名', type: 'boolean', value: signatureData.enabled === true },
