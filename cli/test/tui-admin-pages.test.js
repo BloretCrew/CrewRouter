@@ -34,6 +34,35 @@ test('admin user edits confirm before sending profile and quota fields', async (
   assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
 });
 
+test('admin retention page mirrors web thresholds, validates saves and runs preview tasks', async () => {
+  const calls = [];
+  const config = { compress_days: 30, compress_size_gb: 10, purge_days: 90, purge_size_gb: 20, provider_quota_days: 60, agg_enabled: true };
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/admin/retention-config') return config;
+    if (path === '/api/admin/retention/run-compress') return { taskId: 'task-1', status: 'queued' };
+    if (path === '/api/admin/retention/tasks/task-1') return { status: 'completed', result: { compressed: 0 } };
+    return {};
+  };
+  const page = pageById('admin-retention');
+  const data = await page.load(api);
+  assert.deepEqual(data.sections.map(section => section.title), ['压缩阈值', '清除阈值', '其他保留配置', '任务状态']);
+  assert.ok(data.sections[0].rows[0].label.includes('30 天'));
+  const edit = data.actions.find(action => action.label === '编辑保留配置');
+  const values = { ...config };
+  await edit.run({ form: async () => values, confirm: async () => true, notify() {}, refresh: async () => {} });
+  const save = calls.find(call => call.path === '/api/admin/retention-config' && call.options.method === 'PUT');
+  assert.deepEqual(save.options.body, config);
+
+  let result = '';
+  await data.actions.find(action => action.label === '预览压缩（dry-run）').run({ confirm: async () => false, show: async (_title, body) => { result = body; } });
+  assert.ok(calls.some(call => call.path === '/api/admin/retention/run-compress' && call.options.body.dry_run === true));
+  assert.match(result, /compressed/);
+  calls.length = 0;
+  await data.actions.find(action => action.label === '立即执行清除').run({ confirm: async () => false, show: async () => {} });
+  assert.equal(calls.length, 0, 'destructive purge must not start when confirmation is declined');
+});
+
 test('admin model management presents web columns, selects web filters and avoids raw JSON details', async () => {
   const calls = [];
   const model = { id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Provider One', series: 'S', enabled: true, input_price_per_1k_tokens: 0.1, output_price_per_1k_tokens: 0.2, cached_output_price_per_1k_tokens: 0.05, reference_input_price_per_1k_tokens: 0.3, reference_output_price_per_1k_tokens: 0.4, model_multiplier: 1.2, completion_multiplier: 1.3, rate_limit_rpm: 10, rate_limit_tpm: 100, test_ok: true, test_latency_ms: 25 };

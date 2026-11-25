@@ -37,6 +37,21 @@ const clientSourceLabel = value => ({ claude_code: 'Claude Code', codex: 'Codex'
 const itemsOf = payload => Array.isArray(payload) ? payload : array(payload && (payload.items || payload.records || payload.data));
 const display = (...values) => values.map(value => String(value || '').trim()).filter(Boolean).join(' · ');
 
+async function runRetentionTask(api, ctx, kind, dryRun) {
+  const label = kind === 'compress' ? '压缩' : '清除';
+  if (!dryRun && !await ctx.confirm(`立即执行数据${label}`, '此操作可能修改或删除历史数据。确认启动任务？')) return;
+  const started = await api(`/api/admin/retention/run-${kind}`, { method: 'POST', body: { dry_run: dryRun } });
+  if (!started?.taskId) { await ctx.show('任务未启动', '服务端未返回任务编号。'); return; }
+  await ctx.show('保留任务已启动', `任务编号：${started.taskId}\n状态：${started.status || 'queued'}\n${dryRun ? '这是预览任务，不会修改数据。' : '请等待任务完成；执行期间同一实例不能启动其他保留任务。'}`);
+  for (let attempt = 0; attempt < 600; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const task = await api(`/api/admin/retention/tasks/${encodeURIComponent(started.taskId)}`);
+    if (task.status === 'completed') { await ctx.show(`数据${label}任务完成`, JSON.stringify(task.result || {}, null, 2)); return; }
+    if (task.status === 'failed') { await ctx.show(`数据${label}任务失败`, task.error?.message || task.error?.code || '未知错误'); return; }
+  }
+  await ctx.show('任务仍在执行', `任务编号：${started.taskId}\n超过 10 分钟未完成；可稍后刷新或重试查看状态。`);
+}
+
 function createAdminPages(runtime) {
   const adminOnly = page => ({ ...page, async load(api) {
     if (runtime.client.isAdmin !== true) {
@@ -1212,10 +1227,41 @@ function createAdminPages(runtime) {
       },
     }),
     adminOnly({
-      id: 'admin-retention', label: '数据保留', description: '数据保留规则只读概览；立即压缩/清除任务不在 TUI 快捷执行。',
+      id: 'admin-retention', label: '数据保留', description: '配置数据压缩、清除与聚合，并可预览或启动保留任务。',
       async load(api) {
         const data = await api('/api/admin/retention-config');
-        return { sections: [{ title: '数据保留配置', rows: Object.entries(data || {}).map(([key, value]) => ({ label: `${key}：${typeof value === 'boolean' ? (value ? '启用' : '关闭') : value}` })) }, { title: '任务状态', rows: [{ label: '任务状态只在网页管理后台启动任务后显示；CLI 不会触发数据清理。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+        const values = data || {};
+        const fields = [
+          ['compress_days', '压缩天数'], ['compress_size_gb', '压缩大小（GB）'],
+          ['purge_days', '清除天数'], ['purge_size_gb', '清除大小（GB）'],
+          ['provider_quota_days', '供应商额度明细保留天数'],
+        ];
+        const describe = (key, value) => key === 'agg_enabled' ? (value ? '启用' : '关闭') : `${value}${key.endsWith('_gb') ? ' GB' : ' 天'}`;
+        return { sections: [
+          { title: '压缩阈值', rows: [{ label: `按时间：${describe('compress_days', values.compress_days)}` }, { label: `按表大小：${describe('compress_size_gb', values.compress_size_gb)}` }, { label: '说明：任一阈值达到即触发；0 表示禁用该条件。' }] },
+          { title: '清除阈值', rows: [{ label: `按时间：${describe('purge_days', values.purge_days)}` }, { label: `按表大小：${describe('purge_size_gb', values.purge_size_gb)}` }, { label: '说明：任一阈值达到即触发；删除阈值为 0 时永不删除。' }] },
+          { title: '其他保留配置', rows: [{ label: `${fields[4][1]}：${describe('provider_quota_days', values.provider_quota_days)}` }, { label: `每日聚合：${describe('agg_enabled', values.agg_enabled)}` }] },
+          { title: '任务状态', rows: [{ label: '任务启动后可查看返回的结果；同一实例已有保留任务运行时，新任务会被拒绝。' }] },
+        ], actions: [
+          { label: '编辑保留配置', run: async ctx => {
+            const formFields = fields.map(([name, label]) => ({ name, label, value: String(values[name] ?? 0) }));
+            formFields.push({ name: 'agg_enabled', label: '启用每日聚合', type: 'boolean', value: values.agg_enabled === true });
+            const form = await ctx.form('编辑数据保留配置', formFields, { description: '压缩/清除按时间或表大小任一条件触发；0 可禁用条件。' });
+            if (!form) return;
+            const parsed = {};
+            for (const [name, label] of fields) { const value = Number(form[name]); if (!Number.isInteger(value) || value < 0 || value > 3650 && name !== 'compress_size_gb' && name !== 'purge_size_gb' || (name.endsWith('_gb') && value > 1024)) { await ctx.show('配置无效', `${label} 必须是允许范围内的非负整数。`); return; } parsed[name] = value; }
+            if (parsed.compress_days && parsed.purge_days && parsed.compress_days >= parsed.purge_days) { await ctx.show('配置无效', '压缩天数必须小于清除天数。'); return; }
+            if (parsed.compress_size_gb && parsed.purge_size_gb && parsed.compress_size_gb >= parsed.purge_size_gb) { await ctx.show('配置无效', '压缩大小必须小于清除大小。'); return; }
+            parsed.agg_enabled = form.agg_enabled === true;
+            if (!await ctx.confirm('保存数据保留配置', `压缩：${parsed.compress_days} 天 / ${parsed.compress_size_gb} GB\n清除：${parsed.purge_days} 天 / ${parsed.purge_size_gb} GB\n供应商额度明细：${parsed.provider_quota_days} 天\n每日聚合：${parsed.agg_enabled ? '启用' : '关闭'}`)) return;
+            await api('/api/admin/retention-config', { method: 'PUT', body: parsed }); ctx.notify('数据保留配置已保存。'); await ctx.refresh();
+          } },
+          ...[['compress', '压缩'], ['purge', '清除']].flatMap(([kind, label]) => [
+            { label: `预览${label}（dry-run）`, run: ctx => runRetentionTask(api, ctx, kind, true) },
+            { label: `立即执行${label}`, run: ctx => runRetentionTask(api, ctx, kind, false) },
+          ]),
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
       },
     }),
     adminOnly({
