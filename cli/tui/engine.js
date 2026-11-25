@@ -291,7 +291,7 @@ async function runPagedTui({
         }
         const sectionActions = Array.isArray(section.actions) ? section.actions : [];
         if (section.toolbar === true && toolbarActions.length || sectionActions.length) {
-          addSpans([{ text: '▸ ', fg: 'rose' }, { text: section.title === '搜索与筛选' ? '筛选操作' : '常用操作', fg: 'dim', bold: true }], 'heading', null, 0);
+          addSpans([{ text: '▸ ', fg: 'rose' }, { text: section.toolbarLabel || (section.title === '搜索与筛选' ? '筛选操作' : '常用操作'), fg: 'dim', bold: true }], 'heading', null, 0);
           for (const action of [...(section.toolbar === true ? toolbarActions : []), ...sectionActions]) add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
         }
         const columns = Array.isArray(section.columns) ? section.columns : [];

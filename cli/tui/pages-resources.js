@@ -346,7 +346,7 @@ function myUpstreamPage(runtime) {
       };
       return {
         sections: [
-          { title: '供应商', tab: 'providers', toolbar: true, tableMinWidth: 112, columns: [
+          { title: '供应商', tab: 'providers', toolbar: true, toolbarLabel: '搜索、筛选与操作', tableMinWidth: 112, columns: [
             { key: 'name', label: '名称', ratio: 0.16 }, { key: 'base_url', label: 'Base URL', ratio: 0.24 }, { key: 'format', label: '格式', ratio: 0.12 },
             { key: 'status', label: '状态', ratio: 0.1 }, { key: 'ping', label: '延迟', ratio: 0.1 }, { key: 'model_count', label: '模型数', ratio: 0.1 }, { key: 'actions', label: '操作', ratio: 0.18 },
           ], description: `${visibleProviders.length}/${providers.length} 个供应商 · 状态：${providerStatus === 'all' ? '全部' : providerStatus === 'enabled' ? '已启用' : '已禁用'}${providerQuery ? ` · 搜索 ${providerQuery}` : ''}`, cards: [

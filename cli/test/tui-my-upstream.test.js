@@ -53,7 +53,7 @@ test('my provider table places toolbar after stats and before web column headers
     await until(() => tty.screen().includes('Personal'));
     const screen = tty.screen();
     const stats = screen.indexOf('我的供应商');
-    const toolbar = screen.indexOf('常用操作');
+    const toolbar = screen.indexOf('搜索、筛选与操作');
     const header = screen.indexOf('名称');
     assert.ok(stats >= 0 && stats < toolbar && toolbar < header, 'provider layout must be stats → toolbar → table');
     for (const column of ['名称', 'Base URL', '格式', '状态', '延迟', '模型数', '操作']) assert.ok(screen.includes(column), `provider column missing: ${column}`);
