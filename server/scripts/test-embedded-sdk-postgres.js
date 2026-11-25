@@ -32,7 +32,7 @@ async function main() {
     features: ['gateway', 'management', 'events'],
     console: false,
     migrate: true,
-    backgroundTasks: false,
+    backgroundTasks: true,
     plugins: false,
     store: false,
     handleSignals: false,
