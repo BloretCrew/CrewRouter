@@ -110,7 +110,7 @@ function providersPage(runtime) {
 
 function personalModelDetail(model) {
   const item = model || {};
-  const price = value => `${value == null ? '—' : value} 积分/千Token`;
+  const price = value => `${value == null ? '—' : value} 人民币/千Token`;
   return [
     `显示名称：${item.alias || item.name || '未命名'}`, `上游模型ID：${item.upstream_model_id || item.name || item.id || '—'}`,
     `所属供应商：${item.provider_name || item.provider || '未知'}`, `模型系列：${item.series || '无'}`,
@@ -126,7 +126,7 @@ function personalModelDetail(model) {
 }
 
 function myUpstreamPage(runtime) {
-  const updateLabels = { enabled: '启用状态', input_price_per_1k_tokens: '输入价格（每 1,000 个 Token）', output_price_per_1k_tokens: '输出价格（每 1,000 个 Token）', cached_output_price_per_1k_tokens: '缓存输出价格（每 1,000 个 Token）', series: '模型系列', description: '模型说明', alias: '显示名称/别名' };
+  const updateLabels = { enabled: '启用状态', input_price_per_1k_tokens: '输入价格（人民币/1,000 Token）', output_price_per_1k_tokens: '输出价格（人民币/1,000 Token）', cached_output_price_per_1k_tokens: '缓存输出价格（人民币/1,000 Token）', series: '模型系列', description: '模型说明', alias: '显示名称/别名' };
   const modelMultiplierLabel = value => `计费倍率 ×${Number(value || 1).toFixed(2)}`;
   const describeUpdates = updates => Object.entries(updates).map(([name, value]) => `${updateLabels[name] || name}：${name === 'enabled' ? (value ? '启用' : '停用') : value}`).join('\n');
   return {
@@ -241,14 +241,14 @@ function myUpstreamPage(runtime) {
         if (action === 'enable' || action === 'disable') updates.enabled = action === 'enable';
         else {
           const fieldOptions = [
-            { label: '启用状态', value: 'enabled' }, { label: '输入价格 / 1,000 个 Token', value: 'input_price_per_1k_tokens' }, { label: '输出价格 / 1,000 个 Token', value: 'output_price_per_1k_tokens' },
-            { label: '缓存输出价格 / 1,000 个 Token', value: 'cached_output_price_per_1k_tokens' }, { label: '系列', value: 'series' }, { label: '说明', value: 'description' }, { label: '显示名称/别名', value: 'alias' }, { label: '完成字段选择', value: '__done__' },
+            { label: '启用状态', value: 'enabled' }, { label: '输入价格（人民币/1,000 Token）', value: 'input_price_per_1k_tokens' }, { label: '输出价格（人民币/1,000 Token）', value: 'output_price_per_1k_tokens' },
+            { label: '缓存输出价格（人民币/1,000 Token）', value: 'cached_output_price_per_1k_tokens' }, { label: '系列', value: 'series' }, { label: '说明', value: 'description' }, { label: '显示名称/别名', value: 'alias' }, { label: '完成字段选择', value: '__done__' },
           ];
           while (true) {
             const field = await ctx.choose('选择供应商模型更新字段', fieldOptions, { description: '可添加多个字段；未选择字段保持不变。' });
             if (!field || field === '__done__') break;
             if (field === 'enabled') { const value = await ctx.choose('设置模型状态', [{ label: '启用', value: true }, { label: '停用', value: false }]); if (value !== null) updates.enabled = value; continue; }
-            const labels = { input_price_per_1k_tokens: '输入价格（每 1,000 个 Token）', output_price_per_1k_tokens: '输出价格（每 1,000 个 Token）', cached_output_price_per_1k_tokens: '缓存输出价格（每 1,000 个 Token）', series: '系列名称', description: '模型说明', alias: '显示名称/别名' };
+            const labels = { input_price_per_1k_tokens: '输入价格（人民币/1,000 Token）', output_price_per_1k_tokens: '输出价格（人民币/1,000 Token）', cached_output_price_per_1k_tokens: '缓存输出价格（人民币/1,000 Token）', series: '系列名称', description: '模型说明', alias: '显示名称/别名' };
             const value = await ctx.ask(labels[field], { description: field.endsWith('_price_per_1k_tokens') ? '请输入大于或等于 0 的数字。' : '留空会清除此字段。' });
             if (value === null) continue;
             if (field.endsWith('_price_per_1k_tokens')) { if (!String(value).trim() || !Number.isFinite(Number(value)) || Number(value) < 0) { await ctx.show('价格无效', '请输入大于或等于 0 的数字。'); continue; } updates[field] = Number(value); }
@@ -319,7 +319,7 @@ function myUpstreamPage(runtime) {
         }
         const fieldOptions = [
           { label: '设置启用状态', value: 'enabled' }, { label: '设置系列', value: 'series' }, { label: '设置说明', value: 'description' },
-          { label: '设置显示名称/别名', value: 'alias' }, { label: '设置输入价格 / 1,000 个 Token', value: 'input_price_per_1k_tokens' }, { label: '设置输出价格 / 1,000 个 Token', value: 'output_price_per_1k_tokens' },
+          { label: '设置显示名称/别名', value: 'alias' }, { label: '设置输入价格（人民币/千Token）', value: 'input_price_per_1k_tokens' }, { label: '设置输出价格（人民币/千Token）', value: 'output_price_per_1k_tokens' },
           { label: '完成字段选择', value: '__done__' },
         ];
         const updates = {};
@@ -330,7 +330,7 @@ function myUpstreamPage(runtime) {
             const enabled = await ctx.choose('模型启用状态', [{ label: '启用', value: true }, { label: '停用', value: false }]);
             if (enabled !== null) updates.enabled = enabled;
           } else {
-            const labels = { series: '系列名称', description: '模型说明', alias: '显示名称/别名', input_price_per_1k_tokens: '输入价格（每 1,000 个 Token）', output_price_per_1k_tokens: '输出价格（每 1,000 个 Token）' };
+            const labels = { series: '系列名称', description: '模型说明', alias: '显示名称/别名', input_price_per_1k_tokens: '输入价格（人民币/1,000 Token）', output_price_per_1k_tokens: '输出价格（人民币/1,000 Token）' };
             const value = await ctx.ask(labels[field], { description: '留空将清空此字段（价格除外）。' });
             if (value === null) continue;
             if (field.endsWith('_price_per_1k_tokens')) {
@@ -375,11 +375,11 @@ function myUpstreamPage(runtime) {
                 { name: 'upstream_model_id', label: '上游模型 ID', value: item.upstream_model_id || item.name || item.id },
                 { name: 'alias', label: '显示名称/别名', value: item.alias || '' }, { name: 'description', label: '说明', value: item.description || '' },
                 { name: 'series', label: '系列', value: item.series || '' }, { name: 'enabled', label: '启用模型', type: 'boolean', value: item.enabled !== false },
-                { name: 'input_price_per_1k_tokens', label: '输入价格 / 1,000 个 Token', value: String(item.input_price_per_1k_tokens || 0) },
-                { name: 'output_price_per_1k_tokens', label: '输出价格 / 1,000 个 Token', value: String(item.output_price_per_1k_tokens || 0) },
-                { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格 / 1,000 个 Token', value: String(item.cached_output_price_per_1k_tokens || 0) },
-                { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格 / 1,000 Token', value: String(item.reference_input_price_per_1k_tokens || 0) },
-                { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格 / 1,000 Token', value: String(item.reference_output_price_per_1k_tokens || 0) },
+                { name: 'input_price_per_1k_tokens', label: '输入价格（人民币/1,000 Token）', value: String(item.input_price_per_1k_tokens || 0) },
+                { name: 'output_price_per_1k_tokens', label: '输出价格（人民币/1,000 Token）', value: String(item.output_price_per_1k_tokens || 0) },
+                { name: 'cached_output_price_per_1k_tokens', label: '缓存输出价格（人民币/1,000 Token）', value: String(item.cached_output_price_per_1k_tokens || 0) },
+                { name: 'reference_input_price_per_1k_tokens', label: '参考输入价格（人民币/1,000 Token）', value: String(item.reference_input_price_per_1k_tokens || 0) },
+                { name: 'reference_output_price_per_1k_tokens', label: '参考输出价格（人民币/1,000 Token）', value: String(item.reference_output_price_per_1k_tokens || 0) },
                 { name: 'rate_limit_rpm', label: '每分钟最大请求数（不限制填 0）', value: String(item.rate_limit_rpm || 0) }, { name: 'rate_limit_tpm', label: '每分钟最大 Token 数（不限制填 0）', value: String(item.rate_limit_tpm || 0) },
                 { name: 'model_multiplier', label: '计费倍率', value: String(item.model_multiplier || 1) }, { name: 'completion_multiplier', label: '补全倍率', value: String(item.completion_multiplier || 1) },
                 { name: 'thinking_model_id', label: '思考模式模型 ID（可空）', value: item.thinking_model_id || '' }, { name: 'non_thinking_model_id', label: '普通模式模型 ID（可空）', value: item.non_thinking_model_id || '' },
@@ -388,7 +388,7 @@ function myUpstreamPage(runtime) {
               const numeric = ['input_price_per_1k_tokens', 'output_price_per_1k_tokens', 'cached_output_price_per_1k_tokens', 'reference_input_price_per_1k_tokens', 'reference_output_price_per_1k_tokens', 'rate_limit_rpm', 'rate_limit_tpm', 'model_multiplier', 'completion_multiplier'];
               const body = Object.fromEntries(Object.entries(values).map(([name, value]) => [name, numeric.includes(name) ? (Number(value) || 0) : value]));
               const rateLabels = ['输入价格', '输出价格', '缓存输出价格', '参考输入价格', '参考输出价格'];
-              const rates = numeric.slice(0, 5).map((name, index) => `${rateLabels[index]}：${body[name]} / 1,000 个 Token`).join('\n');
+              const rates = numeric.slice(0, 5).map((name, index) => `${rateLabels[index]}：${body[name]} 人民币/1,000 个 Token`).join('\n');
               if (!await ctx.confirm('保存个人模型更改', `${item.alias || item.name || item.id}\n${body.enabled ? '启用' : '停用'} · 系列 ${body.series || '无'} · ${modelMultiplierLabel(body.model_multiplier)}\n${rates}\n停用或改价可能影响 API Key 用户及计费。`)) return;
               await runtime.client.put(`/api/user/models/${encodeURIComponent(item.id)}`, body);
               ctx.notify('个人模型已更新。'); await ctx.refresh();
@@ -457,7 +457,7 @@ function modelsPage(runtime) {
       const data = await listModels(runtime.client, { search: runtime.modelSearch, page: runtime.modelPage, limit: 100 });
       const rows = data.items.map(item => ({
         label: `${item.name || item.alias || item.id} · ${item.provider_name || item.provider || '未知供应商'} · ${enabledLabel(item.enabled)}`,
-        detail: `${item.id} · 输入 ${Number(item.input_price_per_1k_tokens || item.input_price || 0).toFixed(4)} 积分/千Token · 输出 ${Number(item.output_price_per_1k_tokens || item.output_price || 0).toFixed(4)} 积分/千Token`,
+        detail: `${item.id} · 输入 ${Number(item.input_price_per_1k_tokens || item.input_price || 0).toFixed(4)} 人民币/千Token · 输出 ${Number(item.output_price_per_1k_tokens || item.output_price || 0).toFixed(4)} 人民币/千Token`,
         run: async ctx => {
           const actions = [
             { label: '查看详情', value: 'detail' },

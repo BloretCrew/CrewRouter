@@ -374,7 +374,7 @@ function createAdminPages(runtime) {
           const name = item.alias || item.name || id;
           const assigned = assignedIds.has(id);
           const stateLabel = [item.test_ok === true ? `通过 ${item.test_latency_ms || 0}毫秒` : item.test_ok === false ? '测试失败' : '未测试', item.is_starred ? '已收藏' : '', item.is_hidden ? '已隐藏' : ''].filter(Boolean).join(' · ');
-          return { label: name, cells: { name, provider: item.provider_name || item.provider || '—', series: item.series || '—', multiplier: modelMultiplierLabel(item.model_multiplier), input_price: `${item.input_price_per_1k_tokens ?? '—'} 积分/千Token`, output_price: `${item.output_price_per_1k_tokens ?? '—'} 积分/千Token`, test: stateLabel, queue: assigned ? '已加入' : '未加入', actions: 'Enter 管理' }, detail: display(`上游模型 ID：${item.upstream_model_id || item.name || id}`, `输入 ${item.input_price_per_1k_tokens ?? '—'} 积分/千Token`, `输出 ${item.output_price_per_1k_tokens ?? '—'} 积分/千Token`, item.description, array(item.tags).map(tag => tag.name).join('、')), run: async ctx => {
+          return { label: name, cells: { name, provider: item.provider_name || item.provider || '—', series: item.series || '—', multiplier: modelMultiplierLabel(item.model_multiplier), input_price: `${item.input_price_per_1k_tokens ?? '—'} 人民币/千Token`, output_price: `${item.output_price_per_1k_tokens ?? '—'} 人民币/千Token`, test: stateLabel, queue: assigned ? '已加入' : '未加入', actions: 'Enter 管理' }, detail: display(`上游模型 ID：${item.upstream_model_id || item.name || id}`, `输入 ${item.input_price_per_1k_tokens ?? '—'} 人民币/千Token`, `输出 ${item.output_price_per_1k_tokens ?? '—'} 人民币/千Token`, item.description, array(item.tags).map(tag => tag.name).join('、')), run: async ctx => {
             const choice = await ctx.choose(`模型 · ${name}`, [
               { label: '查看详情', value: 'detail' },
               { label: item.is_starred ? '取消星标' : '加入星标', value: 'star' },
@@ -386,7 +386,7 @@ function createAdminPages(runtime) {
               const details = [
                 `名称：${name}`, `内部模型编号：${item.model_id || item.id}`, `上游模型 ID：${item.upstream_model_id || item.name || id}`,
                 `供应商：${item.provider_name || item.provider || '未知'}`, `模型系列：${item.series || '无'}`,
-                `输入价格：${item.input_price_per_1k_tokens ?? '—'} 积分/千Token`, `输出价格：${item.output_price_per_1k_tokens ?? '—'} 积分/千Token`,
+                `输入价格：${item.input_price_per_1k_tokens ?? '—'} 人民币/千Token`, `输出价格：${item.output_price_per_1k_tokens ?? '—'} 人民币/千Token`,
                 `计费倍率：${modelMultiplierLabel(item.model_multiplier)}`, `Key 队列：${assignedIds.has(String(item.model_id || item.id)) ? '已加入当前 Key' : '未加入当前 Key'}${item.is_hidden ? ' · 已隐藏' : ''}`,
                 `测试状态：${item.test_ok === true ? `通过 · 响应时间 ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? '测试失败' : '尚未测试'}`,
                 item.test_error && `测试失败原因：${shortError(item.test_error, 500)}`, item.description && `模型说明：${item.description}`,
@@ -420,7 +420,7 @@ function createAdminPages(runtime) {
               `模型名称：${item.alias || item.name || starId}`, `上游模型 ID：${item.upstream_model_id || item.name || starId}`,
               `供应商：${item.provider_name || item.provider || '未知'}`, `模型系列：${item.series || '无'}`,
               `状态：${item.is_hidden ? '已隐藏' : '可用'} · ${assignedIds.has(starId) ? '已加入当前 Key' : '未加入当前 Key'}`,
-              `输入价格：${item.input_price_per_1k_tokens ?? '—'} 积分/千Token`, `输出价格：${item.output_price_per_1k_tokens ?? '—'} 积分/千Token`,
+              `输入价格：${item.input_price_per_1k_tokens ?? '—'} 人民币/千Token`, `输出价格：${item.output_price_per_1k_tokens ?? '—'} 人民币/千Token`,
               `接口测试：${item.test_ok === true ? `通过 · 响应时间 ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? '失败' : '尚未测试'}`,
               item.test_error && `测试失败原因：${shortError(item.test_error, 500)}`, item.description && `模型说明：${item.description}`,
             ].filter(Boolean).join('\n'); await ctx.show(`模型详情 · ${item.alias || item.name || item.model_id}`, details); } if (choice === 'unstar') { if (!await ctx.confirm('取消模型收藏', `${item.alias || item.name || item.model_id}\n${item.provider_name || ''}`)) return; await api('/api/user/model-library/star', { method: 'PUT', body: { teamId: item.team_id, providerId: item.provider, modelId: item.model_id, starred: false } }); ctx.notify('模型收藏已取消。'); await ctx.refresh(); } } })) }] : []),

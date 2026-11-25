@@ -75,12 +75,12 @@ test('user model library renders teams, provider summaries, stars and searchable
   assert.deepEqual(modelSection.columns.map(column => column.label), ['模型名称', '供应商', '系列', '计费倍率', '接口测试', 'Key 队列', '操作']);
   const modelRow = modelSection.rows[0];
   assert.equal(modelRow.cells.multiplier, '计费倍率 ×1.00');
-  assert.equal(modelRow.cells.input_price, '0.1 积分/千Token');
-  assert.equal(modelRow.cells.output_price, '0.2 积分/千Token');
+  assert.equal(modelRow.cells.input_price, '0.1 人民币/千Token');
+  assert.equal(modelRow.cells.output_price, '0.2 人民币/千Token');
   assert.match(modelRow.cells.test, /通过 21毫秒/);
   assert.equal(modelRow.cells.queue, '未加入');
-  assert.ok(modelRow.detail.includes('输入 0.1 积分/千Token'));
-  assert.ok(modelRow.detail.includes('输出 0.2 积分/千Token'));
+  assert.ok(modelRow.detail.includes('输入 0.1 人民币/千Token'));
+  assert.ok(modelRow.detail.includes('输出 0.2 人民币/千Token'));
   assert.ok(modelRow.detail.includes('上游模型 ID：Model One'));
   assert.equal(modelRow.cells.test, '通过 21毫秒');
   const actions = [];
