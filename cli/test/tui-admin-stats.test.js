@@ -16,7 +16,7 @@ test('admin stats tabs expose web dimensions and latency endpoint', async () => 
     return {};
   };
   const page = buildPages(runtime).find(item => item.id === 'admin-stats');
-  assert.deepEqual(page.tabs.map(tab => tab.id), ['overview', 'daily', 'models', 'providers', 'sources', 'users', 'teams', 'latency']);
+  assert.deepEqual(page.tabs.map(tab => tab.id), ['overview', 'latency', 'multi', 'daily', 'models', 'providers', 'sources', 'members', 'messages', 'logs']);
   page.onTabChange({ id: 'latency' });
   const data = await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/admin/stats/latency'));
@@ -28,6 +28,53 @@ test('admin stats tabs expose web dimensions and latency endpoint', async () => 
   const modelSection = modelData.sections[0];
   assert.deepEqual(modelSection.columns.map(column => column.label), ['名称', '请求数', 'Token 用量', '费用（积分）', '平均响应时间']);
   assert.deepEqual(modelSection.rows[0].cells, { name: 'm1', requests: '2 次', tokens: '3 Token', cost: '1.5000 积分', latency: '40 毫秒' });
+});
+
+test('admin stats mirrors web multi, messages and logs tabs with API filters and details', async () => {
+  const runtime = makeRuntime();
+  const calls = [];
+  runtime.adminStatsTab = 'multi';
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/admin/stats') return { daily: [] };
+    if (path === '/api/admin/stats/multi') return { summary: { requests: 10, tokens: 200, cost: 3, active_users: 2, active_projects: 1, active_models: 3, active_providers: 2 }, relationships: { user_project: [{ left: 'alice', right: '/work/a', requests: 8, tokens: 160, cost: 2 }] }, caveats: ['Team 按当前归属统计。'] };
+    if (path === '/api/admin/stats/multi/filters') return { users: [{ id: 9, name: 'alice' }], teams: [{ id: 2, name: 'Team A' }], models: [{ id: 'm1', name: 'Model One' }], providers: [{ id: 'p1', name: 'Provider One' }], sources: [{ id: 'codex', name: 'Codex' }], projects: [{ id: '/work/a', name: '/work/a' }] };
+    if (path === '/api/admin/message-stats') return { summary: { requests: 5, analyzed_requests: 4, total_messages: 12, total_tokens: 250, total_cost: 2.5, metadata_rate: 0.5 }, by_block: [{ block: 'git_status', requests: 2, occurrences: 3, tokens: 100, cost: 1 }], by_source: [{ request_source: 'codex', requests: 2, messages: 6, tokens: 120 }] };
+    if (path === '/api/admin/usage-logs') return { page: 1, total: 31, logs: [{ id: 41, user_id: 9, username: 'alice', created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', provider_name: 'Provider One', request_source: 'codex', tokens_used: 100, cost: 0.5, latency_ms: 30 }] };
+    if (path === '/api/admin/usage-logs/41') return { log: { id: 41, user_id: 9, username: 'alice', model_name: 'Model One', upstream_model_id: 'up-1', provider_name: 'Provider One', request_type: 'chat', request_source: 'codex', tokens_used: 100, prompt_tokens: 80, completion_tokens: 20, cached_tokens: 10, cost: 0.5, latency_ms: 30, is_stream: true, ttft_ms: 10, output_tps: 12 } };
+    if (path === '/api/admin/stats/multi-dimension') return { dimensions: ['model'], metric: 'tokens', rows: [{ labels: ['Model One'], requests: 4, tokens: 120, cost: 1.2 }] };
+    return {};
+  };
+  const page = buildPages(runtime).find(item => item.id === 'admin-stats');
+  let multi = await page.load(api);
+  assert.ok(multi.sections[0].rows.some(row => /alice → \/work\/a/.test(row.label)));
+  const filterAction = multi.actions.find(action => action.label === '筛选关联分析');
+  const choices = ['team_id', '2'];
+  await filterAction.run({ api, choose: async () => choices.shift(), refresh: async () => {} });
+  assert.equal(runtime.adminStatsMultiFilters.team_id, '2');
+  const dimAction = multi.actions.find(action => action.label === '选择维度与指标');
+  const dimensions = ['model', '__done__', 'tokens', 'usage'];
+  await dimAction.run({ choose: async () => dimensions.shift(), refresh: async () => {} });
+  assert.deepEqual(runtime.adminStatsDimensionQuery, { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 });
+  await page.load(api);
+  assert.ok(calls.some(call => call.path === '/api/admin/stats/multi-dimension' && call.options.query.dimensions === 'model'));
+
+  runtime.adminStatsTab = 'messages';
+  const messages = await page.load(api);
+  assert.ok(messages.sections[0].cards.some(card => card.label === '已分析请求数'));
+  assert.match(messages.sections[0].rows[0].label, /git status/);
+
+  runtime.adminStatsTab = 'logs';
+  runtime.adminStatsLogPage = 1;
+  const logs = await page.load(api);
+  assert.equal(logs.sections[0].rows[0].cells.user, 'alice');
+  assert.equal(logs.actions.find(action => action.label === '调用记录下一页').disabled, false);
+  let details = '';
+  await logs.sections[0].rows[0].run({ api, show: async (_title, content) => { details = content; } });
+  assert.match(details, /缓存命中：10（12.5%）/);
+  assert.doesNotMatch(details, /"model_name"/);
+  assert.ok(calls.some(call => call.path === '/api/admin/usage-logs/41'));
+  assert.ok(logs.actions.some(action => action.label === '筛选调用记录'));
 });
 
 test('admin stats date selection is explicit and includes 365 days', async () => {

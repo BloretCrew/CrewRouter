@@ -726,9 +726,9 @@ function createAdminPages(runtime) {
       onTabChange(tab) { runtime.adminStatsTab = tab?.id || 'overview'; },
       loadOnTabChange: true,
       tabs: [
-        { id: 'overview', label: '概览' }, { id: 'daily', label: '每日' }, { id: 'models', label: '模型' },
-        { id: 'providers', label: '供应商' }, { id: 'sources', label: '客户端' }, { id: 'users', label: '用户' },
-        { id: 'teams', label: '团队' }, { id: 'latency', label: '响应速度' },
+        { id: 'overview', label: '总览' }, { id: 'latency', label: '延迟与吞吐' }, { id: 'multi', label: '多维分析' },
+        { id: 'daily', label: '每日统计' }, { id: 'models', label: '模型分析' }, { id: 'providers', label: '供应商分析' },
+        { id: 'sources', label: '客户端' }, { id: 'members', label: '成员 / Team' }, { id: 'messages', label: '消息分析' }, { id: 'logs', label: '调用记录' },
       ],
       async load(api) {
         const days = runtime.adminStatsDays || 30;
@@ -750,6 +750,8 @@ function createAdminPages(runtime) {
           }, detail: item.cached_tokens ? `缓存命中 ${formatBigNumber(item.cached_tokens)} Token` : '' };
         });
         const tab = runtime.adminStatsTab || 'overview';
+        const logPage = runtime.adminStatsLogPage || 1;
+        let logTotal = 0;
         const sections = [];
         if (tab === 'overview') sections.push({ title: '统计概览', toolbar: true, cards: summaryCards, rows: [{ label: '切换上方页签查看每日、模型、供应商、客户端、用户、团队及响应速度明细。' }] });
         if (tab === 'daily') sections.push({ title: '每日用量', toolbar: true, tableMinWidth: 118, columns: [
@@ -763,7 +765,91 @@ function createAdminPages(runtime) {
         if (tab === 'providers') sections.push({ title: '按供应商', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byProvider, item => item.provider_name || item.provider_id || '未知供应商') });
         if (tab === 'sources') sections.push({ title: '按客户端来源', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.bySource, item => item.request_source || '未知来源') });
         if (tab === 'users') sections.push({ title: '按用户', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byUser, item => item.user_name || item.username || `用户 ${item.user_id}`) });
-        if (tab === 'teams') sections.push({ title: '按团队', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byTeam, item => item.team_name || `团队 ${item.team_id}`) });
+        if (tab === 'teams' || tab === 'members') sections.push({ title: '按成员与 Team', toolbar: true, tableMinWidth: 118, columns: [
+          { key: 'name', label: '成员', ratio: 0.27 }, { key: 'team', label: 'Team', ratio: 0.2 }, { key: 'requests', label: '请求数', ratio: 0.16 },
+          { key: 'tokens', label: 'Token 用量', ratio: 0.17 }, { key: 'cost', label: '费用（积分）', ratio: 0.2 },
+        ], rows: [...array(data.byUser).slice(0, 50).map(item => ({ label: item.username || item.user_name || `用户 ${item.user_id}`, cells: { name: item.username || item.user_name || `用户 ${item.user_id}`, team: item.team_name || '未分配 Team', requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分` } })), ...array(data.byTeam).slice(0, 50).map(item => ({ label: `Team · ${item.team_name || item.team_id}`, cells: { name: '—', team: item.team_name || `Team ${item.team_id}`, requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分` } }))] });
+        if (tab === 'multi') {
+          const multi = await api('/api/admin/stats/multi', { query: { days, data_source: 'association', ...(runtime.adminStatsMultiFilters || {}) } });
+          const relations = multi.relationships || {};
+          const summary = multi.summary || {};
+          const multiDimensionQuery = runtime.adminStatsDimensionQuery || null;
+          let multiDimensionResult = null;
+          let multiDimensionError = '';
+          if (multiDimensionQuery) {
+            try { multiDimensionResult = await api('/api/admin/stats/multi-dimension', { query: multiDimensionQuery }); }
+            catch (error) { multiDimensionError = error.message || '当前实例暂不支持此维度分析'; }
+          }
+          const relationRows = ['user_project', 'user_model', 'team_model', 'project_source', 'model_provider'].flatMap(key => array(relations[key]).slice(0, 20).map(item => ({
+            label: `${key.replace(/_/g, ' → ')} · ${item.left || '未知'} → ${item.right || '未知'}`,
+            detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分`,
+          })));
+          sections.push({ title: '多维关联分析', cards: [
+            { label: '总请求', value: Number(summary.requests || 0).toLocaleString() }, { label: '总 Token', value: `${formatBigNumber(summary.tokens)} Token` },
+            { label: '总积分', value: `${formatCost(summary.cost)} 积分` }, { label: '活跃成员', value: summary.active_users || 0 },
+            { label: '活跃项目', value: summary.active_projects || 0 }, { label: '模型 / 供应商', value: `${summary.active_models || 0} / ${summary.active_providers || 0}` },
+          ], rows: [
+            { label: multiDimensionQuery ? `自选维度：${multiDimensionQuery.dimensions} · 指标：${multiDimensionQuery.metric} · 数据源：${multiDimensionQuery.data_source}` : '可另选统计维度、指标与数据源，查看自定义组合。' },
+            ...(multiDimensionError ? [{ label: `自选维度分析不可用：${multiDimensionError}` }] : multiDimensionResult ? array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: multiDimensionQuery.metric === 'requests' ? `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` : multiDimensionQuery.metric === 'tokens' ? `${formatBigNumber(row.tokens)} Token · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` : `${formatCost(row.cost)} 积分 · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })) : relationRows.length ? relationRows : [{ label: '当前筛选范围内暂无关联数据。' }]),
+            ...array(multi.caveats).map(caveat => ({ label: `统计说明：${caveat}` })),
+          ] });
+        }
+        if (tab === 'messages') {
+          const messageStats = await api('/api/admin/message-stats', { query: { days } });
+          const summary = messageStats.summary || {};
+          const messageCards = [
+            ['requests', '请求数', ' 次'], ['analyzed_requests', '已分析请求数', ' 次'], ['total_messages', '消息总数', ' 条'],
+            ['total_characters', '字符总数', ' 字符'], ['total_lines', '行数总计', ' 行'], ['total_tokens', 'Token 总量', ' Token'],
+            ['total_cost', '费用', ' 积分'], ['active_days', '活跃天数', ' 天'], ['metadata_rate', '元数据覆盖率', '%'],
+            ['workspace_rate', '工作区信息覆盖率', '%'], ['git_rate', 'Git 状态覆盖率', '%'],
+          ].filter(([key]) => summary[key] != null).map(([key, label, suffix]) => ({ label, value: key.endsWith('_rate') ? `${(Number(summary[key]) * 100).toFixed(1)}%` : `${key === 'total_tokens' || key === 'total_characters' ? formatBigNumber(summary[key]) : Number(summary[key]).toLocaleString()}${suffix}` }));
+          const messageRows = array(messageStats.by_block).map(item => ({ label: `区块：${String(item.block || '未知').replace(/_/g, ' ')}`, detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · 出现 ${Number(item.occurrences || 0).toLocaleString()} 次 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分` }));
+          messageRows.push(...array(messageStats.by_source).map(item => ({ label: `客户端：${item.request_source || '未知'}`, detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · ${Number(item.messages || 0).toLocaleString()} 条消息 · ${formatBigNumber(item.tokens)} Token` })));
+          sections.push({ title: '消息分析', cards: messageCards, rows: messageRows.length ? messageRows : [{ label: '当前时间范围没有已分析的消息。' }] });
+        }
+        if (tab === 'logs') {
+          const filters = runtime.adminStatsLogFilters || {};
+          const logs = await api('/api/admin/usage-logs', { query: { page: logPage, limit: 30, ...filters } });
+          logTotal = Number(logs.total || 0);
+          const logItems = array(logs.logs);
+          const logColumns = [
+            { key: 'time', label: '时间', ratio: 0.16 }, { key: 'user', label: '用户', ratio: 0.1 }, { key: 'model', label: '模型', ratio: 0.16 },
+            { key: 'provider', label: '供应商', ratio: 0.12 }, { key: 'source', label: '客户端', ratio: 0.11 }, { key: 'tokens', label: 'Token', ratio: 0.12 },
+            { key: 'cost', label: '积分', ratio: 0.1 }, { key: 'latency', label: '延迟', ratio: 0.08 }, { key: 'detail', label: '详情', ratio: 0.05 },
+          ];
+          sections.push({ title: '管理员调用记录', tableMinWidth: 135, columns: logColumns, description: `第 ${logs.page || logPage} 页 · 共 ${logs.total || 0} 条`, rows: logItems.length ? logItems.map(item => ({ label: formatTime(item.created_at), cells: {
+            time: formatTime(item.created_at), user: item.username || `用户 ${item.user_id}`, model: item.model_name || item.model_id || '未知模型', provider: item.provider_name || '未知', source: item.request_source || '未知',
+            tokens: `${formatBigNumber(item.tokens_used)} Token`, cost: `${formatCost(item.cost)} 积分`, latency: item.latency_ms == null ? '—' : `${Math.round(Number(item.latency_ms))} 毫秒`, detail: 'Enter 查看',
+          }, run: async ctx => {
+            const response = await api(`/api/admin/usage-logs/${encodeURIComponent(item.id)}`);
+            const log = response.log || item;
+            const prompt = Number(log.prompt_tokens || 0); const cached = Number(log.cached_tokens || 0);
+            const details = [
+              `时间：${formatTime(log.created_at)}`, `用户：${log.username || `用户 ${log.user_id}`}`, `模型：${log.model_name || log.model_id || '未知'}`,
+              `上游模型 ID：${log.upstream_model_id || '未知'}`, `供应商：${log.provider_name || '未知'}`, `请求类型：${log.request_type || '未知'}`, `客户端：${log.request_source || '未知'}`,
+              `API Key：${log.key_prefix ? `${log.key_prefix}****` : '未知'}${log.key_name ? `（${log.key_name}）` : ''}`,
+              `总 Token：${formatBigNumber(log.tokens_used)}`, `输入 Token：${formatBigNumber(prompt)}`, `输出 Token：${formatBigNumber(log.completion_tokens)}`,
+              `缓存命中：${formatBigNumber(cached)}${prompt ? `（${(cached / prompt * 100).toFixed(1)}%）` : ''}`, `积分：${formatCost(log.cost)}`,
+              `记录延迟：${log.latency_ms == null ? '未知' : `${Math.round(Number(log.latency_ms))} 毫秒`}`, `请求模式：${log.is_stream == null ? '未知' : log.is_stream ? '流式' : '非流式'}`,
+              `首字延迟：${log.ttft_ms == null ? '未知' : `${Math.round(Number(log.ttft_ms))} 毫秒`}`, `每输出 Token 耗时：${log.tpot_ms == null ? '未知' : `${Number(log.tpot_ms).toFixed(1)} 毫秒`}`,
+              `输出速度：${log.output_tps == null ? '未知' : `${Number(log.output_tps).toFixed(1)} Token/秒`}`, `端到端延迟：${log.e2e_ms == null ? '未知' : `${Math.round(Number(log.e2e_ms))} 毫秒`}`,
+              `服务层级：${log.service_tier || '未知'}`, `限流状态：${log.rate_limit ? JSON.stringify(log.rate_limit) : '无'}`, `IP 地址：${log.ip_address || '未知'}`,
+            ];
+            const analysis = log.message_analysis;
+            if (analysis) {
+              details.push('', `消息分析：${Number(analysis.message_count || 0)} 条消息`);
+              const values = analysis.values || {};
+              for (const [key, label] of [['workspace_path', '工作区路径'], ['os_version', '操作系统版本'], ['shell', 'Shell 类型'], ['date', '客户端日期']]) if (values[key]) details.push(`${label}：${values[key]}`);
+              const observed = analysis.observed_fields || {};
+              if (observed.git_status) details.push('Git 状态：请求包含此区块');
+              if (observed.project_layout) details.push('项目结构：请求包含此区块');
+              if (analysis.block_counts && Object.keys(analysis.block_counts).length) details.push(`消息区块：${Object.entries(analysis.block_counts).map(([key, count]) => `${key.replace(/_/g, ' ')} ${count} 次`).join('、')}`);
+            }
+            if (log.messages) details.push('', '请求消息：', typeof log.messages === 'string' ? log.messages : JSON.stringify(log.messages, null, 2));
+            if (log.response) details.push('', 'AI 回复：', String(log.response));
+            await ctx.show(`调用记录 · ${log.model_name || log.model_id || log.id}`, details.join('\n'));
+          } })) : [{ label: '当前筛选范围暂无调用记录。' }] });
+        }
         if (tab === 'latency') {
           const latency = await api('/api/admin/stats/latency', { query: { days, ...(runtime.adminStatsFilters || {}) } });
           const summary = latency.summary || {};
@@ -775,8 +861,66 @@ function createAdminPages(runtime) {
             { label: '已测量请求数', value: text(summary.measuredRequests, '0'), detail: `数据覆盖 ${(Number(summary.coverage || 0) * 100).toFixed(1)}% 的请求` },
           ], rows: array(latency.daily).map(item => ({ label: display(item.date, `${item.requests || 0} 次请求`, `完整响应95%分位 ${percentile(item.e2e, 'p95') ?? '—'} 毫秒`, `首字延迟95%分位 ${percentile(item.ttft, 'p95') ?? '—'} 毫秒`, `输出速度中位数 ${percentile(item.outputTps, 'p50') ?? '—'} Token/秒`) })) });
         }
-        return { sections, actions: [
+        return { sections, pageToolbar: true, actions: [
           ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
+          ...(tab === 'multi' ? [{ label: '选择维度与指标', toolbar: 'page', run: async ctx => {
+            const dimensionOptions = [
+              { label: '成员', value: 'user' }, { label: 'Team', value: 'team' }, { label: '项目', value: 'project' },
+              { label: '客户端', value: 'source' }, { label: '模型', value: 'model' }, { label: '供应商', value: 'provider' }, { label: 'API Key', value: 'key' },
+            ];
+            const dimensions = [];
+            while (dimensions.length < dimensionOptions.length) {
+              const remaining = dimensionOptions.filter(option => !dimensions.includes(option.value));
+              const selected = await ctx.choose(`统计维度（已选 ${dimensions.length} 项）`, [...remaining.map(option => ({ ...option, label: `添加：${option.label}` })), { label: '完成维度选择', value: '__done__' }]);
+              if (!selected || selected === '__done__') break;
+              dimensions.push(selected);
+            }
+            if (!dimensions.length) return;
+            const metric = await ctx.choose('统计指标', [{ label: '请求数', value: 'requests' }, { label: 'Token 用量', value: 'tokens' }, { label: '消费积分', value: 'cost' }]);
+            if (!metric) return;
+            const source = await ctx.choose('统计数据来源', [{ label: '请求使用统计', value: 'usage' }, { label: '项目关联统计', value: 'association' }]);
+            if (!source) return;
+            runtime.adminStatsDimensionQuery = { dimensions: dimensions.join(','), metric, data_source: source, days },
+            await ctx.refresh();
+          } }, { label: '清除自选维度', toolbar: 'page', run: async ctx => { runtime.adminStatsDimensionQuery = null; await ctx.refresh(); } }, { label: '筛选关联分析', toolbar: 'page', run: async ctx => {
+            const options = await api('/api/admin/stats/multi/filters');
+            const filters = runtime.adminStatsMultiFilters || {};
+            const dimensions = [['user_id', '成员', 'users'], ['team_id', 'Team', 'teams'], ['model_id', '模型', 'models'], ['provider_id', '供应商', 'providers'], ['request_source', '客户端', 'sources'], ['workspace_path', '项目', 'projects']];
+            const dimension = await ctx.choose('选择筛选条件', dimensions.map(([key, label]) => ({ label: `${label}${filters[key] ? ' · 已筛选' : ''}`, value: key })));
+            if (!dimension) return;
+            const [key, label, optionKey] = dimensions.find(([candidate]) => candidate === dimension);
+            const rows = array(options[optionKey]);
+            const value = await ctx.choose(`${label}筛选`, [{ label: `全部${label}`, value: '' }, ...rows.map(row => ({ label: row.name || row.id, value: row.id }))]);
+            if (value === null) return;
+            const next = { ...filters };
+            if (value) next[key] = value; else delete next[key];
+            runtime.adminStatsMultiFilters = next; await ctx.refresh();
+          } }, { label: '清除关联筛选', toolbar: 'page', run: async ctx => { runtime.adminStatsMultiFilters = {}; await ctx.refresh(); } }] : []),
+          ...(tab === 'logs' ? [
+            { label: '筛选调用记录', toolbar: 'page', run: async ctx => {
+              const current = runtime.adminStatsLogFilters || {};
+              const model = await ctx.ask('模型名称或 ID（留空不过滤）', { defaultValue: current.model_q || '' }); if (model === null) return;
+              const user = await ctx.ask('用户名或用户 ID（留空不过滤）', { defaultValue: current.user_q || '' }); if (user === null) return;
+              const provider = await ctx.ask('供应商名称或 ID（留空不过滤）', { defaultValue: current.provider_q || '' }); if (provider === null) return;
+              const requestType = await ctx.choose('请求类型', [{ label: '全部', value: '' }, ...['chat', 'responses', 'fusion', 'playground', 'imagine', 'agent_manage', 'gemini', 'interactions'].map(value => ({ label: value, value }))]); if (requestType === null) return;
+              const source = await ctx.choose('客户端', [{ label: '全部', value: '' }, ...['grok', 'codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness', 'unknown'].map(value => ({ label: value, value }))]); if (source === null) return;
+              const next = { ...(model ? { model_q: String(model).trim() } : {}), ...(user ? { user_q: String(user).trim() } : {}), ...(provider ? { provider_q: String(provider).trim() } : {}), ...(requestType ? { request_type: requestType } : {}), ...(source ? { request_source: source } : {}) };
+              runtime.adminStatsLogFilters = next; runtime.adminStatsLogPage = 1; await ctx.refresh();
+            } },
+            { label: '搜索调用记录日期', toolbar: 'page', run: async ctx => {
+              const values = await ctx.form('调用记录日期范围', [{ name: 'start_date', label: '开始日期（YYYY-MM-DD）', value: runtime.adminStatsLogFilters?.start_date || '' }, { name: 'end_date', label: '结束日期（YYYY-MM-DD）', value: runtime.adminStatsLogFilters?.end_date || '' }]);
+              if (!values) return;
+              const next = { ...(runtime.adminStatsLogFilters || {}) };
+              if (values.start_date) next.start_date = values.start_date; else delete next.start_date;
+              if (values.end_date) next.end_date = values.end_date; else delete next.end_date;
+              const validDate = value => !value || (typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value);
+              if (!validDate(next.start_date) || !validDate(next.end_date) || next.start_date && next.end_date && next.start_date > next.end_date) { await ctx.show('日期范围无效', '请使用真实存在的 YYYY-MM-DD 日期，且结束日期不能早于开始日期。'); return; }
+              runtime.adminStatsLogFilters = next; runtime.adminStatsLogPage = 1; await ctx.refresh();
+            } },
+            { label: '清除调用记录筛选', toolbar: 'page', run: async ctx => { runtime.adminStatsLogFilters = {}; runtime.adminStatsLogPage = 1; await ctx.refresh(); } },
+            { label: '调用记录上一页', toolbar: 'page', disabled: (runtime.adminStatsLogPage || 1) <= 1, run: async ctx => { runtime.adminStatsLogPage = Math.max(1, (runtime.adminStatsLogPage || 1) - 1); await ctx.refresh(); } },
+            { label: '调用记录下一页', toolbar: 'page', disabled: logPage * 30 >= logTotal, run: async ctx => { runtime.adminStatsLogPage = logPage + 1; await ctx.refresh(); } },
+          ] : []),
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
