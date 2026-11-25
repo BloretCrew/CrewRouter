@@ -223,12 +223,14 @@ test('admin retention page mirrors web thresholds, validates saves and runs prev
 
 test('admin model management presents web columns, selects web filters and avoids raw JSON details', async () => {
   const calls = [];
-  const model = { id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Provider One', series: 'S', enabled: true, input_price_per_1k_tokens: 0.1, output_price_per_1k_tokens: 0.2, cached_output_price_per_1k_tokens: 0.05, reference_input_price_per_1k_tokens: 0.3, reference_output_price_per_1k_tokens: 0.4, model_multiplier: 1.2, completion_multiplier: 1.3, rate_limit_rpm: 10, rate_limit_tpm: 100, test_ok: true, test_latency_ms: 25 };
+  const model = { id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Provider One', series: 'S', enabled: true, input_price_per_1k_tokens: 0.1, output_price_per_1k_tokens: 0.2, cached_output_price_per_1k_tokens: 0.05, reference_input_price_per_1k_tokens: 0.3, reference_output_price_per_1k_tokens: 0.4, model_multiplier: 1.2, completion_multiplier: 1.3, rate_limit_rpm: 10, rate_limit_tpm: 100, test_ok: true, test_latency_ms: 25, test_tokens_per_second: 42.5 };
   const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [model], total: 1, page: 1, stats: { enabledCount: 1, providerCount: 1, avgInputPrice: 0.1 }, providers: [{ id: 'p1', name: 'Provider One', model_count: 1 }], series: ['S'] }; };
   const data = await pageById('admin-models').load(api);
   const section = data.sections[0];
-  assert.deepEqual(section.columns.map(column => column.label), ['模型名称', '供应商', '系列', '输入价/千Token', '输出价/千Token', '缓存输出价', '请求/Token限额', '状态/测试']);
+  assert.deepEqual(section.columns.map(column => column.label), ['模型名称', '供应商', '系列', '输入价/千Token', '输出价/千Token', '倍率', '缓存输出价', '请求/Token限额', '状态/测试']);
   assert.equal(section.rows[0].cells.input, '0.1 元');
+  assert.equal(section.rows[0].cells.multiplier, '×1.20');
+  assert.match(section.rows[0].cells.state, /42\.50 Token\/秒/);
   assert.equal(section.rows[0].cells.limits, '10 次/分 · 100 Token/分');
   assert.ok(data.actions.find(action => action.label === '筛选供应商' && action.toolbar === 'page'));
   assert.ok(data.actions.find(action => action.label === '筛选系列' && action.toolbar === 'page'));

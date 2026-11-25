@@ -427,19 +427,20 @@ function createAdminPages(runtime) {
           const input = item.input_price_per_1k_tokens;
           const output = item.output_price_per_1k_tokens;
           const cached = item.cached_output_price_per_1k_tokens;
-          const testState = item.test_ok === true ? `通过 · ${Math.round(Number(item.test_latency_ms) || 0)} 毫秒` : item.test_ok === false ? '失败' : '未测试';
+          const testState = item.test_ok === true ? `通过 · ${Math.round(Number(item.test_latency_ms) || 0)} 毫秒${item.test_tokens_per_second != null ? ` · ${Number(item.test_tokens_per_second).toFixed(2)} Token/秒` : ''}` : item.test_ok === false ? `失败${item.test_error ? ` · ${String(item.test_error).replace(/\\s+/g, ' ').slice(0, 48)}` : ''}` : '未测试';
           const details = [
             `上游模型 ID：${item.upstream_model_id || item.name || item.id}`, `系列：${item.series || '无'}`, `供应商：${item.provider_name || item.provider || '未知供应商'}`,
             `输入价格：${input ?? '—'} 元/千 Token`, `输出价格：${output ?? '—'} 元/千 Token`, `缓存输出价格：${cached ?? '—'} 元/千 Token`,
             `参考输入/输出价：${item.reference_input_price_per_1k_tokens ?? '—'} / ${item.reference_output_price_per_1k_tokens ?? '—'} 元/千 Token`,
-            `计费倍率：${Number(item.model_multiplier ?? 1).toFixed(2)} · 完成倍率 ${Number(item.completion_multiplier ?? 1).toFixed(2)}`,
+            item.reference_cached_output_price_per_1k_tokens != null && `参考缓存输出价：${item.reference_cached_output_price_per_1k_tokens} 元/千 Token`,
+            `计费倍率：${Number(item.model_multiplier ?? 1).toFixed(2)} · 输出倍率 ${Number(item.completion_multiplier ?? 1).toFixed(2)}`,
             `速率限制：${Number(item.rate_limit_rpm || 0) || '不限'} 次/分钟 · ${Number(item.rate_limit_tpm || 0) || '不限'} Token/分钟`,
             `状态：${item.enabled === false ? '已停用' : '已启用'}`, `接口测试：${testState}`,
             item.test_error && `测试错误：${String(item.test_error).replace(/\s+/g, ' ').slice(0, 240)}`, item.description && `模型说明：${item.description}`,
           ].filter(Boolean).join('\n');
           return { label: display(item.alias || item.name, item.name !== item.alias ? item.name : '', item.id), cells: {
             name: item.alias || item.name || item.id, provider: item.provider_name || item.provider || '未知', series: item.series || '无',
-            input: `${input ?? '—'} 元`, output: `${output ?? '—'} 元`, cached: `${cached ?? '—'} 元`,
+            multiplier: `×${Number(item.model_multiplier ?? 1).toFixed(2)}`, input: `${input ?? '—'} 元`, output: `${output ?? '—'} 元`, cached: `${cached ?? '—'} 元`,
             limits: `${Number(item.rate_limit_rpm || 0) || '不限'} 次/分 · ${Number(item.rate_limit_tpm || 0) || '不限'} Token/分`,
             state: `${item.enabled === false ? '已停用' : '已启用'} · ${testState}`,
           }, detail: `${selectedIds.has(String(item.id)) ? '已选中 · ' : ''}${details}`, run: async ctx => {
@@ -484,10 +485,10 @@ function createAdminPages(runtime) {
           { label: '已启用', value: `${stats.enabledCount ?? items.filter(item => item.enabled !== false).length} 个` },
           { label: '供应商数', value: `${stats.providerCount ?? new Set(items.map(item => item.provider)).size} 个` },
           { label: '平均输入价', value: `${Number(stats.avgInputPrice || 0).toFixed(4)} 元/千 Token` },
-        ], tableMinWidth: 145, columns: [
-          { key: 'name', label: '模型名称', ratio: 0.2 }, { key: 'provider', label: '供应商', ratio: 0.13 }, { key: 'series', label: '系列', ratio: 0.08 },
-          { key: 'input', label: '输入价/千Token', ratio: 0.12 }, { key: 'output', label: '输出价/千Token', ratio: 0.12 },
-          { key: 'cached', label: '缓存输出价', ratio: 0.1 }, { key: 'limits', label: '请求/Token限额', ratio: 0.1 }, { key: 'state', label: '状态/测试', ratio: 0.15 },
+        ], tableMinWidth: 170, columns: [
+          { key: 'name', label: '模型名称', ratio: 0.16 }, { key: 'provider', label: '供应商', ratio: 0.11 }, { key: 'series', label: '系列', ratio: 0.07 },
+          { key: 'input', label: '输入价/千Token', ratio: 0.1 }, { key: 'output', label: '输出价/千Token', ratio: 0.1 }, { key: 'multiplier', label: '倍率', ratio: 0.06 },
+          { key: 'cached', label: '缓存输出价', ratio: 0.09 }, { key: 'limits', label: '请求/Token限额', ratio: 0.13 }, { key: 'state', label: '状态/测试', ratio: 0.18 },
         ], rows: modelRows.length ? modelRows : [{ label: '没有符合条件的模型。' }] }];
         return { sections, pageToolbar: true, actions: [
           { label: '添加模型', toolbar: 'page', run: async ctx => {
