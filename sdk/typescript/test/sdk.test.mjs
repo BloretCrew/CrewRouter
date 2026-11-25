@@ -157,6 +157,14 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { users: [{ id: 9, name: 'alice' }], teams: [{ id: 2, name: 'Team' }], models: [{ id: 'm1', name: 'Model' }], providers: [{ id: 'p1', name: 'Provider' }], sources: [{ id: 'claude_code', name: 'Claude Code' }], projects: [{ id: '/workspace', name: '/workspace' }] });
       return;
     }
+    if (req.url === '/api/admin/series-icons' && req.method === 'GET') {
+      json(res, 200, [{ name: 'opus', icon_url: 'https://example.invalid/opus.svg', created_at: '2026-01-01T00:00:00.000Z' }]);
+      return;
+    }
+    if (req.url === '/api/admin/series-icons' && req.method === 'POST') {
+      json(res, 200, { success: true });
+      return;
+    }
     if (req.url === '/api/admin/products') {
       json(res, 200, [{ id: 1, name: 'Product', description: null, price: '2.5', image_url: null, link: null, is_active: true, sort_order: 0, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' }]);
       return;
@@ -319,6 +327,8 @@ test('management wrappers preserve their documented response payload shapes', as
   const adminUsageLogs = await client.admin.usageLogs.list({ page: 1 });
   const adminStatsFilters = await client.admin.stats.filters();
   const adminUptime = await client.admin.models.getUptime({ days: 7 });
+  const adminSeriesIcons = await client.admin.seriesIcons.list();
+  const adminSeriesIconSaved = await client.admin.seriesIcons.create({ name: 'opus', icon_url: 'https://example.invalid/opus.svg' });
   const adminProducts = await client.admin.products.list();
   const teamMembers = await client.admin.teams.getMembers(2);
   const teamModels = await client.admin.teams.getModels(2);
@@ -382,6 +392,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminUsageLogs.data.logs[0].username, 'alice');
   assert.equal(adminStatsFilters.data.projects[0].id, '/workspace');
   assert.equal(adminUptime.data.granularity, '15m');
+  assert.equal(adminSeriesIcons.data[0].name, 'opus');
+  assert.equal(adminSeriesIconSaved.data.success, true);
   assert.equal(adminProducts.data[0].price, '2.5');
   assert.equal(teamMembers.data[0].email, null);
   assert.equal(teamModels.data[0].model_id, 'm1');

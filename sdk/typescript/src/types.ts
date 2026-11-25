@@ -414,6 +414,16 @@ export interface AdminUsageLogsResponse {
   logs: AdminUsageLog[];
 }
 
+export interface AdminSeriesIcon {
+  name: string;
+  icon_url: string;
+  created_at: string;
+}
+
+export interface AdminSeriesIconCreateResponse {
+  success: true;
+}
+
 export interface AdminProduct {
   id: number;
   name: string;

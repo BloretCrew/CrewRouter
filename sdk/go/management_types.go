@@ -117,6 +117,18 @@ type AdminUsageLogsResponse struct {
 	Logs  []AdminUsageLog `json:"logs"`
 }
 
+// AdminSeriesIcon is one named model-series icon configured by an administrator.
+type AdminSeriesIcon struct {
+	Name      string `json:"name"`
+	IconURL   string `json:"icon_url"`
+	CreatedAt string `json:"created_at"`
+}
+
+// AdminSeriesIconCreateResponse is returned after saving a series icon.
+type AdminSeriesIconCreateResponse struct {
+	Success bool `json:"success"`
+}
+
 // AdminProduct is one product returned to administrator clients.
 type AdminProduct struct {
 	ID          int64   `json:"id"`

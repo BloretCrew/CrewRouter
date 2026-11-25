@@ -1221,6 +1221,27 @@
         ],
         "additionalProperties": true
       },
+      "AdminSeriesIcon": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "icon_url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "icon_url",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
       "AdminProduct": {
         "type": "object",
         "properties": {
@@ -11094,8 +11115,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminSeriesIcon"
+                  }
                 }
               }
             }
@@ -11127,8 +11150,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyActionSuccess"
                 }
               }
             }

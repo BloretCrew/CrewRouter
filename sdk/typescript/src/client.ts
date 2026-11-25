@@ -7,6 +7,8 @@ import type {
   AdminUsageLogsResponse,
   AdminStatsFiltersResponse,
   AdminProduct,
+  AdminSeriesIcon,
+  AdminSeriesIconCreateResponse,
   AdminProviderTag,
   AdminProviderTagUpdateResponse,
   TeamMember,
@@ -344,6 +346,12 @@ export class CrewRouter {
     products: {
       list: <T = AdminProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.products.list', options),
+    },
+    seriesIcons: {
+      list: <T = AdminSeriesIcon[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.seriesIcons.list', options),
+      create: <T = AdminSeriesIconCreateResponse>(body: { name: string; icon_url: string }, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.seriesIcons.create', { ...options, body }),
     },
     providerTags: {
       list: <T = AdminProviderTag[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>

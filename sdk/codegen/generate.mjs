@@ -551,6 +551,9 @@ function managementSchemas() {
       sources: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
       projects: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
     }, ['users', 'teams', 'models', 'providers', 'sources', 'projects']),
+    AdminSeriesIcon: object({
+      name: { type: 'string' }, icon_url: { type: 'string' }, created_at: { type: 'string', format: 'date-time' },
+    }, ['name', 'icon_url', 'created_at']),
     AdminProduct: object({
       id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
       price: numberOrString, image_url: nullableString, link: nullableString,
@@ -785,6 +788,8 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
+    'admin.seriesIcons.list': { type: 'array', items: { $ref: '#/components/schemas/AdminSeriesIcon' } },
+    'admin.seriesIcons.create': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },
     'admin.stats.multi.filters.list': { $ref: '#/components/schemas/AdminStatsFiltersResponse' },
     'admin.providerTags.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProviderTag' } },

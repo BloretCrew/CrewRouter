@@ -207,6 +207,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(teamModels) != 1 || teamModels[0].MappingID != nil || teamModels[0].ModelID != "m1" {
 		t.Fatalf("unexpected Team model response: %#v", teamModels)
 	}
+	var seriesIcons []crewrouter.AdminSeriesIcon
+	if err := json.Unmarshal([]byte(`[{"name":"opus","icon_url":"https://example.invalid/opus.svg","created_at":"2026-01-01T00:00:00Z"}]`), &seriesIcons); err != nil {
+		t.Fatalf("decode admin series icons: %v", err)
+	}
+	var seriesIconCreated crewrouter.AdminSeriesIconCreateResponse
+	if err := json.Unmarshal([]byte(`{"success":true}`), &seriesIconCreated); err != nil || !seriesIconCreated.Success {
+		t.Fatalf("decode admin series icon create response: %#v, %v", seriesIconCreated, err)
+	}
 	var adminProviderTags []crewrouter.AdminProviderTag
 	if err := json.Unmarshal([]byte(`[{"id":4,"name":"global","color":"#123456","sort_order":0,"created_at":"2026-01-01T00:00:00Z"}]`), &adminProviderTags); err != nil {
 		t.Fatalf("decode administrator provider tags: %v", err)

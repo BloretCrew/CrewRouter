@@ -54,6 +54,16 @@ class TeamMember(TypedDict, total=False):
     created_at: str
 
 
+class AdminSeriesIcon(TypedDict):
+    name: str
+    icon_url: str
+    created_at: str
+
+
+class AdminSeriesIconCreateResponse(TypedDict):
+    success: bool
+
+
 class AdminProduct(TypedDict, total=False):
     id: int
     name: str
