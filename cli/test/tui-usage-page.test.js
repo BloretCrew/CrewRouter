@@ -52,6 +52,10 @@ test('usage tabs request latency, message and log data with shared filters', asy
   assert.equal(latencyCards.cards[0].value, '24 毫秒');
   assert.equal(latencyCards.cards[1].value, '80 毫秒');
   assert.equal(latencyCards.cards[4].value, '120 毫秒');
+  assert.deepEqual(latencyCards.cards.slice(5).map(card => card.label), ['缓存命中率', '上游处理时间均值', '吞吐达标率']);
+  assert.equal(latencyCards.cards[5].value, '25.0%');
+  assert.equal(latencyCards.cards[6].value, '30 毫秒');
+  assert.equal(latencyCards.cards[7].value, '≥50：30.0% · ≥80：20.0% · ≥90：10.0% · ≥100：5.0%');
   assert.match(latencySection.rows[2].label, /已采集 10 \/ 20 条请求（50\.0%）/);
   const latencyModelSection = latencyData.sections.find(section => section.title === '模型延迟与吞吐');
   assert.deepEqual(latencyModelSection.columns.map(column => column.label), ['模型', '请求数', '已采集', 'TTFT P50', 'TTFT P75', 'TTFT P95', 'TTFT P99', 'TPOT P50', '输出 TPS P50', 'E2E P95', '缓存命中']);

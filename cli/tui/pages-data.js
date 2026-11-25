@@ -225,7 +225,9 @@ function usagePage(runtime) {
             { label: '输出速度 P50', value: latencySummary.outputTps?.p50 == null ? '未采集' : `${Number(latencySummary.outputTps.p50).toFixed(2)} Token/秒` },
             { label: 'TPOT P50', value: latencySummary.tpot?.p50 == null ? '未采集' : `${Number(latencySummary.tpot.p50).toFixed(1)} 毫秒` },
             { label: 'E2E P95', value: latencySummary.e2e?.p95 == null ? '未采集' : `${latencySummary.e2e.p95} 毫秒` },
-            { label: '吞吐达标率', value: `${Number(latencySummary.tpsThresholds?.ge50 || 0).toFixed(1)}%`, detail: '输出速度 ≥ 50 Token/秒' },
+            { label: '缓存命中率', value: latencySummary.cacheHitRate == null ? '未采集' : `${(Number(latencySummary.cacheHitRate) * 100).toFixed(1)}%` },
+            { label: '上游处理时间均值', value: latencySummary.upstreamProcessingAvg == null ? '未采集' : `${latencySummary.upstreamProcessingAvg} 毫秒` },
+            { label: '吞吐达标率', value: ['ge50', 'ge80', 'ge90', 'ge100'].map((key, index) => `≥${[50, 80, 90, 100][index]}：${latencySummary.tpsThresholds?.[key] == null ? '—' : `${(Number(latencySummary.tpsThresholds[key]) * 100).toFixed(1)}%`}`).join(' · '), detail: '输出速度达对应 Token/秒阈值的请求比例' },
           ] },
           { title: '每日首字延迟与输出速度', tab: 'latency', rows: dailyLatencyRows.length ? dailyLatencyRows.map(row => ({ label: `${row.cells.date} · ${row.cells.requests} 次请求 · 已采集 ${row.cells.measured}`, detail: `TTFT P50 ${row.cells.ttft50} · P95 ${row.cells.ttft95} · 输出速度 P50 ${row.cells.tps50} · E2E P95 ${row.cells.e2e95}` })) : [{ label: '当前范围没有每日延迟数据。' }] },
           { title: '模型延迟与吞吐', tab: 'latency', tableMinWidth: 150, columns: [
