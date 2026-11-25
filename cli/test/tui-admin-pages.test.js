@@ -40,14 +40,19 @@ test('user settings show readable profile/signature fields and edit the complete
     calls.push({ path, options });
     if (path === '/api/user/signature') return { enabled: true, template: 'Hello {{username}}', defaults: { variables: [{ name: 'username' }, { name: 'model' }] } };
     if (path === '/auth/me') return { username: 'alice', email: 'alice@example.test', avatar: 'https://example.test/avatar.png' };
+    if (path === '/api/user/plugin-pref-optin') return { optedIn: true };
+    if (path === '/api/user/hook-notify-rules') return { pushEnabled: true, selection: { harnesses: ['codex'], eventTypes: ['tool_use'] } };
     return {};
   };
   const page = pageById('settings');
   const data = await page.load(api);
-  assert.deepEqual(data.sections.map(section => section.title), ['个人资料', 'API 签名', '网页专属设置']);
+  assert.deepEqual(data.sections.map(section => section.title), ['个人资料', 'API 签名', '插件授权', '事件通知', '网页专属设置']);
   assert.ok(data.sections[0].rows.some(row => row.label.includes('alice@example.test')));
   assert.ok(data.sections[1].rows.some(row => row.label.includes('可用变量：username、model')));
-  assert.ok(data.sections[2].rows.some(row => row.label.includes('界面背景与主题')));
+  assert.ok(data.sections[2].rows.some(row => row.label.includes('已授权')));
+  assert.ok(data.sections[3].rows.some(row => row.label === '客户端：Codex'));
+  assert.ok(data.sections[3].rows.some(row => row.label === '事件：工具调用'));
+  assert.ok(data.sections[4].rows.some(row => row.label.includes('界面背景与主题')));
   const edit = data.actions.find(action => action.label === '编辑 API 签名');
   let fields;
   await edit.run({ form: async (_title, input) => { fields = input; return { enabled: false, template: 'Updated {{model}}' }; }, confirm: async () => false, notify() {}, refresh: async () => {} });
@@ -55,6 +60,27 @@ test('user settings show readable profile/signature fields and edit the complete
   assert.equal(calls.some(call => call.path === '/api/user/signature' && call.options.method === 'PUT'), false);
   await edit.run({ form: async () => ({ enabled: false, template: 'Updated {{model}}' }), confirm: async () => true, notify() {}, refresh: async () => {} });
   assert.deepEqual(calls.find(call => call.path === '/api/user/signature' && call.options.method === 'PUT').options.body, { enabled: false, template: 'Updated {{model}}' });
+
+  const optin = data.actions.find(action => action.label === '关闭插件偏好授权');
+  await optin.run({ confirm: async () => false, notify() {}, refresh: async () => {} });
+  assert.equal(calls.some(call => call.path === '/api/user/plugin-pref-optin' && call.options.method === 'PUT'), false);
+  await optin.run({ confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path === '/api/user/plugin-pref-optin' && call.options.method === 'PUT').options.body, { enabled: false });
+
+  const pushToggle = data.actions.find(action => action.label === '关闭事件推送');
+  await pushToggle.run({ confirm: async () => false, notify() {}, refresh: async () => {} });
+  assert.equal(calls.some(call => call.path.endsWith('/push-enabled')), false);
+  await pushToggle.run({ confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path.endsWith('/push-enabled')).options.body, { enabled: false });
+
+  const selectionAction = data.actions.find(action => action.label === '选择事件推送范围');
+  const selectionChoices = ['claude_code', '__done__', 'session_start', '__done__'];
+  await selectionAction.run({
+    choose: async () => selectionChoices.shift(),
+    confirm: async () => true,
+    notify() {}, refresh: async () => {},
+  });
+  assert.deepEqual(calls.find(call => call.path.endsWith('/selection')).options.body, { harnesses: ['codex', 'claude_code'], eventTypes: ['tool_use', 'session_start'] });
 });
 
 test('admin OAuth clients mirror web columns and support scoped client lifecycle actions', async () => {

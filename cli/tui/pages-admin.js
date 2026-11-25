@@ -1168,9 +1168,14 @@ function createAdminPages(runtime) {
     {
       id: 'settings', label: '设置', description: '个人资料、API 签名及网页专属设置状态。',
       async load(api) {
-        const [signature, profile] = await Promise.allSettled([api('/api/user/signature'), api('/auth/me')]);
+        const [signature, profile, pluginOptinResult, hookResult] = await Promise.allSettled([api('/api/user/signature'), api('/auth/me'), api('/api/user/plugin-pref-optin'), api('/api/user/hook-notify-rules')]);
         const signatureData = signature.status === 'fulfilled' ? signature.value : {};
         const user = profile.status === 'fulfilled' ? profile.value : {};
+        const pluginOptedIn = pluginOptinResult.status === 'fulfilled' && pluginOptinResult.value?.optedIn === true;
+        const hookSettings = hookResult.status === 'fulfilled' ? hookResult.value : {};
+        const hookSelection = hookSettings.selection || { harnesses: [], eventTypes: [] };
+        const harnessNames = { claude_code: 'Claude Code', codex: 'Codex', grok: 'Grok', opencode: 'OpenCode', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw', deepseek_harness: 'DeepSeek Harness' };
+        const hookEventNames = { session_start: '会话开始', session_end: '会话结束', tool_use: '工具调用' };
         return { sections: [
           { title: '个人资料', rows: [
             { label: `用户名：${text(user.username, '未知')}` },
@@ -1184,12 +1189,24 @@ function createAdminPages(runtime) {
             ...(Array.isArray(signatureData.defaults?.variables) ? [{ label: `可用变量：${signatureData.defaults.variables.map(item => typeof item === 'string' ? item : item.name || item.key).join('、')}` }] : []),
             ...(signature.status === 'rejected' ? [{ label: signature.reason.message || '签名设置暂不可用' }] : []),
           ] },
+          { title: '插件授权', description: '控制已安装插件可读取的个人数据范围。', rows: [
+            { label: `允许插件读取我的偏好：${pluginOptedIn ? '已授权' : '未授权'}`, detail: '开启后，声明 preferences:read 权限的插件可通过接口读取你的界面偏好；关闭后立即失效。' },
+            ...(pluginOptinResult.status === 'rejected' ? [{ label: `授权状态读取失败：${pluginOptinResult.reason.message || '未知错误'}` }] : []),
+          ] },
+          { title: '事件通知', description: '客户端上报的事件可推送到站内通知与 Bark。', rows: [
+            { label: `事件推送总开关：${hookSettings.pushEnabled === true ? '已开启' : '已关闭'}` },
+            { label: `客户端：${(hookSelection.harnesses || []).length ? hookSelection.harnesses.map(value => harnessNames[value] || value).join('、') : '全部客户端'}` },
+            { label: `事件：${(hookSelection.eventTypes || []).length ? hookSelection.eventTypes.map(value => hookEventNames[value] || value).join('、') : '全部支持事件'}`, detail: 'TUI 当前支持配置：会话开始、会话结束、工具调用；留空表示全部。' },
+            ...(hookResult.status === 'rejected' ? [{ label: `事件通知设置读取失败：${hookResult.reason.message || '未知错误'}` }] : []),
+          ] },
           { title: '网页专属设置', rows: [
             { label: '界面背景与主题', detail: '壁纸上传及主题插件选择需要浏览器图形界面。' },
-            { label: '插件偏好授权', detail: '授权开关可在网页设置的“插件”分类管理。' },
             { label: 'API 签名预览', detail: 'TUI 显示签名模板；依赖网页即时预览的变量渲染在此不支持。' },
           ] },
         ], actions: [
+          { label: pluginOptedIn ? '关闭插件偏好授权' : '允许插件读取我的偏好', disabled: pluginOptinResult.status === 'rejected', run: async ctx => { if (pluginOptinResult.status === 'rejected') return; const enabled = !pluginOptedIn; if (!await ctx.confirm(enabled ? '允许插件读取偏好' : '撤销插件偏好授权', enabled ? '拥有 preferences:read 权限的已安装插件将可以读取你的界面偏好。' : '插件将立即失去读取界面偏好的权限。')) return; await api('/api/user/plugin-pref-optin', { method: 'PUT', body: { enabled } }); ctx.notify(enabled ? '插件偏好读取已授权。' : '插件偏好授权已撤销。'); await ctx.refresh(); } },
+          { label: hookSettings.pushEnabled ? '关闭事件推送' : '开启事件推送', disabled: hookResult.status === 'rejected', run: async ctx => { if (hookResult.status === 'rejected') return; const enabled = hookSettings.pushEnabled !== true; if (!await ctx.confirm(enabled ? '开启事件推送' : '关闭事件推送', enabled ? '已选择的客户端事件将推送到站内通知；Bark 推送还需配置并开启 Bark。' : '客户端上报事件将不再触发通知。')) return; await api('/api/user/hook-notify-rules/push-enabled', { method: 'PUT', body: { enabled } }); ctx.notify(enabled ? '事件推送已开启。' : '事件推送已关闭。'); await ctx.refresh(); } },
+          { label: '选择事件推送范围', disabled: hookResult.status === 'rejected', run: async ctx => { if (hookResult.status === 'rejected') return; const harnesses = ['claude_code', 'codex', 'grok', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness']; const events = ['session_start', 'session_end', 'tool_use']; const selectedHarnesses = new Set(hookSelection.harnesses || []); const selectedEvents = new Set(hookSelection.eventTypes || []); const selectSet = async (title, values, selected, labels) => { while (true) { const value = await ctx.choose(title, [...values.map(id => ({ label: `${selected.has(id) ? '☑' : '☐'} ${labels[id] || id}`, value: id })), { label: `完成选择（${selected.size} 项）`, value: '__done__' }], { description: '不选择任何项表示全部。' }); if (value === null) return false; if (value === '__done__') return true; if (selected.has(value)) selected.delete(value); else selected.add(value); } }; if (!await selectSet('选择接收事件的客户端', harnesses, selectedHarnesses, harnessNames)) return; if (!await selectSet('选择要推送的事件', events, selectedEvents, hookEventNames)) return; const nextHarnesses = [...selectedHarnesses]; const nextEvents = [...selectedEvents]; if (!await ctx.confirm('保存事件推送范围', `客户端：${nextHarnesses.length ? nextHarnesses.map(value => harnessNames[value]).join('、') : '全部'}\n事件：${nextEvents.length ? nextEvents.map(value => hookEventNames[value]).join('、') : '全部支持事件'}`)) return; await api('/api/user/hook-notify-rules/selection', { method: 'PUT', body: { harnesses: nextHarnesses, eventTypes: nextEvents } }); ctx.notify('事件推送范围已保存。'); await ctx.refresh(); } },
           { label: '编辑 API 签名', run: async ctx => {
             const values = await ctx.form('编辑 API 签名', [
               { name: 'enabled', label: '启用 AI 回复签名', type: 'boolean', value: signatureData.enabled === true },
