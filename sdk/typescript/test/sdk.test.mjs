@@ -141,6 +141,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ amount: '2.5', fee_rate: '0.1', code: 'redeem-1', code_amount: '3', net_amount: '2.2727' }]);
       return;
     }
+    if (req.url === '/api/admin/usage-logs?page=1') {
+      json(res, 200, { total: 1, page: 1, logs: [{ id: 1, user_id: 9, model_id: 'm1', api_key_id: null, tokens_used: '12', prompt_tokens: '10', completion_tokens: '2', cached_tokens: '0', provider_id: null, request_type: 'chat', request_source: 'unknown', user_agent: null, latency_ms: '25', ip_address: null, custom_instruction_count: 0, cost: '0.01', created_at: '2026-01-01T00:00:00.000Z', username: 'alice', key_prefix: null, key_name: null, series: null, model_name: 'Model', upstream_model_id: null, requested_model: null, resolved_model: null, response_model: null, provider_name: null }] });
+      return;
+    }
     if (req.url === '/api/admin/products') {
       json(res, 200, [{ id: 1, name: 'Product', description: null, price: '2.5', image_url: null, link: null, is_active: true, sort_order: 0, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' }]);
       return;
@@ -282,6 +286,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const providerTags = await client.providerTags.list();
   const uptime = await client.modelUptime.get();
   const uptimeDetail = await client.modelUptime.getDetail('m1');
+  const adminUsageLogs = await client.admin.usageLogs.list({ page: 1 });
   const adminProducts = await client.admin.products.list();
   const teamMembers = await client.admin.teams.getMembers(2);
   const adminProviderTags = await client.admin.providerTags.list();
@@ -334,6 +339,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(uptime.data.items.m1.uptime_pct, null);
   assert.equal(uptimeDetail.data.granularity, '15m');
   assert.equal(uptimeDetail.data.days[0].status, 'none');
+  assert.equal(adminUsageLogs.data.logs[0].custom_instruction_count, 0);
+  assert.equal(adminUsageLogs.data.logs[0].username, 'alice');
   assert.equal(adminProducts.data[0].price, '2.5');
   assert.equal(teamMembers.data[0].email, null);
   assert.equal(adminProviderTags.data[0].created_at, '2026-01-01T00:00:00.000Z');

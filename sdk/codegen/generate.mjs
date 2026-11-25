@@ -523,6 +523,23 @@ function managementSchemas() {
       total: { type: 'integer' }, page: { type: 'integer' }, limit: { type: 'integer' },
       stats: { $ref: '#/components/schemas/AdminUserStats' },
     }, ['items', 'total', 'page', 'limit', 'stats']),
+    AdminUsageLog: object({
+      id: { type: 'integer' }, user_id: { type: 'integer' }, model_id: nullableString,
+      api_key_id: { type: ['integer', 'null'] }, tokens_used: { type: ['integer', 'string', 'null'] },
+      prompt_tokens: { type: ['integer', 'string', 'null'] }, completion_tokens: { type: ['integer', 'string', 'null'] },
+      cached_tokens: { type: ['integer', 'string', 'null'] }, provider_id: { type: ['string', 'null'] },
+      request_type: nullableString, request_source: { type: 'string' }, user_agent: nullableString,
+      latency_ms: { type: ['number', 'string', 'null'] }, ip_address: nullableString,
+      custom_instruction_count: { type: 'integer' }, cost: { type: ['number', 'string', 'null'] },
+      created_at: { type: 'string', format: 'date-time' }, username: nullableString,
+      key_prefix: nullableString, key_name: nullableString, series: nullableString,
+      model_name: nullableString, upstream_model_id: nullableString, requested_model: nullableString,
+      resolved_model: nullableString, response_model: nullableString, provider_name: nullableString,
+    }, ['id', 'user_id', 'request_source', 'custom_instruction_count', 'created_at']),
+    AdminUsageLogsResponse: object({
+      total: { type: 'integer' }, page: { type: 'integer' },
+      logs: { type: 'array', items: { $ref: '#/components/schemas/AdminUsageLog' } },
+    }, ['total', 'page', 'logs']),
     AdminProduct: object({
       id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
       price: numberOrString, image_url: nullableString, link: nullableString,
@@ -564,6 +581,17 @@ function managementSchemas() {
     UserUsageLogDetailResponse: object({
       log: { $ref: '#/components/schemas/UserUsageLogDetail' },
     }, ['log']),
+    AdminUsageLog: {
+      allOf: [
+        { $ref: '#/components/schemas/UserUsageLog' },
+        object({ username: nullableString, custom_instruction_count: { type: 'integer' } }, ['custom_instruction_count']),
+      ],
+      description: 'Administrator-visible usage record. Restricted to authenticated administrators.',
+    },
+    AdminUsageLogsResponse: object({
+      total: { type: 'integer' }, page: { type: 'integer' },
+      logs: { type: 'array', items: { $ref: '#/components/schemas/AdminUsageLog' } },
+    }, ['total', 'page', 'logs']),
     StatsFilterOption: object({ id: { type: 'string' }, name: { type: 'string' } }, ['id', 'name']),
     StatsFilterTeam: object({ id: { type: 'integer' }, name: { type: 'string' } }, ['id', 'name']),
     UserStatsFiltersResponse: object({
@@ -684,6 +712,8 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
+    'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },
+    'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },
     'admin.providerTags.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProviderTag' } },
     'admin.providerTags.create': { $ref: '#/components/schemas/AdminProviderTagUpdateResponse' },
     'admin.providerTags.byId.update': { $ref: '#/components/schemas/AdminProviderTagUpdateResponse' },

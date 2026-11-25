@@ -64,6 +64,20 @@ type TeamMember struct {
 	CreatedAt string  `json:"created_at"`
 }
 
+// AdminUsageLog is a user usage log row enriched with administrator-visible username/count fields.
+type AdminUsageLog struct {
+	UserUsageLog
+	Username               *string `json:"username"`
+	CustomInstructionCount int     `json:"custom_instruction_count"`
+}
+
+// AdminUsageLogsResponse is the paginated administrator usage log list.
+type AdminUsageLogsResponse struct {
+	Total int64           `json:"total"`
+	Page  int             `json:"page"`
+	Logs  []AdminUsageLog `json:"logs"`
+}
+
 // AdminProduct is one product returned to administrator clients.
 type AdminProduct struct {
 	ID          int64   `json:"id"`

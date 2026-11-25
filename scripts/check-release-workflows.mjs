@@ -64,6 +64,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const openapi = JSON.parse(await readFile(openapiPath, 'utf8'));
   const adminUsers = openapi.paths['/api/admin/users']?.get;
   const adminProducts = openapi.paths['/api/admin/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const adminUsageLogs = openapi.paths['/api/admin/usage-logs']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminTeamMembers = openapi.paths['/api/admin/teams/{id}/members']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProviderTags = openapi.paths['/api/admin/provider-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProviderTagCreate = openapi.paths['/api/admin/provider-tags']?.post?.responses?.[200]?.content?.['application/json']?.schema;
@@ -103,11 +104,12 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (adminUsers?.['x-crewrouter-permission'] !== 'admin.users.read' || adminUsers.responses?.[200]?.content?.['application/json']?.schema?.oneOf?.length !== 2) throw new Error(`${openapiPath} must document admin user list pagination variants`);
   if (adminUsers.responses[200].content['application/json'].schema.oneOf[0].items?.$ref !== '#/components/schemas/AdminUser' || adminUsers.responses[200].content['application/json'].schema.oneOf[1].$ref !== '#/components/schemas/AdminUsersPage') throw new Error(`${openapiPath} must define admin user list row and page schemas`);
   if (adminProducts?.type !== 'array' || adminProducts.items?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product list responses`);
+  if (adminUsageLogs?.$ref !== '#/components/schemas/AdminUsageLogsResponse' || openapi.components.schemas.AdminUsageLogsResponse?.properties?.logs?.items?.$ref !== '#/components/schemas/AdminUsageLog') throw new Error(`${openapiPath} must define paginated administrator usage logs`);
   if (openapi.components.schemas.AdminUsersPage?.properties?.stats?.$ref !== '#/components/schemas/AdminUserStats') throw new Error(`${openapiPath} must define paginated admin user stats`);
   if (adminTeamMembers?.type !== 'array' || adminTeamMembers.items?.$ref !== '#/components/schemas/TeamMember') throw new Error(`${openapiPath} must define administrator Team member list responses`);
   if (adminProviderTags?.type !== 'array' || adminProviderTags.items?.$ref !== '#/components/schemas/AdminProviderTag') throw new Error(`${openapiPath} must define administrator provider tag list responses`);
   if (adminProviderTagCreate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse' || adminProviderTagUpdate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse') throw new Error(`${openapiPath} must define admin provider tag mutation responses`);
-  if (adminProviderTagCreate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse' || adminProviderTagUpdate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse') throw new Error(`${openapiPath} must define admin provider tag mutation responses`);
+  if (adminUsageLogs?.$ref !== '#/components/schemas/AdminUsageLogsResponse' || openapi.components.schemas.AdminUsageLogsResponse?.properties?.logs?.items?.$ref !== '#/components/schemas/AdminUsageLog') throw new Error(`${openapiPath} must define paginated administrator usage logs`);
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);

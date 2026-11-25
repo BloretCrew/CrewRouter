@@ -145,6 +145,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"price":"2.5","image_url":null,"link":null,"is_active":true,"sort_order":0,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}]`), &adminProducts); err != nil {
 		t.Fatalf("decode admin products: %v", err)
 	}
+	var adminUsageLogs crewrouter.AdminUsageLogsResponse
+	if err := json.Unmarshal([]byte(`{"total":1,"page":1,"logs":[{"id":1,"user_id":9,"model_id":"m1","api_key_id":null,"tokens_used":"12","prompt_tokens":"10","completion_tokens":"2","cached_tokens":"0","provider_id":null,"request_type":"chat","request_source":"unknown","user_agent":null,"latency_ms":"25","ip_address":null,"custom_instruction_count":0,"cost":"0.01","created_at":"2026-01-01T00:00:00Z","username":"alice","key_prefix":null,"key_name":null,"series":null,"model_name":"Model","upstream_model_id":null,"requested_model":null,"resolved_model":null,"response_model":null,"provider_name":null}]}`), &adminUsageLogs); err != nil {
+		t.Fatalf("decode admin usage logs: %v", err)
+	}
+	if adminUsageLogs.Total != 1 || adminUsageLogs.Logs[0].Username == nil || *adminUsageLogs.Logs[0].Username != "alice" {
+		t.Fatalf("unexpected admin usage log response: %#v", adminUsageLogs)
+	}
 	if len(adminProducts) != 1 || adminProducts[0].Price != "2.5" || adminProducts[0].Description != nil {
 		t.Fatalf("unexpected admin product response: %#v", adminProducts)
 	}

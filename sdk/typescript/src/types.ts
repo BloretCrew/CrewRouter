@@ -335,6 +335,17 @@ export interface TeamMember {
   created_at: string;
 }
 
+export interface AdminUsageLog extends UserUsageLog {
+  custom_instruction_count: number;
+  username: string | null;
+}
+
+export interface AdminUsageLogsResponse {
+  total: number;
+  page: number;
+  logs: AdminUsageLog[];
+}
+
 export interface AdminProduct {
   id: number;
   name: string;

@@ -1099,6 +1099,55 @@
         ],
         "additionalProperties": true
       },
+      "AdminUsageLog": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/UserUsageLog"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "custom_instruction_count": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "custom_instruction_count"
+            ],
+            "additionalProperties": true
+          }
+        ],
+        "description": "Administrator-visible usage record. Restricted to authenticated administrators."
+      },
+      "AdminUsageLogsResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUsageLog"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "logs"
+        ],
+        "additionalProperties": true
+      },
       "AdminProduct": {
         "type": "object",
         "properties": {
@@ -11798,8 +11847,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/AdminUsageLogsResponse"
                 }
               }
             }

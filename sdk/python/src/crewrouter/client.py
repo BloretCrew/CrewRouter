@@ -403,6 +403,17 @@ class UserUsageLog(TypedDict, total=False):
     provider_name: Optional[str]
 
 
+class AdminUsageLog(UserUsageLog, total=False):
+    custom_instruction_count: int
+    username: Optional[str]
+
+
+class AdminUsageLogsResponse(TypedDict):
+    total: int
+    page: int
+    logs: list[AdminUsageLog]
+
+
 class UserUsageLogsResponse(TypedDict):
     total: int
     page: int
