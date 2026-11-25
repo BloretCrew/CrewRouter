@@ -803,7 +803,29 @@ function createAdminPages(runtime) {
       id: 'admin-teams', label: '团队管理', description: '管理团队、成员与请求限额规则。',
       async load(api) {
         const teams = itemsOf(await api('/api/admin/teams'));
-        const sections = await Promise.all(teams.map(async team => {
+        const search = String(runtime.adminTeamSearch || '').trim().toLowerCase();
+        const filteredTeams = teams.filter(team => !search || [team.name, team.description].some(value => String(value || '').toLowerCase().includes(search)));
+        const selectedTeamId = runtime.adminSelectedTeamId;
+        if (selectedTeamId == null) {
+          const defaultCount = teams.filter(team => team.is_default === true).length;
+          const frontierCount = teams.filter(team => team.is_frontier === true).length;
+          const totalMembers = teams.reduce((sum, team) => sum + Number(team.member_count || 0), 0);
+          const listRows = filteredTeams.map(team => ({
+            label: team.name || `Team ${team.id}`,
+            detail: [team.is_default && '默认', team.is_frontier && '前沿', team.is_personal && '个人', `${Number(team.member_count || 0)} 位成员`, team.description || '暂无描述', `创建于 ${team.created_at ? formatTime(team.created_at) : '时间未知'}`].filter(Boolean).join(' · '),
+            run: async ctx => { runtime.adminSelectedTeamId = team.id; await ctx.refresh(); },
+          }));
+          return { sections: [{ title: 'Team 管理', cards: [
+            { label: '团队总数', value: teams.length }, { label: '默认团队', value: defaultCount }, { label: '前沿团队', value: frontierCount }, { label: '总成员数', value: totalMembers },
+          ], description: `${search ? `搜索“${runtime.adminTeamSearch}” · 显示 ${filteredTeams.length}/${teams.length}` : `共 ${teams.length} 个 Team`} · 选择 Team 查看成员、模型授权和限额规则`, rows: listRows.length ? listRows : [{ label: teams.length ? '未找到匹配的 Team。' : '暂无 Team，使用“创建团队”开始。' }] }], actions: [
+            { label: search ? '清除 Team 搜索' : '搜索 Team', toolbar: true, run: async ctx => { runtime.adminTeamSearch = search ? '' : String(await ctx.ask('搜索 Team 名称或描述', { defaultValue: runtime.adminTeamSearch || '' }) || '').trim(); await ctx.refresh(); } },
+            { label: '创建团队', toolbar: true, run: async ctx => { const values = await ctx.form('创建团队', [{ name: 'name', label: 'Team 名称' }, { name: 'description', label: '描述（可选）' }]); if (!values || !String(values.name || '').trim()) return; if (!await ctx.confirm('创建 Team', `${values.name.trim()}${values.description ? `\\n${values.description}` : ''}`)) return; await api('/api/admin/teams', { method: 'POST', body: { name: values.name.trim(), description: String(values.description || '').trim() } }); ctx.notify('Team 已创建。'); await ctx.refresh(); } },
+            { label: '刷新', run: ctx => ctx.refresh() },
+          ] };
+        }
+        const team = teams.find(item => String(item.id) === String(selectedTeamId));
+        if (!team) { runtime.adminSelectedTeamId = null; await ctx.refresh(); return; }
+        const sections = await Promise.all([team].map(async team => {
           const [members, rules, models] = await Promise.allSettled([
             api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`),
             api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules`),
@@ -814,7 +836,9 @@ function createAdminPages(runtime) {
           const modelItems = models.status === 'fulfilled' ? itemsOf(models.value) : [];
           const modelSearch = String(runtime[`team_${team.id}_modelSearch`] || '').toLowerCase();
           const visibleModels = modelItems.filter(model => !modelSearch || [model.name, model.model_id, model.provider_name, model.provider, model.series].some(value => String(value || '').toLowerCase().includes(modelSearch)));
-          const memberRows = memberItems.map(member => ({ label: member.username, detail: display(member.email, member.created_at && formatTime(member.created_at)), run: async ctx => {
+          const memberSearch = String(runtime[`team_${team.id}_memberSearch`] || '').trim().toLowerCase();
+          const visibleMembers = memberItems.filter(member => !memberSearch || [member.username, member.email].some(value => String(value || '').toLowerCase().includes(memberSearch)));
+          const memberRows = visibleMembers.map(member => ({ label: member.username || `用户 ${member.id}`, detail: display(member.email, member.created_at && formatTime(member.created_at)), run: async ctx => {
             if (!await ctx.confirm('移除团队成员', `将 ${member.username} 从 ${team.name} 移出？`)) return;
             await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members/${encodeURIComponent(member.id)}`, { method: 'DELETE' });
             ctx.notify('成员已移出团队。'); await ctx.refresh();
@@ -823,10 +847,10 @@ function createAdminPages(runtime) {
           const ruleRows = ruleItems.map(rule => ({ label: `${rule.rule_type} ${rule.rule_value} / ${rule.duration_hours} 小时`, detail: rule.description || rule.id, run: async ctx => { if (!await ctx.confirm('删除限额规则', `${team.name} · ${rule.rule_type} ${rule.rule_value}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/rules/${encodeURIComponent(rule.id)}`, { method: 'DELETE' }); await ctx.refresh(); } }));
           return {
             title: `${team.name} · 团队编号 ${team.id}`,
-            description: display(team.is_default && '默认团队', team.is_frontier && '前沿团队', `${team.member_count || memberItems.length} 成员`, team.description),
-            cards: [{ label: '成员', value: team.member_count || memberItems.length }, { label: '模型授权', value: modelItems.filter(model => model.enabled).length }, { label: '限额规则', value: ruleItems.length }],
+            description: display(team.is_default && '默认团队', team.is_frontier && '前沿团队', team.is_personal && '个人 Team', `${team.member_count ?? memberItems.length} 位成员`, team.description || '暂无描述'),
+            cards: [{ label: '成员', value: team.member_count ?? memberItems.length }, { label: '模型授权', value: modelItems.filter(model => model.enabled).length }, { label: '限额规则', value: ruleItems.length }],
             rows: [
-              { label: `成员列表 · ${memberRows.length} 人`, detail: memberRows.length ? '成员在下方独立分区展示' : '暂无成员' },
+              { label: `成员管理 · 显示 ${memberRows.length}/${memberItems.length} 人`, detail: memberRows.length ? '选择成员可移除；添加成员请使用页面操作。' : memberItems.length ? '没有匹配的成员。' : '暂无成员。' },
               ...memberRows.map(row => ({ ...row, label: `成员 · ${row.label}` })),
               { label: `模型授权 · ${modelRows.length} 个模型`, detail: '单模型启停；禁用可能清除无其他团队授权的Key当前模型绑定' },
               ...modelRows.map(row => ({ ...row, label: `模型 · ${row.label}` })),
@@ -834,6 +858,8 @@ function createAdminPages(runtime) {
               ...ruleRows.map(row => ({ ...row, label: `限额 · ${row.label}` })),
             ],
             actions: [
+              { label: '返回 Team 列表', toolbar: true, run: async ctx => { runtime.adminSelectedTeamId = null; await ctx.refresh(); } },
+              { label: memberSearch ? '清除成员搜索' : '搜索 Team 成员', run: async ctx => { runtime[`team_${team.id}_memberSearch`] = memberSearch ? '' : String(await ctx.ask('搜索成员用户名或邮箱', { defaultValue: runtime[`team_${team.id}_memberSearch`] || '' }) || '').trim(); await ctx.refresh(); } },
               { label: `搜索 ${team.name} 模型`, run: async ctx => { runtime[`team_${team.id}_modelSearch`] = String(await ctx.ask('模型名称、ID 或供应商') || '').trim(); await ctx.refresh(); } },
               { label: `编辑 ${team.name}`, run: async ctx => { const values = await ctx.form('编辑团队', [{ name: 'name', label: '名称', value: team.name }, { name: 'description', label: '说明', value: team.description || '' }, { name: 'is_default', label: '默认团队', type: 'boolean', value: team.is_default === true }, { name: 'is_frontier', label: '前沿团队', type: 'boolean', value: team.is_frontier === true }]); if (!values) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: 'PUT', body: values }); ctx.notify('团队已更新。'); await ctx.refresh(); } },
               { label: `添加成员到团队 ${team.name}`, run: async ctx => { const input = await ctx.ask('用户 ID（多个以逗号分隔）'); if (!input) return; const userIds = String(input).split(',').map(value => Number(value.trim())).filter(Number.isInteger); if (!userIds.length || !await ctx.confirm('添加团队成员', `团队：${team.name}\n用户编号：${userIds.join(', ')}`)) return; await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, { method: 'POST', body: { userIds } }); ctx.notify('成员已添加。'); await ctx.refresh(); } },

@@ -448,21 +448,49 @@ test('admin updates page only performs the confirmed version check and never app
   assert.equal(calls.some(call => call.path.endsWith('/apply')), false);
 });
 
-test('Team page separates member, model access and quota sections in web order', async () => {
-  const api = async path => {
-    if (path === '/api/admin/teams') return [{ id: 4, name: 'Team Four', member_count: 1 }];
+test('Team page mirrors web overview, search, create and selected-Team detail flow', async () => {
+  const calls = [];
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/admin/teams') return [
+      { id: 4, name: 'Team Four', description: 'Research', member_count: 1, created_at: '2026-11-20T00:00:00Z', is_default: true },
+      { id: 5, name: 'Team Five', description: 'Support', member_count: 2, is_frontier: true },
+    ];
     if (path.endsWith('/members')) return [{ id: 9, username: 'alice', email: 'a@example.test' }];
     if (path.endsWith('/rules')) return [{ id: 'r1', rule_type: 'requests', rule_value: 100, duration_hours: 24 }];
     if (path.endsWith('/models')) return [{ model_id: 'm1', name: 'Model One', provider_name: 'Provider', enabled: true }];
     return {};
   };
-  const data = await pageById('admin-teams').load(api);
-  const section = data.sections[0];
+  const page = buildPages(runtime).find(item => item.id === 'admin-teams');
+  const list = await page.load(api);
+  assert.deepEqual(list.sections.map(section => section.title), ['Team 管理']);
+  assert.deepEqual(list.sections[0].cards.map(card => card.label), ['团队总数', '默认团队', '前沿团队', '总成员数']);
+  assert.match(list.sections[0].rows[0].detail, /默认.*1 位成员.*Research.*创建于/);
+  await list.actions.find(action => action.label === '搜索 Team').run({ ask: async () => 'support', refresh: async () => {} });
+  assert.deepEqual(runtime.adminTeamSearch, 'support');
+  const filtered = await page.load(api);
+  assert.equal(filtered.sections[0].rows.length, 1);
+  assert.equal(filtered.sections[0].rows[0].label, 'Team Five');
+  const create = filtered.actions.find(action => action.label === '创建团队');
+  await create.run({ form: async () => ({ name: 'New Team', description: 'Platform' }), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.options.method === 'POST').options.body, { name: 'New Team', description: 'Platform' });
+  await filtered.sections[0].rows[0].run({ refresh: async () => {} });
+  runtime.adminSelectedTeamId = 4;
+  const detail = await page.load(api);
+  const section = detail.sections[0];
   assert.equal(section.title, 'Team Four · 团队编号 4');
   assert.deepEqual(section.cards.map(card => card.label), ['成员', '模型授权', '限额规则']);
   const labels = section.rows.map(row => row.label);
-  assert.ok(labels.findIndex(label => label.startsWith('成员列表')) < labels.findIndex(label => label.startsWith('模型授权')));
+  assert.ok(labels.findIndex(label => label.startsWith('成员管理')) < labels.findIndex(label => label.startsWith('模型授权')));
   assert.ok(labels.findIndex(label => label.startsWith('模型授权')) < labels.findIndex(label => label.startsWith('限额规则')));
+  const searchMembers = section.actions.find(action => action.label === '搜索 Team 成员');
+  await searchMembers.run({ ask: async () => 'alice', refresh: async () => {} });
+  assert.equal(runtime.team_4_memberSearch, 'alice');
+  const filteredDetail = await page.load(api);
+  assert.ok(filteredDetail.sections[0].rows.some(row => row.label === '成员管理 · 显示 1/1 人'));
+  await filteredDetail.sections[0].actions.find(action => action.label === '返回 Team 列表').run({ refresh: async () => {} });
+  assert.equal(runtime.adminSelectedTeamId, null);
 });
 
 test('project recent workspace opens a safely quoted terminal copy command', async () => {
