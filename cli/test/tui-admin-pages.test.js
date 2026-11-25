@@ -174,9 +174,20 @@ test('admin OAuth clients mirror web columns and support scoped client lifecycle
   };
   const data = await pageById('admin-oauth-clients').load(api);
   assert.deepEqual(data.sections[0].columns.map(column => column.label), ['应用', '类型', '权限 / 回调', '客户端密钥', '状态', '操作']);
+  assert.deepEqual(data.sections[0].rows.map(row => [row.cells.scopes, row.cells.secret, row.cells.actions]), [['gateway:invoke · 1 个回调', '已设置 abc123…', '管理'], ['gateway:invoke · 1 个回调', '不使用', '只读']]);
   const builtInOptions = [];
-  await data.sections[0].rows[1].run({ choose: async (_title, options) => { builtInOptions.push(...options); return 'detail'; }, show: async () => {} });
+  let builtInDetail = '';
+  await data.sections[0].rows[1].run({ choose: async (_title, options) => { builtInOptions.push(...options); return 'detail'; }, show: async (_title, body) => { builtInDetail = body; } });
   assert.deepEqual(builtInOptions.map(option => option.value), ['detail']);
+  assert.match(builtInDetail, /回调地址：http:\/\/127\.0\.0\.1\/callback/);
+  const confidentialOptions = [];
+  await data.sections[0].rows[0].run({ choose: async (_title, options) => { confidentialOptions.push(...options); return null; } });
+  assert.ok(confidentialOptions.some(option => option.value === 'rotate'));
+  const publicClient = { ...clients[0], client_id: 'public-app', type: 'public' };
+  const publicData = await pageById('admin-oauth-clients').load(async () => ({ clients: [publicClient], scopes: scopeCatalog }));
+  const publicOptions = [];
+  await publicData.sections[0].rows[0].run({ choose: async (_title, options) => { publicOptions.push(...options); return null; } });
+  assert.ok(!publicOptions.some(option => option.value === 'rotate'), 'public OAuth clients have no secret to rotate');
   const choices = ['events:report', '__done__'];
   const formData = { name: 'New Client', clientId: '', type: 'public', redirects: 'https://client.example/cb', allowLoopbackAnyPath: false, description: '', enabled: true };
   await data.actions.find(action => action.label === '新建 OAuth 应用').run({
