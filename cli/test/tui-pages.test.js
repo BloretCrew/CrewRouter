@@ -19,7 +19,7 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.deepEqual(PAGE_CAPABILITIES, {
     'my-upstream': 'personalProviders', projects: 'projects', 'audit-logs': 'auditLogs', 'policy-center': 'teamPolicies',
     'admin-users': 'multiUser', 'admin-policies': 'teamPolicies', 'admin-policy-settings': 'teamPolicies',
-    'admin-policy-members': 'teamPolicies', 'admin-policy-approvals': 'teamPolicies', 'admin-policy-clients': 'teamPolicies',
+    'admin-policy-members': 'teamPolicies', 'admin-policy-hits': 'teamPolicies', 'admin-policy-exceptions': 'teamPolicies', 'admin-policy-approvals': 'teamPolicies', 'admin-policy-clients': 'teamPolicies',
     'admin-policy-notifications': 'teamPolicies', 'admin-teams': 'multiUser', 'admin-stats': 'adminStats', 'admin-audit-logs': 'teamAuditLogs',
   });
   assert.deepEqual(navAreas.map(area => ({ ...area })), [
@@ -29,6 +29,10 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.deepEqual(navGroups[0].pages, ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings']);
   assert.deepEqual(navGroups[1].pages, ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings']);
   assert.deepEqual(navGroups[3].pages, ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings']);
+  assert.ok(navGroups[2].pages.includes('admin-policy-hits'));
+  assert.ok(navGroups[2].pages.includes('admin-policy-exceptions'));
+  assert.ok(WEB_PAGE_MAP.some(mapping => mapping.cli === 'admin-policy-hits'));
+  assert.ok(WEB_PAGE_MAP.some(mapping => mapping.cli === 'admin-policy-exceptions'));
   assert.equal(WEB_PAGE_MAP.find(mapping => mapping.area === 'admin' && mapping.web === 'adminPolicies').kind, 'tabbed-page');
   assert.equal(WEB_PAGE_MAP.find(mapping => mapping.area === 'admin' && mapping.web === 'policyMembers').kind, 'tab');
   for (const page of pages) assert.ok(navGroups.some(group => group.pages.includes(page.id)), `${page.id} belongs to a navigation group`);

@@ -1075,7 +1075,13 @@ function createAdminPages(runtime) {
               { label: member.policy_bypass ? '关闭策略豁免' : '开启策略豁免', value: 'bypass' },
               { label: '查看生效策略', value: 'effective' },
             ]);
-            if (choice === 'detail') await ctx.show(`成员 · ${member.username}`, JSON.stringify(member, null, 2));
+            if (choice === 'detail') await ctx.show(`成员详情 · ${member.username}`, [
+              `用户名：${member.username || '未知'}`, `邮箱：${member.email || '未知'}`, `Team：${member.team_name || (member.team_id ? `Team ${member.team_id}` : '未分配')}`,
+              `管理员：${member.is_admin ? '是' : '否'}`, `团队角色：${member.team_role || 'member'}`, `成员策略数：${Number(member.policy_count || 0)} 条`,
+              `近 24 小时策略命中：${Number(member.hits_24h || 0)} 次`, `最后一次命中：${member.last_hit_at ? formatTime(member.last_hit_at) : '无记录'}`,
+              `策略豁免：${member.policy_bypass ? '已开启' : '未开启'}`, member.policy_bypass_until && `豁免到期：${formatTime(member.policy_bypass_until)}`,
+              `账号状态：${suspended ? `暂停中${member.suspended_reason ? ` · ${member.suspended_reason}` : ''}` : '正常'}`, member.suspended_until && `暂停至：${formatTime(member.suspended_until)}`,
+            ].filter(Boolean).join('\n'));
             if (choice === 'role') {
               const role = await ctx.choose('团队 角色', ['owner', 'admin', 'member', 'viewer'].map(value => ({ label: value, value })));
               if (!role || !await ctx.confirm('更新成员角色', `${member.username}\n${member.team_name}: ${role}`)) return;
@@ -1095,13 +1101,127 @@ function createAdminPages(runtime) {
               if (!await ctx.confirm(enabled ? '开启策略豁免' : '关闭策略豁免', `${member.username}\n${enabled ? '该成员将绕过策略检查。' : '策略检查将恢复。'}`)) return;
               await api(`/api/admin/policy-members/${member.id}/bypass`, { method: 'POST', body: { enabled } }); ctx.notify(enabled ? '策略豁免已开启。' : '策略豁免已关闭。'); await ctx.refresh();
             }
-            if (choice === 'effective') { const result = await api('/api/admin/policies/effective', { query: { user_id: member.id } }); await ctx.show(`生效策略 · ${member.username}`, JSON.stringify(result, null, 2)); }
+            if (choice === 'effective') {
+              const result = await api('/api/admin/policies/effective', { query: { user_id: member.id } });
+              const effective = array(result.policies || result.items);
+              await ctx.show(`生效策略 · ${member.username}`, [
+                `执行模式：${result.settings?.enforcement_mode || result.enforcement_mode || '未知'}`,
+                `当前暂停：${result.suspension?.suspended ? '是' : '否'}`,
+                `生效策略：${effective.length} 条`,
+                ...effective.map(policy => `${policy.name || `策略 ${policy.id}`} · ${policy.effect || '未知效果'} / ${policy.action || '未知动作'} · ${policy.enabled === false ? '停用' : '启用'}${policy.description ? `\n  ${policy.description}` : ''}`),
+                ...array(result.exemptions).map(exemption => `豁免：${exemption.policy_name || '所有策略'} · ${exemption.status || '有效'} · ${exemption.ends_at ? `到期 ${formatTime(exemption.ends_at)}` : '无到期时间'}`),
+              ].join('\n'));
+            }
           } };
         }) }], actions: [
           { label: '搜索成员', run: async ctx => { runtime.policyMemberQuery = String(await ctx.ask('用户名或邮箱', { defaultValue: query }) || '').trim(); runtime.policyMemberPage = 1; await ctx.refresh(); } },
           ...[['', '全部状态'], ['active', '正常成员'], ['suspended', '暂停成员']].map(([value, label]) => ({ label, run: async ctx => { runtime.policyMemberStatus = value; runtime.policyMemberPage = 1; await ctx.refresh(); } })),
           { label: '上一页', run: async ctx => { runtime.policyMemberPage = Math.max(1, page - 1); await ctx.refresh(); } },
           { label: '下一页', run: async ctx => { runtime.policyMemberPage = page + 1; await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
+      id: 'admin-policy-hits', label: '策略命中记录', description: '筛选策略命中记录、查看请求决策原因，并可为成员创建有限期豁免。',
+      async load(api) {
+        const page = runtime.policyHitPage || 1;
+        const filters = runtime.policyHitFilters || {};
+        const data = await api('/api/admin/policy-hits', { query: { page, limit: 30, ...filters } });
+        const items = array(data.items);
+        const rows = items.map(item => ({ label: display(`#${item.id}`, item.policy_name || `策略 ${item.policy_id}`, item.username || `用户 ${item.user_id || '未知'}`, item.team_name || '未分配 Team', item.decision || item.effect || item.action), detail: display(`时间：${formatTime(item.created_at)}`, `请求：${item.requested_model || item.model_id || '未知模型'} · ${item.request_source || '未知客户端'}`, item.reason && `原因：${item.reason}`), run: async ctx => {
+          const choice = await ctx.choose(`策略命中 · #${item.id}`, [{ label: '查看详情', value: 'detail' }, ...(item.user_id ? [{ label: '从此记录创建豁免', value: 'exemption' }] : [])]);
+          if (choice === 'detail') {
+            const details = [`命中编号：${item.id}`, `策略：${item.policy_name || `策略 ${item.policy_id}`}`, `成员：${item.username || `用户 ${item.user_id || '未知'}`}`, `Team：${item.team_name || (item.team_id ? `Team ${item.team_id}` : '未分配')}`, `时间：${formatTime(item.created_at)}`, `决策：${item.decision || '未知'}`, `效果：${item.effect || '未知'}`, `动作：${item.action || '未知'}`, `模型：${item.requested_model || item.model_id || '未知'}`, `客户端：${item.request_source || '未知'}`, `原因：${item.reason || '未提供'}`, `请求类型：${item.request_type || '未知'}`, `IP 地址：${item.ip_address || '未知'}`].join('\\n');
+            await ctx.show(`策略命中详情 · #${item.id}`, details);
+          }
+          if (choice === 'exemption') {
+            const values = await ctx.form('从命中记录创建豁免', [{ name: 'hours', label: '豁免时长（小时，1-720）', value: '24' }, { name: 'max_uses', label: '最大使用次数（0 表示不限制）', value: '0' }]);
+            if (!values) return;
+            const hours = Number(values.hours); const maxUses = Number(values.max_uses || 0);
+            if (!Number.isInteger(hours) || hours < 1 || hours > 720 || !Number.isInteger(maxUses) || maxUses < 0) { await ctx.show('豁免参数无效', '豁免时长须为 1 到 720 的整数，最大使用次数须为非负整数。'); return; }
+            if (!await ctx.confirm('确认创建策略豁免', `成员：${item.username || `用户 ${item.user_id}`}\n策略：${item.policy_name || `策略 ${item.policy_id}`}\n时长：${hours} 小时\n最大使用次数：${maxUses || '不限'}\n这会暂时绕过该策略。`)) return;
+            await api(`/api/admin/policy-exemptions/from-hit/${encodeURIComponent(item.id)}`, { method: 'POST', body: { hours, ...(maxUses ? { max_uses: maxUses } : {}) } });
+            ctx.notify('限期豁免已创建。'); await ctx.refresh();
+          }
+        } }));
+        return { pageToolbar: true, sections: [{ title: '策略命中记录', description: `第 ${data.page || page} 页 · 共 ${data.total || items.length} 条`, rows: rows.length ? rows : [{ label: '没有匹配的策略命中记录。' }] }], actions: [
+          { label: '筛选命中记录', toolbar: 'page', run: async ctx => {
+            const values = await ctx.form('策略命中筛选', [
+              { name: 'q', label: '成员用户名或策略名称', value: filters.q || '' },
+              { name: 'effect', label: '策略效果', value: filters.effect || '', options: [{ label: '全部', value: '' }, { label: '允许', value: 'allow' }, { label: '阻止', value: 'deny' }] },
+              { name: 'decision', label: '请求决策', value: filters.decision || '', options: [{ label: '全部', value: '' }, ...['allow', 'block', 'warn', 'shadow', 'challenge', 'queue', 'downgrade', 'suspend', 'error'].map(value => ({ label: value, value }))] },
+              { name: 'action', label: '执行动作', value: filters.action || '', options: [{ label: '全部', value: '' }, ...['block', 'warn', 'shadow', 'throttle', 'queue', 'downgrade', 'suspend', 'notify'].map(value => ({ label: value, value }))] },
+              { name: 'request_source', label: '客户端', value: filters.request_source || '', options: [{ label: '全部', value: '' }, ...['grok', 'codex', 'claude_code', 'opencode', 'qwen_code', 'hermes', 'openclaw', 'deepseek_harness', 'unknown'].map(value => ({ label: value, value }))] },
+            ]);
+            if (!values) return;
+            runtime.policyHitFilters = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value]).filter(([, value]) => value));
+            runtime.policyHitPage = 1; await ctx.refresh();
+          } },
+          { label: '上一页', toolbar: 'page', disabled: page <= 1, run: async ctx => { runtime.policyHitPage = Math.max(1, page - 1); await ctx.refresh(); } },
+          { label: '下一页', toolbar: 'page', disabled: page * 30 >= Number(data.total || 0), run: async ctx => { runtime.policyHitPage = page + 1; await ctx.refresh(); } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
+      },
+    }),
+    adminOnly({
+      id: 'admin-policy-exceptions', label: '策略例外与申诉', description: '查看并撤销策略豁免，审核成员策略申诉。批准申诉将自动创建 24 小时豁免。',
+      async load(api) {
+        const exceptionPage = runtime.policyExceptionPage || 1;
+        const appealPage = runtime.policyAppealPage || 1;
+        const exceptionStatus = runtime.policyExceptionStatus || '';
+        const appealStatus = runtime.policyAppealStatus || 'pending';
+        const [exemptions, appeals] = await Promise.all([
+          api('/api/admin/policy-exemptions', { query: { page: exceptionPage, limit: 30, status: exceptionStatus } }),
+          api('/api/admin/policy-appeals', { query: { page: appealPage, limit: 30, status: appealStatus } }),
+        ]);
+        const exceptionRows = array(exemptions.items).map(item => ({ label: display(`#${item.id}`, item.policy_name || (item.policy_id ? `策略 ${item.policy_id}` : '所有策略'), item.username || `${item.subject_type} ${item.subject_id}`, item.status), detail: display(`原因：${item.reason || '未填写'}`, `到期：${item.ends_at ? formatTime(item.ends_at) : '不自动到期'}`, `已用/上限：${item.uses || 0}/${item.max_uses || '不限'}`, `创建：${formatTime(item.created_at)}`), run: async ctx => {
+          if (item.status !== 'active') { await ctx.show(`豁免详情 · #${item.id}`, `状态：${item.status}\\n主体：${item.username || `${item.subject_type} ${item.subject_id}`}\\n原因：${item.reason || '未填写'}\\n到期：${item.ends_at ? formatTime(item.ends_at) : '不自动到期'}`); return; }
+          if (!await ctx.confirm('撤销策略豁免', `撤销 #${item.id}？主体将恢复接受相关策略检查。\\n${item.username || `${item.subject_type} ${item.subject_id}`} · ${item.policy_name || '所有策略'}`)) return;
+          await api(`/api/admin/policy-exemptions/${encodeURIComponent(item.id)}`, { method: 'DELETE' }); ctx.notify('策略豁免已撤销。'); await ctx.refresh();
+        } }));
+        const appealRows = array(appeals.items).map(item => ({ label: display(`#${item.id}`, item.username || `用户 ${item.user_id}`, item.policy_name || `策略 ${item.policy_id || '未指定'}`, item.status), detail: display(`申诉原因：${item.reason || '未填写'}`, item.hit_reason && `命中原因：${item.hit_reason}`, item.hit_action && `命中动作：${item.hit_action}`, `提交时间：${formatTime(item.created_at)}`), run: async ctx => {
+          const choice = await ctx.choose(`策略申诉 · #${item.id}`, [{ label: '查看详情', value: 'detail' }, ...(item.status === 'pending' ? [{ label: '批准并创建 24 小时豁免', value: 'approve' }, { label: '驳回申诉', value: 'reject' }] : [])]);
+          if (choice === 'detail') { await ctx.show(`申诉详情 · #${item.id}`, [`成员：${item.username || `用户 ${item.user_id}`}`, `策略：${item.policy_name || `策略 ${item.policy_id || '未指定'}`}`, `状态：${item.status}`, `申诉原因：${item.reason || '未填写'}`, `命中原因：${item.hit_reason || '无'}`, `处理结果：${item.resolution || '尚未处理'}`, `提交时间：${formatTime(item.created_at)}`, item.resolved_at && `处理时间：${formatTime(item.resolved_at)}`].filter(Boolean).join('\\n')); return; }
+          if (!choice) return;
+          const resolution = await ctx.ask(choice === 'approve' ? '批准说明' : '驳回说明'); if (resolution === null) return;
+          if (!await ctx.confirm(choice === 'approve' ? '批准申诉并创建豁免' : '驳回申诉', `${item.username || `用户 ${item.user_id}`} · ${item.policy_name || '策略申诉'}\\n${choice === 'approve' ? '批准后将自动创建 24 小时豁免。' : '驳回后成员仍受原策略约束。'}\\n处理说明：${resolution || '未填写'}`)) return;
+          await api(`/api/admin/policy-appeals/${encodeURIComponent(item.id)}/decide`, { method: 'POST', body: { decision: choice, resolution, ...(choice === 'approve' ? { hours: 24 } : {}) } });
+          ctx.notify(choice === 'approve' ? '申诉已批准并创建限期豁免。' : '申诉已驳回。'); await ctx.refresh();
+        } }));
+        const policiesResult = await api('/api/admin/policies', { query: { page: 1, limit: 200 } }).catch(() => ({ items: [] }));
+        const policies = array(policiesResult.items);
+        return { pageToolbar: true, sections: [
+          { title: '策略例外', description: `第 ${exemptions.page || exceptionPage} 页 · 共 ${exemptions.total || 0} 条`, rows: exceptionRows.length ? exceptionRows : [{ label: '没有匹配的策略例外。' }] },
+          { title: '成员申诉', description: `第 ${appeals.page || appealPage} 页 · 共 ${appeals.total || 0} 条 · ${appealStatus || '全部状态'}`, rows: appealRows.length ? appealRows : [{ label: '没有匹配的成员申诉。' }] },
+        ], actions: [
+          { label: '创建策略豁免', toolbar: 'page', run: async ctx => {
+            const values = await ctx.form('创建策略豁免', [
+              { name: 'subject_type', label: '主体类型', value: 'user', options: [{ label: '成员', value: 'user' }, { label: 'Team', value: 'team' }, { label: 'API Key', value: 'api_key' }] },
+              { name: 'subject_id', label: '主体编号（必填）' },
+              { name: 'policy_id', label: '绑定策略（留空表示所有策略）', value: '', options: [{ label: '所有策略', value: '' }, ...policies.map(policy => ({ label: `${policy.name} · ${policy.scope_type}/${policy.effect}`, value: String(policy.id) }))] },
+              { name: 'hours', label: '豁免时长（小时，留空表示无到期时间）' },
+              { name: 'max_uses', label: '最大使用次数（留空表示不限）' },
+              { name: 'reason', label: '豁免原因' },
+            ]);
+            if (!values || !String(values.subject_id || '').trim()) return;
+            const subjectId = Number(values.subject_id);
+            const hours = values.hours ? Number(values.hours) : null;
+            const maxUses = values.max_uses ? Number(values.max_uses) : null;
+            if (!Number.isInteger(subjectId) || subjectId < 1 || hours !== null && (!Number.isInteger(hours) || hours < 1 || hours > 87600) || maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) { await ctx.show('豁免参数无效', '主体编号须为正整数；时长须为 1 到 87600 小时；使用次数须为正整数。'); return; }
+            const subjectLabel = { user: '成员', team: 'Team', api_key: 'API Key' }[values.subject_type];
+            const policy = policies.find(item => String(item.id) === String(values.policy_id));
+            if (!await ctx.confirm('确认创建策略豁免', `${subjectLabel} #${subjectId}\n策略：${policy?.name || '所有策略'}\n时长：${hours ? `${hours} 小时` : '不自动到期'}\n最大使用次数：${maxUses || '不限'}\n原因：${values.reason || '未填写'}\n豁免生效期间将绕过匹配策略。`)) return;
+            const body = { subject_type: values.subject_type, subject_id: subjectId, policy_id: values.policy_id ? Number(values.policy_id) : null, ends_at: hours ? new Date(Date.now() + hours * 3600000).toISOString() : null, max_uses: maxUses, reason: values.reason || '' };
+            await api('/api/admin/policy-exemptions', { method: 'POST', body });
+            ctx.notify('策略豁免已创建。'); await ctx.refresh();
+          } },
+          { label: '筛选例外状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('例外状态', [{ label: '全部', value: '' }, { label: '生效中', value: 'active' }, { label: '已撤销', value: 'revoked' }, { label: '已过期', value: 'expired' }]); if (value !== null) { runtime.policyExceptionStatus = value; runtime.policyExceptionPage = 1; await ctx.refresh(); } } },
+          { label: '筛选申诉状态', toolbar: 'page', run: async ctx => { const value = await ctx.choose('申诉状态', [{ label: '待处理', value: 'pending' }, { label: '已批准', value: 'approved' }, { label: '已驳回', value: 'rejected' }, { label: '全部', value: '' }]); if (value !== null) { runtime.policyAppealStatus = value; runtime.policyAppealPage = 1; await ctx.refresh(); } } },
+          { label: '例外上一页', toolbar: 'page', disabled: exceptionPage <= 1, run: async ctx => { runtime.policyExceptionPage = Math.max(1, exceptionPage - 1); await ctx.refresh(); } },
+          { label: '例外下一页', toolbar: 'page', disabled: exceptionPage * 30 >= Number(exemptions.total || 0), run: async ctx => { runtime.policyExceptionPage = exceptionPage + 1; await ctx.refresh(); } },
+          { label: '申诉上一页', toolbar: 'page', disabled: appealPage <= 1, run: async ctx => { runtime.policyAppealPage = Math.max(1, appealPage - 1); await ctx.refresh(); } },
+          { label: '申诉下一页', toolbar: 'page', disabled: appealPage * 30 >= Number(appeals.total || 0), run: async ctx => { runtime.policyAppealPage = appealPage + 1; await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
@@ -1125,11 +1245,14 @@ function createAdminPages(runtime) {
         const rules = rulesResult.status === 'fulfilled' ? array(rulesResult.value) : [];
         const analytics = analyticsResult.status === 'fulfilled' ? analyticsResult.value : {};
         return { sections: [
-          { title: '7 日策略分析', rows: [{ label: JSON.stringify(analytics.totals || {}) }, ...array(analytics.rows).slice(0, 10).map(item => ({ label: display(item.policy_name || item.group, `${item.hits || 0} 次命中`) }))] },
+          { title: '7 日策略分析', cards: [
+            { label: '命中总数', value: Number(analytics.totals?.hits || 0) }, { label: '拦截数', value: Number(analytics.totals?.blocked || 0) },
+            { label: '涉及成员', value: Number(analytics.totals?.members || 0) }, { label: '平均评估耗时', value: `${Math.round(Number(analytics.totals?.avg_eval_ms || 0))} 毫秒` },
+          ], rows: array(analytics.rows).slice(0, 10).map(item => ({ label: display(item.policy_name || item.group || '未知分组', `${Number(item.hits || 0)} 次命中`), detail: `${Number(item.blocked || 0)} 次拦截 · 涉及 ${Number(item.members || 0)} 位成员` })) },
           { title: '通知渠道', rows: channels.length ? channels.map(channel => ({ label: display(channel.name, channel.type, channel.min_severity, channel.enabled ? '启用' : '停用'), run: async ctx => {
             const choice = await ctx.choose(`通知渠道 · ${channel.name}`, [{ label: '查看详情', value: 'detail' }, { label: '测试渠道（会发送外部通知）', value: 'test' }, { label: '删除渠道', value: 'delete' }]);
-            if (choice === 'detail') await ctx.show(`通知渠道 · ${channel.name}`, JSON.stringify(channel, null, 2));
-            if (choice === 'test') { if (!await ctx.confirm('发送测试通知', `将向已配置的 ${channel.type} 目标发送测试通知。继续？`)) return; const result = await api(`/api/admin/policy-channels/${channel.id}/test`, { method: 'POST', body: {} }); await ctx.show('渠道测试结果', JSON.stringify(result, null, 2)); }
+            if (choice === 'detail') await ctx.show(`通知渠道 · ${channel.name}`, [`名称：${channel.name}`, `类型：${channel.type}`, `最低告警级别：${channel.min_severity || 'warning'}`, `状态：${channel.enabled ? '启用' : '停用'}`, `Secret：${channel.has_secret ? '已配置（不显示密钥）' : '未配置'}`, `配置键：${Object.keys(channel.config || {}).filter(key => !/secret|token|key/i.test(key)).join('、') || '无非敏感配置'}`, `创建时间：${formatTime(channel.created_at)}`, `更新时间：${formatTime(channel.updated_at)}`].join('\n'));
+            if (choice === 'test') { if (!await ctx.confirm('发送测试通知', `将向已配置的 ${channel.type} 目标发送测试通知。继续？`)) return; const result = await api(`/api/admin/policy-channels/${channel.id}/test`, { method: 'POST', body: {} }); await ctx.show('渠道测试结果', [`结果：${result.success === false || result.ok === false ? '失败' : '完成'}`, result.status && `状态：${result.status}`, result.message && `说明：${result.message}`, result.error && `错误：${String(result.error).replace(/\s+/g, ' ').slice(0, 300)}`].filter(Boolean).join('\n') || '测试请求已完成。'); }
             if (choice === 'delete') { if (!await ctx.confirm('删除通知渠道', `删除「${channel.name}」？关联规则可能失去该渠道。`)) return; await api(`/api/admin/policy-channels/${channel.id}`, { method: 'DELETE' }); await ctx.refresh(); }
           } })) : [{ label: channelsResult.status === 'rejected' ? channelsResult.reason.message : '暂无通知渠道。' }] },
           { title: '告警规则', rows: rules.length ? rules.map(rule => ({ label: display(rule.name, rule.event_type, rule.severity, rule.enabled ? '启用' : '停用'), detail: display(`渠道 ${array(rule.channel_ids).join(', ') || '无'}`, `静默 ${rule.silence_window_seconds || 0}s`) })) : [{ label: rulesResult.status === 'rejected' ? rulesResult.reason.message : '暂无告警规则。' }] },
@@ -1190,11 +1313,18 @@ function createAdminPages(runtime) {
       async load(api) {
         const data = await api('/api/admin/policy-approvals', { query: { page: 1, limit: 100, status: runtime.approvalStatus || 'pending' } });
         const items = array(data && data.items);
-        return { sections: [{ title: '审批中心', description: `${items.length} 条 · ${runtime.approvalStatus || '全部状态'}`, rows: items.map(item => ({ label: display(item.kind === 'request' ? '运行时放行' : '策略变更', item.policy_name || item.policy_id, item.requested_by_name, item.status), detail: display(item.preview && JSON.stringify(item.preview), formatTime(item.created_at)), run: async ctx => {
+        return { sections: [{ title: '审批中心', description: `${items.length} 条 · ${runtime.approvalStatus || '全部状态'}`, rows: items.map(item => ({ label: display(item.kind === 'request' ? '运行时放行' : '策略变更', item.policy_name || item.policy_id, item.requested_by_name, item.status), detail: display(item.preview?.model && `模型：${item.preview.model}`, item.preview?.provider && `供应商：${item.preview.provider}`, item.preview?.reason && `原因：${item.preview.reason}`, item.preview?.action && `请求动作：${item.preview.action}`, formatTime(item.created_at)), run: async ctx => {
           const decision = await ctx.choose(`审批 · #${item.id}`, [{ label: '查看详情', value: 'detail' }, ...(item.status === 'pending' ? [{ label: '通过', value: 'approve' }, { label: '驳回', value: 'reject' }] : [])]);
-          if (decision === 'detail') { await ctx.show('审批详情', JSON.stringify(item, null, 2)); return; }
-          if (!decision || !await ctx.confirm(decision === 'approve' ? '通过审批' : '驳回审批', `${item.policy_name || item.kind}\n申请人 ${item.requested_by_name || '未知'}\n${JSON.stringify(item.preview || {})}`)) return;
-          const note = await ctx.ask('审批备注（可留空）');
+          const preview = item.preview || {};
+          if (decision === 'detail') { await ctx.show(`审批详情 · #${item.id}`, [
+            `审批编号：${item.id}`, `申请类型：${item.kind === 'request' ? '运行时访问申请' : '策略变更申请'}`, `策略：${item.policy_name || `策略 ${item.policy_id || '未指定'}`}`,
+            `申请人：${item.requested_by_name || '未知'}`, `状态：${item.status || '未知'}`, `申请时间：${formatTime(item.created_at)}`,
+            preview.model && `模型：${preview.model}`, preview.provider && `供应商：${preview.provider}`, preview.reason && `申请原因：${preview.reason}`, preview.action && `请求动作：${preview.action}`,
+            preview.team_id && `Team 编号：${preview.team_id}`, preview.user_id && `成员编号：${preview.user_id}`,
+          ].filter(Boolean).join('\\n')); return; }
+          if (!decision) return;
+          const note = await ctx.ask('审批备注（可留空）'); if (note === null) return;
+          if (!await ctx.confirm(decision === 'approve' ? '通过审批' : '驳回审批', `${item.policy_name || item.kind}\n申请人 ${item.requested_by_name || '未知'}\n申请原因：${preview.reason || '未提供'}\n处理备注：${note || '无'}`)) return;
           await api(`/api/admin/policy-approvals/${item.id}/decide`, { method: 'POST', body: { decision, note: note || '' } }); ctx.notify(decision === 'approve' ? '审批已通过。' : '审批已驳回。'); await ctx.refresh();
         } })) }], actions: [
           ...[['pending', '待审批'], ['', '全部审批']].map(([value, label]) => ({ label, run: async ctx => { runtime.approvalStatus = value; await ctx.refresh(); } })),
@@ -1214,8 +1344,13 @@ function createAdminPages(runtime) {
         const result = list.status === 'fulfilled' ? list.value : {};
         const items = array(result.items);
         return { sections: [
-          { title: '策略概览', rows: [{ label: JSON.stringify(overviewData) }, { label: JSON.stringify(healthData) }] },
-          { title: '策略列表', description: `第 ${result.page || runtime.adminPolicyPage || 1} 页 · 共 ${result.total || 0} 条`, rows: items.map(item => ({ label: display(item.name, item.scope_type, item.effect, item.action, item.enabled ? '启用' : '停用'), detail: display(item.description, `优先级 ${item.priority}`, `24小时命中 ${item.hits_24h || 0}`), run: async ctx => { const detail = await api(`/api/admin/policies/${item.id}`); await ctx.show(`策略详情 · ${item.name}`, JSON.stringify(detail, null, 2)); } })) },
+          { title: '策略概览', cards: [
+            { label: '策略总数', value: Number(overviewData.policies?.total || 0) }, { label: '已启用', value: Number(overviewData.policies?.enabled || 0) },
+            { label: '阻止策略', value: Number(overviewData.policies?.deny || 0) }, { label: '允许策略', value: Number(overviewData.policies?.allow || 0) },
+            { label: '近 24 小时命中', value: Number(overviewData.hits?.last_24h || 0) }, { label: '近 24 小时拦截', value: Number(overviewData.hits?.blocked_24h || 0) },
+            { label: '待处理审批', value: Number(overviewData.pending?.approvals || 0) }, { label: '待处理申诉', value: Number(overviewData.pending?.appeals || 0) },
+          ], rows: [...array(overviewData.top_policies).map(item => ({ label: `高频策略：${item.policy_name || `策略 ${item.policy_id}`}`, detail: `近 24 小时 ${Number(item.hits || 0)} 次命中` })), ...array(overviewData.top_clients).map(item => ({ label: `高频客户端：${item.label || item.request_source || '未知'}`, detail: `近 24 小时 ${Number(item.hits || 0)} 次命中` })), ...array(healthData.items?.expiring).map(item => ({ label: `即将到期：${item.name || `策略 ${item.id}`}`, detail: `到期：${formatTime(item.ends_at)}` })), ...array(healthData.items?.zero_hits).map(item => ({ label: `近 30 天无命中：${item.name || `策略 ${item.id}`}`, detail: `${item.scope_type || '未知作用域'} · ${item.enabled ? '已启用' : '已停用'}` })), ...array(healthData.items?.orphans).map(item => ({ label: `失效作用域：${item.name || `策略 ${item.id}`}`, detail: item.orphan_team ? '关联 Team 不存在' : item.orphan_member ? '关联成员不存在' : '作用域异常' })), ...(overview.status === 'rejected' ? [{ label: `概览暂不可用：${overview.reason.message}` }] : []), ...(health.status === 'rejected' ? [{ label: `策略健康暂不可用：${health.reason.message}` }] : [])] },
+          { title: '策略列表', description: `第 ${result.page || runtime.adminPolicyPage || 1} 页 · 共 ${result.total || 0} 条`, rows: items.map(item => ({ label: display(item.name, item.scope_type, item.effect, item.action, item.enabled ? '启用' : '停用'), detail: display(item.description, `优先级 ${item.priority}`, `24小时命中 ${item.hits_24h || 0}`), run: async ctx => { const detail = await api(`/api/admin/policies/${item.id}`); const policy = detail.policy || detail; await ctx.show(`策略详情 · ${item.name}`, [`策略名称：${policy.name || item.name}`, `说明：${policy.description || '无'}`, `作用域：${policy.scope_type || item.scope_type}${policy.scope_id ? ` · 对象编号 ${policy.scope_id}` : ''}`, `效果与动作：${policy.effect || item.effect || '未知'} / ${policy.action || item.action || '未知'}`, `状态：${policy.status || '未知'} · ${policy.enabled === false ? '已停用' : '已启用'}`, `优先级：${policy.priority ?? '未设置'}`, `近 24 小时命中：${policy.hits_24h ?? item.hits_24h ?? 0} 次`, `条件摘要：${Object.entries(policy.conditions || {}).map(([key, value]) => `${key.replace(/_/g, ' ')}：${Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}`).join('；') || '无额外条件'}`, policy.starts_at && `开始时间：${formatTime(policy.starts_at)}`, policy.ends_at && `结束时间：${formatTime(policy.ends_at)}`, policy.message_template && `命中提示：${policy.message_template}`].filter(Boolean).join('\n')); } })) },
         ], actions: [
           { label: '搜索策略', run: async ctx => { runtime.adminPolicyFilters = { ...(runtime.adminPolicyFilters || {}), q: String(await ctx.ask('策略名称或说明') || '').trim() }; runtime.adminPolicyPage = 1; await ctx.refresh(); } },
           { label: '上一页', run: async ctx => { runtime.adminPolicyPage = Math.max(1, (runtime.adminPolicyPage || 1) - 1); await ctx.refresh(); } },

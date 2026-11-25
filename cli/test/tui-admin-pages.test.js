@@ -111,6 +111,59 @@ test('admin model actions create, edit, batch update, delete and export through 
   await fs.rm(exportDir, { recursive: true, force: true });
 });
 
+test('admin policy hits filter, detail and create a time-limited exemption through web endpoints', async () => {
+  const calls = [];
+  const hit = { id: 7, policy_id: 3, policy_name: 'Block risky request', user_id: 9, username: 'alice', team_id: 2, team_name: 'Team A', created_at: '2026-11-25T00:00:00Z', decision: 'block', effect: 'deny', action: 'block', requested_model: 'model-x', request_source: 'codex', reason: 'matched client rule', ip_address: '127.0.0.1' };
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/policy-hits') return { items: [hit], total: 1, page: 1 }; if (path === '/api/admin/policy-hits/7') return hit; return { id: 12 }; };
+  const page = pageById('admin-policy-hits');
+  const data = await page.load(api);
+  assert.deepEqual(calls[0].options.query, { page: 1, limit: 30 });
+  let details = '';
+  const row = data.sections[0].rows[0];
+  await row.run({ choose: async () => 'detail', show: async (_title, body) => { details = body; } });
+  assert.match(details, /决策：block/);
+  assert.match(details, /客户端：codex/);
+  await data.actions.find(action => action.label === '筛选命中记录').run({ form: async () => ({ q: 'alice', effect: 'deny', decision: '', action: '', request_source: '' }), refresh: async () => {} });
+  assert.deepEqual(runtime.policyHitFilters, { q: 'alice', effect: 'deny' });
+  const exemptionChoices = ['exemption'];
+  await row.run({ choose: async () => exemptionChoices.shift(), form: async () => ({ hours: '12', max_uses: '3' }), confirm: async () => false });
+  assert.equal(calls.some(call => call.path.endsWith('/from-hit/7')), false);
+  await row.run({ choose: async () => 'exemption', form: async () => ({ hours: '12', max_uses: '3' }), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path.endsWith('/from-hit/7')).options.body, { hours: 12, max_uses: 3 });
+});
+
+test('admin policy exceptions and appeals filter, revoke, approve and reject with explicit impact', async () => {
+  const calls = [];
+  const exemption = { id: 11, subject_type: 'user', subject_id: 9, username: 'alice', policy_name: 'Block risky request', reason: 'temporary access', status: 'active', ends_at: '2026-11-26T00:00:00Z', uses: 1, max_uses: 3 };
+  const appeal = { id: 21, user_id: 9, username: 'alice', policy_id: 3, policy_name: 'Block risky request', reason: 'false positive', hit_reason: 'matched rule', hit_action: 'block', status: 'pending', created_at: '2026-11-25T00:00:00Z' };
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/policy-exemptions') return { items: [exemption], total: 1, page: 1 }; if (path === '/api/admin/policy-appeals') return { items: [appeal], total: 1, page: 1 }; if (path === '/api/admin/policies') return { items: [{ id: 3, name: 'Block risky request', scope_type: 'global', effect: 'deny' }] }; return {}; };
+  const page = pageById('admin-policy-exceptions');
+  const data = await page.load(api);
+  assert.deepEqual(calls.slice(0, 2).map(call => call.options.query), [{ page: 1, limit: 30, status: '' }, { page: 1, limit: 30, status: 'pending' }]);
+  const create = data.actions.find(action => action.label === '创建策略豁免');
+  const createValues = { subject_type: 'user', subject_id: '9', policy_id: '3', hours: '12', max_uses: '4', reason: 'approved test' };
+  await create.run({ form: async () => createValues, confirm: async () => false });
+  assert.equal(calls.some(call => call.path === '/api/admin/policy-exemptions' && call.options.method === 'POST'), false);
+  await create.run({ form: async () => createValues, confirm: async () => true, notify() {}, refresh: async () => {} });
+  const created = calls.find(call => call.path === '/api/admin/policy-exemptions' && call.options.method === 'POST');
+  assert.deepEqual({ subject_type: created.options.body.subject_type, subject_id: created.options.body.subject_id, policy_id: created.options.body.policy_id, max_uses: created.options.body.max_uses, reason: created.options.body.reason }, { subject_type: 'user', subject_id: 9, policy_id: 3, max_uses: 4, reason: 'approved test' });
+  assert.ok(Date.parse(created.options.body.ends_at) > Date.now());
+  let revokeMessage = '';
+  await data.sections[0].rows[0].run({ confirm: async (_title, message) => { revokeMessage = message; return false; } });
+  assert.match(revokeMessage, /恢复接受相关策略检查/);
+  assert.equal(calls.some(call => call.path.endsWith('/11') && call.options.method === 'DELETE'), false);
+  await data.sections[0].rows[0].run({ confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(calls.some(call => call.path.endsWith('/11') && call.options.method === 'DELETE'));
+  let approveMessage = '';
+  await data.sections[1].rows[0].run({ choose: async () => 'approve', ask: async () => '确认误拦截', confirm: async (_title, message) => { approveMessage = message; return true; }, notify() {}, refresh: async () => {} });
+  assert.match(approveMessage, /24 小时豁免/);
+  assert.deepEqual(calls.find(call => call.path.endsWith('/21/decide')).options.body, { decision: 'approve', resolution: '确认误拦截', hours: 24 });
+  let rejectMessage = '';
+  await data.sections[1].rows[0].run({ choose: async () => 'reject', ask: async () => '规则匹配有效', confirm: async (_title, message) => { rejectMessage = message; return true; }, notify() {}, refresh: async () => {} });
+  assert.match(rejectMessage, /仍受原策略约束/);
+  assert.equal(calls.filter(call => call.path.endsWith('/21/decide')).at(-1).options.body.decision, 'reject');
+});
+
 test('admin error logs pass user/model/provider/status/date filters to API', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { logs: [], total: 0, page: 1 }; };
