@@ -41,6 +41,7 @@ from crewrouter import (
     UserKeyTag,
     UserUsageLog,
     UserUsageLogsResponse,
+    UserStatsFiltersResponse,
     UserUsageLogDetail,
     UserUsageLogDetailResponse,
     ModelUptimeDailyResponse,
@@ -150,6 +151,7 @@ class TypedRequestTests(unittest.TestCase):
         usage_logs: UserUsageLogsResponse = {"total": 1, "page": 1, "logs": [usage_log]}
         usage_detail: UserUsageLogDetail = {**usage_log, "messages": [{"role": "user", "content": "hi"}], "response": {"choices": []}}
         usage_detail_response: UserUsageLogDetailResponse = {"log": usage_detail}
+        stats_filters: UserStatsFiltersResponse = {"sources": [{"id": "claude_code", "name": "Claude Code"}], "models": [{"id": "m1", "name": "Model"}], "providers": [{"id": "p1", "name": "Provider"}], "teams": [{"id": 2, "name": "Team"}]}
         available_model: ApiKeyAvailableModel = {
             "id": "m1", "name": "Model", "provider": "p1", "series": "s1",
             "description": None, "enabled": True, "icon_url": None,
@@ -185,6 +187,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertEqual(admin_page["items"][0]["username"], "alice")
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         self.assertEqual(usage_detail_response["log"]["messages"][0]["content"], "hi")
+        self.assertEqual(stats_filters["teams"][0]["id"], 2)
         product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)
         self.assertEqual(key_models_updated["current_model_id"], "m1")

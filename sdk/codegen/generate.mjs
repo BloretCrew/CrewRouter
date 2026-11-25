@@ -554,6 +554,14 @@ function managementSchemas() {
     UserUsageLogDetailResponse: object({
       log: { $ref: '#/components/schemas/UserUsageLogDetail' },
     }, ['log']),
+    StatsFilterOption: object({ id: { type: 'string' }, name: { type: 'string' } }, ['id', 'name']),
+    StatsFilterTeam: object({ id: { type: 'integer' }, name: { type: 'string' } }, ['id', 'name']),
+    UserStatsFiltersResponse: object({
+      sources: { type: 'array', items: { $ref: '#/components/schemas/StatsFilterOption' } },
+      models: { type: 'array', items: { $ref: '#/components/schemas/StatsFilterOption' } },
+      providers: { type: 'array', items: { $ref: '#/components/schemas/StatsFilterOption' } },
+      teams: { type: 'array', items: { $ref: '#/components/schemas/StatsFilterTeam' } },
+    }, ['sources', 'models', 'providers', 'teams']),
     ApiKeyQueueItem: object({
       model_id: { type: 'string' }, id: { type: 'string' }, name: { type: 'string' },
       provider: nullableString, series: nullableString, icon_url: nullableString, sort_order: { type: 'integer' },
@@ -691,6 +699,7 @@ function managementResponseSchema(operationId) {
     'user.currentModel.list': { $ref: '#/components/schemas/CurrentModelResponse' },
     'user.usageLogs.list': { $ref: '#/components/schemas/UserUsageLogsResponse' },
     'user.usageLogs.byId.get': { $ref: '#/components/schemas/UserUsageLogDetailResponse' },
+    'user.stats.filters.list': { $ref: '#/components/schemas/UserStatsFiltersResponse' },
   };
   return schemas[operationId] || null;
 }

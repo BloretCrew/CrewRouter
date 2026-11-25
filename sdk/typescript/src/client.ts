@@ -36,6 +36,7 @@ import type {
   UserCodeBalanceItem,
   UserUsageLogsResponse,
   UserUsageLogDetailResponse,
+  UserStatsFiltersResponse,
   ModelUptimeResponse,
   ModelUptimeDetailResponse,
   RequestOptions,
@@ -244,6 +245,11 @@ export class CrewRouter {
       this.call<T>('user.models.uptime.list', { ...options, query }),
     getDetail: <T = ModelUptimeDetailResponse>(id: string, query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.models.byId.uptime.list', { ...options, pathParams: { ...(options?.pathParams || {}), id }, query }),
+  };
+
+  readonly stats = {
+    filters: <T = UserStatsFiltersResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.stats.filters.list', options),
   };
 
   readonly providers = {

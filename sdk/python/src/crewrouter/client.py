@@ -392,6 +392,23 @@ class UserUsageLogDetailResponse(TypedDict):
     log: UserUsageLogDetail
 
 
+class StatsFilterOption(TypedDict):
+    id: str
+    name: str
+
+
+class StatsFilterTeam(TypedDict):
+    id: int
+    name: str
+
+
+class UserStatsFiltersResponse(TypedDict):
+    sources: list[StatsFilterOption]
+    models: list[StatsFilterOption]
+    providers: list[StatsFilterOption]
+    teams: list[StatsFilterTeam]
+
+
 class ModelUptimeSummaryItem(TypedDict):
     uptime_pct: Optional[float]
     label: str

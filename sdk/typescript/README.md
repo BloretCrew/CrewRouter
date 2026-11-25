@@ -91,6 +91,7 @@ const refundableCodes = await client.codeBalances.list(); // UserCodeBalanceItem
 const providerTags = await client.providerTags.list(); // ProviderTag[]
 const uptime = await client.modelUptime.get({ days: 7 }); // ModelUptimeResponse; day or 15m granularity
 const detail = await client.modelUptime.getDetail('model-id', { days: 7 }); // ModelUptimeDetailResponse
+const filters = await client.stats.filters(); // UserStatsFiltersResponse
 ```
 
 Every non-session operation is reachable through `call`:

@@ -122,6 +122,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected API key models update payload: %#v", modelsUpdate)
 	}
 
+	var statsFilters crewrouter.UserStatsFiltersResponse
+	if err := json.Unmarshal([]byte(`{"sources":[{"id":"claude_code","name":"Claude Code"}],"models":[{"id":"m1","name":"Model"}],"providers":[{"id":"p1","name":"Provider"}],"teams":[{"id":2,"name":"Team"}]}`), &statsFilters); err != nil {
+		t.Fatalf("decode user stats filters: %v", err)
+	}
+	if len(statsFilters.Sources) != 1 || statsFilters.Teams[0].ID != 2 {
+		t.Fatalf("unexpected stats filters payload: %#v", statsFilters)
+	}
+
 	var legacyUsers []crewrouter.AdminUser
 	if err := json.Unmarshal([]byte(`[{"id":9,"username":"alice","email":null,"email_verified":false,"avatar":null,"balance":"1.5","refund_balance":"0","is_admin":false,"tags":[],"rate_limit_rpm":0,"rate_limit_tpm":0,"created_at":"2026-01-01T00:00:00Z","team_id":null,"team_name":null}]`), &legacyUsers); err != nil {
 		t.Fatalf("decode legacy admin users: %v", err)

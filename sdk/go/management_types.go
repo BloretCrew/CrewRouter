@@ -1,5 +1,25 @@
 package crewrouter
 
+// StatsFilterOption is a model, provider, or request-source filter choice.
+type StatsFilterOption struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// StatsFilterTeam is a Team filter choice.
+type StatsFilterTeam struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// UserStatsFiltersResponse contains the filter values available to a user.
+type UserStatsFiltersResponse struct {
+	Sources   []StatsFilterOption `json:"sources"`
+	Models    []StatsFilterOption `json:"models"`
+	Providers []StatsFilterOption `json:"providers"`
+	Teams     []StatsFilterTeam   `json:"teams"`
+}
+
 // AdminUser is one administrator-visible user row.
 type AdminUser struct {
 	ID            int64   `json:"id"`

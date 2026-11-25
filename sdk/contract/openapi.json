@@ -1391,6 +1391,74 @@
         ],
         "additionalProperties": true
       },
+      "StatsFilterOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "StatsFilterTeam": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "UserStatsFiltersResponse": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatsFilterOption"
+            }
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatsFilterOption"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatsFilterOption"
+            }
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatsFilterTeam"
+            }
+          }
+        },
+        "required": [
+          "sources",
+          "models",
+          "providers",
+          "teams"
+        ],
+        "additionalProperties": true
+      },
       "ApiKeyQueueItem": {
         "type": "object",
         "properties": {
@@ -19988,8 +20056,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/UserStatsFiltersResponse"
                 }
               }
             }

@@ -483,6 +483,23 @@ export interface UserUsageLogDetailResponse {
   log: UserUsageLogDetail;
 }
 
+export interface StatsFilterOption {
+  id: string;
+  name: string;
+}
+
+export interface StatsFilterTeam {
+  id: number;
+  name: string;
+}
+
+export interface UserStatsFiltersResponse {
+  sources: StatsFilterOption[];
+  models: StatsFilterOption[];
+  providers: StatsFilterOption[];
+  teams: StatsFilterTeam[];
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;
