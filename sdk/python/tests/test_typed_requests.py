@@ -42,6 +42,8 @@ from crewrouter import (
     DailyUsageItem,
     UserBalance,
     TeamQuotaRule,
+    TeamQuotaRuleCreateRequest,
+    TeamQuotaRuleCreated,
     UserCodeBalanceItem,
     UserModelListItem,
     UserModelInfo,
@@ -196,6 +198,8 @@ class TypedRequestTests(unittest.TestCase):
         admin_stats_filters: AdminStatsFiltersResponse = {"users": [{"id": 9, "name": "alice"}], "teams": [{"id": 2, "name": "Team"}], "models": [{"id": "m1", "name": "Model"}], "providers": [{"id": "p1", "name": "Provider"}], "sources": [{"id": "claude_code", "name": "Claude Code"}], "projects": [{"id": "/workspace", "name": "/workspace"}]}
         admin_page: AdminUsersPage = {"items": [admin_user], "total": 1, "page": 1, "limit": 50, "stats": {"adminCount": 0, "verifiedCount": 0, "totalBalance": 1.5}}
         team_rule: TeamQuotaRule = {"id": "team-rule-1", "rule_type": "requests", "rule_value": 100, "duration_hours": 24, "description": "daily cap"}
+        team_rule_request: TeamQuotaRuleCreateRequest = {"rule_type": "requests", "rule_value": 100, "duration_hours": 24, "description": "daily cap"}
+        team_rule_created: TeamQuotaRuleCreated = {**team_rule, "id": "team-rule-1", "rule_value": 100}
         admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
         team_member: TeamMember = {"id": 9, "username": "alice", "email": None, "avatar": None, "created_at": "2026-01-01T00:00:00Z"}
         team_model: TeamModelListItem = {"mapping_id": None, "enabled": False, "model_id": "m1", "name": "Model", "provider": "p1", "series": None, "description": None, "input_price_per_1k_tokens": "0.01", "output_price_per_1k_tokens": 0.02, "icon_url": None, "upstream_model_id": None, "alias": None, "model_multiplier": "1.0", "test_ok": None, "test_latency_ms": None, "test_tokens_per_second": None, "test_error": None, "test_tested_at": None, "provider_id": "p1", "provider_name": "Provider", "provider_enabled": True}
@@ -215,6 +219,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertIsNone(team_model["mapping_id"])
         self.assertEqual(admin_provider_tag["sort_order"], 0)
         self.assertEqual(admin_provider_tag_updated["id"], 4)
+        self.assertEqual(team_rule_request["rule_type"], team_rule_created["rule_type"])
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         self.assertEqual(usage_detail_response["log"]["messages"][0]["content"], "hi")
         self.assertEqual(stats_filters["teams"][0]["id"], 2)

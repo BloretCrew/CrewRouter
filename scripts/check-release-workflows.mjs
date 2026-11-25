@@ -69,6 +69,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const adminTeamMembers = openapi.paths['/api/admin/teams/{id}/members']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminTeamModels = openapi.paths['/api/admin/teams/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const teamRules = openapi.paths['/api/admin/teams/{id}/rules']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const teamRulesCreate = openapi.paths['/api/admin/teams/{id}/rules']?.post;
   const adminProviderTags = openapi.paths['/api/admin/provider-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProviderTagCreate = openapi.paths['/api/admin/provider-tags']?.post?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProviderTagUpdate = openapi.paths['/api/admin/provider-tags/{id}']?.put?.responses?.[200]?.content?.['application/json']?.schema;
@@ -118,6 +119,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (adminTeamModels?.type !== 'array' || adminTeamModels.items?.$ref !== '#/components/schemas/TeamModelListItem') throw new Error(`${openapiPath} must define administrator Team model list responses`);
   if (teamRules?.type !== 'array' || teamRules.items?.$ref !== '#/components/schemas/TeamQuotaRule') throw new Error(`${openapiPath} must define Team quota rule lists`);
   if (!openapi.components.schemas.TeamQuotaRule?.additionalProperties || openapi.components.schemas.TeamQuotaRule?.properties?.rule_type?.enum?.join(',') !== 'requests,tokens') throw new Error(`${openapiPath} must describe extensible legacy Team quota rules`);
+  if (teamRulesCreate?.requestBody?.required !== true || teamRulesCreate.requestBody.content['application/json'].schema.$ref !== '#/components/schemas/TeamQuotaRuleCreateRequest' || teamRulesCreate.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/TeamQuotaRuleCreated') throw new Error(`${openapiPath} must type Team quota rule create request/response`);
   if (adminProviderTags?.type !== 'array' || adminProviderTags.items?.$ref !== '#/components/schemas/AdminProviderTag') throw new Error(`${openapiPath} must define administrator provider tag list responses`);
   if (adminProviderTagCreate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse' || adminProviderTagUpdate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse') throw new Error(`${openapiPath} must define admin provider tag mutation responses`);
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);

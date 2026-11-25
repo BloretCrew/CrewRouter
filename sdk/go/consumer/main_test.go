@@ -185,6 +185,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(teamRules) != 1 || teamRules[0].RuleType != "requests" || teamRules[0].DurationHours != 24 {
 		t.Fatalf("unexpected Team rules payload: %#v", teamRules)
 	}
+	var createdTeamRule crewrouter.TeamQuotaRuleCreated
+	if err := json.Unmarshal([]byte(`{"id":"team-rule-1","rule_type":"requests","rule_value":100,"duration_hours":24,"description":"daily cap"}`), &createdTeamRule); err != nil {
+		t.Fatalf("decode created Team rule: %v", err)
+	}
+	if createdTeamRule.ID != "team-rule-1" || createdTeamRule.RuleValue != 100 {
+		t.Fatalf("unexpected created Team rule: %#v", createdTeamRule)
+	}
 
 	var teamMembers []crewrouter.TeamMember
 	if err := json.Unmarshal([]byte(`[{"id":9,"username":"alice","email":null,"avatar":null,"created_at":"2026-01-01T00:00:00Z"}]`), &teamMembers); err != nil {

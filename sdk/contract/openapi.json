@@ -2853,6 +2853,73 @@
         "additionalProperties": true,
         "description": "Legacy Team quota rules may omit id/value fields or carry extension fields; newly created rules populate id, rule_value and duration_hours."
       },
+      "TeamQuotaRuleCreateRequest": {
+        "type": "object",
+        "properties": {
+          "rule_type": {
+            "type": "string",
+            "enum": [
+              "requests",
+              "tokens"
+            ]
+          },
+          "rule_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "duration_hours": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_type",
+          "rule_value",
+          "duration_hours"
+        ],
+        "additionalProperties": true
+      },
+      "TeamQuotaRuleCreated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "rule_type": {
+            "type": "string",
+            "enum": [
+              "requests",
+              "tokens"
+            ]
+          },
+          "rule_value": {
+            "type": "number"
+          },
+          "duration_hours": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule_type",
+          "rule_value",
+          "duration_hours",
+          "description"
+        ],
+        "additionalProperties": true
+      },
       "TeamRuleDeleteResponse": {
         "type": "object",
         "properties": {
@@ -12120,7 +12187,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TeamQuotaRule"
+                  "$ref": "#/components/schemas/TeamQuotaRuleCreated"
                 }
               }
             }
@@ -12134,12 +12201,11 @@
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true
+                "$ref": "#/components/schemas/TeamQuotaRuleCreateRequest"
               }
             }
           }

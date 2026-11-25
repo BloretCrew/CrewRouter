@@ -755,6 +755,14 @@ function managementSchemas() {
       additionalProperties: true,
       description: 'Legacy Team quota rules may omit id/value fields or carry extension fields; newly created rules populate id, rule_value and duration_hours.',
     },
+    TeamQuotaRuleCreateRequest: object({
+      rule_type: { type: 'string', enum: ['requests', 'tokens'] }, rule_value: numberOrString,
+      duration_hours: { type: 'number', exclusiveMinimum: 0 }, description: { type: 'string' },
+    }, ['rule_type', 'rule_value', 'duration_hours']),
+    TeamQuotaRuleCreated: object({
+      id: { type: 'string' }, rule_type: { type: 'string', enum: ['requests', 'tokens'] },
+      rule_value: { type: 'number' }, duration_hours: { type: 'number' }, description: { type: 'string' },
+    }, ['id', 'rule_type', 'rule_value', 'duration_hours', 'description']),
     TeamRuleDeleteResponse: object({ success: { const: true } }),
     BalanceGroup: object({
       id: { type: 'integer' }, name: { type: 'string' }, description: nullableString,
@@ -787,7 +795,7 @@ function managementResponseSchema(operationId) {
     'admin.teams.byId.members.list': { type: 'array', items: { $ref: '#/components/schemas/TeamMember' } },
     'admin.teams.byId.models.list': { type: 'array', items: { $ref: '#/components/schemas/TeamModelListItem' } },
     'admin.teams.byId.rules.list': { type: 'array', items: { $ref: '#/components/schemas/TeamQuotaRule' } },
-    'admin.teams.byId.rules.create': { $ref: '#/components/schemas/TeamQuotaRule' },
+    'admin.teams.byId.rules.create': { $ref: '#/components/schemas/TeamQuotaRuleCreated' },
     'admin.teams.byId.rules.byRuleId.delete': { $ref: '#/components/schemas/TeamRuleDeleteResponse' },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
@@ -918,6 +926,12 @@ function buildOpenApi(operations) {
     };
     if (op.operationId === 'admin.users.list') {
       operation.description = 'Administrator-only user list. Without the page query, returns a full array for legacy consumers. With page specified, returns a paginated object containing items, total, page, limit and filtered stats.';
+    }
+    if (op.operationId === 'admin.teams.byId.rules.create') {
+      operation.requestBody = {
+        required: true,
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/TeamQuotaRuleCreateRequest' } } },
+      };
     }
     if (op.operationId === 'user.usageLogs.byId.get') {
       operation.description = 'Returns one usage record owned by the authenticated user. messages and response are opaque upstream payloads, can be large, and may contain user data; avoid logging or redistributing them.';

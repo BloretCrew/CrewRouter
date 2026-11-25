@@ -334,6 +334,21 @@ class TeamQuotaRule(TypedDict, total=False):
     current: Any
 
 
+class TeamQuotaRuleCreateRequest(TypedDict):
+    rule_type: str
+    rule_value: Union[int, float, str]
+    duration_hours: Union[int, float]
+    description: str
+
+
+class TeamQuotaRuleCreated(TypedDict):
+    id: str
+    rule_type: str
+    rule_value: Union[int, float]
+    duration_hours: Union[int, float]
+    description: str
+
+
 class BalanceGroup(TypedDict, total=False):
     id: Union[int, str]
     name: str

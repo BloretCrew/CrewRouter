@@ -362,6 +362,21 @@ export interface TeamQuotaRule {
   [key: string]: unknown;
 }
 
+export interface TeamQuotaRuleCreateRequest {
+  rule_type: 'requests' | 'tokens';
+  rule_value: number | string;
+  duration_hours: number;
+  description?: string;
+}
+
+export interface TeamQuotaRuleCreated {
+  id: string;
+  rule_type: 'requests' | 'tokens';
+  rule_value: number;
+  duration_hours: number;
+  description: string;
+}
+
 export interface TeamRuleDeleteResponse {
   success: true;
 }

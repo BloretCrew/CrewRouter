@@ -37,6 +37,8 @@ export type {
   TeamMember,
   TeamModelListItem,
   TeamQuotaRule,
+  TeamQuotaRuleCreateRequest,
+  TeamQuotaRuleCreated,
   TeamRuleDeleteResponse,
   AdminUserStats,
   AdminUsersPage,

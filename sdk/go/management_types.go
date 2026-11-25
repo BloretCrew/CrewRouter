@@ -269,6 +269,23 @@ type TeamModelListItem struct {
 	ProviderEnabled        *bool   `json:"provider_enabled"`
 }
 
+// TeamQuotaRuleCreateRequest is accepted when adding a Team quota rule.
+type TeamQuotaRuleCreateRequest struct {
+	RuleType      string  `json:"rule_type"`
+	RuleValue     any     `json:"rule_value"`
+	DurationHours float64 `json:"duration_hours"`
+	Description   string  `json:"description,omitempty"`
+}
+
+// TeamQuotaRuleCreated is returned after adding a Team quota rule.
+type TeamQuotaRuleCreated struct {
+	ID            string  `json:"id"`
+	RuleType      string  `json:"rule_type"`
+	RuleValue     float64 `json:"rule_value"`
+	DurationHours float64 `json:"duration_hours"`
+	Description   string  `json:"description"`
+}
+
 // TeamQuotaRule is a quota rule returned with the balance summary.
 type TeamQuotaRule struct {
 	ID            string `json:"id,omitempty"`
