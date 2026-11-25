@@ -248,24 +248,33 @@ function usagePage(runtime) {
           avg_lines: '平均每次请求行数', avg_daily_requests: '日均请求数', avg_daily_tokens: '日均 Token 用量', metadata_rate: '元数据覆盖率',
           workspace_rate: '工作区信息覆盖率', git_rate: 'Git 状态覆盖率',
         };
-        const summaryCards = Object.entries(messageStats.summary || {}).filter(([key]) => key !== 'analysis_status').map(([key, value]) => {
-          const label = summaryLabels[key] || key.replace(/_/g, ' ');
-          if (key === 'peak_day' && value && typeof value === 'object') return { label: '请求最多日期', value: `${value.date || '未知'} · ${value.requests || 0} 次请求` };
-          if (key.endsWith('_rate') && Number.isFinite(Number(value))) return { label, value: `${(Number(value) * 100).toFixed(1)}%` };
-          if (['total_tokens', 'avg_daily_tokens'].includes(key)) return { label, value: `${formatBigNumber(value)} Token` };
-          if (['total_cost'].includes(key)) return { label, value: `${formatCost(value)} 积分` };
-          if (['total_characters', 'avg_characters'].includes(key)) return { label, value: `${formatBigNumber(value)} 字符` };
-          if (typeof value === 'boolean') return { label, value: value ? '是' : '否' };
-          if (typeof value === 'object' && value !== null) return { label, value: JSON.stringify(value) };
-          return { label, value: text(value) };
-        });
-        const blockRows = Array.isArray(messageStats.by_block) ? messageStats.by_block.map(item => ({ label: item.block || '未知区块', detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · 出现 ${Number(item.occurrences || 0).toLocaleString()} 次 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分` })) : Object.entries(messageStats.blocks || {}).map(([name, count]) => ({ label: name.replace(/_/g, ' '), detail: `${count} 次` }));
-        const sourceRows = Array.isArray(messageStats.by_source) ? messageStats.by_source.map(item => ({ label: clientDisplay(item.request_source), detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · 平均 ${(Number(item.messages || 0) / Math.max(Number(item.requests || 0), 1)).toFixed(1)} 条消息 · 平均 ${Math.round(Number(item.characters || 0) / Math.max(Number(item.requests || 0), 1)).toLocaleString()} 字符 · ${formatBigNumber(item.tokens)} Token` })) : [];
+        const summary = messageStats.summary || {};
+        const pct = value => `${(Number(value || 0) * 100).toFixed(1)}%`;
+        const summaryRows = [
+          { label: '活跃请求', detail: `${Number(summary.analyzed_requests || 0).toLocaleString()} 条` },
+          { label: '项目数', detail: `${arrayOrEmpty(messageStats.by_workspace).length} 个` },
+          { label: '活跃天数', detail: `${Number(summary.active_days || 0)} 天` },
+          { label: '日均请求', detail: `${Number(summary.avg_daily_requests || 0).toFixed(1)} 次` },
+          { label: '总 Token', detail: `${formatBigNumber(summary.total_tokens)} Token` },
+          { label: 'Git 状态率', detail: pct(summary.git_rate) },
+          ...(Number(analysisStatus.pending_requests || 0) > 0 ? [{ label: `后台待分析：${Number(analysisStatus.pending_requests).toLocaleString()} 个请求`, detail: '这些请求尚未完成消息结构扫描。' }] : []),
+        ];
+        const blockRows = Array.isArray(messageStats.by_block) ? messageStats.by_block.map(item => ({ label: item.block || '未知区块', cells: { block: item.block || '未知区块', requests: Number(item.requests || 0).toLocaleString(), occurrences: Number(item.occurrences || 0).toLocaleString() } })) : Object.entries(messageStats.blocks || {}).map(([name, count]) => ({ label: name.replace(/_/g, ' '), cells: { block: name.replace(/_/g, ' '), requests: Number(count || 0).toLocaleString(), occurrences: Number(count || 0).toLocaleString() } }));
+        const messageSources = Array.isArray(messageStats.by_source) ? messageStats.by_source : [];
+        const messageSourceRows = messageSources.map(item => ({ label: clientDisplay(item.request_source), cells: { source: clientDisplay(item.request_source), requests: Number(item.requests || 0).toLocaleString(), avg_messages: (Number(item.messages || 0) / Math.max(Number(item.requests || 0), 1)).toFixed(1), avg_characters: Math.round(Number(item.characters || 0) / Math.max(Number(item.requests || 0), 1)).toLocaleString(), tokens: formatBigNumber(item.tokens) } }));
+        const dailyRows = Array.isArray(messageStats.daily) ? messageStats.daily.map(item => ({ label: item.date || '未知日期', detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.tokens)} Token · ${Number(item.messages || 0).toLocaleString()} 条消息${item.git_requests != null ? ` · 含 Git 状态 ${item.git_requests} 次` : ''}` })) : [];
+        const analysisNote = analysisStatus.enabled === false ? '消息分析功能当前未启用。' : analysisStatus.last_error ? `最近一次后台分析异常：${analysisStatus.last_error}` : '只统计自己实际发送的消息记录。';
+        const maxDailyRequests = Math.max(1, ...arrayOrEmpty(messageStats.daily).map(item => Number(item.requests || 0)));
+        const maxDailyTokens = Math.max(1, ...arrayOrEmpty(messageStats.daily).map(item => Number(item.tokens || 0)));
+        const dailyTrendRows = arrayOrEmpty(messageStats.daily).map(item => { const requestWidth = Math.round(Number(item.requests || 0) / maxDailyRequests * 12); const tokenWidth = Math.round(Number(item.tokens || 0) / maxDailyTokens * 8); return { label: item.date || '未知日期', detail: `请求 ${Number(item.requests || 0).toLocaleString()} 次 [${'█'.repeat(requestWidth)}${'░'.repeat(12 - requestWidth)}] · Token ${formatBigNumber(item.tokens)} [${'█'.repeat(tokenWidth)}${'░'.repeat(8 - tokenWidth)}]` }; });
         const workspaceRows = Array.isArray(messageStats.by_workspace) ? messageStats.by_workspace.slice(0, 50).map(item => ({ label: item.workspace_path || '未识别项目', detail: `${Number(item.requests || 0).toLocaleString()} 次活跃请求 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分 · ${Math.round(Number(item.characters || 0)).toLocaleString()} 字符${item.sources ? ` · 客户端 ${Object.keys(item.sources).map(clientDisplay).join('、')}` : ''}` })) : [];
-        const dailyRows = Array.isArray(messageStats.daily) ? messageStats.daily.map(item => ({ label: `每日活动：${item.date || '未知日期'}`, detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.tokens)} Token · ${Number(item.messages || 0).toLocaleString()} 条消息${item.git_requests != null ? ` · 含 Git 状态 ${item.git_requests} 次` : ''}` })) : [];
-        const pendingRows = Number(analysisStatus.pending_requests || 0) > 0 ? [{ label: `后台待分析：${Number(analysisStatus.pending_requests).toLocaleString()} 个请求`, detail: '这些请求尚未完成消息结构扫描。' }] : [];
-        const analysisNote = analysisStatus.enabled === false ? '消息分析功能当前未启用。' : analysisStatus.last_error ? `最近一次后台分析异常：${analysisStatus.last_error}` : '读取请求中的消息内容进行结构分析，不用于推断未出现的区块。';
-        sections.push({ title: '消息结构分析', tab: 'messages', toolbar: true, description: `${summaryCards.length} 项汇总 · 数据按当前时间范围和筛选条件统计 · ${analysisNote}`, cards: summaryCards, rows: [...pendingRows, ...workspaceRows, ...dailyRows, ...blockRows, ...sourceRows] });
+        sections.push(
+          { title: '项目活跃趋势', tab: 'messages', description: `按日展示请求数与 Token · ${periodLabel}`, rows: dailyTrendRows.length ? dailyTrendRows : [{ label: '当前范围暂无项目活跃趋势。' }] },
+          { title: '消息读取概要', tab: 'messages', description: `${analysisNote}${analysisStatus.enabled === false ? '' : ' · 请求消息由后台异步扫描'}`, rows: summaryRows },
+          { title: '项目结构区块', tab: 'messages', tableMinWidth: 88, columns: [{ key: 'block', label: '区块', ratio: 0.48 }, { key: 'requests', label: '请求数', ratio: 0.26 }, { key: 'occurrences', label: '出现次数', ratio: 0.26 }], rows: blockRows.length ? blockRows : [{ label: '暂无项目结构区块。' }] },
+          { title: 'Harness 消息结构', tab: 'messages', tableMinWidth: 96, columns: [{ key: 'source', label: 'Harness', ratio: 0.24 }, { key: 'requests', label: '请求数', ratio: 0.18 }, { key: 'avg_messages', label: '平均消息', ratio: 0.18 }, { key: 'avg_characters', label: '平均字符', ratio: 0.2 }, { key: 'tokens', label: 'Token', ratio: 0.2 }], rows: messageSourceRows.length ? messageSourceRows : [{ label: '暂无 Harness 消息结构数据。' }] },
+          ...(workspaceRows.length ? [{ title: '工作区明细', tab: 'messages', description: `${workspaceRows.length} 个工作区（最多显示 50 个）`, rows: workspaceRows }] : []),
+        );
       }
       if (runtime.usageTab === 'logs') {
         const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, limit: 20, ...(runtime.usageLogFilters || {}) });
