@@ -15,7 +15,7 @@ test('model library TUI renders web sections in binding, quota, filters, stars a
   const page = buildPages(runtime).find(item => item.id === 'model-library');
   const api = async path => {
     if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 1, visible_model_count: 1 }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: true, test_latency_ms: 100 }], available_series: [], total_models: 1 };
-    if (path === '/api/user/api-keys') return [{ id: 1, name: 'Server CR CLI', current_model_name: 'glm-5.3-flash' }];
+    if (path === '/api/user/api-keys') return [{ id: 1, name: 'Server CR CLI', current_model_name: 'glm-5.3-flash', current_model_provider_name: 'Blora Router', model_queue: [{ model_id: 'm1', name: 'GLM 5.3 Flash' }], harness_models: [{ harness: 'codex', model_id: 'm2', name: 'Claude Sonnet', provider_name: 'Anthropic' }], request_model_bindings: [{ request_model_name: 'my-sonnet', harness: 'claude_code', model_id: 'm3', name: 'Claude Sonnet 4.5', provider_name: 'Anthropic' }] }];
     if (path === '/api/user/providers/quota') return { providers: [{ id: 'q1', name: 'Quota Provider', quota: { total: 10, remaining: 8 }, status: 'success' }] };
     if (path === '/api/user/provider-tags') return [];
     if (path === '/api/user/api-keys/1/models') return { queue: [{ model_id: 'star-1', name: 'Starred' }] };
@@ -30,7 +30,13 @@ test('model library TUI renders web sections in binding, quota, filters, stars a
     positions.push(screen.lastIndexOf('▸ 供应商'));
     assert.ok(positions.every(value => value >= 0), `missing model-library section: ${positions.join(',')}`);
     assert.ok(positions.every((value, index) => index === 0 || positions[index - 1] < value), `unexpected model-library section order: ${positions.join(',')}`);
-    assert.ok(screen.includes('当前 API Key：Server CR CLI'));
+    assert.ok(screen.includes('当前 Key：Server CR CLI'));
+    assert.ok(screen.includes('供应商：Blora Router · 当前模型：glm-5.3-flash'));
+    assert.ok(screen.includes('默认模型队列：1 个'));
+    assert.ok(screen.includes('Codex 专属模型'));
+    assert.ok(screen.includes('Claude Sonnet 4.5'));
+    assert.ok(screen.includes('请求名映射：my-sonnet'));
+    assert.ok(!screen.includes('secret-key-value'));
     assert.ok(screen.includes('刷新供应商额度'));
     assert.ok(!screen.includes('模型库概览'));
   } finally { tty.input.write('q'); await task; }
@@ -42,7 +48,7 @@ test('user model library renders teams, provider summaries, stars and searchable
   const api = async (path, options = {}) => {
     calls.push({ path, options });
     if (path === '/api/user/model-library') return { teams: [{ team_id: 2, team_name: 'Team A', providers: [{ provider_id: 'p1', provider_name: 'Provider A', model_count: 4, visible_model_count: 3, hidden_model_count: 1, test_summary: { tested: 2, success: 1, avg_latency_ms: 20 }, tags: [{ id: 5, name: 'Featured' }] }] }], starred_models: [{ team_id: 2, provider: 'p1', model_id: 'star-1', name: 'Starred', alias: 'Starred', provider_name: 'Provider A', test_ok: false, test_error: `HTTP 400\n${'long upstream error '.repeat(100)}` }], available_series: ['S'], total_models: 4 };
-    if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main' }];
+    if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main', current_model_name: 'Model One', model_queue: [{ name: 'Model One' }], harness_models: [{ harness: 'codex', name: 'Model Two' }] }];
     if (path === '/api/user/provider-tags') return [{ id: 5, name: 'Featured' }];
     if (path === '/api/user/providers/quota') return { providers: [{ id: 'quota-p1', name: 'Quota Provider', quota: { planName: 'Pro', total: 1000, remaining: 400, periods: [{ key: 'current_period', label: '本周期', percent: 60, resetsAt: '2026-11-26T00:00:00Z' }], credits: { balance: 120 }, rateLimitResetCredits: { available_count: 2 } }, keys: [{ ok: true, label: '主 Key', quota: { total: 1000, remaining: 400, used: 600, currentPercent: 60 } }, { ok: false, label: '备用 Key', error: 'upstream timeout', quota: null }], status: 'partial', last_valid_at: '2026-11-24T00:00:00Z' }] };
     if (path === '/api/user/providers/quota/refresh') return { providers: [{ name: 'Quota Provider' }] };
@@ -54,6 +60,9 @@ test('user model library renders teams, provider summaries, stars and searchable
   const initial = await page.load(api);
   assert.equal(initial.pageToolbar, undefined);
   assert.ok(initial.sections.some(section => section.title === '当前 Key 绑定' && section.actions?.some(action => action.label === '选择 API Key')));
+  let keyOptions = [];
+  await initial.sections.find(section => section.title === '当前 Key 绑定').actions.find(action => action.label === '选择 API Key').run({ choose: async (_title, options) => { keyOptions = options; return null; }, show: async () => {} });
+  assert.ok(keyOptions[0].label.includes('默认队列 1 个 · Harness 专属 1 个'));
   assert.ok(initial.sections.some(section => section.title === '搜索与筛选' && section.actions?.some(action => action.label === '搜索模型/供应商')));
   const reorderAction = initial.sections.find(section => section.title === '搜索与筛选').actions.find(action => action.label === '排序模式：保存测试结果排序');
   assert.ok(reorderAction);
@@ -118,15 +127,15 @@ test('user model library renders teams, provider summaries, stars and searchable
   await page.load(api);
   assert.equal(calls.filter(call => call.path === '/api/user/team/2/provider/p1/models').at(-1).options.query.include_hidden, '1');
   const modelSection = expanded.sections.find(section => section.title.includes('模型目录'));
-  assert.deepEqual(modelSection.columns.map(column => column.label), ['模型名称', '供应商', '系列', '计费倍率', '接口测试', 'Key 队列', '操作']);
+  assert.deepEqual(modelSection.columns.map(column => column.label), ['模型名称', '系列', '倍率', '测试状态', '模型说明', 'Key 队列', '操作']);
   const modelRow = modelSection.rows[0];
   assert.equal(modelRow.cells.multiplier, '计费倍率 ×1.00');
-  assert.equal(modelRow.cells.input_price, '0.1 人民币/千Token');
-  assert.equal(modelRow.cells.output_price, '0.2 人民币/千Token');
+  assert.equal(modelRow.cells.description, '—');
   assert.match(modelRow.cells.test, /通过 21毫秒/);
   assert.equal(modelRow.cells.queue, '未加入');
   assert.ok(modelRow.detail.includes('输入 0.1 人民币/千Token'));
   assert.ok(modelRow.detail.includes('输出 0.2 人民币/千Token'));
+  assert.ok(modelRow.detail.includes('测试吞吐：未采集'));
   assert.ok(modelRow.detail.includes('上游模型 ID：Model One'));
   assert.equal(modelRow.cells.test, '通过 21毫秒');
   const actions = [];
