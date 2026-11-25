@@ -10,7 +10,7 @@ const page = runtime => buildPages(runtime).find(item => item.id === 'usage');
 test('usage tabs request latency, message and log data with shared filters', async () => {
   const runtime = makeRuntime();
   const calls = [];
-  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [{ date: 'today', requests: 3, prompt_tokens: 10, completion_tokens: 20, tokens: 30, cost: 0.5 }], byModel: [{ model_name: 'Model One', requests: 2, tokens: 10, cost: 0.25 }], byApiKey: [{ key_name: 'Main Key', requests: 1, tokens: 5, cost: 0.1 }], byProvider: [{ provider_name: 'Provider One', requests: 1, tokens: 7, cost: 0.2 }], bySource: [{ request_source: 'codex', requests: 1, tokens: 6, cost: 0.15 }] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; return {}; };
+  runtime.client.get = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/user/stats') return { summary: {}, daily: [{ date: 'today', requests: 3, prompt_tokens: 10, completion_tokens: 20, tokens: 30, cost: 0.5 }], byModel: [{ model_name: 'Model One', requests: 2, tokens: 10, cost: 0.25 }], byApiKey: [{ key_name: 'Main Key', requests: 1, tokens: 5, cost: 0.1 }], byProvider: [{ provider_name: 'Provider One', requests: 1, tokens: 7, cost: 0.2 }], bySource: [{ request_source: 'codex', requests: 1, tokens: 6, cost: 0.15 }] }; if (path === '/api/user/stats/latency') return { p50_ms: 24, p95_ms: 80, p99_ms: 100, total_requests: 10, daily: [{ date: 'today', requests: 10, p95_ms: 80, tokens_per_second: 12 }] }; if (path === '/api/user/message-stats') return { summary: { requests: 12, total_tokens: 2000, total_cost: 3, metadata_rate: 0.5, git_rate: 0.25, peak_day: { date: '2026-11-24', requests: 4 } }, by_block: [{ block: 'git_status', requests: 3, occurrences: 4, tokens: 1000, cost: 1.2 }], by_source: [{ request_source: 'codex', requests: 2, messages: 10, characters: 400, tokens: 1000 }] }; if (path === '/api/user/usage-logs') return { page: 1, total: 1, logs: [{ id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', request_source: 'codex', tokens_used: 100, cost: 0.5 }] }; if (path === '/api/user/usage-logs/42') return { log: { id: 42, created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', upstream_model_id: 'up-1', provider_name: 'Provider One', request_type: 'chat', request_source: 'codex', key_prefix: 'abcd', key_name: 'Main', tokens_used: 100, prompt_tokens: 80, completion_tokens: 20, cached_tokens: 30, latency_ms: 25, is_stream: true, ttft_ms: 10, tpot_ms: 2, output_tps: 12, cost: 0.5 } }; return {}; };
   const usage = page(runtime);
   usage.onTabChange({ id: 'latency' });
   const latencyData = await usage.load();
@@ -29,13 +29,25 @@ test('usage tabs request latency, message and log data with shared filters', asy
   assert.deepEqual(modelSection.rows[0].cells, { name: 'Model One', requests: '2 次', tokens: '10 Token', cost: '0.2500 积分' });
   assert.ok(modelData.actions.some(action => action.label === '时间范围与筛选' && action.toolbar === true));
   usage.onTabChange({ id: 'messages' });
-  await usage.load();
+  const messages = await usage.load();
+  const messagesSection = messages.sections.find(section => section.tab === 'messages');
+  assert.ok(messagesSection.cards.some(card => card.label === 'Token 总量' && card.value === '2.0K Token'));
+  assert.ok(messagesSection.cards.some(card => card.label === '元数据覆盖率' && card.value === '50.0%'));
+  assert.match(messagesSection.rows[0].label, /git_status/);
+  assert.match(messagesSection.rows[0].detail, /出现 4 次.*1.0K Token/);
   usage.onTabChange({ id: 'logs' });
-  await usage.load();
+  const logData = await usage.load();
+  const logRow = logData.sections.find(section => section.tab === 'logs').rows[0];
+  let detail = '';
+  await logRow.run({ api: async (path, options) => runtime.client.get(path, options), show: async (_title, body) => { detail = body; } });
+  assert.match(detail, /输入 Token：80/);
+  assert.match(detail, /缓存命中 Token：30（37.5%）/);
+  assert.match(detail, /每输出 Token 耗时（TPOT）：2.0 毫秒/);
+  assert.doesNotMatch(detail, /"model_name"|"cached_tokens"/);
   assert.deepEqual(calls.map(call => call.path), [
     '/api/user/stats', '/api/user/stats/latency',
     '/api/user/stats', '/api/user/stats', '/api/user/stats',
-    '/api/user/message-stats', '/api/user/stats', '/api/user/usage-logs',
+    '/api/user/message-stats', '/api/user/stats', '/api/user/usage-logs', '/api/user/usage-logs/42',
   ]);
 });
 

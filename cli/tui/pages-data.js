@@ -74,18 +74,66 @@ function usagePage(runtime) {
       }
       if (runtime.usageTab === 'messages') {
         const messageStats = await getMessageStats(runtime.client, { days: runtime.usageDays, ...filters });
-        sections.push({ title: '消息结构分析', tab: 'messages', toolbar: true, cards: Object.entries(messageStats.summary || {}).slice(0, 6).map(([label, value]) => ({ label, value: typeof value === 'object' ? JSON.stringify(value) : text(value) })), rows: Object.entries(messageStats.blocks || {}).map(([name, count]) => ({ label: `${name} · ${count}` })) });
+        const summaryLabels = {
+          requests: '请求数', analyzed_requests: '已分析请求数', total_messages: '消息总数', total_characters: '字符总数', total_lines: '行数总计',
+          sampled: '是否抽样', sample_size: '样本数', metadata_requests: '包含元数据的请求', workspace_requests: '包含工作区信息的请求',
+          git_requests: '包含 Git 状态的请求', total_tokens: 'Token 总量', total_cost: '费用（积分）', active_days: '活跃天数',
+          first_activity: '首次活动日期', last_activity: '最近活动日期', avg_messages: '平均每次请求消息数', avg_characters: '平均每次请求字符数',
+          avg_lines: '平均每次请求行数', avg_daily_requests: '日均请求数', avg_daily_tokens: '日均 Token 用量', metadata_rate: '元数据覆盖率',
+          workspace_rate: '工作区信息覆盖率', git_rate: 'Git 状态覆盖率',
+        };
+        const summaryCards = Object.entries(messageStats.summary || {}).filter(([key]) => key !== 'analysis_status').map(([key, value]) => {
+          const label = summaryLabels[key] || key.replace(/_/g, ' ');
+          if (key === 'peak_day' && value && typeof value === 'object') return { label: '请求最多日期', value: `${value.date || '未知'} · ${value.requests || 0} 次请求` };
+          if (key.endsWith('_rate') && Number.isFinite(Number(value))) return { label, value: `${(Number(value) * 100).toFixed(1)}%` };
+          if (['total_tokens', 'avg_daily_tokens'].includes(key)) return { label, value: `${formatBigNumber(value)} Token` };
+          if (['total_cost'].includes(key)) return { label, value: `${formatCost(value)} 积分` };
+          if (['total_characters', 'avg_characters'].includes(key)) return { label, value: `${formatBigNumber(value)} 字符` };
+          if (typeof value === 'boolean') return { label, value: value ? '是' : '否' };
+          if (typeof value === 'object' && value !== null) return { label, value: JSON.stringify(value) };
+          return { label, value: text(value) };
+        });
+        const blockRows = Array.isArray(messageStats.by_block) ? messageStats.by_block.map(item => ({ label: item.block || '未知区块', detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · 出现 ${Number(item.occurrences || 0).toLocaleString()} 次 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分` })) : Object.entries(messageStats.blocks || {}).map(([name, count]) => ({ label: name.replace(/_/g, ' '), detail: `${count} 次` }));
+        const sourceRows = Array.isArray(messageStats.by_source) ? messageStats.by_source.map(item => ({ label: clientDisplay(item.request_source), detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · 平均 ${(Number(item.messages || 0) / Math.max(Number(item.requests || 0), 1)).toFixed(1)} 条消息 · 平均 ${Math.round(Number(item.characters || 0) / Math.max(Number(item.requests || 0), 1)).toLocaleString()} 字符 · ${formatBigNumber(item.tokens)} Token` })) : [];
+        sections.push({ title: '消息结构分析', tab: 'messages', toolbar: true, description: `${summaryCards.length} 项统计 · 数据按当前时间范围和筛选条件汇总`, cards: summaryCards, rows: [...blockRows, ...sourceRows] });
       }
       if (runtime.usageTab === 'logs') {
-        const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, pageSize: 20, days: runtime.usageDays, ...filters });
-        const items = Array.isArray(logs.items) ? logs.items : [];
+        const logs = await getUsageLogs(runtime.client, { page: runtime.usageLogPage || 1, limit: 20, days: runtime.usageDays, ...filters });
+        const items = Array.isArray(logs.logs) ? logs.logs : Array.isArray(logs.items) ? logs.items : [];
         sections.push({ title: '调用记录', tab: 'logs', toolbar: true, tableMinWidth: 112, columns: [
           { key: 'time', label: '时间', ratio: 0.18 }, { key: 'model', label: '模型', ratio: 0.22 }, { key: 'status', label: '结果', ratio: 0.1 },
           { key: 'tokens', label: 'Token 用量', ratio: 0.14 }, { key: 'cost', label: '费用（积分）', ratio: 0.14 }, { key: 'source', label: '客户端', ratio: 0.12 }, { key: 'detail', label: '详情', ratio: 0.1 },
         ], description: `第 ${logs.page || runtime.usageLogPage || 1} 页 · 共 ${logs.total || 0} 条`, rows: items.map(item => ({ label: formatTime(item.created_at), cells: {
           time: formatTime(item.created_at), model: item.model_name || item.model_id || '未知模型', status: item.status_code ? `HTTP ${item.status_code}` : (item.status || '未知'),
-          tokens: `${formatBigNumber(item.tokens_used || item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分`, source: item.request_source || '未知来源', detail: 'Enter 查看',
-        }, run: async ctx => await ctx.show('调用记录详情', JSON.stringify(item, null, 2)) })) });
+          tokens: `${formatBigNumber(item.tokens_used || item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分`, source: clientDisplay(item.request_source), detail: 'Enter 查看',
+        }, run: async ctx => {
+          const data = item.id != null ? await ctx.api(`/api/user/usage-logs/${encodeURIComponent(item.id)}`) : { log: item };
+          const log = data.log || item;
+          const promptTokens = Number(log.prompt_tokens || 0);
+          const cachedTokens = Number(log.cached_tokens || 0);
+          const modelName = log.model_name || log.model_id || '未知模型';
+          const lines = [
+            `调用时间：${formatTime(log.created_at)}`, `模型：${modelName}`, `上游模型 ID：${log.upstream_model_id || '未知'}`, `系列：${log.series || '无'}`,
+            `供应商：${log.provider_name || '未知供应商'}`, `请求类型：${log.request_type || '未知'}`, `客户端：${clientDisplay(log.request_source)}`,
+            `API Key：${log.key_prefix ? `${log.key_prefix}****` : '未知'}${log.key_name ? `（${log.key_name}）` : ''}`,
+            `总 Token：${formatBigNumber(log.tokens_used || 0)}`, `输入 Token：${formatBigNumber(promptTokens)}`, `输出 Token：${formatBigNumber(log.completion_tokens || 0)}`,
+            `缓存命中 Token：${formatBigNumber(cachedTokens)}${promptTokens ? `（${(cachedTokens / promptTokens * 100).toFixed(1)}%）` : ''}`,
+            `积分：${Number(log.cost || 0) === 0 && Number(log.tokens_used || 0) > 0 ? '0（配额内）' : formatCost(log.cost)}`,
+            `记录延迟（服务端）：${log.latency_ms == null ? '未知' : `${log.latency_ms} 毫秒`}`,
+            `请求模式：${log.is_stream == null ? '未知' : log.is_stream ? '流式' : '非流式'}`,
+            `首字延迟（TTFT）：${log.ttft_ms == null ? '未知' : `${log.ttft_ms} 毫秒`}`,
+            `上游首字节：${log.upstream_first_byte_ms == null ? '未知' : `${log.upstream_first_byte_ms} 毫秒`}`,
+            `生成耗时：${log.generation_ms == null ? '未知' : `${log.generation_ms} 毫秒`}`,
+            `每输出 Token 耗时（TPOT）：${log.tpot_ms == null ? '未知' : `${Number(log.tpot_ms).toFixed(1)} 毫秒`}`,
+            `输出速度：${log.output_tps == null ? '未知' : `${Number(log.output_tps).toFixed(1)} Token/秒`}`,
+            `端到端延迟：${log.e2e_ms == null ? '未知' : `${log.e2e_ms} 毫秒`}`,
+            `上游处理时间：${log.upstream_processing_ms == null ? '未知' : `${log.upstream_processing_ms} 毫秒`}`,
+            `服务层级：${log.service_tier || '未知'}`, `限流状态：${log.rate_limit ? JSON.stringify(log.rate_limit) : '无'}`, `IP 地址：${log.ip_address || '未知'}`,
+          ];
+          if (log.messages) lines.push('', '请求消息：', typeof log.messages === 'string' ? log.messages : JSON.stringify(log.messages, null, 2));
+          if (log.response) lines.push('', 'AI 回复：', String(log.response));
+          await ctx.show(`调用记录详情 · ${modelName}`, lines.join('\\n'));
+        } })) });
       }
       return {
         sections,
