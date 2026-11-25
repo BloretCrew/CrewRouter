@@ -43,7 +43,7 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
     if (path === '/api/admin/message-stats') return { summary: { requests: 5, analyzed_requests: 4, total_messages: 12, total_tokens: 250, total_cost: 2.5, metadata_rate: 0.5 }, by_block: [{ block: 'git_status', requests: 2, occurrences: 3, tokens: 100, cost: 1 }], by_source: [{ request_source: 'codex', requests: 2, messages: 6, tokens: 120 }] };
     if (path === '/api/admin/usage-logs') return { page: 1, total: 31, logs: [{ id: 41, user_id: 9, username: 'alice', created_at: '2026-11-24T00:00:00Z', model_name: 'Model One', provider_name: 'Provider One', request_source: 'codex', tokens_used: 100, cost: 0.5, latency_ms: 30 }] };
     if (path === '/api/admin/usage-logs/41') return { log: { id: 41, user_id: 9, username: 'alice', model_name: 'Model One', upstream_model_id: 'up-1', provider_name: 'Provider One', request_type: 'chat', request_source: 'codex', tokens_used: 100, prompt_tokens: 80, completion_tokens: 20, cached_tokens: 10, cost: 0.5, latency_ms: 30, is_stream: true, ttft_ms: 10, output_tps: 12 } };
-    if (path === '/api/admin/stats/multi-dimension') return { dimensions: ['model'], metric: 'tokens', rows: [{ labels: ['Model One'], requests: 4, tokens: 120, cost: 1.2 }] };
+    if (path === '/api/admin/stats/multi-dimension') return options.query?.quota_mode === 'member_estimate' ? { dimensions: ['user', 'provider'], metric: 'tokens', quota_mode: 'member_estimate', quota_estimates: [{ user_name: 'alice', provider_name: 'Provider One', kind: 'balance', unit: 'credits', estimated_value: 8.25, estimated_percent: 16.5, share_label: 'Token' }], quota_estimate_status: 'ok', quota_estimate_caveat: '按同一供应商内占比估算。', rows: [{ labels: ['alice', 'Provider One'], requests: 4, tokens: 120, cost: 1.2 }] } : { dimensions: ['model'], metric: 'tokens', rows: [{ labels: ['Model One'], requests: 4, tokens: 120, cost: 1.2 }] };
     return {};
   };
   const page = buildPages(runtime).find(item => item.id === 'admin-stats');
@@ -54,11 +54,34 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   await filterAction.run({ api, choose: async () => choices.shift(), refresh: async () => {} });
   assert.equal(runtime.adminStatsMultiFilters.team_id, '2');
   const dimAction = multi.actions.find(action => action.label === '选择维度与指标');
-  const dimensions = ['model', '__done__', 'tokens', 'usage'];
-  await dimAction.run({ choose: async () => dimensions.shift(), refresh: async () => {} });
+  const dimensions = ['model', '__done__', 'tokens'];
+  await dimAction.run({ choose: async (title, options) => {
+    if (title.startsWith('统计维度')) return dimensions.shift();
+    if (title === '统计指标') return 'tokens';
+    if (title.includes('叠加供应商额度')) return false;
+    if (title === '统计数据来源') return 'usage';
+    return options[0]?.value;
+  }, refresh: async () => {} });
   assert.deepEqual(runtime.adminStatsDimensionQuery, { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 });
   await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/admin/stats/multi-dimension' && call.options.query.dimensions === 'model'));
+  const estimateChoices = ['user', '__done__'];
+  const chooseEstimate = async (title, options) => {
+    if (title.startsWith('统计维度')) return estimateChoices.shift();
+    if (title === '统计指标') return 'tokens';
+    if (title.includes('叠加供应商额度')) return true;
+    if (title === '成员额度展示方式') return 'member_estimate';
+    if (title === '统计数据来源') return 'usage';
+    return options[0]?.value;
+  };
+  const estimateAction = multi.actions.find(action => action.label === '选择维度与指标');
+  await estimateAction.run({ choose: chooseEstimate, refresh: async () => {} });
+  assert.equal(runtime.adminStatsDimensionQuery.quota_mode, 'member_estimate');
+  await page.load(api);
+  const estimateSection = (await page.load(api)).sections[0];
+  assert.ok(estimateSection.rows.some(row => /成员额度估算：1 条/.test(row.label)));
+  assert.ok(estimateSection.rows.some(row => /不是实际个人账单/.test(row.detail || row.label)));
+  assert.equal(calls.filter(call => call.path === '/api/admin/stats/multi-dimension' && call.options.query.quota_mode === 'member_estimate').length > 0, true);
   runtime.adminStatsDimensionQuery = { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 };
   const limitedPage = await page.load(async (path, options = {}) => { if (path === '/api/admin/stats/multi-dimension') throw new Error('企业版功能不可用'); return api(path, options); });
   assert.ok(limitedPage.sections[0].rows.some(row => /自选维度分析不可用/.test(row.label)));

@@ -817,7 +817,17 @@ function createAdminPages(runtime) {
               { label: '活跃项目', value: summary.active_projects || 0 }, { label: '模型 / 供应商', value: `${summary.active_models || 0} / ${summary.active_providers || 0}` },
             ], rows: [
               { label: multiDimensionQuery ? `自选维度：${multiDimensionQuery.dimensions} · 指标：${multiDimensionQuery.metric} · 数据源：${multiDimensionQuery.data_source}` : '可另选统计维度、指标与数据源，查看自定义组合。' },
-              ...(multiDimensionError ? [{ label: `自选维度分析不可用：${multiDimensionError}` }] : multiDimensionResult ? array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: multiDimensionQuery.metric === 'requests' ? `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` : multiDimensionQuery.metric === 'tokens' ? `${formatBigNumber(row.tokens)} Token · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` : `${formatCost(row.cost)} 积分 · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })) : relationRows.length ? relationRows : [{ label: '当前筛选范围内暂无关联数据。' }]),
+              ...(multiDimensionError ? [{ label: `自选维度分析不可用：${multiDimensionError}` }] : multiDimensionResult ? [
+                ...array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: multiDimensionQuery.metric === 'requests' ? `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` : multiDimensionQuery.metric === 'tokens' ? `${formatBigNumber(row.tokens)} Token · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` : `${formatCost(row.cost)} 积分 · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })),
+                ...(multiDimensionResult.quota_mode === 'member_estimate' ? [
+                  { label: `成员额度估算：${array(multiDimensionResult.quota_estimates).length} 条 · 按同一供应商下的 ${multiDimensionQuery.metric} 占比估算，不是实际个人账单。` },
+                  ...array(multiDimensionResult.quota_estimates).slice(0, 50).map(estimate => ({
+                    label: `${array(estimate.category_labels).join(' · ') || estimate.user_name || '未知成员'} · ${estimate.provider_name || '未知供应商'} · ${estimate.kind === 'window' ? '周期额度' : '余额额度'}${estimate.window_key ? ` · ${estimate.window_key}` : ''}`,
+                    detail: `估算使用 ${Number(estimate.estimated_value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 4 })} ${estimate.unit || '未知单位'} · ${Number(estimate.estimated_percent || 0).toFixed(1)}% · 实际额度仅为供应商级参照`,
+                  })),
+                  ...(multiDimensionResult.quota_estimate_caveat ? [{ label: `估算范围说明：${multiDimensionResult.quota_estimate_caveat}` }] : []),
+                ] : []),
+              ] : relationRows.length ? relationRows : [{ label: '当前筛选范围内暂无关联数据。' }]),
               ...array(multi.caveats).map(caveat => ({ label: `统计说明：${caveat}` })),
             ] });
           }
@@ -962,9 +972,15 @@ function createAdminPages(runtime) {
             if (!dimensions.length) return;
             const metric = await ctx.choose('统计指标', [{ label: '请求数', value: 'requests' }, { label: 'Token 用量', value: 'tokens' }, { label: '消费积分', value: 'cost' }]);
             if (!metric) return;
+            const includeQuota = await ctx.choose('是否叠加供应商额度参照', [{ label: '否，仅展示请求统计', value: false }, { label: '是，叠加供应商额度上下文', value: true }]);
+            if (includeQuota === null) return;
+            const quotaMode = includeQuota && dimensions.includes('user')
+              ? await ctx.choose('成员额度展示方式', [{ label: '仅展示供应商级额度参照', value: 'reference' }, { label: '按供应商内成员请求占比估算', value: 'member_estimate' }])
+              : 'reference';
+            if (quotaMode === null) return;
             const source = await ctx.choose('统计数据来源', [{ label: '请求使用统计', value: 'usage' }, { label: '项目关联统计', value: 'association' }]);
             if (!source) return;
-            runtime.adminStatsDimensionQuery = { dimensions: dimensions.join(','), metric, data_source: source, days };
+            runtime.adminStatsDimensionQuery = { dimensions: dimensions.join(','), metric, data_source: source, days, ...(includeQuota ? { include_quota: 'true' } : {}), ...(quotaMode === 'member_estimate' ? { quota_mode: 'member_estimate' } : {}) };
             await ctx.refresh();
           } }, { label: '清除自选维度', toolbar: 'page', run: async ctx => { runtime.adminStatsDimensionQuery = null; await ctx.refresh(); } }, { label: '筛选关联分析', toolbar: 'page', run: async ctx => {
             const options = await api('/api/admin/stats/multi/filters');
