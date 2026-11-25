@@ -37,6 +37,7 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   const api = async (path, options = {}) => {
     calls.push({ path, options });
     if (path === '/api/admin/stats') return { daily: [] };
+    if (path === '/api/admin/stats/multi' && options.query?.data_source === 'quota') return { data_source: 'quota', dimensions: ['provider', 'account'], metric: 'remaining', rows: [{ labels: ['Provider One', 'Main Account'], values: ['p1', 'a1'], value: 4.5, unit: 'credits', kind: 'balance', status: 'success', observed_at: '2026-11-25T00:00:00Z', account_ids: ['a1'], coverage: { start: '2026-11-01', end: '2026-11-25' } }], coverage: { start: '2026-11-01', end: '2026-11-25', samples: 12, caveats: ['额度是上游独立观测值。'] }, provider_quota: { summary: { accounts: 1 }, coverage: { start: '2026-11-01', end: '2026-11-25', samples: 12, caveats: ['额度是上游独立观测值。'] } } };
     if (path === '/api/admin/stats/multi') return { summary: { requests: 10, tokens: 200, cost: 3, active_users: 2, active_projects: 1, active_models: 3, active_providers: 2 }, relationships: { user_project: [{ left: 'alice', right: '/work/a', requests: 8, tokens: 160, cost: 2 }] }, caveats: ['Team 按当前归属统计。'] };
     if (path === '/api/admin/stats/multi/filters') return { users: [{ id: 9, name: 'alice' }], teams: [{ id: 2, name: 'Team A' }], models: [{ id: 'm1', name: 'Model One' }], providers: [{ id: 'p1', name: 'Provider One' }], sources: [{ id: 'codex', name: 'Codex' }], projects: [{ id: '/work/a', name: '/work/a' }] };
     if (path === '/api/admin/message-stats') return { summary: { requests: 5, analyzed_requests: 4, total_messages: 12, total_tokens: 250, total_cost: 2.5, metadata_rate: 0.5 }, by_block: [{ block: 'git_status', requests: 2, occurrences: 3, tokens: 100, cost: 1 }], by_source: [{ request_source: 'codex', requests: 2, messages: 6, tokens: 120 }] };
@@ -58,6 +59,16 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   assert.deepEqual(runtime.adminStatsDimensionQuery, { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 });
   await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/admin/stats/multi-dimension' && call.options.query.dimensions === 'model'));
+  const quotaChoices = ['provider', 'account', '__done__', 'remaining'];
+  const quotaAction = multi.actions.find(action => action.label === '查询供应商额度维度');
+  await quotaAction.run({ confirm: async () => true, choose: async () => quotaChoices.shift(), refresh: async () => {} });
+  assert.deepEqual(runtime.adminStatsQuotaQuery, { dimensions: 'provider,account', metric: 'remaining', data_source: 'quota', days: 30 });
+  const quotaPage = await page.load(api);
+  assert.equal(quotaPage.sections[0].title, '供应商额度多维分析');
+  assert.match(quotaPage.sections[0].rows[1].label, /Provider One · Main Account · 余额额度/);
+  assert.match(quotaPage.sections[0].rows[1].detail, /4.5 credits.*查询状态：success/);
+  assert.ok(quotaPage.sections[0].rows.some(row => /上游独立观测值/.test(row.label)));
+  assert.ok(calls.some(call => call.path === '/api/admin/stats/multi' && call.options.query.data_source === 'quota' && call.options.query.dimensions === 'provider,account'));
 
   runtime.adminStatsTab = 'messages';
   const messages = await page.load(api);

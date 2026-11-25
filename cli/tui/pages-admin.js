@@ -770,9 +770,11 @@ function createAdminPages(runtime) {
           { key: 'tokens', label: 'Token 用量', ratio: 0.17 }, { key: 'cost', label: '费用（积分）', ratio: 0.2 },
         ], rows: [...array(data.byUser).slice(0, 50).map(item => ({ label: item.username || item.user_name || `用户 ${item.user_id}`, cells: { name: item.username || item.user_name || `用户 ${item.user_id}`, team: item.team_name || '未分配 Team', requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分` } })), ...array(data.byTeam).slice(0, 50).map(item => ({ label: `Team · ${item.team_name || item.team_id}`, cells: { name: '—', team: item.team_name || `Team ${item.team_id}`, requests: `${Number(item.requests || 0).toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`, cost: `${formatCost(item.cost)} 积分` } }))] });
         if (tab === 'multi') {
-          const multi = await api('/api/admin/stats/multi', { query: { days, data_source: 'association', ...(runtime.adminStatsMultiFilters || {}) } });
+          const quotaQuery = runtime.adminStatsQuotaQuery || null;
+          const multi = await api('/api/admin/stats/multi', { query: quotaQuery ? { days, ...quotaQuery, data_source: 'quota' } : { days, data_source: 'association', ...(runtime.adminStatsMultiFilters || {}) } });
           const relations = multi.relationships || {};
           const summary = multi.summary || {};
+          const quotaMode = multi.data_source === 'quota' || Boolean(quotaQuery);
           const multiDimensionQuery = runtime.adminStatsDimensionQuery || null;
           let multiDimensionResult = null;
           let multiDimensionError = '';
@@ -784,15 +786,41 @@ function createAdminPages(runtime) {
             label: `${key.replace(/_/g, ' → ')} · ${item.left || '未知'} → ${item.right || '未知'}`,
             detail: `${Number(item.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.tokens)} Token · ${formatCost(item.cost)} 积分`,
           })));
-          sections.push({ title: '多维关联分析', cards: [
-            { label: '总请求', value: Number(summary.requests || 0).toLocaleString() }, { label: '总 Token', value: `${formatBigNumber(summary.tokens)} Token` },
-            { label: '总积分', value: `${formatCost(summary.cost)} 积分` }, { label: '活跃成员', value: summary.active_users || 0 },
-            { label: '活跃项目', value: summary.active_projects || 0 }, { label: '模型 / 供应商', value: `${summary.active_models || 0} / ${summary.active_providers || 0}` },
-          ], rows: [
-            { label: multiDimensionQuery ? `自选维度：${multiDimensionQuery.dimensions} · 指标：${multiDimensionQuery.metric} · 数据源：${multiDimensionQuery.data_source}` : '可另选统计维度、指标与数据源，查看自定义组合。' },
-            ...(multiDimensionError ? [{ label: `自选维度分析不可用：${multiDimensionError}` }] : multiDimensionResult ? array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: multiDimensionQuery.metric === 'requests' ? `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` : multiDimensionQuery.metric === 'tokens' ? `${formatBigNumber(row.tokens)} Token · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` : `${formatCost(row.cost)} 积分 · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })) : relationRows.length ? relationRows : [{ label: '当前筛选范围内暂无关联数据。' }]),
-            ...array(multi.caveats).map(caveat => ({ label: `统计说明：${caveat}` })),
-          ] });
+          if (quotaMode) {
+            const quotaRows = array(multi.rows).map(row => {
+              const amount = row.value == null ? '未知' : `${Number(row.value).toLocaleString('zh-CN', { maximumFractionDigits: 6 })}${row.unit && row.unit !== 'unknown' ? ` ${row.unit}` : ''}`;
+              const dimensionLabel = array(row.labels).filter(Boolean).join(' · ') || '未分类';
+              const kindLabel = row.kind === 'balance' ? '余额额度' : row.kind === 'window' ? '周期额度' : row.kind === 'status' ? '状态额度' : row.kind || '额度';
+              return { label: `${dimensionLabel} · ${kindLabel}${row.window_key ? ` · ${row.window_key}` : ''}`, detail: [
+                `指标：${amount}`, row.status && `查询状态：${row.status}`, row.observed_at && `观测时间：${formatTime(row.observed_at)}`,
+                row.quality?.cached && '使用缓存快照', row.quality?.legacy && '旧格式数据', row.quality?.precision && `精度：${row.quality.precision}`,
+                row.account_ids?.length > 1 && `${row.account_ids.length} 个账户`, row.coverage?.start && row.coverage?.end && `覆盖：${row.coverage.start} 至 ${row.coverage.end}`,
+              ].filter(Boolean).join(' · ') };
+            });
+            const coverage = multi.coverage || multi.provider_quota?.coverage || {};
+            const caveats = array(coverage.caveats);
+            sections.push({ title: '供应商额度多维分析', cards: [
+              { label: '供应商账户数', value: Number(multi.provider_quota?.summary?.accounts || 0) },
+              { label: '数据覆盖', value: coverage.start && coverage.end ? `${coverage.start} 至 ${coverage.end}` : '未知' },
+              { label: '历史采样', value: `${Number(coverage.samples || 0)} 条` },
+            ], rows: [
+              { label: `额度维度：${multi.dimensions || quotaQuery?.dimensions || 'provider'} · 指标：${multi.metric || quotaQuery?.metric || 'remaining'}` },
+              ...quotaRows,
+              ...caveats.map(caveat => ({ label: `统计说明：${caveat}` })),
+              ...(multiDimensionResult ? array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: `${row.value ?? '未知'}${row.unit ? ` ${row.unit}` : ''} · ${row.status || '未知状态'}` })) : []),
+              ...(!quotaRows.length ? [{ label: '当前条件下暂无额度观测数据。' }] : []),
+            ] });
+          } else {
+            sections.push({ title: '多维关联分析', cards: [
+              { label: '总请求', value: Number(summary.requests || 0).toLocaleString() }, { label: '总 Token', value: `${formatBigNumber(summary.tokens)} Token` },
+              { label: '总积分', value: `${formatCost(summary.cost)} 积分` }, { label: '活跃成员', value: summary.active_users || 0 },
+              { label: '活跃项目', value: summary.active_projects || 0 }, { label: '模型 / 供应商', value: `${summary.active_models || 0} / ${summary.active_providers || 0}` },
+            ], rows: [
+              { label: multiDimensionQuery ? `自选维度：${multiDimensionQuery.dimensions} · 指标：${multiDimensionQuery.metric} · 数据源：${multiDimensionQuery.data_source}` : '可另选统计维度、指标与数据源，查看自定义组合。' },
+              ...(multiDimensionError ? [{ label: `自选维度分析不可用：${multiDimensionError}` }] : multiDimensionResult ? array(multiDimensionResult.rows).map(row => ({ label: array(row.labels).join(' · ') || '未分类', detail: multiDimensionQuery.metric === 'requests' ? `${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token · ${formatCost(row.cost)} 积分` : multiDimensionQuery.metric === 'tokens' ? `${formatBigNumber(row.tokens)} Token · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatCost(row.cost)} 积分` : `${formatCost(row.cost)} 积分 · ${Number(row.requests || 0).toLocaleString()} 次请求 · ${formatBigNumber(row.tokens)} Token` })) : relationRows.length ? relationRows : [{ label: '当前筛选范围内暂无关联数据。' }]),
+              ...array(multi.caveats).map(caveat => ({ label: `统计说明：${caveat}` })),
+            ] });
+          }
         }
         if (tab === 'messages') {
           const messageStats = await api('/api/admin/message-stats', { query: { days } });
@@ -863,7 +891,63 @@ function createAdminPages(runtime) {
         }
         return { sections, pageToolbar: true, actions: [
           ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
-          ...(tab === 'multi' ? [{ label: '选择维度与指标', toolbar: 'page', run: async ctx => {
+          ...(tab === 'multi' ? [{ label: '筛选额度统计', toolbar: 'page', run: async ctx => {
+            const current = runtime.adminStatsQuotaFilters || {};
+            const options = await api('/api/admin/stats/multi/filters');
+            const filters = [
+              ['provider_id', '供应商', [...new Map(array(options.providers).map(item => [String(item.id), item])).values()]],
+              ['user_id', '成员', array(options.users)], ['team_id', 'Team', array(options.teams)], ['model_id', '模型', array(options.models)],
+              ['request_source', '客户端', array(options.sources)], ['workspace_path', '项目', array(options.projects)],
+            ];
+            const key = await ctx.choose('选择额度筛选条件', [
+              ...filters.map(([field, label]) => ({ label: `${label}${current[field] ? ' · 已筛选' : ''}`, value: field })),
+              ...[['account_id', '账户编号'], ['kind', '额度类型'], ['unit', '计量单位'], ['window_key', '周期窗口'], ['status', '查询状态']].map(([field, label]) => ({ label: `${label}${current[field] ? ' · 已筛选' : ''}`, value: field })),
+              { label: '清除额度筛选', value: '__clear__' },
+            ]);
+            if (!key) return;
+            if (key === '__clear__') { runtime.adminStatsQuotaFilters = {}; runtime.adminStatsQuotaQuery = null; await ctx.refresh(); return; }
+            const source = filters.find(([field]) => field === key);
+            let value;
+            if (source) {
+              const [, label, rows] = source;
+              value = await ctx.choose(label, [{ label: `全部${label}`, value: '' }, ...rows.map(item => ({ label: item.name || item.label || String(item.id), value: item.id }))]);
+            } else {
+              const choices = key === 'kind' ? [{ label: '余额额度', value: 'balance' }, { label: '周期额度', value: 'window' }, { label: '状态额度', value: 'status' }]
+                : key === 'status' ? ['success', 'partial', 'failed', 'stale'].map(item => ({ label: item, value: item }))
+                  : key === 'unit' ? ['requests', 'tokens', 'credits', 'percent', 'USD', 'unknown'].map(item => ({ label: item, value: item }))
+                    : null;
+              value = choices ? await ctx.choose('额度筛选值', [{ label: '全部', value: '' }, ...choices]) : await ctx.ask({ account_id: '额度账户 ID', window_key: '周期窗口名称' }[key] || '筛选值', { defaultValue: current[key] || '' });
+            }
+            if (value === null) return;
+            const next = { ...current };
+            if (value) next[key] = String(value); else delete next[key];
+            runtime.adminStatsQuotaFilters = next;
+            if (runtime.adminStatsQuotaQuery) runtime.adminStatsQuotaQuery = { ...runtime.adminStatsQuotaQuery, ...next, days };
+            await ctx.refresh();
+          } }, { label: '查询供应商额度维度', toolbar: 'page', run: async ctx => {
+            const dimensionOptions = [['provider', '供应商'], ['account', '额度账户'], ['kind', '额度类型'], ['unit', '计量单位'], ['window', '周期窗口'], ['date', '日期']];
+            const dimensions = [];
+            while (dimensions.length < dimensionOptions.length) {
+              const remaining = dimensionOptions.filter(([value]) => !dimensions.includes(value));
+              const selected = await ctx.choose(`额度维度（已选 ${dimensions.length} 项）`, [...remaining.map(([value, label]) => ({ label: `添加：${label}`, value })), { label: '完成维度选择', value: '__done__' }]);
+              if (!selected || selected === '__done__') break;
+              dimensions.push(selected);
+            }
+            if (!dimensions.length) return;
+            const metricOptions = [
+              ['total', '总额度'], ['used', '已用额度'], ['remaining', '剩余额度'], ['used_percent', '已用百分比'],
+              ['observed_consumption', '观测到的消耗'], ['percent_change', '相对变化百分比'],
+            ];
+            const metric = await ctx.choose('额度统计指标', metricOptions.map(([value, label]) => ({ label, value })));
+            if (!metric) return;
+            if (['used_percent', 'percent_change'].includes(metric) && !dimensions.includes('account')) { await ctx.show('维度组合无效', '使用率和相对变化指标必须包含“额度账户”维度。'); return; }
+            const confirmed = await ctx.confirm('查询供应商额度维度', `维度：${dimensions.map(value => dimensionOptions.find(([key]) => key === value)?.[1] || value).join('、')}\n指标：${metricOptions.find(([value]) => value === metric)?.[1] || metric}\n范围：最近 ${days} 天\n额度是独立上游账户观测值，不应与请求消费金额直接相加。`);
+            if (!confirmed) return;
+            const query = { dimensions: dimensions.join(','), metric, data_source: 'quota', days, ...(runtime.adminStatsQuotaFilters || {}) };
+            runtime.adminStatsQuotaQuery = query;
+            runtime.adminStatsDimensionQuery = null;
+            await ctx.refresh();
+          } }, { label: '退出额度统计', toolbar: 'page', run: async ctx => { runtime.adminStatsQuotaQuery = null; runtime.adminStatsQuotaFilters = {}; await ctx.refresh(); } }, { label: '选择维度与指标', toolbar: 'page', run: async ctx => {
             const dimensionOptions = [
               { label: '成员', value: 'user' }, { label: 'Team', value: 'team' }, { label: '项目', value: 'project' },
               { label: '客户端', value: 'source' }, { label: '模型', value: 'model' }, { label: '供应商', value: 'provider' }, { label: 'API Key', value: 'key' },
