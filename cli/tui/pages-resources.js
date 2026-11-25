@@ -617,10 +617,7 @@ function keysPage(runtime) {
             await runtime.client.put(`/api/user/api-keys/${encodeURIComponent(key.id)}`, { permissions });
             ctx.notify('API Key 权限已保存。'); await ctx.refresh();
           } else if (choice === 'options') {
-            const [quotaResult, signatureResult] = await Promise.allSettled([
-              runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/quota-warning`),
-              runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/signature`),
-            ]);
+            const quotaResult = await runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/quota-warning`).then(value => ({ status: 'fulfilled', value }), reason => ({ status: 'rejected', reason }));
             const current = {
               quota_warning_enabled: quotaResult.status === 'fulfilled' ? quotaResult.value.quota_warning_enabled === true : key.quota_warning_enabled === true,
               swallow_images: key.swallow_images === true, crewrouter_commands: key.crewrouter_commands === true,

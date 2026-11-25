@@ -12,7 +12,7 @@ function makeRuntime(isOwner = true) {
     isAdmin: false,
     get: async path => {
       calls.push({ path, method: 'GET' });
-      if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main', key_prefix: 'cr_x', enabled: true, is_owner: isOwner, total_requests: 2, tags: [{ id: 3, name: 'Ops', color: '#123456' }] }];
+      if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main', key_prefix: 'cr_x', enabled: true, is_owner: isOwner, total_requests: 2, swallow_images: false, crewrouter_commands: false, permissions: ['gateway.chat'], tags: [{ id: 3, name: 'Ops', color: '#123456' }] }];
       if (path === '/oauth/authorizations') return { authorizations: [] };
       if (path === '/api/user/key-tags') return [{ id: 3, name: 'Ops', color: '#123456' }, { id: 4, name: 'Dev', color: '#654321' }];
       if (path === '/api/user/api-keys/1/members') return { is_owner: isOwner, members: [{ id: 9, username: 'alice', email: 'alice@example.test', created_at: '2026-11-20T00:00:00Z' }] };
@@ -127,6 +127,7 @@ test('API Key option toggles call each web endpoint and signature PUT is complet
     if (title === 'API Key 操作') return choiceQueue.shift();
     return null;
   }, form: async () => ({ quota_warning_enabled: false, swallow_images: true, crewrouter_commands: true }), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(!calls.some(call => call.method === 'GET' && call.path.endsWith('/signature')), 'options should not make the separate signature request');
   for (const [suffix, field, expected] of [['quota-warning', 'quota_warning_enabled', false], ['swallow-images', 'swallow_images', true], ['crewrouter-commands', 'crewrouter_commands', true]]) {
     assert.ok(calls.some(call => call.method === 'PUT' && call.path.endsWith(`/${suffix}`) && call.body[field] === expected));
   }
