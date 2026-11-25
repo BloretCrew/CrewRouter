@@ -860,16 +860,24 @@ function createAdminPages(runtime) {
       tabs: [
         { id: 'overview', label: '总览' }, { id: 'latency', label: '延迟与吞吐' }, { id: 'multi', label: '多维分析' },
         { id: 'daily', label: '每日统计' }, { id: 'models', label: '模型分析' }, { id: 'providers', label: '供应商分析' },
-        { id: 'sources', label: '客户端' }, { id: 'members', label: '成员 / Team' }, { id: 'messages', label: '消息分析' }, { id: 'logs', label: '调用记录' },
+        { id: 'clients', label: '客户端' }, { id: 'members', label: '成员 / Team' }, { id: 'messages', label: '消息分析' }, { id: 'logs', label: '调用记录' },
       ],
       async load(api) {
         const days = runtime.adminStatsDays || 30;
         const data = await api('/api/admin/stats', { query: { days, ...(runtime.adminStatsFilters || {}) } });
-        const summaryCards = [
-          { label: '用户', value: text(data && data.users, '0') }, { label: '模型', value: text(data && data.models, '0') },
-          { label: 'API Key', value: text(data && data.apiKeys, '0') }, { label: '周期', value: `${days} 天` },
-        ];
         const daily = array(data && data.daily);
+        const totalRequests = daily.reduce((sum, item) => sum + Number(item.requests || 0), 0);
+        const totalTokens = daily.reduce((sum, item) => sum + Number(item.tokens || 0), 0);
+        const totalCost = daily.reduce((sum, item) => sum + Number(item.cost || 0), 0);
+        const dayCount = daily.length || 1;
+        const activeModels = array(data && data.byModel).length;
+        const activeProviders = array(data && data.byProvider).length;
+        const summaryCards = [
+          { label: '总请求数', value: totalRequests.toLocaleString(), detail: `日均 ${Math.round(totalRequests / dayCount).toLocaleString()} 次` },
+          { label: '总 Token 消耗', value: formatBigNumber(totalTokens), detail: `日均 ${formatBigNumber(Math.round(totalTokens / dayCount))} Token` },
+          { label: '总积分消耗', value: `${totalCost.toFixed(2)} 积分`, detail: `日均 ${ (totalCost / dayCount).toFixed(2)} 积分` },
+          { label: '活跃模型', value: activeModels.toLocaleString(), detail: `供应商 ${activeProviders}` },
+        ];
         const nameColumns = [
           { key: 'name', label: '名称', ratio: 0.34 }, { key: 'requests', label: '请求数', ratio: 0.16 },
           { key: 'tokens', label: 'Token 用量', ratio: 0.18 }, { key: 'cost', label: '费用（积分）', ratio: 0.16 }, { key: 'latency', label: '平均响应时间', ratio: 0.16 },
@@ -895,7 +903,7 @@ function createAdminPages(runtime) {
         } })) });
         if (tab === 'models') sections.push({ title: '按模型', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byModel, item => item.model_name || item.model_id || '未知模型') });
         if (tab === 'providers') sections.push({ title: '按供应商', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byProvider, item => item.provider_name || item.provider_id || '未知供应商') });
-        if (tab === 'sources') sections.push({ title: '按客户端来源', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.bySource, item => item.request_source || '未知来源') });
+        if (tab === 'clients') sections.push({ title: '按客户端来源', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.bySource, item => item.request_source || '未知来源') });
         if (tab === 'users') sections.push({ title: '按用户', toolbar: true, tableMinWidth: 118, columns: nameColumns, rows: byRows(data.byUser, item => item.user_name || item.username || `用户 ${item.user_id}`) });
         if (tab === 'teams' || tab === 'members') sections.push({ title: '按成员与 Team', toolbar: true, tableMinWidth: 118, columns: [
           { key: 'name', label: '成员', ratio: 0.27 }, { key: 'team', label: 'Team', ratio: 0.2 }, { key: 'requests', label: '请求数', ratio: 0.16 },
@@ -1076,7 +1084,7 @@ function createAdminPages(runtime) {
           ], rows: array(latency.daily).map(item => ({ label: display(item.date, `${item.requests || 0} 次请求`, `完整响应95%分位 ${percentile(item.e2e, 'p95') ?? '—'} 毫秒`, `首字延迟95%分位 ${percentile(item.ttft, 'p95') ?? '—'} 毫秒`, `输出速度中位数 ${percentile(item.outputTps, 'p50') ?? '—'} Token/秒`) })) });
         }
         return { sections, pageToolbar: true, actions: [
-          ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; if (runtime.adminStatsQuotaQuery) runtime.adminStatsQuotaQuery = { ...runtime.adminStatsQuotaQuery, days: value }; if (runtime.adminStatsDimensionQuery) runtime.adminStatsDimensionQuery = { ...runtime.adminStatsDimensionQuery, days: value }; await ctx.refresh(); } })),
+          ...[7, 30, 90, 180, 365].map(value => ({ label: value === 365 ? '最近 1 年' : `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; if (runtime.adminStatsQuotaQuery) runtime.adminStatsQuotaQuery = { ...runtime.adminStatsQuotaQuery, days: value }; if (runtime.adminStatsDimensionQuery) runtime.adminStatsDimensionQuery = { ...runtime.adminStatsDimensionQuery, days: value }; await ctx.refresh(); } })),
           ...(tab === 'multi' ? [{ label: '筛选额度统计', toolbar: 'page', disabled: !runtime.adminStatsQuotaQuery, run: async ctx => {
             const current = runtime.adminStatsQuotaFilters || {};
             const options = await api('/api/admin/stats/multi/filters');

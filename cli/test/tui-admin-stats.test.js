@@ -16,7 +16,14 @@ test('admin stats tabs expose web dimensions and latency endpoint', async () => 
     return {};
   };
   const page = buildPages(runtime).find(item => item.id === 'admin-stats');
-  assert.deepEqual(page.tabs.map(tab => tab.id), ['overview', 'latency', 'multi', 'daily', 'models', 'providers', 'sources', 'members', 'messages', 'logs']);
+  assert.deepEqual(page.tabs.map(tab => tab.id), ['overview', 'latency', 'multi', 'daily', 'models', 'providers', 'clients', 'members', 'messages', 'logs']);
+  page.onTabChange({ id: 'overview' });
+  const overview = await page.load(api);
+  assert.deepEqual(overview.sections[0].cards.map(card => card.label), ['总请求数', '总 Token 消耗', '总积分消耗', '活跃模型']);
+  assert.deepEqual(overview.sections[0].cards.map(card => card.value), ['2', '12', '1.50 积分', '1']);
+  assert.equal(overview.sections[0].cards[0].detail, '日均 2 次');
+  assert.equal(overview.sections[0].cards[3].detail, '供应商 1');
+  assert.ok(overview.actions.some(action => action.label === '最近 1 年'));
   page.onTabChange({ id: 'latency' });
   const data = await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/admin/stats/latency'));
@@ -137,5 +144,6 @@ test('admin stats date selection is explicit and includes 365 days', async () =>
   const page = buildPages(runtime).find(item => item.id === 'admin-stats');
   const api = async () => ({ users: 0, models: 0, apiKeys: 0, daily: [] });
   const data = await page.load(api);
-  assert.ok(data.actions.some(action => action.label === '最近 365 天'));
+  assert.ok(data.actions.some(action => action.label === '最近 1 年'));
+  assert.equal(data.actions.some(action => action.label === '最近 365 天'), false);
 });
