@@ -14,6 +14,40 @@ from .generated.operations import CONTRACT_VERSION, OPERATIONS
 _PATH_PARAM = re.compile(r":([A-Za-z0-9_]+)")
 
 
+class AdminUser(TypedDict, total=False):
+    id: int
+    username: str
+    email: Optional[str]
+    email_verified: bool
+    avatar: Optional[str]
+    balance: Union[float, str]
+    refund_balance: Union[float, str]
+    is_admin: bool
+    tags: list[Any]
+    rate_limit_rpm: int
+    rate_limit_tpm: int
+    created_at: str
+    team_id: Optional[int]
+    team_name: Optional[str]
+
+
+class AdminUserStats(TypedDict):
+    adminCount: int
+    verifiedCount: int
+    totalBalance: float
+
+
+class AdminUsersPage(TypedDict):
+    items: list[AdminUser]
+    total: int
+    page: int
+    limit: int
+    stats: AdminUserStats
+
+
+AdminUsersResponse = Union[list[AdminUser], AdminUsersPage]
+
+
 class ApiKeyTag(TypedDict, total=False):
     id: Union[int, str]
     name: str

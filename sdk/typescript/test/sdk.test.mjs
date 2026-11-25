@@ -137,6 +137,14 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ amount: '2.5', fee_rate: '0.1', code: 'redeem-1', code_amount: '3', net_amount: '2.2727' }]);
       return;
     }
+    if (req.url === '/api/admin/users') {
+      json(res, 200, [{ id: 9, username: 'alice', email: null, email_verified: false, avatar: null, balance: '1.5', refund_balance: '0', is_admin: false, tags: [], rate_limit_rpm: 0, rate_limit_tpm: 0, created_at: '2026-01-01T00:00:00.000Z', team_id: null, team_name: null }]);
+      return;
+    }
+    if (req.url === '/api/admin/users?page=1') {
+      json(res, 200, { items: [{ id: 9, username: 'alice', email: null, email_verified: false, avatar: null, balance: '1.5', refund_balance: '0', is_admin: false, tags: [], rate_limit_rpm: 0, rate_limit_tpm: 0, created_at: '2026-01-01T00:00:00.000Z', team_id: null, team_name: null }], total: 1, page: 1, limit: 50, stats: { adminCount: 0, verifiedCount: 0, totalBalance: 1.5 } });
+      return;
+    }
     if (req.url === '/api/user/provider-tags') {
       json(res, 200, [{ id: 2, name: 'gateway', color: '#445566', sort_order: 1 }]);
       return;
@@ -221,6 +229,8 @@ test('management wrappers preserve their documented response payload shapes', as
   const providerTags = await client.providerTags.list();
   const uptime = await client.modelUptime.get();
   const uptimeDetail = await client.modelUptime.getDetail('m1');
+  const adminUsersLegacy = await client.admin.users.list();
+  const adminUsersPage = await client.admin.users.list({ query: { page: 1 } });
 
   assert.equal(keys.data[0].key_value, null);
   assert.deepEqual(keys.data[0].permissions, ['keys.read']);
@@ -258,6 +268,10 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(uptime.data.items.m1.uptime_pct, null);
   assert.equal(uptimeDetail.data.granularity, '15m');
   assert.equal(uptimeDetail.data.days[0].status, 'none');
+  assert.equal(adminUsersLegacy.data[0].username, 'alice');
+  assert.equal(adminUsersPage.data.stats.adminCount, 0);
+  assert.equal(adminUsersLegacy.data[0].username, 'alice');
+  assert.equal(adminUsersPage.data.stats.adminCount, 0);
 });
 
 test('management errors expose code and permission', async () => {

@@ -103,6 +103,18 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected API key models update payload: %#v", modelsUpdate)
 	}
 
+	var legacyUsers []crewrouter.AdminUser
+	if err := json.Unmarshal([]byte(`[{"id":9,"username":"alice","email":null,"email_verified":false,"avatar":null,"balance":"1.5","refund_balance":"0","is_admin":false,"tags":[],"rate_limit_rpm":0,"rate_limit_tpm":0,"created_at":"2026-01-01T00:00:00Z","team_id":null,"team_name":null}]`), &legacyUsers); err != nil {
+		t.Fatalf("decode legacy admin users: %v", err)
+	}
+	var pagedUsers crewrouter.AdminUsersPage
+	if err := json.Unmarshal([]byte(`{"items":[{"id":9,"username":"alice","email":null,"email_verified":false,"avatar":null,"balance":"1.5","refund_balance":"0","is_admin":false,"tags":[],"rate_limit_rpm":0,"rate_limit_tpm":0,"created_at":"2026-01-01T00:00:00Z","team_id":null,"team_name":null}],"total":1,"page":1,"limit":50,"stats":{"adminCount":0,"verifiedCount":0,"totalBalance":1.5}}`), &pagedUsers); err != nil {
+		t.Fatalf("decode paged admin users: %v", err)
+	}
+	if len(legacyUsers) != 1 || pagedUsers.Total != 1 || pagedUsers.Stats.TotalBalance != 1.5 {
+		t.Fatalf("unexpected admin user response: %#v / %#v", legacyUsers, pagedUsers)
+	}
+
 	var config crewrouter.ApiKeyClaudeConfig
 	if err := json.Unmarshal([]byte(`{"env":{"ANTHROPIC_BASE_URL":"https://router.example","ANTHROPIC_AUTH_TOKEN":"sk-fixture-secret","ANTHROPIC_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_HAIKU_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_SONNET_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_OPUS_MODEL":"claude-fable-5"},"model":"claude-fable-5","effortLevel":"high"}`), &config); err != nil {
 		t.Fatalf("decode API key config: %v", err)

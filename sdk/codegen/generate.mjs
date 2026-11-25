@@ -503,6 +503,20 @@ function managementSchemas() {
     CurrentModelResponse: object({
       currentModel: { anyOf: [{ $ref: '#/components/schemas/CurrentModel' }, { type: 'null' }] },
     }, ['currentModel']),
+    AdminUser: object({
+      id: { type: 'integer' }, username: { type: 'string' }, email: nullableString,
+      email_verified: { type: 'boolean' }, avatar: nullableString, balance: numberOrString,
+      refund_balance: numberOrString, is_admin: { type: 'boolean' },
+      tags: { type: 'array', items: { type: 'object', additionalProperties: true } },
+      rate_limit_rpm: { type: 'integer' }, rate_limit_tpm: numberOrString,
+      created_at: { type: 'string', format: 'date-time' }, team_id: { type: ['integer', 'null'] }, team_name: nullableString,
+    }, ['id', 'username', 'email_verified', 'is_admin', 'created_at']),
+    AdminUserStats: object({ adminCount: { type: 'integer' }, verifiedCount: { type: 'integer' }, totalBalance: { type: 'number' } }, ['adminCount', 'verifiedCount', 'totalBalance']),
+    AdminUsersPage: object({
+      items: { type: 'array', items: { $ref: '#/components/schemas/AdminUser' } },
+      total: { type: 'integer' }, page: { type: 'integer' }, limit: { type: 'integer' },
+      stats: { $ref: '#/components/schemas/AdminUserStats' },
+    }, ['items', 'total', 'page', 'limit', 'stats']),
     UserUsageLog: object({
       id: { type: 'integer' }, user_id: { type: 'integer' }, model_id: nullableString,
       api_key_id: { type: ['integer', 'null'] }, tokens_used: { type: ['integer', 'string', 'null'] },
@@ -624,6 +638,7 @@ function managementSuccessStatus(operationId) {
 function managementResponseSchema(operationId) {
   const schemas = {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
+    'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },
@@ -741,6 +756,9 @@ function buildOpenApi(operations) {
       'x-crewrouter-streaming': op.streaming,
       'x-crewrouter-body-limit': op.limits.body,
     };
+    if (op.operationId === 'admin.users.list') {
+      operation.description = 'Administrator-only user list. Without the page query, returns a full array for legacy consumers. With page specified, returns a paginated object containing items, total, page, limit and filtered stats.';
+    }
     if (op.operationId === 'user.apiKeys.byId.config.list') {
       operation.description = 'Owner-only Claude Code configuration. Requires keys.secret and an API Key owned by the caller. The response contains the API Key in ANTHROPIC_AUTH_TOKEN; never log or expose it. Legacy hash-only keys return HTTP 410 and must be regenerated.';
     }

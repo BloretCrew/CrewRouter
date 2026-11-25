@@ -266,6 +266,39 @@ export interface UserProviderListItem {
   created_by: number | null;
 }
 
+export interface AdminUser {
+  id: number;
+  username: string;
+  email: string | null;
+  email_verified: boolean;
+  avatar: string | null;
+  balance: number | string;
+  refund_balance: number | string;
+  is_admin: boolean;
+  tags: unknown[];
+  rate_limit_rpm: number;
+  rate_limit_tpm: number;
+  created_at: string;
+  team_id: number | null;
+  team_name: string | null;
+}
+
+export interface AdminUserStats {
+  adminCount: number;
+  verifiedCount: number;
+  totalBalance: number;
+}
+
+export interface AdminUsersPage {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+  stats: AdminUserStats;
+}
+
+export type AdminUsersResponse = AdminUser[] | AdminUsersPage;
+
 export interface UserProduct {
   id: number;
   name: string;

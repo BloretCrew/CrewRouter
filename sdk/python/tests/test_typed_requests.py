@@ -10,6 +10,8 @@ from crewrouter import (
     ApiKeyFusionConfig,
     ApiKeyFusionConfigPut,
     ApiKeyActionSuccess,
+    AdminUser,
+    AdminUsersPage,
     ApiKeyModelsResponse,
     ApiKeyModelsUpdateResponse,
     ApiKeyHarnessModelsResponse,
@@ -161,10 +163,13 @@ class TypedRequestTests(unittest.TestCase):
         fusion: ApiKeyFusionConfig = {"panel_models": ["m1"], "judge_model_id": "", "outer_model_id": "", "fusion_enabled": True, "fusion_synthesis_prompt_enabled": True}
         fusion_put: ApiKeyFusionConfigPut = {"panel_models": ["m1"]}
         success: ApiKeyActionSuccess = {"success": True}
+        admin_user: AdminUser = {"id": 9, "username": "alice", "email": None, "email_verified": False, "avatar": None, "balance": "1.5", "refund_balance": "0", "is_admin": False, "tags": [], "rate_limit_rpm": 0, "rate_limit_tpm": 0, "created_at": "2026-01-01T00:00:00Z", "team_id": None, "team_name": None}
+        admin_page: AdminUsersPage = {"items": [admin_user], "total": 1, "page": 1, "limit": 50, "stats": {"adminCount": 0, "verifiedCount": 0, "totalBalance": 1.5}}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(claude_config["model"], "claude-fable-5")
         self.assertEqual(fusion["panel_models"], fusion_put["panel_models"])
         self.assertTrue(success["success"])
+        self.assertEqual(admin_page["items"][0]["username"], "alice")
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)

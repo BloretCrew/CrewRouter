@@ -1,5 +1,41 @@
 package crewrouter
 
+// AdminUser is one administrator-visible user row.
+type AdminUser struct {
+	ID            int64   `json:"id"`
+	Username      string  `json:"username"`
+	Email         *string `json:"email"`
+	EmailVerified bool    `json:"email_verified"`
+	Avatar        *string `json:"avatar"`
+	Balance       any     `json:"balance"`
+	RefundBalance any     `json:"refund_balance"`
+	IsAdmin       bool    `json:"is_admin"`
+	Tags          any     `json:"tags"`
+	RateLimitRPM  int     `json:"rate_limit_rpm"`
+	RateLimitTPM  int64   `json:"rate_limit_tpm"`
+	CreatedAt     string  `json:"created_at"`
+	TeamID        *int64  `json:"team_id"`
+	TeamName      *string `json:"team_name"`
+}
+
+// AdminUserStats summarizes the filtered administrator user list.
+type AdminUserStats struct {
+	AdminCount    int     `json:"adminCount"`
+	VerifiedCount int     `json:"verifiedCount"`
+	TotalBalance  float64 `json:"totalBalance"`
+}
+
+// AdminUsersPage is returned when the page query parameter is supplied.
+type AdminUsersPage struct {
+	Items []AdminUser    `json:"items"`
+	Total int            `json:"total"`
+	Page  int            `json:"page"`
+	Limit int            `json:"limit"`
+	Stats AdminUserStats `json:"stats"`
+}
+
+// Decode the unpaged array response into []AdminUser and the paged response into AdminUsersPage.
+
 // ApiKeyTag is a tag attached to an API key.
 type ApiKeyTag struct {
 	ID    any    `json:"id"`

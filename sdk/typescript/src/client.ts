@@ -3,6 +3,7 @@ import { OPERATIONS, type CrewRouterOperation, type OperationId } from './genera
 import { HttpClient } from './http.js';
 import type {
   AnthropicMessagesRequest,
+  AdminUsersResponse,
   ApiKeyActionSuccess,
   ApiKeyClaudeConfig,
   ApiKeyFusionConfig,
@@ -264,7 +265,7 @@ export class CrewRouter {
 
   readonly admin = {
     users: {
-      list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      list: <T = AdminUsersResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.users.list', options),
     },
     models: {

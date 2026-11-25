@@ -7,6 +7,10 @@ compatible gateway and management API.
 from ._http import CrewRouterResponse
 from ._sse import AsyncStream, AsyncStreamRequest, Stream, StreamEvent
 from .client import (
+    AdminUser,
+    AdminUserStats,
+    AdminUsersPage,
+    AdminUsersResponse,
     AnthropicMessagesRequest,
     ApiKeyClaudeConfig,
     ApiKeyClaudeConfigEnv,
@@ -77,6 +81,10 @@ from .generated.operations import CONTRACT_VERSION, OPERATIONS, OPERATION_LIST
 __version__ = "27.0.0b1"
 
 __all__ = [
+    "AdminUser",
+    "AdminUserStats",
+    "AdminUsersPage",
+    "AdminUsersResponse",
     "CrewRouter",
     "AsyncCrewRouter",
     "ChatMessage",
