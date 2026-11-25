@@ -63,6 +63,7 @@ if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-s
 for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']) {
   const openapi = JSON.parse(await readFile(openapiPath, 'utf8'));
   const adminUsers = openapi.paths['/api/admin/users']?.get;
+  const adminCodeBalances = openapi.paths['/api/admin/users/{id}/code-balances']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProducts = openapi.paths['/api/admin/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProductCreate = openapi.paths['/api/admin/products']?.post;
   const adminProductUpdate = openapi.paths['/api/admin/products/{id}']?.put;
@@ -113,6 +114,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const harnessModels = openapi.paths['/api/user/api-keys/{id}/harness-models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const requestModelBindings = openapi.paths['/api/user/api-keys/{id}/request-model-bindings']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   if (adminUsers?.['x-crewrouter-permission'] !== 'admin.users.read' || adminUsers.responses?.[200]?.content?.['application/json']?.schema?.oneOf?.length !== 2) throw new Error(`${openapiPath} must document admin user list pagination variants`);
+  if (adminCodeBalances?.type !== 'array' || adminCodeBalances.items?.$ref !== '#/components/schemas/AdminUserCodeBalanceItem') throw new Error(`${openapiPath} must define administrator refundable balance rows`);
   if (adminUsers.responses[200].content['application/json'].schema.oneOf[0].items?.$ref !== '#/components/schemas/AdminUser' || adminUsers.responses[200].content['application/json'].schema.oneOf[1].$ref !== '#/components/schemas/AdminUsersPage') throw new Error(`${openapiPath} must define admin user list row and page schemas`);
   if (adminProducts?.type !== 'array' || adminProducts.items?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product list responses`);
   if (adminProductCreate?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProductCreateRequest' || adminProductCreate.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product create schema`);

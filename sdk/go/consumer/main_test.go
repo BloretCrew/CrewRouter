@@ -173,6 +173,14 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 		t.Fatalf("unexpected administrator stats filters: %#v", adminStatsFilters)
 	}
 
+	var adminCodeBalances []crewrouter.AdminUserCodeBalanceItem
+	if err := json.Unmarshal([]byte(`[{"id":1,"amount":"5.0","fee_rate":"0.1","code":"refund-1","net_amount":"4.5454"}]`), &adminCodeBalances); err != nil {
+		t.Fatalf("decode admin code balances: %v", err)
+	}
+	if len(adminCodeBalances) != 1 || adminCodeBalances[0].Code != "refund-1" {
+		t.Fatalf("unexpected admin code balances: %#v", adminCodeBalances)
+	}
+
 	var adminUsageLogs crewrouter.AdminUsageLogsResponse
 	if err := json.Unmarshal([]byte(`{"total":1,"page":1,"logs":[{"id":1,"user_id":9,"model_id":"m1","api_key_id":null,"tokens_used":"12","prompt_tokens":"10","completion_tokens":"2","cached_tokens":"0","provider_id":null,"request_type":"chat","request_source":"unknown","user_agent":null,"latency_ms":"25","ip_address":null,"custom_instruction_count":0,"cost":"0.01","created_at":"2026-01-01T00:00:00Z","username":"alice","key_prefix":null,"key_name":null,"series":null,"model_name":"Model","upstream_model_id":null,"requested_model":null,"resolved_model":null,"response_model":null,"provider_name":null}]}`), &adminUsageLogs); err != nil {
 		t.Fatalf("decode admin usage logs: %v", err)

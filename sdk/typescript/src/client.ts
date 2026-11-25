@@ -4,6 +4,7 @@ import { HttpClient } from './http.js';
 import type {
   AnthropicMessagesRequest,
   AdminUsersResponse,
+  AdminUserCodeBalanceItem,
   AdminUsageLogsResponse,
   AdminStatsFiltersResponse,
   AdminProduct,
@@ -306,6 +307,8 @@ export class CrewRouter {
     users: {
       list: <T = AdminUsersResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.users.list', options),
+      getCodeBalances: <T = AdminUserCodeBalanceItem[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.users.byId.codeBalances.list', mergePathParams(options, { id })),
     },
     usageLogs: {
       list: <T = AdminUsageLogsResponse>(query?: Record<string, QueryValue>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>

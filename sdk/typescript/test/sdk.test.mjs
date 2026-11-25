@@ -221,6 +221,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { success: true });
       return;
     }
+    if (req.url === '/api/admin/users/9/code-balances') {
+      json(res, 200, [{ id: 1, amount: '5.0', fee_rate: '0.1', code: 'refund-1', net_amount: '4.5454' }]);
+      return;
+    }
     if (req.url === '/api/admin/users') {
       json(res, 200, [{ id: 9, username: 'alice', email: null, email_verified: false, avatar: null, balance: '1.5', refund_balance: '0', is_admin: false, tags: [], rate_limit_rpm: 0, rate_limit_tpm: 0, created_at: '2026-01-01T00:00:00.000Z', team_id: null, team_name: null }]);
       return;
@@ -355,6 +359,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const updatedAdminTag = await client.admin.providerTags.update(4, { name: 'global' });
   const deletedAdminTag = await client.admin.providerTags.delete(4);
   const reorderedAdminTags = await client.admin.providerTags.reorder({ orderedIds: [4] });
+  const adminCodeBalances = await client.admin.users.getCodeBalances(9);
   const adminUsersLegacy = await client.admin.users.list();
   const adminUsersPage = await client.admin.users.list({ query: { page: 1 } });
 
@@ -410,6 +415,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminSeriesIcons.data[0].name, 'opus');
   assert.equal(adminSeriesIconSaved.data.success, true);
   assert.equal(adminProducts.data[0].price, '2.5');
+  assert.equal(adminCodeBalances.data[0].net_amount, '4.5454');
   assert.equal(createdAdminProduct.data.id, 1);
   assert.equal(updatedAdminProduct.data.id, 1);
   assert.equal(deletedAdminProduct.data.success, true);

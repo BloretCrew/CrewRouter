@@ -503,6 +503,14 @@ class AdminStatsFiltersResponse(TypedDict):
     projects: list[AdminStatsFilterOption]
 
 
+class AdminUserCodeBalanceItem(TypedDict):
+    id: int
+    amount: Union[float, str]
+    fee_rate: Union[float, str]
+    code: str
+    net_amount: Union[float, str]
+
+
 class AdminUsageLog(UserUsageLog, total=False):
     custom_instruction_count: int
     username: Optional[str]

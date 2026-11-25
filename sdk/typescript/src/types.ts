@@ -403,6 +403,14 @@ export interface AdminStatsFiltersResponse {
   projects: AdminStatsFilterOption[];
 }
 
+export interface AdminUserCodeBalanceItem {
+  id: number;
+  amount: number | string;
+  fee_rate: number | string;
+  code: string;
+  net_amount: number | string;
+}
+
 export interface AdminUsageLog extends UserUsageLog {
   custom_instruction_count: number;
   username: string | null;

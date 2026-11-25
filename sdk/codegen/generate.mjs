@@ -540,6 +540,10 @@ function managementSchemas() {
       total: { type: 'integer' }, page: { type: 'integer' },
       logs: { type: 'array', items: { $ref: '#/components/schemas/AdminUsageLog' } },
     }, ['total', 'page', 'logs']),
+    AdminUserCodeBalanceItem: object({
+      id: { type: 'integer' }, amount: numberOrString, fee_rate: numberOrString,
+      code: { type: 'string' }, net_amount: numberOrString,
+    }, ['id', 'amount', 'fee_rate', 'code', 'net_amount']),
     AdminStatsFilterOption: object({
       id: { oneOf: [{ type: 'integer' }, { type: 'string' }] }, name: { type: 'string' },
     }, ['id', 'name']),
@@ -795,6 +799,7 @@ function managementResponseSchema(operationId) {
   const schemas = {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
+    'admin.users.byId.codeBalances.list': { type: 'array', items: { $ref: '#/components/schemas/AdminUserCodeBalanceItem' } },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
     'admin.products.create': { $ref: '#/components/schemas/AdminProduct' },
     'admin.products.byId.update': { $ref: '#/components/schemas/AdminProduct' },

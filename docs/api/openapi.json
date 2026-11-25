@@ -1148,6 +1148,55 @@
         ],
         "additionalProperties": true
       },
+      "AdminUserCodeBalanceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "fee_rate": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "net_amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "fee_rate",
+          "code",
+          "net_amount"
+        ],
+        "additionalProperties": true
+      },
       "AdminStatsFilterOption": {
         "type": "object",
         "properties": {
@@ -13216,8 +13265,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminUserCodeBalanceItem"
+                  }
                 }
               }
             }

@@ -47,6 +47,7 @@ export type {
   AdminUserStats,
   AdminUsersPage,
   AdminUsersResponse,
+  AdminUserCodeBalanceItem,
   AdminUsageLog,
   AdminUsageLogsResponse,
   AdminStatsFilterOption,

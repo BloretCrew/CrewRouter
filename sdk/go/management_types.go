@@ -103,6 +103,15 @@ type AdminStatsFiltersResponse struct {
 	Projects  []AdminStatsFilterOption `json:"projects"`
 }
 
+// AdminUserCodeBalanceItem is a refundable code balance row visible to administrators.
+type AdminUserCodeBalanceItem struct {
+	ID        int64  `json:"id"`
+	Amount    any    `json:"amount"`
+	FeeRate   any    `json:"fee_rate"`
+	Code      string `json:"code"`
+	NetAmount any    `json:"net_amount"`
+}
+
 // AdminUsageLog is a user usage log row enriched with administrator-visible username/count fields.
 type AdminUsageLog struct {
 	UserUsageLog
