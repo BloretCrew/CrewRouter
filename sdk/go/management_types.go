@@ -38,6 +38,15 @@ type AdminUser struct {
 	TeamName      *string `json:"team_name"`
 }
 
+// TeamMember is one user returned in an administrator Team membership list.
+type TeamMember struct {
+	ID        int64   `json:"id"`
+	Username  string  `json:"username"`
+	Email     *string `json:"email"`
+	Avatar    *string `json:"avatar"`
+	CreatedAt string  `json:"created_at"`
+}
+
 // AdminProduct is one product returned to administrator clients.
 type AdminProduct struct {
 	ID          int64   `json:"id"`

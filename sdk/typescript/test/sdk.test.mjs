@@ -145,6 +145,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 1, name: 'Product', description: null, price: '2.5', image_url: null, link: null, is_active: true, sort_order: 0, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' }]);
       return;
     }
+    if (req.url === '/api/admin/teams/2/members') {
+      json(res, 200, [{ id: 9, username: 'alice', email: null, avatar: null, created_at: '2026-01-01T00:00:00.000Z' }]);
+      return;
+    }
     if (req.url === '/api/admin/users') {
       json(res, 200, [{ id: 9, username: 'alice', email: null, email_verified: false, avatar: null, balance: '1.5', refund_balance: '0', is_admin: false, tags: [], rate_limit_rpm: 0, rate_limit_tpm: 0, created_at: '2026-01-01T00:00:00.000Z', team_id: null, team_name: null }]);
       return;
@@ -259,6 +263,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const uptime = await client.modelUptime.get();
   const uptimeDetail = await client.modelUptime.getDetail('m1');
   const adminProducts = await client.admin.products.list();
+  const teamMembers = await client.admin.teams.getMembers(2);
   const adminUsersLegacy = await client.admin.users.list();
   const adminUsersPage = await client.admin.users.list({ query: { page: 1 } });
 
@@ -305,6 +310,7 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(uptimeDetail.data.granularity, '15m');
   assert.equal(uptimeDetail.data.days[0].status, 'none');
   assert.equal(adminProducts.data[0].price, '2.5');
+  assert.equal(teamMembers.data[0].email, null);
   assert.equal(adminUsersLegacy.data[0].username, 'alice');
   assert.equal(adminUsersPage.data.stats.adminCount, 0);
   assert.equal(adminUsersLegacy.data[0].username, 'alice');

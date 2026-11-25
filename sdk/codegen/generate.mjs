@@ -529,6 +529,10 @@ function managementSchemas() {
       is_active: { type: 'boolean' }, sort_order: { type: 'integer' },
       created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
     }, ['id', 'name', 'is_active', 'sort_order', 'created_at', 'updated_at']),
+    TeamMember: object({
+      id: { type: 'integer' }, username: { type: 'string' }, email: nullableString,
+      avatar: nullableString, created_at: { type: 'string', format: 'date-time' },
+    }, ['id', 'username', 'created_at']),
     UserUsageLog: object({
       id: { type: 'integer' }, user_id: { type: 'integer' }, model_id: nullableString,
       api_key_id: { type: ['integer', 'null'] }, tokens_used: { type: ['integer', 'string', 'null'] },
@@ -675,6 +679,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
+    'admin.teams.byId.members.list': { type: 'array', items: { $ref: '#/components/schemas/TeamMember' } },
     'user.usage.list': { type: 'array', items: { $ref: '#/components/schemas/DailyUsageItem' } },
     'user.balance.list': { $ref: '#/components/schemas/UserBalance' },
     'user.models.list': { type: 'array', items: { $ref: '#/components/schemas/UserModelListItem' } },

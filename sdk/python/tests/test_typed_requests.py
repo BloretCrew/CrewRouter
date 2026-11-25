@@ -16,6 +16,7 @@ from crewrouter import (
     AdminUser,
     AdminProduct,
     AdminUsersPage,
+    TeamMember,
     ApiKeyModelsResponse,
     ApiKeyModelsUpdateResponse,
     ApiKeyHarnessModelsResponse,
@@ -179,6 +180,7 @@ class TypedRequestTests(unittest.TestCase):
         admin_user: AdminUser = {"id": 9, "username": "alice", "email": None, "email_verified": False, "avatar": None, "balance": "1.5", "refund_balance": "0", "is_admin": False, "tags": [], "rate_limit_rpm": 0, "rate_limit_tpm": 0, "created_at": "2026-01-01T00:00:00Z", "team_id": None, "team_name": None}
         admin_page: AdminUsersPage = {"items": [admin_user], "total": 1, "page": 1, "limit": 50, "stats": {"adminCount": 0, "verifiedCount": 0, "totalBalance": 1.5}}
         admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
+        team_member: TeamMember = {"id": 9, "username": "alice", "email": None, "avatar": None, "created_at": "2026-01-01T00:00:00Z"}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(claude_config["model"], "claude-fable-5")
         self.assertEqual(fusion["panel_models"], fusion_put["panel_models"])
@@ -187,6 +189,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertFalse(swallow_response["swallow_images"])
         self.assertTrue(commands_response["crewrouter_commands"])
         self.assertEqual(admin_page["items"][0]["username"], "alice")
+        self.assertIsNone(team_member["email"])
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         self.assertEqual(usage_detail_response["log"]["messages"][0]["content"], "hi")
         self.assertEqual(stats_filters["teams"][0]["id"], 2)

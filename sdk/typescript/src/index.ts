@@ -32,6 +32,7 @@ export type {
   CrewRouterResponse,
   AdminUser,
   AdminProduct,
+  TeamMember,
   AdminUserStats,
   AdminUsersPage,
   AdminUsersResponse,

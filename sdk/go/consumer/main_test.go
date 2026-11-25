@@ -148,6 +148,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(adminProducts) != 1 || adminProducts[0].Price != "2.5" || adminProducts[0].Description != nil {
 		t.Fatalf("unexpected admin product response: %#v", adminProducts)
 	}
+	var teamMembers []crewrouter.TeamMember
+	if err := json.Unmarshal([]byte(`[{"id":9,"username":"alice","email":null,"avatar":null,"created_at":"2026-01-01T00:00:00Z"}]`), &teamMembers); err != nil {
+		t.Fatalf("decode team members: %v", err)
+	}
+	if len(teamMembers) != 1 || teamMembers[0].Email != nil {
+		t.Fatalf("unexpected Team member response: %#v", teamMembers)
+	}
 
 	var config crewrouter.ApiKeyClaudeConfig
 	if err := json.Unmarshal([]byte(`{"env":{"ANTHROPIC_BASE_URL":"https://router.example","ANTHROPIC_AUTH_TOKEN":"sk-fixture-secret","ANTHROPIC_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_HAIKU_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_SONNET_MODEL":"claude-fable-5","ANTHROPIC_DEFAULT_OPUS_MODEL":"claude-fable-5"},"model":"claude-fable-5","effortLevel":"high"}`), &config); err != nil {

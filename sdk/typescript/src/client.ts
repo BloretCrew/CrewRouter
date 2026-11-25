@@ -5,6 +5,7 @@ import type {
   AnthropicMessagesRequest,
   AdminUsersResponse,
   AdminProduct,
+  TeamMember,
   ApiKeyActionSuccess,
   ApiKeyEnabledUpdateResponse,
   ApiKeySwallowImagesUpdateResponse,
@@ -302,6 +303,8 @@ export class CrewRouter {
     teams: {
       list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.teams.list', options),
+      getMembers: <T = TeamMember[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.teams.byId.members.list', mergePathParams(options, { id })),
     },
     products: {
       list: <T = AdminProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>

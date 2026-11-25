@@ -31,6 +31,14 @@ class AdminUser(TypedDict, total=False):
     team_name: Optional[str]
 
 
+class TeamMember(TypedDict, total=False):
+    id: int
+    username: str
+    email: Optional[str]
+    avatar: Optional[str]
+    created_at: str
+
+
 class AdminProduct(TypedDict, total=False):
     id: int
     name: str
