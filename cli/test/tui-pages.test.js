@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildPages, WEB_PAGE_MAP, navGroups } = require('../tui/pages');
+const { buildPages, WEB_PAGE_MAP, navGroups, navAreas } = require('../tui/pages');
 
 function runtime(isAdmin = true) {
   return { client: { isAdmin }, cfg: { tui: { days: 30 } }, profileName: 'test', baseUrl: 'http://localhost' };
@@ -16,6 +16,10 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.ok(ids.has('service'), 'CLI retains its local service/profile page');
   assert.ok(ids.has('overview'), 'CLI retains its overview page');
   assert.deepEqual(navGroups.map(group => group.id), ['console', 'admin', 'admin-subpages', 'tools', 'cli']);
+  assert.deepEqual(navAreas.map(area => ({ ...area })), [
+    { id: 'console', label: '控制台', groups: ['console', 'tools', 'cli'] },
+    { id: 'admin', label: '管理后台', groups: ['admin', 'admin-subpages'], adminOnly: true },
+  ]);
   assert.deepEqual(navGroups[0].pages, ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings']);
   assert.deepEqual(navGroups[1].pages, ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings']);
   assert.deepEqual(navGroups[3].pages, ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings']);

@@ -66,6 +66,10 @@ test('console and admin are top-level tabs whose sidebars swap after verified ad
     await clickText(tty, '控制台');
     await until(() => tty.screen().includes('[控制台]') && tty.screen().includes('控制台内容'));
     assert.ok(!tty.screen().includes('后台首页'));
+    tty.input.write('\x1b[C');
+    await until(() => tty.screen().includes('[管理后台]') && tty.screen().includes('后台内容'));
+    tty.input.write('\x1b[D');
+    await until(() => tty.screen().includes('[控制台]') && tty.screen().includes('控制台内容'));
   } finally { tty.input.write('q'); await task; }
 });
 
