@@ -651,20 +651,21 @@ function createAdminPages(runtime) {
           const total = quota.total ?? provider.aggregated?.total;
           const remaining = quota.remaining ?? provider.aggregated?.remaining;
           const keys = array(provider.keys).filter(key => key && (key.ok || key.error || key.quota));
-          const state = provider.error || ['failed', 'error'].includes(provider.status) ? (quota.total != null ? '最近查询失败，保留上次有效值' : '查询失败') : provider.status === 'stale' ? '已过期' : provider.status === 'partial' ? '部分成功' : '';
-          return { label: provider.name || '未知供应商', detail: [quota.planName, currentPercent != null ? `当前周期已用 ${Math.round(Number(currentPercent))}%` : total != null ? `剩余 ${remaining ?? '未知'} / ${total}` : '额度未知', keys.length > 1 ? `${keys.length} 个 Key` : '', provider.last_valid_at ? `最后有效观测 ${formatTime(provider.last_valid_at)}` : '', state].filter(Boolean).join(' · '), run: async ctx => {
-            const lines = [
-              `供应商：${provider.name || '未知供应商'}`,
-              quota.planName && `方案：${quota.planName}`,
-              ...periods.map(period => `${period.label || period.key || '额度'}：${period.percent == null ? '未知' : `已用 ${Math.round(Number(period.percent))}%`}${period.startsAt || period.resetsAt ? ` · 周期 ${period.startsAt ? formatTime(period.startsAt) : '未知'} 至 ${period.resetsAt ? formatTime(period.resetsAt) : '未知'}` : ''}`),
-              !periods.length && `剩余额度：${remaining ?? '未知'} / ${total ?? '未知'}`,
-              quota.credits && `Credits：${quota.credits.unlimited ? '无限' : quota.credits.balance ?? '0'}`,
-              ...keys.map((key, index) => `${key.label || key.masked_key || `Key ${index + 1}`}：${key.quota?.currentPercent != null ? `已用 ${Math.round(Number(key.quota.currentPercent))}%` : key.quota ? `剩余 ${key.quota.remaining ?? '未知'} / ${key.quota.total ?? '未知'}` : key.error || '查询失败'}`),
-              state,
-              provider.last_valid_at && `最后有效观测：${formatTime(provider.last_valid_at)}`,
-            ].filter(Boolean).join('\n');
-            await ctx.show(`供应商额度 · ${provider.name || '未知'}`, lines);
-          } };
+          const state = provider.error || ['failed', 'error'].includes(provider.status) ? (quota.total != null ? '最近查询失败，保留上次有效值' : '查询失败') : provider.status === 'stale' ? '额度数据已过期' : provider.status === 'partial' ? '部分 Key 查询成功' : '';
+          const progress = percent => { const value = Math.max(0, Math.min(100, Number(percent) || 0)); const filled = Math.round(value / 100 * 20); return `[${'█'.repeat(filled)}${'░'.repeat(20 - filled)}] ${Math.round(value)}%`; };
+          const periodLabel = period => ({ current_period: '当前周期', five_hour: '5 小时窗口', seven_day: '7 天窗口', daily: '每日', weekly: '每周', monthly: '每月', primary: '主要额度窗口', secondary: '次要额度窗口' })[period] || String(period || '额度周期').replace(/_/g, ' ');
+          const resetText = value => { if (!value) return ''; const timestamp = new Date(value).getTime(); if (!Number.isFinite(timestamp)) return `重置时间 ${value}`; const minutes = Math.max(0, Math.floor((timestamp - Date.now()) / 60000)); if (!minutes) return '即将重置'; const days = Math.floor(minutes / 1440); const hours = Math.floor(minutes % 1440 / 60); const remainder = minutes % 60; return days ? `${days} 天 ${hours} 小时后重置` : hours ? `${hours} 小时 ${remainder} 分钟后重置` : `${Math.max(1, remainder)} 分钟后重置`; };
+          const detailLines = [
+            quota.planName && `方案：${quota.planName}`,
+            ...periods.map(period => `${periodLabel(period.key || period.label)}：${period.percent == null ? '使用率未知' : progress(period.percent)}${resetText(period.resetsAt) ? ` · ${resetText(period.resetsAt)}` : ''}`),
+            !periods.length && (currentPercent != null ? `当前额度：${progress(currentPercent)}` : `剩余额度：${remaining ?? '未知'} / ${total ?? '未知'}`),
+            quota.credits && `Credits：${quota.credits.unlimited ? '无限' : quota.credits.balance ?? '0'}${quota.rateLimitResetCredits?.available_count != null ? ` · 可手动重置 ${quota.rateLimitResetCredits.available_count} 次` : ''}`,
+            ...keys.map((key, index) => { const keyQuota = key.quota || {}; const keyPercent = keyQuota.currentPercent ?? (Number(keyQuota.total) > 0 && keyQuota.used != null ? Number(keyQuota.used) / Number(keyQuota.total) * 100 : null); const keyState = !key.ok ? (key.quota ? '最近查询失败，显示上次有效值' : key.error || '查询失败') : ''; return `${key.label || key.masked_key || `Key ${index + 1}`}：${keyPercent == null ? keyQuota.total != null ? `剩余 ${keyQuota.remaining ?? '未知'} / ${keyQuota.total}` : '额度未知' : progress(keyPercent)}${keyState ? ` · ${keyState}` : ''}`; }),
+            state,
+            provider.last_valid_at && `最后有效观测：${formatTime(provider.last_valid_at)}`,
+          ].filter(Boolean);
+          const headline = periods.length ? `${periodLabel(periods.find(period => period.key === 'current_period')?.key || periods[0].key || periods[0].label)} · ${currentPercent == null ? '使用率未知' : `已用 ${Math.round(Number(currentPercent))}%`}` : total != null ? `剩余 ${remaining ?? '未知'} / ${total}` : '额度未知';
+          return { label: provider.name || '未知供应商', detail: [quota.planName, headline, state, provider.last_valid_at && `最后有效观测 ${formatTime(provider.last_valid_at)}`].filter(Boolean).join(' · '), run: async ctx => await ctx.show(`供应商额度 · ${provider.name || '未知'}`, detailLines.join('\n')) };
         });
         const shortError = (value, max = 72) => { const normalized = String(value || '').replace(/\s+/g, ' ').trim(); return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized; };
         const modelRows = searchedModels.map(item => {
