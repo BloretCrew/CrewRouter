@@ -18,8 +18,9 @@ test('session row opens the paginated web message timeline with readable event l
   const data = await page.load();
   assert.deepEqual(calls[0].options.query, { days: 7, page: 1, pageSize: 20 });
   const sessionRow = data.sections[0].rows[0];
-  assert.match(sessionRow.label, /缓存 30 Token.*4 次工具调用/);
-  for (const detail of ['工作区：/work/repo', '会话摘要：A useful sessio', '最近工具：read_file', '上下文压力：注意']) assert.ok(sessionRow.detail.includes(detail), `missing session detail: ${detail}; actual=${sessionRow.detail}`);
+  assert.match(sessionRow.label, /^Codex · session-1$/);
+  for (const detail of ['工作区：/work/repo', '会话摘要：A useful sessio', '活动时间：', '2 次请求 · 4 次工具调用 · 最近工具 read_file', '总 Token：100 · 缓存命中：30', '摘要更新：', '上下文压力：注意']) assert.ok(sessionRow.detail.includes(detail), `missing session detail: ${detail}; actual=${sessionRow.detail}`);
+  assert.ok(!sessionRow.detail.includes('上下文压力：正常'), 'normal pressure should not add noise to the session card');
   assert.equal(data.actions.find(action => action.label === '下一页').disabled, false);
   const rows = [];
   const choices = ['messages', 'more', 'close'];
@@ -59,7 +60,7 @@ test('session content search reads the web results array and renders matching ex
   const page = buildPages(runtime).find(item => item.id === 'sessions');
   const data = await page.load();
   assert.equal(data.sections[0].description, '最近 7 天 · 搜索“workflow” · 共 1 个匹配会话（最多显示 20 个）');
-  assert.equal(data.sections[0].rows[0].label, 'session-search · Codex · 3 条匹配消息');
+  assert.equal(data.sections[0].rows[0].label, 'Codex · session-search · 3 条匹配消息');
   assert.match(data.sections[0].rows[0].detail, /【命中：workflow】/);
   assert.match(data.sections[0].rows[0].detail, /second workflow hit/);
   assert.match(data.sections[0].rows[0].detail, /third workflow hit/);

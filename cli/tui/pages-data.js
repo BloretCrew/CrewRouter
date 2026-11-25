@@ -394,11 +394,20 @@ function sessionsPage(runtime) {
         : (Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
       const rows = items.map(item => ({
         label: search
-          ? `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.matchCount || 0).toLocaleString()} 条匹配消息`
-          : `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token · 缓存 ${formatBigNumber(item.totalCachedTokens)} Token${item.toolCallCount ? ` · ${item.toolCallCount} 次工具调用` : ''}`,
+          ? `${clientDisplay(item.harness)} · ${item.sessionKey || '未知会话'} · ${Number(item.matchCount || 0).toLocaleString()} 条匹配消息`
+          : `${clientDisplay(item.harness)} · ${item.sessionKey || '未知会话'}`,
         detail: search
-          ? [`最近匹配：${item.lastSeen ? formatTime(item.lastSeen) : '未知'}`, ...arrayOrEmpty(item.previews).slice(0, 3).map(preview => `${formatTime(preview.ts)} · ${String(preview.excerpt || '').replace(/<<<MARK>>>(.*?)<<<END>>>/g, '【命中：$1】')}`)].join('\\n')
-          : [item.cwd && `工作区：${item.cwd}`, item.summary ? `会话摘要：${String(item.summary).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : item.lastMessagePreview ? `最近消息：${String(item.lastMessagePreview).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : '', item.models && item.models.length ? `模型：${item.models.slice(0, 3).join(', ')}` : '', item.lastToolName && `最近工具：${item.lastToolName}`, item.summaryCreatedAt && `摘要更新：${formatTime(item.summaryCreatedAt)}`, item.pressureLevel === 'critical' ? '上下文压力：高' : item.pressureLevel === 'warning' ? '上下文压力：注意' : '上下文压力：正常'].filter(Boolean).join(' · '),
+          ? [`最近匹配：${item.lastSeen ? formatTime(item.lastSeen) : '未知'} · 最多展示 3 条命中摘录`, ...arrayOrEmpty(item.previews).slice(0, 3).map(preview => `${formatTime(preview.ts)} · ${String(preview.excerpt || '').replace(/<<<MARK>>>(.*?)<<<END>>>/g, '【命中：$1】')}`)].join('\\n')
+          : [
+            item.cwd && `工作区：${item.cwd}`,
+            item.summary ? `会话摘要：${String(item.summary).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : item.lastMessagePreview ? `最近消息：${String(item.lastMessagePreview).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : '',
+            `活动时间：${item.firstSeen ? formatTime(item.firstSeen) : '未知'} 至 ${item.lastSeen ? formatTime(item.lastSeen) : '未知'}`,
+            `${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${Number(item.toolCallCount || 0).toLocaleString()} 次工具调用${item.lastToolName ? ` · 最近工具 ${item.lastToolName}` : ''}`,
+            `总 Token：${formatBigNumber(item.totalTokens)} · 缓存命中：${formatBigNumber(item.totalCachedTokens)}`,
+            item.models?.length ? `模型：${item.models.slice(0, 3).join('、')}` : '',
+            item.summaryCreatedAt && `摘要更新：${formatTime(item.summaryCreatedAt)}`,
+            item.pressureLevel === 'critical' ? '上下文压力：高（接近容量上限）' : item.pressureLevel === 'warning' ? '上下文压力：注意' : '',
+          ].filter(Boolean).join('\\n'),
         run: async ctx => {
           const choice = await ctx.choose(`会话 · ${item.sessionKey}`, [{ label: '查看消息', value: 'messages' }, { label: '查看已缓存摘要', value: 'summary' }]);
           if (choice === 'messages') await showSessionMessages(ctx, runtime, item);
