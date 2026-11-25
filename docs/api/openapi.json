@@ -750,7 +750,6 @@
         "properties": {
           "panel_models": {
             "type": "array",
-            "maxItems": 10,
             "items": {
               "type": "string"
             }
@@ -771,7 +770,8 @@
         "required": [
           "panel_models"
         ],
-        "additionalProperties": true
+        "additionalProperties": true,
+        "description": "Distinct panel_models are limited to 10 after trimming and deduplication; repeated entries do not consume extra slots."
       },
       "ApiKeyActionSuccess": {
         "type": "object",

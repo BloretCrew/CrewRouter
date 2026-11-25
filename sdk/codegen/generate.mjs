@@ -474,15 +474,15 @@ function managementSchemas() {
       judge_model_id: { type: 'string' }, outer_model_id: { type: 'string' },
       fusion_enabled: { type: 'boolean' }, fusion_synthesis_prompt_enabled: { type: 'boolean' },
     }, ['panel_models', 'judge_model_id', 'outer_model_id', 'fusion_enabled', 'fusion_synthesis_prompt_enabled']),
-    ApiKeyFusionConfigPut: object({
-      panel_models: { type: 'array', maxItems: 10, items: { type: 'string' } },
-      judge_model_id: { type: 'string' }, outer_model_id: { type: 'string' },
-      fusion_enabled: { type: 'boolean' }, fusion_synthesis_prompt_enabled: { type: 'boolean' },
-    }, ['panel_models']),
+    ApiKeyFusionConfigPut: {
+      ...object({
+        panel_models: { type: 'array', items: { type: 'string' } },
+        judge_model_id: { type: 'string' }, outer_model_id: { type: 'string' },
+        fusion_enabled: { type: 'boolean' }, fusion_synthesis_prompt_enabled: { type: 'boolean' },
+      }, ['panel_models']),
+      description: 'Distinct panel_models are limited to 10 after trimming and deduplication; repeated entries do not consume extra slots.',
+    },
     ApiKeyActionSuccess: object({ success: { const: true } }),
-    ApiKeyEnabledUpdateResponse: object({ success: { const: true }, enabled: { type: 'boolean' } }),
-    ApiKeySwallowImagesUpdateResponse: object({ success: { const: true }, swallow_images: { type: 'boolean' } }),
-    ApiKeyCommandsUpdateResponse: object({ success: { const: true }, crewrouter_commands: { type: 'boolean' } }),
     ApiKeyEnabledUpdateResponse: object({ success: { const: true }, enabled: { type: 'boolean' } }),
     ApiKeySwallowImagesUpdateResponse: object({ success: { const: true }, swallow_images: { type: 'boolean' } }),
     ApiKeyCommandsUpdateResponse: object({ success: { const: true }, crewrouter_commands: { type: 'boolean' } }),
