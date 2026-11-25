@@ -61,6 +61,7 @@ test('session content search reads the web results array and renders matching ex
   const data = await page.load();
   assert.equal(data.sections[0].description, '最近 7 天 · 搜索“workflow” · 共 1 个匹配会话（最多显示 20 个）');
   assert.equal(data.sections[0].rows[0].label, 'Codex · session-search · 3 条匹配消息');
+  assert.match(data.sections[0].rows[0].detail, /命中时间：.* 至 .*/);
   assert.match(data.sections[0].rows[0].detail, /【命中：workflow】/);
   assert.match(data.sections[0].rows[0].detail, /second workflow hit/);
   assert.match(data.sections[0].rows[0].detail, /third workflow hit/);

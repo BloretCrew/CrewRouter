@@ -534,7 +534,7 @@ function sessionsPage(runtime) {
           ? `${clientDisplay(item.harness)} · ${item.sessionKey || '未知会话'} · ${Number(item.matchCount || 0).toLocaleString()} 条匹配消息`
           : `${clientDisplay(item.harness)} · ${item.sessionKey || '未知会话'}`,
         detail: search
-          ? [`最近匹配：${item.lastSeen ? formatTime(item.lastSeen) : '未知'} · 最多展示 3 条命中摘录`, ...arrayOrEmpty(item.previews).slice(0, 3).map(preview => `${formatTime(preview.ts)} · ${String(preview.excerpt || '').replace(/<<<MARK>>>(.*?)<<<END>>>/g, '【命中：$1】')}`)].join('\\n')
+          ? [`命中时间：${item.firstSeen ? formatTime(item.firstSeen) : '未知'} 至 ${item.lastSeen ? formatTime(item.lastSeen) : '未知'} · 最多展示 3 条命中摘录`, ...arrayOrEmpty(item.previews).slice(0, 3).map(preview => `${formatTime(preview.ts)} · ${String(preview.excerpt || '').replace(/<<<MARK>>>(.*?)<<<END>>>/g, '【命中：$1】')}`)].join('\\n')
           : [
             item.cwd && `工作区：${item.cwd}`,
             item.summary ? `会话摘要：${String(item.summary).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : item.lastMessagePreview ? `最近消息：${String(item.lastMessagePreview).split(/[。.!！？?\\n]/)[0].slice(0, 60)}` : '',
