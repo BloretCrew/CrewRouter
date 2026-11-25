@@ -61,11 +61,14 @@ function createAdminPages(runtime) {
       async load(api) {
         const days = runtime.projectDays || 30;
         const source = runtime.projectSource || '';
-        const data = await api('/api/user/project-stats', { query: { days, ...(source ? { request_source: source } : {}) } });
+        const customRange = runtime.projectCustomRange || null;
+        const rangeLabel = customRange ? `${customRange.start} 至 ${customRange.end}` : `最近 ${days} 天`;
+        const query = customRange ? { start: customRange.start, end: customRange.end, ...(source ? { request_source: source } : {}) } : { days, ...(source ? { request_source: source } : {}) };
+        const data = await api('/api/user/project-stats', { query });
         const summary = data.summary || {};
         const projects = array(data.projects);
         return { sections: [
-          { title: '项目工作摘要', cards: [
+          { title: '项目工作摘要', toolbar: true, description: `时间范围：${rangeLabel}${source ? ` · 客户端 ${source}` : ''}`, cards: [
             { label: '活跃项目', value: text(summary.projects, '0') }, { label: '活跃天数', value: text(summary.active_days, '0') },
             { label: 'AI 请求次数', value: text(summary.requests, '0') }, { label: 'Token 用量', value: formatBigNumber(summary.tokens) },
             { label: '最近活动', value: summary.last_activity ? formatTime(summary.last_activity) : '—' },
@@ -79,10 +82,9 @@ function createAdminPages(runtime) {
             active_days: `${Number(item.active_days || 0)} 天`, cost: `${formatCost(item.cost)} 积分`,
           }, detail: Object.keys(item.sources || {}).length ? `客户端：${Object.keys(item.sources).join('、')}` : '' })) : [{ label: '暂无项目活动。' }] },
           { title: '每日活动', tableMinWidth: 84, columns: [{ key: 'date', label: '日期', ratio: 0.45 }, { key: 'requests', label: '请求数', ratio: 0.3 }, { key: 'projects', label: '活跃项目数', ratio: 0.25 }], rows: array(data.daily).slice(-30).map(item => ({ label: item.date || '未知日期', cells: { date: item.date || '未知日期', requests: `${Number(item.requests || 0).toLocaleString()} 次`, projects: `${Number(item.projects || 0)} 个` } })) },
-        ], actions: [
-          ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, run: async ctx => { runtime.projectDays = value; await ctx.refresh(); } })),
-          ...['', 'claude_code', 'codex', 'opencode', 'grok', 'qwen_code'].map(value => ({ label: value ? `客户端：${value}` : '全部客户端', run: async ctx => { runtime.projectSource = value; await ctx.refresh(); } })),
-          { label: '自定义日期范围', run: async ctx => { const dates = await ctx.form('自定义日期范围', [{ name: 'start', label: '开始日期（YYYY-MM-DD）' }, { name: 'end', label: '结束日期（YYYY-MM-DD）' }]); if (!dates) return; const result = await api('/api/user/project-stats', { query: { start: dates.start, end: dates.end, ...(source ? { request_source: source } : {}) } }); runtime.projectResult = result; ctx.notify('日期范围查询完成；刷新可恢复预设范围。'); } },
+        ], pageToolbar: true, actions: [
+          { label: '选择时间范围', toolbar: 'page', run: async ctx => { const range = await ctx.choose('项目统计时间范围', [...[7, 30, 90, 180, 365].map(value => ({ label: value === 365 ? '最近 1 年' : `最近 ${value} 天`, value })), { label: '自定义日期范围', value: 'custom' }]); if (range === null) return; if (range !== 'custom') { runtime.projectDays = range; runtime.projectCustomRange = null; await ctx.refresh(); return; } const dates = await ctx.form('自定义日期范围', [{ name: 'start', label: '开始日期（YYYY-MM-DD）' }, { name: 'end', label: '结束日期（YYYY-MM-DD）' }]); if (!dates) return; const validDate = value => { const valueText = String(value || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(valueText)) return false; const parsed = new Date(`${valueText}T00:00:00Z`); return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === valueText; }; if (!validDate(dates.start) || !validDate(dates.end) || dates.start > dates.end) { await ctx.show('日期范围无效', '请输入有效日期，并确认结束日期不早于开始日期。'); return; } runtime.projectCustomRange = { start: dates.start, end: dates.end }; await ctx.refresh(); } },
+          { label: '筛选客户端', toolbar: 'page', run: async ctx => { const options = [['', '全部客户端'], ['claude_code', 'Claude Code'], ['codex', 'Codex'], ['opencode', 'OpenCode'], ['grok', 'Grok'], ['qwen_code', 'Qwen Code'], ['hermes', 'Hermes'], ['openclaw', 'OpenClaw'], ['deepseek_harness', 'DeepSeek Harness'], ['unknown', '未知/其他']]; const value = await ctx.choose('客户端来源', options.map(([id, label]) => ({ label, value: id }))); if (value !== null) { runtime.projectSource = value; await ctx.refresh(); } } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
