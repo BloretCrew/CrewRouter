@@ -373,6 +373,25 @@ class UserUsageLogsResponse(TypedDict):
     logs: list[UserUsageLog]
 
 
+class UserUsageLogDetail(UserUsageLog, total=False):
+    is_stream: Optional[bool]
+    ttft_ms: Optional[Union[float, str]]
+    upstream_first_byte_ms: Optional[Union[float, str]]
+    generation_ms: Optional[Union[float, str]]
+    tpot_ms: Optional[Union[float, str]]
+    output_tps: Optional[Union[float, str]]
+    e2e_ms: Optional[Union[float, str]]
+    upstream_processing_ms: Optional[Union[float, str]]
+    service_tier: Optional[str]
+    rate_limit: Any
+    messages: Any
+    response: Any
+
+
+class UserUsageLogDetailResponse(TypedDict):
+    log: UserUsageLogDetail
+
+
 class ModelUptimeSummaryItem(TypedDict):
     uptime_pct: Optional[float]
     label: str

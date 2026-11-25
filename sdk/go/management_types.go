@@ -193,6 +193,29 @@ type UserUsageLog struct {
 	ProviderName     *string `json:"provider_name"`
 }
 
+// UserUsageLogDetail contains a user's full request record. Messages and Response
+// are opaque upstream JSON and may be large or sensitive; avoid logging them.
+type UserUsageLogDetail struct {
+	UserUsageLog
+	IsStream             *bool   `json:"is_stream"`
+	TTFTMS               any     `json:"ttft_ms"`
+	UpstreamFirstByteMS  any     `json:"upstream_first_byte_ms"`
+	GenerationMS         any     `json:"generation_ms"`
+	TPOTMS               any     `json:"tpot_ms"`
+	OutputTPS            any     `json:"output_tps"`
+	E2EMS                any     `json:"e2e_ms"`
+	UpstreamProcessingMS any     `json:"upstream_processing_ms"`
+	ServiceTier          *string `json:"service_tier"`
+	RateLimit            any     `json:"rate_limit"`
+	Messages             any     `json:"messages"`
+	Response             any     `json:"response"`
+}
+
+// UserUsageLogDetailResponse wraps one detailed user-owned usage record.
+type UserUsageLogDetailResponse struct {
+	Log UserUsageLogDetail `json:"log"`
+}
+
 // UserUsageLogsResponse is the paginated response from GET /api/user/usage-logs.
 type UserUsageLogsResponse struct {
 	Total int64          `json:"total"`

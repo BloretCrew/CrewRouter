@@ -82,6 +82,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const keySchedule = openapi.paths['/api/user/api-keys/{id}/schedule']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const currentModel = openapi.paths['/api/user/current-model']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const usageLogs = openapi.paths['/api/user/usage-logs']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const usageLogDetail = openapi.paths['/api/user/usage-logs/{id}']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyModels = openapi.paths['/api/user/api-keys/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyModelsUpdate = openapi.paths['/api/user/api-keys/{id}/models']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyConfig = openapi.paths['/api/user/api-keys/{id}/config']?.get;
@@ -127,6 +128,10 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (!openapi.components.schemas.ApiKeySchedule?.properties?.schedule_on_time?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable API Key schedule times`);
   if (currentModel?.$ref !== '#/components/schemas/CurrentModelResponse' || !openapi.components.schemas.CurrentModelResponse?.properties?.currentModel?.anyOf?.some(item => item.type === 'null')) throw new Error(`${openapiPath} must document the nullable current model response`);
   if (usageLogs?.$ref !== '#/components/schemas/UserUsageLogsResponse' || openapi.components.schemas.UserUsageLogsResponse?.properties?.logs?.items?.$ref !== '#/components/schemas/UserUsageLog') throw new Error(`${openapiPath} must define paginated usage-log responses`);
+  const usageLogDetailSchema = openapi.components.schemas.UserUsageLogDetail;
+  const usageLogDetailFields = usageLogDetailSchema?.properties || usageLogDetailSchema?.allOf?.find(item => item.properties)?.properties;
+  if (usageLogDetail?.$ref !== '#/components/schemas/UserUsageLogDetailResponse' || !usageLogDetailFields?.messages || !usageLogDetailFields?.response) throw new Error(`${openapiPath} must define detailed usage-log opaque payloads`);
+  if (!openapi.paths['/api/user/usage-logs/{id}']?.get?.description?.includes('avoid logging or redistributing')) throw new Error(`${openapiPath} must warn about sensitive usage-log detail payloads`);
   if (apiKeyModels?.$ref !== '#/components/schemas/ApiKeyModelsResponse' || openapi.components.schemas.ApiKeyModelsResponse?.properties?.queue?.items?.$ref !== '#/components/schemas/ApiKeyQueueItem') throw new Error(`${openapiPath} must define API Key model queue responses`);
   if (!openapi.components.schemas.ApiKeyQueueItem?.properties?.sort_order || !openapi.components.schemas.ApiKeyModelsResponse?.properties?.models?.items?.$ref?.endsWith('/ApiKeyAvailableModel')) throw new Error(`${openapiPath} must define API Key available models and ordered queue fields`);
   if (apiKeyModelsUpdate?.$ref !== '#/components/schemas/ApiKeyModelsUpdateResponse') throw new Error(`${openapiPath} must define model queue update responses`);

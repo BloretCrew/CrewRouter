@@ -1279,6 +1279,118 @@
         ],
         "additionalProperties": true
       },
+      "UserUsageLogDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/UserUsageLog"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "is_stream": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "ttft_ms": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "upstream_first_byte_ms": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "generation_ms": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "tpot_ms": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "output_tps": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "e2e_ms": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "upstream_processing_ms": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "service_tier": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "rate_limit": {},
+              "messages": {},
+              "response": {}
+            },
+            "required": [],
+            "additionalProperties": true
+          }
+        ],
+        "description": "Detailed user-owned usage record. messages and response are opaque upstream JSON and may contain sensitive/high-volume data."
+      },
+      "UserUsageLogDetailResponse": {
+        "type": "object",
+        "properties": {
+          "log": {
+            "$ref": "#/components/schemas/UserUsageLogDetail"
+          }
+        },
+        "required": [
+          "log"
+        ],
+        "additionalProperties": true
+      },
       "ApiKeyQueueItem": {
         "type": "object",
         "properties": {
@@ -20451,8 +20563,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/UserUsageLogDetailResponse"
                 }
               }
             }
@@ -20464,7 +20575,8 @@
           "session"
         ],
         "x-crewrouter-streaming": false,
-        "x-crewrouter-body-limit": "2mb"
+        "x-crewrouter-body-limit": "2mb",
+        "description": "Returns one usage record owned by the authenticated user. messages and response are opaque upstream payloads, can be large, and may contain user data; avoid logging or redistributing them."
       }
     },
     "/api/user/usage-logs/export": {

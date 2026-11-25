@@ -35,6 +35,7 @@ import type {
   ProviderTag,
   UserCodeBalanceItem,
   UserUsageLogsResponse,
+  UserUsageLogDetailResponse,
   ModelUptimeResponse,
   ModelUptimeDetailResponse,
   RequestOptions,
@@ -217,6 +218,8 @@ export class CrewRouter {
       this.call<T>('user.usage.list', { ...options, query }),
     logs: <T = UserUsageLogsResponse>(query?: Record<string, string | number | boolean | null | undefined | Array<string | number | boolean>>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.usageLogs.list', { ...options, query }),
+    getLog: <T = UserUsageLogDetailResponse>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.usageLogs.byId.get', mergePathParams(options, { id })),
   };
 
   readonly balance = {

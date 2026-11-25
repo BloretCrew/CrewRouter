@@ -209,6 +209,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { currentModel: null });
       return;
     }
+    if (req.url === '/api/user/usage-logs/1') {
+      json(res, 200, { log: { id: 1, user_id: 7, model_id: null, api_key_id: 3, tokens_used: '12', prompt_tokens: '10', completion_tokens: '2', cached_tokens: '0', provider_id: null, request_type: 'chat', request_source: 'unknown', user_agent: null, latency_ms: '25', is_stream: false, ttft_ms: null, upstream_first_byte_ms: null, generation_ms: null, tpot_ms: null, output_tps: null, e2e_ms: null, upstream_processing_ms: null, service_tier: null, rate_limit: null, ip_address: null, messages: [{ role: 'user', content: 'hi' }], response: { choices: [] }, cost: '0.01', created_at: '2026-01-01T00:00:00.000Z', key_prefix: 'sk-test', key_name: 'CI', series: null, model_name: 'Model', upstream_model_id: null, requested_model: null, resolved_model: null, response_model: null, provider_name: null } });
+      return;
+    }
     if (req.url.startsWith('/api/user/usage-logs')) {
       json(res, 200, { total: 1, page: 1, logs: [{ id: 1, user_id: 7, model_id: null, api_key_id: 3, tokens_used: '12', prompt_tokens: '10', completion_tokens: '2', cached_tokens: '0', provider_id: null, request_type: 'chat', request_source: 'unknown', user_agent: null, latency_ms: '25', ip_address: null, cost: '0.01', created_at: '2026-01-01T00:00:00.000Z', key_prefix: 'sk-test', key_name: 'CI', series: null, model_name: 'Model', upstream_model_id: null, requested_model: null, resolved_model: null, response_model: null, provider_name: null }] });
       return;
@@ -239,6 +243,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const commands = await client.keys.setCrewRouterCommands(7, true);
   const currentModel = await client.currentModel.get();
   const usageLogs = await client.usage.logs({ page: 1 });
+  const usageLogDetail = await client.usage.getLog(1);
   const products = await client.products.list();
   const codeBalances = await client.codeBalances.list();
   const providerTags = await client.providerTags.list();
@@ -279,6 +284,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(currentModel.data.currentModel, null);
   assert.equal(usageLogs.data.total, 1);
   assert.equal(usageLogs.data.logs[0].tokens_used, '12');
+  assert.equal(usageLogDetail.data.log.id, 1);
+  assert.equal(usageLogDetail.data.log.messages[0].content, 'hi');
   assert.equal(products.data[0].description, null);
   assert.equal(codeBalances.data[0].net_amount, '2.2727');
   assert.equal(providerTags.data[0].sort_order, 1);

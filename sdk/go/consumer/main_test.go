@@ -99,6 +99,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if usageLogs.Total != 1 || usageLogs.Logs[0].TokensUsed != "12" {
 		t.Fatalf("unexpected usage log response: %#v", usageLogs)
 	}
+	var usageDetail crewrouter.UserUsageLogDetailResponse
+	if err := json.Unmarshal([]byte(`{"log":{"id":1,"user_id":7,"model_id":null,"api_key_id":3,"tokens_used":"12","prompt_tokens":"10","completion_tokens":"2","cached_tokens":"0","provider_id":null,"request_type":"chat","request_source":"unknown","user_agent":null,"latency_ms":"25","is_stream":false,"ttft_ms":null,"upstream_first_byte_ms":null,"generation_ms":null,"tpot_ms":null,"output_tps":null,"e2e_ms":null,"upstream_processing_ms":null,"service_tier":null,"rate_limit":null,"ip_address":null,"messages":[{"role":"user","content":"hi"}],"response":{"choices":[]},"cost":"0.01","created_at":"2026-01-01T00:00:00Z","key_prefix":"sk-test","key_name":"CI","series":null,"model_name":"Model","upstream_model_id":null,"requested_model":null,"resolved_model":null,"response_model":null,"provider_name":null}}`), &usageDetail); err != nil {
+		t.Fatalf("decode usage log detail: %v", err)
+	}
+	if usageDetail.Log.ID != 1 || usageDetail.Log.Messages == nil {
+		t.Fatalf("unexpected usage log detail payload: %#v", usageDetail)
+	}
 
 	var keyModels crewrouter.ApiKeyModelsResponse
 	if err := json.Unmarshal([]byte(`{"models":[{"id":"m1","name":"Model","provider":"p1","series":"s1","description":null,"enabled":true,"icon_url":null,"input_price_per_1k_tokens":"0.01","output_price_per_1k_tokens":0.02,"assigned":true,"sort_order":0}],"queue":[{"model_id":"m1","id":"m1","name":"Model","provider":"p1","series":"s1","icon_url":null,"sort_order":0}]}`), &keyModels); err != nil {

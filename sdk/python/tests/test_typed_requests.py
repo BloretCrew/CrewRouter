@@ -41,6 +41,8 @@ from crewrouter import (
     UserKeyTag,
     UserUsageLog,
     UserUsageLogsResponse,
+    UserUsageLogDetail,
+    UserUsageLogDetailResponse,
     ModelUptimeDailyResponse,
     ModelUptimeSlotResponse,
     ModelUptimeDetailPoint,
@@ -146,6 +148,8 @@ class TypedRequestTests(unittest.TestCase):
             "response_model": None, "provider_name": None,
         }
         usage_logs: UserUsageLogsResponse = {"total": 1, "page": 1, "logs": [usage_log]}
+        usage_detail: UserUsageLogDetail = {**usage_log, "messages": [{"role": "user", "content": "hi"}], "response": {"choices": []}}
+        usage_detail_response: UserUsageLogDetailResponse = {"log": usage_detail}
         available_model: ApiKeyAvailableModel = {
             "id": "m1", "name": "Model", "provider": "p1", "series": "s1",
             "description": None, "enabled": True, "icon_url": None,
@@ -180,6 +184,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertTrue(commands_response["crewrouter_commands"])
         self.assertEqual(admin_page["items"][0]["username"], "alice")
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
+        self.assertEqual(usage_detail_response["log"]["messages"][0]["content"], "hi")
         product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)
         self.assertEqual(key_models_updated["current_model_id"], "m1")

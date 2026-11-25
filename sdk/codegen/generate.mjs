@@ -539,6 +539,21 @@ function managementSchemas() {
       total: { type: 'integer' }, page: { type: 'integer' },
       logs: { type: 'array', items: { $ref: '#/components/schemas/UserUsageLog' } },
     }, ['total', 'page', 'logs']),
+    UserUsageLogDetail: {
+      allOf: [
+        { $ref: '#/components/schemas/UserUsageLog' },
+        object({
+          is_stream: { type: ['boolean', 'null'] }, ttft_ms: numberOrString,
+          upstream_first_byte_ms: numberOrString, generation_ms: numberOrString, tpot_ms: numberOrString,
+          output_tps: numberOrString, e2e_ms: numberOrString, upstream_processing_ms: numberOrString,
+          service_tier: nullableString, rate_limit: {}, messages: {}, response: {},
+        }),
+      ],
+      description: 'Detailed user-owned usage record. messages and response are opaque upstream JSON and may contain sensitive/high-volume data.',
+    },
+    UserUsageLogDetailResponse: object({
+      log: { $ref: '#/components/schemas/UserUsageLogDetail' },
+    }, ['log']),
     ApiKeyQueueItem: object({
       model_id: { type: 'string' }, id: { type: 'string' }, name: { type: 'string' },
       provider: nullableString, series: nullableString, icon_url: nullableString, sort_order: { type: 'integer' },
@@ -675,6 +690,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.schedule.list': { $ref: '#/components/schemas/ApiKeySchedule' },
     'user.currentModel.list': { $ref: '#/components/schemas/CurrentModelResponse' },
     'user.usageLogs.list': { $ref: '#/components/schemas/UserUsageLogsResponse' },
+    'user.usageLogs.byId.get': { $ref: '#/components/schemas/UserUsageLogDetailResponse' },
   };
   return schemas[operationId] || null;
 }
@@ -767,6 +783,9 @@ function buildOpenApi(operations) {
     };
     if (op.operationId === 'admin.users.list') {
       operation.description = 'Administrator-only user list. Without the page query, returns a full array for legacy consumers. With page specified, returns a paginated object containing items, total, page, limit and filtered stats.';
+    }
+    if (op.operationId === 'user.usageLogs.byId.get') {
+      operation.description = 'Returns one usage record owned by the authenticated user. messages and response are opaque upstream payloads, can be large, and may contain user data; avoid logging or redistributing them.';
     }
     if (op.operationId === 'user.apiKeys.byId.config.list') {
       operation.description = 'Owner-only Claude Code configuration. Requires keys.secret and an API Key owned by the caller. The response contains the API Key in ANTHROPIC_AUTH_TOKEN; never log or expose it. Legacy hash-only keys return HTTP 410 and must be regenerated.';

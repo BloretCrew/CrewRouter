@@ -464,6 +464,25 @@ export interface UserUsageLogsResponse {
   logs: UserUsageLog[];
 }
 
+export interface UserUsageLogDetail extends UserUsageLog {
+  is_stream: boolean | null;
+  ttft_ms: number | string | null;
+  upstream_first_byte_ms: number | string | null;
+  generation_ms: number | string | null;
+  tpot_ms: number | string | null;
+  output_tps: number | string | null;
+  e2e_ms: number | string | null;
+  upstream_processing_ms: number | string | null;
+  service_tier: string | null;
+  rate_limit: unknown;
+  messages: unknown;
+  response: unknown;
+}
+
+export interface UserUsageLogDetailResponse {
+  log: UserUsageLogDetail;
+}
+
 export interface UserKeyTag {
   id: number;
   name: string;

@@ -60,6 +60,8 @@ export type {
   CurrentModelResponse,
   UserUsageLog,
   UserUsageLogsResponse,
+  UserUsageLogDetail,
+  UserUsageLogDetailResponse,
   UserKeyTag,
   DailyUsageItem,
   TeamQuotaRule,
