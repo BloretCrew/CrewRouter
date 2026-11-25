@@ -165,8 +165,20 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { success: true });
       return;
     }
-    if (req.url === '/api/admin/products') {
+    if (req.url === '/api/admin/products' && req.method === 'GET') {
       json(res, 200, [{ id: 1, name: 'Product', description: null, price: '2.5', image_url: null, link: null, is_active: true, sort_order: 0, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' }]);
+      return;
+    }
+    if (req.url === '/api/admin/products' && req.method === 'POST') {
+      json(res, 200, { id: 1, name: 'Product', description: null, price: '2.5', image_url: null, link: null, is_active: true, sort_order: 0, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' });
+      return;
+    }
+    if (req.url === '/api/admin/products/1' && req.method === 'PUT') {
+      json(res, 200, { id: 1, name: 'Product', description: null, price: '2.5', image_url: null, link: null, is_active: true, sort_order: 0, created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' });
+      return;
+    }
+    if (req.url === '/api/admin/products/1' && req.method === 'DELETE') {
+      json(res, 200, { success: true });
       return;
     }
     if (req.url === '/api/admin/teams/2/members') {
@@ -330,6 +342,9 @@ test('management wrappers preserve their documented response payload shapes', as
   const adminSeriesIcons = await client.admin.seriesIcons.list();
   const adminSeriesIconSaved = await client.admin.seriesIcons.create({ name: 'opus', icon_url: 'https://example.invalid/opus.svg' });
   const adminProducts = await client.admin.products.list();
+  const createdAdminProduct = await client.admin.products.create({ name: 'Product' });
+  const updatedAdminProduct = await client.admin.products.update(1, { name: 'Product', description: '', price: '2.5', image_url: '', link: '', is_active: true, sort_order: 0 });
+  const deletedAdminProduct = await client.admin.products.delete(1);
   const teamMembers = await client.admin.teams.getMembers(2);
   const teamModels = await client.admin.teams.getModels(2);
   const teamRules = await client.admin.teams.getRules(2);
@@ -395,6 +410,9 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminSeriesIcons.data[0].name, 'opus');
   assert.equal(adminSeriesIconSaved.data.success, true);
   assert.equal(adminProducts.data[0].price, '2.5');
+  assert.equal(createdAdminProduct.data.id, 1);
+  assert.equal(updatedAdminProduct.data.id, 1);
+  assert.equal(deletedAdminProduct.data.success, true);
   assert.equal(teamMembers.data[0].email, null);
   assert.equal(teamModels.data[0].model_id, 'm1');
   assert.equal(teamModels.data[0].mapping_id, null);

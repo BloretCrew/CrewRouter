@@ -560,6 +560,14 @@ function managementSchemas() {
       is_active: { type: 'boolean' }, sort_order: { type: 'integer' },
       created_at: { type: 'string', format: 'date-time' }, updated_at: { type: 'string', format: 'date-time' },
     }, ['id', 'name', 'is_active', 'sort_order', 'created_at', 'updated_at']),
+    AdminProductCreateRequest: object({
+      name: { type: 'string' }, description: { type: 'string' }, price: numberOrString,
+      image_url: { type: 'string' }, link: { type: 'string' }, is_active: { type: 'boolean' }, sort_order: { type: 'integer' },
+    }, ['name']),
+    AdminProductUpdateRequest: object({
+      name: { type: 'string' }, description: { type: 'string' }, price: numberOrString,
+      image_url: { type: 'string' }, link: { type: 'string' }, is_active: { type: 'boolean' }, sort_order: { type: 'integer' },
+    }, ['name', 'description', 'price', 'image_url', 'link', 'is_active', 'sort_order']),
     TeamMember: object({
       id: { type: 'integer' }, username: { type: 'string' }, email: nullableString,
       avatar: nullableString, created_at: { type: 'string', format: 'date-time' },
@@ -788,6 +796,9 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyListItem' } },
     'admin.users.list': { oneOf: [{ type: 'array', items: { $ref: '#/components/schemas/AdminUser' } }, { $ref: '#/components/schemas/AdminUsersPage' }] },
     'admin.products.list': { type: 'array', items: { $ref: '#/components/schemas/AdminProduct' } },
+    'admin.products.create': { $ref: '#/components/schemas/AdminProduct' },
+    'admin.products.byId.update': { $ref: '#/components/schemas/AdminProduct' },
+    'admin.products.byId.delete': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.seriesIcons.list': { type: 'array', items: { $ref: '#/components/schemas/AdminSeriesIcon' } },
     'admin.seriesIcons.create': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },
@@ -931,6 +942,13 @@ function buildOpenApi(operations) {
     };
     if (op.operationId === 'admin.users.list') {
       operation.description = 'Administrator-only user list. Without the page query, returns a full array for legacy consumers. With page specified, returns a paginated object containing items, total, page, limit and filtered stats.';
+    }
+    if (op.operationId === 'admin.products.create' || op.operationId === 'admin.products.byId.update') {
+      const schema = op.operationId === 'admin.products.create' ? 'AdminProductCreateRequest' : 'AdminProductUpdateRequest';
+      operation.requestBody = {
+        required: true,
+        content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } },
+      };
     }
     if (op.operationId === 'admin.teams.byId.rules.create') {
       operation.requestBody = {

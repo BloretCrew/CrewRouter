@@ -64,6 +64,26 @@ class AdminSeriesIconCreateResponse(TypedDict):
     success: bool
 
 
+class AdminProductCreateRequest(TypedDict, total=False):
+    name: str
+    description: str
+    price: Union[float, str]
+    image_url: str
+    link: str
+    is_active: bool
+    sort_order: int
+
+
+class AdminProductUpdateRequest(TypedDict):
+    name: str
+    description: str
+    price: Union[float, str]
+    image_url: str
+    link: str
+    is_active: bool
+    sort_order: int
+
+
 class AdminProduct(TypedDict, total=False):
     id: int
     name: str

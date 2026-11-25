@@ -64,6 +64,8 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const openapi = JSON.parse(await readFile(openapiPath, 'utf8'));
   const adminUsers = openapi.paths['/api/admin/users']?.get;
   const adminProducts = openapi.paths['/api/admin/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const adminProductCreate = openapi.paths['/api/admin/products']?.post;
+  const adminProductUpdate = openapi.paths['/api/admin/products/{id}']?.put;
   const adminSeriesIcons = openapi.paths['/api/admin/series-icons']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminUsageLogs = openapi.paths['/api/admin/usage-logs']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminStatsFilters = openapi.paths['/api/admin/stats/multi/filters']?.get?.responses?.[200]?.content?.['application/json']?.schema;
@@ -113,6 +115,10 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (adminUsers?.['x-crewrouter-permission'] !== 'admin.users.read' || adminUsers.responses?.[200]?.content?.['application/json']?.schema?.oneOf?.length !== 2) throw new Error(`${openapiPath} must document admin user list pagination variants`);
   if (adminUsers.responses[200].content['application/json'].schema.oneOf[0].items?.$ref !== '#/components/schemas/AdminUser' || adminUsers.responses[200].content['application/json'].schema.oneOf[1].$ref !== '#/components/schemas/AdminUsersPage') throw new Error(`${openapiPath} must define admin user list row and page schemas`);
   if (adminProducts?.type !== 'array' || adminProducts.items?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product list responses`);
+  if (adminProductCreate?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProductCreateRequest' || adminProductCreate.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product create schema`);
+  if (adminProductUpdate?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProductUpdateRequest' || adminProductUpdate.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product update schema`);
+  if (adminProductCreate?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProductCreateRequest' || adminProductCreate.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product create schema`);
+  if (adminProductUpdate?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProductUpdateRequest' || adminProductUpdate.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminProduct') throw new Error(`${openapiPath} must define administrator product update schema`);
   if (adminSeriesIcons?.type !== 'array' || adminSeriesIcons.items?.$ref !== '#/components/schemas/AdminSeriesIcon') throw new Error(`${openapiPath} must define administrator series icon list responses`);
   if (adminSeriesIcons?.type !== 'array' || adminSeriesIcons.items?.$ref !== '#/components/schemas/AdminSeriesIcon') throw new Error(`${openapiPath} must define series icon list responses`);
   if (adminUsageLogs?.$ref !== '#/components/schemas/AdminUsageLogsResponse' || openapi.components.schemas.AdminUsageLogsResponse?.properties?.logs?.items?.$ref !== '#/components/schemas/AdminUsageLog') throw new Error(`${openapiPath} must define paginated administrator usage logs`);

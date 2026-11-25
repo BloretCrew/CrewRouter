@@ -1304,6 +1304,86 @@
         ],
         "additionalProperties": true
       },
+      "AdminProductCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "AdminProductUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "price",
+          "image_url",
+          "link",
+          "is_active",
+          "sort_order"
+        ],
+        "additionalProperties": true
+      },
       "TeamMember": {
         "type": "object",
         "properties": {
@@ -8836,8 +8916,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/AdminProduct"
                 }
               }
             }
@@ -8851,12 +8930,11 @@
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true
+                "$ref": "#/components/schemas/AdminProductCreateRequest"
               }
             }
           }
@@ -8891,8 +8969,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyActionSuccess"
                 }
               }
             }
@@ -8933,8 +9010,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/AdminProduct"
                 }
               }
             }
@@ -8948,12 +9024,11 @@
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true
+                "$ref": "#/components/schemas/AdminProductUpdateRequest"
               }
             }
           }

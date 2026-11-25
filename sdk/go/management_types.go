@@ -129,6 +129,28 @@ type AdminSeriesIconCreateResponse struct {
 	Success bool `json:"success"`
 }
 
+// AdminProductCreateRequest creates a product; omitted fields use server defaults.
+type AdminProductCreateRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Price       any    `json:"price,omitempty"`
+	ImageURL    string `json:"image_url,omitempty"`
+	Link        string `json:"link,omitempty"`
+	IsActive    *bool  `json:"is_active,omitempty"`
+	SortOrder   *int   `json:"sort_order,omitempty"`
+}
+
+// AdminProductUpdateRequest updates an existing product.
+type AdminProductUpdateRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Price       any    `json:"price"`
+	ImageURL    string `json:"image_url"`
+	Link        string `json:"link"`
+	IsActive    bool   `json:"is_active"`
+	SortOrder   int    `json:"sort_order"`
+}
+
 // AdminProduct is one product returned to administrator clients.
 type AdminProduct struct {
 	ID          int64   `json:"id"`

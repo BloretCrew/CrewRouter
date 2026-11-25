@@ -7,6 +7,8 @@ import type {
   AdminUsageLogsResponse,
   AdminStatsFiltersResponse,
   AdminProduct,
+  AdminProductCreateRequest,
+  AdminProductUpdateRequest,
   AdminSeriesIcon,
   AdminSeriesIconCreateResponse,
   AdminProviderTag,
@@ -346,6 +348,12 @@ export class CrewRouter {
     products: {
       list: <T = AdminProduct[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.products.list', options),
+      create: <T = AdminProduct>(body: AdminProductCreateRequest, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.products.create', { ...options, body }),
+      update: <T = AdminProduct>(id: string | number, body: AdminProductUpdateRequest, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.products.byId.update', mergePathParams({ ...options, body }, { id })),
+      delete: <T = ApiKeyActionSuccess>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.products.byId.delete', mergePathParams(options, { id })),
     },
     seriesIcons: {
       list: <T = AdminSeriesIcon[]>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>

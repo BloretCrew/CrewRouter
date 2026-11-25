@@ -15,6 +15,8 @@ from crewrouter import (
     ApiKeyCommandsUpdateResponse,
     AdminUser,
     AdminProduct,
+    AdminProductCreateRequest,
+    AdminProductUpdateRequest,
     AdminSeriesIcon,
     AdminSeriesIconCreateResponse,
     AdminUsageLog,
@@ -203,6 +205,8 @@ class TypedRequestTests(unittest.TestCase):
         team_rule_request: TeamQuotaRuleCreateRequest = {"rule_type": "requests", "rule_value": 100, "duration_hours": 24, "description": "daily cap"}
         team_rule_created: TeamQuotaRuleCreated = {**team_rule, "id": "team-rule-1", "rule_value": 100}
         admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
+        admin_product_create: AdminProductCreateRequest = {"name": "Product"}
+        admin_product_update: AdminProductUpdateRequest = {"name": "Product", "description": "", "price": "2.5", "image_url": "", "link": "", "is_active": True, "sort_order": 0}
         series_icon: AdminSeriesIcon = {"name": "opus", "icon_url": "https://example.invalid/opus.svg", "created_at": "2026-01-01T00:00:00Z"}
         series_icon_created: AdminSeriesIconCreateResponse = {"success": True}
         team_member: TeamMember = {"id": 9, "username": "alice", "email": None, "avatar": None, "created_at": "2026-01-01T00:00:00Z"}
@@ -218,6 +222,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertTrue(commands_response["crewrouter_commands"])
         self.assertEqual(admin_page["items"][0]["username"], "alice")
         self.assertEqual(admin_usage_logs["logs"][0]["custom_instruction_count"], 0)
+        self.assertEqual(admin_product_create["name"], admin_product_update["name"])
         self.assertEqual(admin_stats_filters["projects"][0]["id"], "/workspace")
         self.assertIsNone(team_member["email"])
         self.assertIsNone(team_model["mapping_id"])

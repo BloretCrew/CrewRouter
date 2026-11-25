@@ -156,6 +156,11 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(legacyUsers) != 1 || pagedUsers.Total != 1 || pagedUsers.Stats.TotalBalance != 1.5 {
 		t.Fatalf("unexpected admin user response: %#v / %#v", legacyUsers, pagedUsers)
 	}
+	adminProductCreate := crewrouter.AdminProductCreateRequest{Name: "Product"}
+	adminProductUpdate := crewrouter.AdminProductUpdateRequest{Name: "Product", Description: "", Price: "2.5", ImageURL: "", Link: "", IsActive: true, SortOrder: 0}
+	if adminProductCreate.Name != adminProductUpdate.Name {
+		t.Fatal("unexpected AdminProduct request types")
+	}
 	var adminProducts []crewrouter.AdminProduct
 	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"price":"2.5","image_url":null,"link":null,"is_active":true,"sort_order":0,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}]`), &adminProducts); err != nil {
 		t.Fatalf("decode admin products: %v", err)

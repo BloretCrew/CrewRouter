@@ -424,6 +424,26 @@ export interface AdminSeriesIconCreateResponse {
   success: true;
 }
 
+export interface AdminProductCreateRequest {
+  name: string;
+  description?: string;
+  price?: number | string;
+  image_url?: string;
+  link?: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface AdminProductUpdateRequest {
+  name: string;
+  description: string;
+  price: number | string;
+  image_url: string;
+  link: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export interface AdminProduct {
   id: number;
   name: string;
