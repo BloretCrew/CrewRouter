@@ -571,6 +571,15 @@ function keysPage(runtime) {
         const expired = key.expires_at && new Date(key.expires_at).getTime() <= Date.now();
         const daysLeft = key.expires_at ? Math.ceil((new Date(key.expires_at).getTime() - Date.now()) / 86400000) : null;
         const status = key.enabled === false ? '已停用' : expired ? '已过期' : daysLeft !== null && daysLeft <= 7 ? `${Math.max(daysLeft, 0)} 天后过期` : '有效';
+        const permissionCount = Array.isArray(key.permissions) ? key.permissions.length : key.permissions && typeof key.permissions === 'object' ? Object.values(key.permissions).filter(Boolean).length : 0;
+        const signatureState = key.signature_enabled == null ? `签名继承（${key.api_signature_enabled ? '开' : '关'}）` : `签名${key.signature_enabled ? '开' : '关'}`;
+        const badges = [
+          key.key_type === 'co_key' || key.is_co_key ? 'Co-Key' : '', key.is_system ? '系统 Key' : '',
+          `权限 ${permissionCount}`, signatureState, key.swallow_images ? '吞图' : '', key.quota_warning_enabled ? '额度预警' : '',
+          key.crewrouter_commands ? '允许指令' : '', key.schedule_enabled ? '定时启停' : '',
+        ].filter(Boolean);
+        const groupName = String(key.key_group || '').trim();
+        const membership = [key.is_co_key ? `由 ${key.owner?.username || '其他用户'} 发起` : '', key.member_count ? `Co-Key · ${key.member_count} 位成员` : ''].filter(Boolean).join(' · ');
         return {
         label: key.name || '未命名',
         cells: {
@@ -580,7 +589,11 @@ function keysPage(runtime) {
           points: `${formatCost(key.total_cost)} 积分`, expires: key.expires_at ? formatTime(key.expires_at) : '永不过期',
           actions: key.is_owner === true ? 'Enter 管理' : 'Enter 查看',
         },
-        detail: `创建于 ${formatTime(key.created_at)} · 最后使用 ${formatTime(key.last_used_at)}${key.is_owner === false ? ' · 共同使用的 Key' : ''}${Array.isArray(key.members) && key.members.length ? ` · ${key.members.length} 位共同成员` : ''}${Array.isArray(key.tags) && key.tags.length ? ` · 标签 ${key.tags.map(tag => tag.name).join('、')}` : ''}`,
+        detail: [
+          groupName || '未分组', `创建于 ${formatTime(key.created_at)}`, key.last_used_at ? `最近使用 ${formatTime(key.last_used_at)}` : '尚未使用',
+          membership, badges.join(' · '), Array.isArray(key.tags) && key.tags.length ? `标签：${key.tags.map(tag => tag.name).join('、')}` : '',
+          Array.isArray(key.model_queue) && key.model_queue.length > 1 ? `模型队列 ${key.model_queue.length} 个` : '',
+        ].filter(Boolean).join(' · '),
         run: async ctx => {
           const actions = [
             { label: '查看详情', value: 'detail' },
@@ -598,9 +611,11 @@ function keysPage(runtime) {
             const permissionSummary = Array.isArray(permissions) ? permissions.join('、') : permissions && typeof permissions === 'object' ? Object.entries(permissions).filter(([, enabled]) => enabled === true).map(([name]) => name).join('、') : '';
             const memberList = Array.isArray(key.members) ? key.members : [];
             await ctx.show(`API Key 详情 · ${key.name || key.id}`, [
-              `名称：${key.name || '未命名'}`, `Key 掩码：${key.key_prefix ? `${key.key_prefix}••••` : key.is_owner === false ? '仅创建者可查看' : '未返回前缀'}`,
-              `状态：${key.enabled === false ? '已停用' : '已启用'}`, `身份：${key.is_owner === false ? '共同成员访问' : 'Key 发起者'}`,
-              `当前模型：${key.current_model_name || key.current_model_id || '未绑定模型'}`, `权限范围：${permissionSummary || '使用默认权限'}`,
+              `名称：${key.name || '未命名'}`, `分组：${groupName || '未分组'}`, `Key 掩码：${key.key_prefix ? `${key.key_prefix}••••` : key.is_owner === false ? '仅创建者可查看' : '未返回前缀'}`,
+              `状态：${status}${key.is_system ? ' · 系统 Key' : ''}`, `身份：${key.is_owner === false ? `共同成员访问 · 发起者 ${key.owner?.username || '未知'}` : `Key 发起者${key.member_count ? ` · ${key.member_count} 位共同成员` : ''}`}`,
+              `当前模型：${key.current_model_name || key.current_model_id || '未绑定模型'}`, `权限范围：${permissionSummary || '使用默认权限'}（${permissionCount} 项）`,
+              `签名状态：${signatureState}`, `附加选项：${[key.swallow_images ? '吞图' : '', key.quota_warning_enabled ? '额度预警' : '', key.crewrouter_commands ? '允许指令' : ''].filter(Boolean).join('、') || '无'}`,
+              `定时启停：${key.schedule_enabled ? `${key.schedule_on_time || '未设置开机时间'} – ${key.schedule_off_time || '未设置关机时间'}${key.schedule_timezone ? ` · ${key.schedule_timezone}` : ''}` : '关闭'}`, `系统 Key：${key.is_system ? '是' : '否'}`,
               `调用次数：${Number(key.total_requests || 0).toLocaleString()} 次`, `Token 消耗：${formatBigNumber(key.total_tokens)} Token`, `积分消耗：${formatCost(key.total_cost)} 积分`,
               `创建时间：${formatTime(key.created_at)}`, `最后使用：${formatTime(key.last_used_at)}`, `有效期：${key.expires_at ? formatTime(key.expires_at) : '永不过期'}`,
               `标签：${Array.isArray(key.tags) && key.tags.length ? key.tags.map(tag => tag.name).join('、') : '无'}`,

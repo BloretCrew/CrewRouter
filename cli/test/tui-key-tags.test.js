@@ -12,7 +12,7 @@ function makeRuntime(isOwner = true) {
     isAdmin: false,
     get: async path => {
       calls.push({ path, method: 'GET' });
-      if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main', key_prefix: 'cr_x', enabled: true, is_owner: isOwner, total_requests: 2, swallow_images: false, crewrouter_commands: false, permissions: ['gateway.chat'], tags: [{ id: 3, name: 'Ops', color: '#123456' }] }];
+      if (path === '/api/user/api-keys') return [{ id: 1, name: 'Main', key_prefix: 'cr_x', enabled: true, is_owner: isOwner, total_requests: 2, swallow_images: false, crewrouter_commands: false, permissions: ['gateway.chat'], api_signature_enabled: false, created_at: '2026-11-01T00:00:00Z', last_used_at: '2026-11-22T00:00:00Z', tags: [{ id: 3, name: 'Ops', color: '#123456' }] }];
       if (path === '/oauth/authorizations') return { authorizations: [] };
       if (path === '/api/user/key-tags') return [{ id: 3, name: 'Ops', color: '#123456' }, { id: 4, name: 'Dev', color: '#654321' }];
       if (path === '/api/user/api-keys/1/members') return { is_owner: isOwner, members: [{ id: 9, username: 'alice', email: 'alice@example.test', created_at: '2026-11-20T00:00:00Z' }] };
@@ -40,6 +40,8 @@ test('API Key page applies tag filter and only exposes tag editing to owners', a
   assert.deepEqual(keySection.columns.map(column => column.label), ['名称', 'Key 掩码', '状态', '当前模型', '请求数', 'Token 消耗', '积分消耗', '有效期', '操作']);
   assert.equal(keySection.rows[0].cells.masked_key, 'cr_x••••');
   assert.equal(keySection.rows[0].cells.requests, '2 次');
+  assert.match(keySection.rows[0].detail, /未分组 · 创建于 .* · 最近使用 /);
+  assert.ok(keySection.rows[0].detail.includes('权限 1'));
   assert.ok(keySection.toolbar);
   assert.ok(data.sections.find(section => section.title === '标签筛选').rows.some(row => row.label.includes('Ops')));
   const { runtime: memberRuntime } = makeRuntime(false);
@@ -52,7 +54,7 @@ test('API Key page applies tag filter and only exposes tag editing to owners', a
 
 test('API Key page uses web field order and masked values in the wide TUI table', { timeout: 15000 }, async () => {
   const runtime = makeRuntime(true).runtime;
-  runtime.client.get = async path => path === '/api/user/api-keys' ? [{ id: 1, name: 'Main Key', key_prefix: 'cr_live_', enabled: true, current_model_name: 'Model One', total_requests: 1234, total_tokens: 5678, total_cost: 2.5, created_at: '2026-11-01T00:00:00Z', last_used_at: '2026-11-22T00:00:00Z', expires_at: null, is_owner: true, tags: [] }] : path === '/oauth/authorizations' ? { authorizations: [] } : [];
+  runtime.client.get = async path => path === '/api/user/api-keys' ? [{ id: 1, name: 'Main Key', key_prefix: 'cr_live_', enabled: true, current_model_name: 'Model One', total_requests: 1234, total_tokens: 5678, total_cost: 2.5, created_at: '2026-11-01T00:00:00Z', last_used_at: '2026-11-22T00:00:00Z', expires_at: null, is_owner: true, key_group: 'Production', permissions: ['gateway:invoke', 'usage:read'], signature_enabled: null, api_signature_enabled: true, swallow_images: true, quota_warning_enabled: true, crewrouter_commands: true, schedule_enabled: true, schedule_on_time: '08:00', schedule_off_time: '22:00', tags: [] }] : path === '/oauth/authorizations' ? { authorizations: [] } : [];
   const page = buildPages(runtime).find(item => item.id === 'keys');
   const tty = terminal(200, 44);
   const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages: [page], authenticate: async () => true });
@@ -105,14 +107,16 @@ test('API Key shared member management is owner-only and uses web member endpoin
 
 test('API Key detail uses readable labels and discloses shared member count', async () => {
   const { runtime } = makeRuntime(false);
-  runtime.client.get = async path => path === '/api/user/api-keys' ? [{ id: 1, name: 'Shared', key_prefix: 'cr_shared_', enabled: true, is_owner: false, current_model_name: 'Model One', total_requests: 5, total_tokens: 100, total_cost: 0.25, created_at: '2026-11-20T00:00:00Z', last_used_at: '2026-11-25T00:00:00Z', expires_at: null, permissions: { usage: true }, members: [{ id: 9, username: 'alice', email: 'alice@example.test' }] }] : path === '/oauth/authorizations' ? { authorizations: [] } : [];
+  runtime.client.get = async path => path === '/api/user/api-keys' ? [{ id: 1, name: 'Shared', key_prefix: 'cr_shared_', enabled: true, is_owner: false, is_co_key: true, key_type: 'co_key', owner: { username: 'owner' }, current_model_name: 'Model One', total_requests: 5, total_tokens: 100, total_cost: 0.25, created_at: '2026-11-20T00:00:00Z', last_used_at: '2026-11-25T00:00:00Z', expires_at: null, permissions: { usage: true }, member_count: 1, key_group: 'Shared group', schedule_enabled: true, schedule_on_time: '09:00', schedule_off_time: '17:00', members: [{ id: 9, username: 'alice', email: 'alice@example.test' }] }] : path === '/oauth/authorizations' ? { authorizations: [] } : [];
   const page = buildPages(runtime).find(item => item.id === 'keys');
   const data = await page.load(async () => ({}));
   const row = data.sections.find(section => section.title === 'API Key').rows[0];
-  assert.match(row.detail, /共同使用的 Key · 1 位共同成员/);
+  assert.match(row.detail, /由 owner 发起 · Co-Key · 1 位成员/);
   let detail = '';
   await row.run({ choose: async () => 'detail', show: async (_title, body) => { detail = body; } });
-  assert.match(detail, /身份：共同成员访问/);
+  assert.match(detail, /身份：共同成员访问 · 发起者 owner/);
+  assert.match(detail, /分组：Shared group/);
+  assert.match(detail, /定时启停：09:00 – 17:00/);
   assert.match(detail, /Token 消耗：100 Token/);
   assert.doesNotMatch(detail, /total_requests|current_model|key_prefix/);
 });
