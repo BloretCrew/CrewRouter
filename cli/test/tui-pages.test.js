@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildPages, WEB_PAGE_MAP, navGroups, navAreas } = require('../tui/pages');
+const { buildPages, WEB_PAGE_MAP, navGroups, navAreas, PAGE_CAPABILITIES } = require('../tui/pages');
 
 function runtime(isAdmin = true) {
   return { client: { isAdmin }, cfg: { tui: { days: 30 } }, profileName: 'test', baseUrl: 'http://localhost' };
@@ -16,6 +16,12 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.ok(ids.has('service'), 'CLI retains its local service/profile page');
   assert.ok(ids.has('overview'), 'CLI retains its overview page');
   assert.deepEqual(navGroups.map(group => group.id), ['console', 'admin', 'admin-subpages', 'tools', 'cli']);
+  assert.deepEqual(PAGE_CAPABILITIES, {
+    'my-upstream': 'personalProviders', projects: 'projects', 'audit-logs': 'auditLogs', 'policy-center': 'teamPolicies',
+    'admin-users': 'multiUser', 'admin-policies': 'teamPolicies', 'admin-policy-settings': 'teamPolicies',
+    'admin-policy-members': 'teamPolicies', 'admin-policy-approvals': 'teamPolicies', 'admin-policy-clients': 'teamPolicies',
+    'admin-policy-notifications': 'teamPolicies', 'admin-teams': 'multiUser', 'admin-stats': 'adminStats', 'admin-audit-logs': 'teamAuditLogs',
+  });
   assert.deepEqual(navAreas.map(area => ({ ...area })), [
     { id: 'console', label: '控制台', groups: ['console', 'tools', 'cli'] },
     { id: 'admin', label: '管理后台', groups: ['admin', 'admin-subpages'], adminOnly: true },

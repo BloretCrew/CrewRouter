@@ -80,6 +80,8 @@ async function runPagedTui({
   navGroups = null,
   navAreas = null,
   canEnterAdmin = () => false,
+  getCapabilities = () => ({}),
+  pageCapabilities = {},
 } = {}) {
   if (!input.isTTY || !output.isTTY || typeof input.setRawMode !== 'function') throw new Error('TUI 需要交互式终端。');
   if (typeof api !== 'function' || !Array.isArray(pages) || !pages.length) throw new Error('页面或 API 未配置。');
@@ -95,6 +97,7 @@ async function runPagedTui({
   let active = 0;
   let activeArea = Array.isArray(navAreas) && navAreas.length ? navAreas[0].id : null;
   const areaLastPage = new Map();
+  let activeAreaFallbackNeedsLoad = false;
   let focus = 'menu';
   let compactMenu = false;
   let compactMenuIndex = 0;
@@ -113,8 +116,12 @@ async function runPagedTui({
   let pageTimer = null;
   let refreshInterval = Math.min(Math.max(Number(refreshMs) || 10000, 2000), 60000);
   const state = () => pageStates.get(pages[active].id);
+  function pageAvailable(index) {
+    const key = pageCapabilities?.[pages[index]?.id];
+    return !key || getCapabilities?.()?.[key] !== false;
+  }
   function pageIndexesForIds(ids) {
-    return (ids || []).map(id => pages.findIndex(page => page.id === id)).filter(index => index >= 0);
+    return (ids || []).map(id => pages.findIndex(page => page.id === id)).filter(index => index >= 0 && pageAvailable(index));
   }
   function areaAllowed(area) { return !area?.adminOnly || canEnterAdmin() === true; }
   function areaById(id) { return Array.isArray(navAreas) ? navAreas.find(area => area.id === id) || null : null; }
@@ -133,8 +140,10 @@ async function runPagedTui({
   }
   function ensureAreaAccess() {
     const currentArea = areaById(activeArea);
-    if (!Array.isArray(navAreas) || !navAreas.length || areaAllowed(currentArea)) return;
-    const fallback = visibleAreas()[0];
+    if (!Array.isArray(navAreas) || !navAreas.length) return;
+    const currentIndexes = pageIndexesForArea(currentArea);
+    if (areaAllowed(currentArea) && currentIndexes.includes(active)) return;
+    const fallback = areaAllowed(currentArea) ? currentArea : visibleAreas().find(area => pageIndexesForArea(area).length > 0);
     if (!fallback) return;
     const fallbackIndexes = pageIndexesForArea(fallback);
     const last = areaLastPage.get(fallback.id);
@@ -143,6 +152,7 @@ async function runPagedTui({
     restoreTab(state(), pages[active]);
     focus = 'menu';
     compactMenu = false;
+    activeAreaFallbackNeedsLoad = true;
   }
   function switchArea(id) {
     const area = areaById(id);
@@ -550,6 +560,11 @@ async function runPagedTui({
       if (rendered.cursor) cursor = rendered.cursor;
     }
     output.write('\x1b[?25l\x1b[H' + lines.join('\r\n') + '\x1b[J' + overlay + cursor);
+    if (activeAreaFallbackNeedsLoad) {
+      activeAreaFallbackNeedsLoad = false;
+      const fallbackIndex = active;
+      setImmediate(() => { if (!closed) void load(fallbackIndex); });
+    }
   }
 
   function dialogGeometry(cols, height) {
@@ -841,6 +856,7 @@ async function runPagedTui({
   async function navigate(id) {
     const next = pages.findIndex(page => page.id === id);
     if (next < 0) { notify('页面不可用'); return; }
+    if (!pageAvailable(next)) { notify('此页面功能在当前实例中不可用'); return; }
     const targetArea = areaForPage(next);
     if (targetArea && !areaAllowed(targetArea)) { notify('当前账号无权打开管理后台'); return; }
     rememberTab(state());

@@ -108,6 +108,31 @@ test('compact menu allows switching top-level areas and their children', { timeo
   } finally { tty.input.write('q'); await task; }
 });
 
+test('instance capabilities hide web-gated pages and preserve pages with unspecified capabilities', { timeout: 15000 }, async () => {
+  const tty = terminal(120, 28);
+  const capabilities = { projects: false };
+  const pages = [
+    page('home', '首页', async () => ({ sections: [{ title: '首页内容', rows: [] }], actions: [] })),
+    page('projects', '项目工作', async () => ({ sections: [{ title: '项目数据', rows: [] }], actions: [] })),
+    page('audit-logs', '操作日志', async () => ({ sections: [{ title: '日志数据', rows: [] }], actions: [] })),
+  ];
+  const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages, navGroups: [{ id: 'console', pages: ['home', 'projects', 'audit-logs'] }], navAreas: [{ id: 'console', label: '控制台', groups: ['console'] }], getCapabilities: () => capabilities, pageCapabilities: { projects: 'projects', 'audit-logs': 'auditLogs' }, authenticate: async () => true });
+  try {
+    await until(() => tty.screen().includes('首页内容'));
+    assert.ok(!tty.screen().includes('项目工作'));
+    assert.ok(tty.screen().includes('操作日志'), 'missing/unknown capabilities preserve legacy pages');
+    capabilities.projects = true;
+    tty.output.emit('resize');
+    await until(() => tty.screen().includes('项目工作'));
+    tty.input.write('\x1b[B');
+    await until(() => tty.screen().includes('项目数据'));
+    capabilities.projects = false;
+    tty.output.emit('resize');
+    await until(() => tty.screen().includes('首页内容'));
+    assert.ok(tty.screen().includes('✦ CrewRouter  ·  首页'));
+  } finally { tty.input.write('q'); await task; }
+});
+
 test('vertical navigation follows the displayed navigation groups rather than page registration order', { timeout: 15000 }, async () => {
   const tty = terminal(100, 24);
   const pages = [

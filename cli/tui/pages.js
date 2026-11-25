@@ -100,6 +100,23 @@ function buildPages(runtime) {
   return pages;
 }
 
+const PAGE_CAPABILITIES = Object.freeze({
+  'my-upstream': 'personalProviders',
+  projects: 'projects',
+  'audit-logs': 'auditLogs',
+  'policy-center': 'teamPolicies',
+  'admin-users': 'multiUser',
+  'admin-policies': 'teamPolicies',
+  'admin-policy-settings': 'teamPolicies',
+  'admin-policy-members': 'teamPolicies',
+  'admin-policy-approvals': 'teamPolicies',
+  'admin-policy-clients': 'teamPolicies',
+  'admin-policy-notifications': 'teamPolicies',
+  'admin-teams': 'multiUser',
+  'admin-stats': 'adminStats',
+  'admin-audit-logs': 'teamAuditLogs',
+});
+
 const navGroups = [
   { id: 'console', label: '控制台', pages: ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings'] },
   { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings'] },
@@ -113,4 +130,4 @@ const navAreas = [
   { id: 'admin', label: '管理后台', groups: ['admin', 'admin-subpages'], adminOnly: true },
 ];
 
-module.exports = { buildPages, WEB_PAGE_MAP, navGroups, navAreas };
+module.exports = { buildPages, WEB_PAGE_MAP, navGroups, navAreas, PAGE_CAPABILITIES };
