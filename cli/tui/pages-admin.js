@@ -891,7 +891,7 @@ function createAdminPages(runtime) {
         }
         return { sections, pageToolbar: true, actions: [
           ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
-          ...(tab === 'multi' ? [{ label: '筛选额度统计', toolbar: 'page', run: async ctx => {
+          ...(tab === 'multi' ? [{ label: '筛选额度统计', toolbar: 'page', disabled: !runtime.adminStatsQuotaQuery, run: async ctx => {
             const current = runtime.adminStatsQuotaFilters || {};
             const options = await api('/api/admin/stats/multi/filters');
             const filters = [
@@ -1382,9 +1382,8 @@ function createAdminPages(runtime) {
             preview.team_id && `Team 编号：${preview.team_id}`, preview.user_id && `成员编号：${preview.user_id}`,
           ].filter(Boolean).join('\\n')); return; }
           if (!decision) return;
-          const note = await ctx.ask('审批备注（可留空）'); if (note === null) return;
-          if (!await ctx.confirm(decision === 'approve' ? '通过审批' : '驳回审批', `${item.policy_name || item.kind}\n申请人 ${item.requested_by_name || '未知'}\n申请原因：${preview.reason || '未提供'}\n处理备注：${note || '无'}`)) return;
-          await api(`/api/admin/policy-approvals/${item.id}/decide`, { method: 'POST', body: { decision, note: note || '' } }); ctx.notify(decision === 'approve' ? '审批已通过。' : '审批已驳回。'); await ctx.refresh();
+          if (!await ctx.confirm(decision === 'approve' ? '通过审批' : '驳回审批', `${item.policy_name || item.kind}\n申请人 ${item.requested_by_name || '未知'}\n申请原因：${preview.reason || '未提供'}`)) return;
+          await api(`/api/admin/policy-approvals/${item.id}/decide`, { method: 'POST', body: { decision } }); ctx.notify(decision === 'approve' ? '审批已通过。' : '审批已驳回。'); await ctx.refresh();
         } })) }], actions: [
           ...[['pending', '待审批'], ['', '全部审批']].map(([value, label]) => ({ label, run: async ctx => { runtime.approvalStatus = value; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },

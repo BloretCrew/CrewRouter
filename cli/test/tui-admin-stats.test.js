@@ -59,6 +59,9 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   assert.deepEqual(runtime.adminStatsDimensionQuery, { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 });
   await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/admin/stats/multi-dimension' && call.options.query.dimensions === 'model'));
+  runtime.adminStatsDimensionQuery = { dimensions: 'model', metric: 'tokens', data_source: 'usage', days: 30 };
+  const limitedPage = await page.load(async (path, options = {}) => { if (path === '/api/admin/stats/multi-dimension') throw new Error('企业版功能不可用'); return api(path, options); });
+  assert.ok(limitedPage.sections[0].rows.some(row => /自选维度分析不可用/.test(row.label)));
   const quotaChoices = ['provider', 'account', '__done__', 'remaining'];
   const quotaAction = multi.actions.find(action => action.label === '查询供应商额度维度');
   await quotaAction.run({ confirm: async () => true, choose: async () => quotaChoices.shift(), refresh: async () => {} });

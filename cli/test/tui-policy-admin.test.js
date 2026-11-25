@@ -24,8 +24,8 @@ test('policy approval row confirms before sending a decision', async () => {
   const row = result.sections[0].rows[0];
   await row.run({ choose: async () => 'approve', confirm: async () => false, ask: async () => '' });
   assert.equal(calls.some(call => call.path.endsWith('/decide')), false);
-  await row.run({ choose: async () => 'approve', confirm: async () => true, ask: async () => 'reviewed', notify() {}, refresh: async () => {} });
-  assert.deepEqual(calls.find(call => call.path.endsWith('/decide')).options.body, { decision: 'approve', note: 'reviewed' });
+  await row.run({ choose: async () => 'approve', confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path.endsWith('/decide')).options.body, { decision: 'approve' });
 });
 
 test('policy notification endpoints are not queried for an unverified administrator', async () => {
