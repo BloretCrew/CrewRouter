@@ -890,7 +890,7 @@ function createAdminPages(runtime) {
           ], rows: array(latency.daily).map(item => ({ label: display(item.date, `${item.requests || 0} 次请求`, `完整响应95%分位 ${percentile(item.e2e, 'p95') ?? '—'} 毫秒`, `首字延迟95%分位 ${percentile(item.ttft, 'p95') ?? '—'} 毫秒`, `输出速度中位数 ${percentile(item.outputTps, 'p50') ?? '—'} Token/秒`) })) });
         }
         return { sections, pageToolbar: true, actions: [
-          ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; await ctx.refresh(); } })),
+          ...[7, 30, 90, 180, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.adminStatsDays = value; if (runtime.adminStatsQuotaQuery) runtime.adminStatsQuotaQuery = { ...runtime.adminStatsQuotaQuery, days: value }; if (runtime.adminStatsDimensionQuery) runtime.adminStatsDimensionQuery = { ...runtime.adminStatsDimensionQuery, days: value }; await ctx.refresh(); } })),
           ...(tab === 'multi' ? [{ label: '筛选额度统计', toolbar: 'page', disabled: !runtime.adminStatsQuotaQuery, run: async ctx => {
             const current = runtime.adminStatsQuotaFilters || {};
             const options = await api('/api/admin/stats/multi/filters');
@@ -964,7 +964,7 @@ function createAdminPages(runtime) {
             if (!metric) return;
             const source = await ctx.choose('统计数据来源', [{ label: '请求使用统计', value: 'usage' }, { label: '项目关联统计', value: 'association' }]);
             if (!source) return;
-            runtime.adminStatsDimensionQuery = { dimensions: dimensions.join(','), metric, data_source: source, days },
+            runtime.adminStatsDimensionQuery = { dimensions: dimensions.join(','), metric, data_source: source, days };
             await ctx.refresh();
           } }, { label: '清除自选维度', toolbar: 'page', run: async ctx => { runtime.adminStatsDimensionQuery = null; await ctx.refresh(); } }, { label: '筛选关联分析', toolbar: 'page', run: async ctx => {
             const options = await api('/api/admin/stats/multi/filters');

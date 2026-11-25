@@ -72,6 +72,13 @@ test('admin stats mirrors web multi, messages and logs tabs with API filters and
   assert.match(quotaPage.sections[0].rows[1].detail, /4.5 credits.*查询状态：success/);
   assert.ok(quotaPage.sections[0].rows.some(row => /上游独立观测值/.test(row.label)));
   assert.ok(calls.some(call => call.path === '/api/admin/stats/multi' && call.options.query.data_source === 'quota' && call.options.query.dimensions === 'provider,account'));
+  await quotaPage.actions.find(action => action.label === '最近 7 天').run({ refresh: async () => {} });
+  assert.equal(runtime.adminStatsQuotaQuery.days, 7, 'range buttons update the active quota query');
+  const invalidQuotaDimensions = ['provider', '__done__', 'used_percent'];
+  let invalidQuotaMessage = '';
+  await quotaPage.actions.find(action => action.label === '查询供应商额度维度').run({ choose: async () => invalidQuotaDimensions.shift(), show: async (_title, message) => { invalidQuotaMessage = message; } });
+  assert.match(invalidQuotaMessage, /必须包含“额度账户”维度/);
+  assert.equal(runtime.adminStatsQuotaQuery.dimensions, 'provider,account', 'invalid metric selection leaves the active quota query unchanged');
 
   runtime.adminStatsTab = 'messages';
   const messages = await page.load(api);
