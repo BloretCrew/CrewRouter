@@ -12,6 +12,9 @@ import type {
   AdminProductUpdateRequest,
   AdminSeriesIcon,
   AdminSeriesIconCreateResponse,
+  AdminRetentionConfig,
+  AdminRetentionConfigUpdate,
+  AdminRetentionConfigUpdateResponse,
   AdminProviderTag,
   AdminProviderTagUpdateResponse,
   TeamMember,
@@ -317,6 +320,12 @@ export class CrewRouter {
     stats: {
       filters: <T = AdminStatsFiltersResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.stats.multi.filters.list', options),
+    },
+    retention: {
+      getConfig: <T = AdminRetentionConfig>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.retentionConfig.list', options),
+      updateConfig: <T = AdminRetentionConfigUpdateResponse>(body: AdminRetentionConfigUpdate, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.retentionConfig.update', { ...options, body }),
     },
     models: {
       list: <T = unknown>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>

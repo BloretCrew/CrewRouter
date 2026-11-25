@@ -157,6 +157,14 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { users: [{ id: 9, name: 'alice' }], teams: [{ id: 2, name: 'Team' }], models: [{ id: 'm1', name: 'Model' }], providers: [{ id: 'p1', name: 'Provider' }], sources: [{ id: 'claude_code', name: 'Claude Code' }], projects: [{ id: '/workspace', name: '/workspace' }] });
       return;
     }
+    if (req.url === '/api/admin/retention-config' && req.method === 'GET') {
+      json(res, 200, { provider_quota_days: 90, compress_days: 30, purge_days: 180, compress_size_gb: 50, purge_size_gb: 100, agg_enabled: true });
+      return;
+    }
+    if (req.url === '/api/admin/retention-config' && req.method === 'PUT') {
+      json(res, 200, { success: true, compress_days: 30, purge_days: 180, compress_size_gb: 50, purge_size_gb: 100, agg_enabled: true });
+      return;
+    }
     if (req.url === '/api/admin/series-icons' && req.method === 'GET') {
       json(res, 200, [{ name: 'opus', icon_url: 'https://example.invalid/opus.svg', created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
@@ -343,6 +351,8 @@ test('management wrappers preserve their documented response payload shapes', as
   const adminUsageLogs = await client.admin.usageLogs.list({ page: 1 });
   const adminStatsFilters = await client.admin.stats.filters();
   const adminUptime = await client.admin.models.getUptime({ days: 7 });
+  const retentionConfig = await client.admin.retention.getConfig();
+  const retentionUpdated = await client.admin.retention.updateConfig({ compress_days: 30, purge_days: 180, compress_size_gb: 50, purge_size_gb: 100, agg_enabled: true });
   const adminSeriesIcons = await client.admin.seriesIcons.list();
   const adminSeriesIconSaved = await client.admin.seriesIcons.create({ name: 'opus', icon_url: 'https://example.invalid/opus.svg' });
   const adminProducts = await client.admin.products.list();
@@ -412,6 +422,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminUsageLogs.data.logs[0].username, 'alice');
   assert.equal(adminStatsFilters.data.projects[0].id, '/workspace');
   assert.equal(adminUptime.data.granularity, '15m');
+  assert.equal(retentionConfig.data.provider_quota_days, 90);
+  assert.equal(retentionUpdated.data.agg_enabled, true);
   assert.equal(adminSeriesIcons.data[0].name, 'opus');
   assert.equal(adminSeriesIconSaved.data.success, true);
   assert.equal(adminProducts.data[0].price, '2.5');

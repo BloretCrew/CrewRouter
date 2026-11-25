@@ -75,6 +75,10 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const teamRules = openapi.paths['/api/admin/teams/{id}/rules']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const teamRulesCreate = openapi.paths['/api/admin/teams/{id}/rules']?.post;
   const adminProviderTags = openapi.paths['/api/admin/provider-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const adminRetentionGet = openapi.paths['/api/admin/retention-config']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const adminRetentionPut = openapi.paths['/api/admin/retention-config']?.put?.responses?.[200]?.content?.['application/json']?.schema;
+  const retentionGet = openapi.paths['/api/admin/retention-config']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const retentionPut = openapi.paths['/api/admin/retention-config']?.put;
   const adminProviderTagCreate = openapi.paths['/api/admin/provider-tags']?.post?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProviderTagUpdate = openapi.paths['/api/admin/provider-tags/{id}']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyList = openapi.paths['/api/user/api-keys']?.get?.responses?.[200]?.content?.['application/json']?.schema;
@@ -132,6 +136,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (!openapi.components.schemas.TeamQuotaRule?.additionalProperties || openapi.components.schemas.TeamQuotaRule?.properties?.rule_type?.enum?.join(',') !== 'requests,tokens') throw new Error(`${openapiPath} must describe extensible legacy Team quota rules`);
   if (teamRulesCreate?.requestBody?.required !== true || teamRulesCreate.requestBody.content['application/json'].schema.$ref !== '#/components/schemas/TeamQuotaRuleCreateRequest' || teamRulesCreate.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/TeamQuotaRuleCreated') throw new Error(`${openapiPath} must type Team quota rule create request/response`);
   if (adminProviderTags?.type !== 'array' || adminProviderTags.items?.$ref !== '#/components/schemas/AdminProviderTag') throw new Error(`${openapiPath} must define administrator provider tag list responses`);
+  if (retentionGet?.$ref !== '#/components/schemas/AdminRetentionConfig' || retentionPut?.requestBody?.required !== true || retentionPut?.requestBody?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminRetentionConfigUpdate' || retentionPut?.responses?.[200]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/AdminRetentionConfigUpdateResponse') throw new Error(`${openapiPath} must define admin retention config request/response`);
   if (adminProviderTagCreate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse' || adminProviderTagUpdate?.$ref !== '#/components/schemas/AdminProviderTagUpdateResponse') throw new Error(`${openapiPath} must define admin provider tag mutation responses`);
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);

@@ -19,6 +19,9 @@ from crewrouter import (
     AdminProductCreateRequest,
     AdminProductUpdateRequest,
     AdminSeriesIcon,
+    AdminRetentionConfig,
+    AdminRetentionConfigUpdate,
+    AdminRetentionConfigUpdateResponse,
     AdminSeriesIconCreateResponse,
     AdminUsageLog,
     AdminUsageLogsResponse,
@@ -210,6 +213,9 @@ class TypedRequestTests(unittest.TestCase):
         admin_product_create: AdminProductCreateRequest = {"name": "Product"}
         admin_product_update: AdminProductUpdateRequest = {"name": "Product", "description": "", "price": "2.5", "image_url": "", "link": "", "is_active": True, "sort_order": 0}
         series_icon: AdminSeriesIcon = {"name": "opus", "icon_url": "https://example.invalid/opus.svg", "created_at": "2026-01-01T00:00:00Z"}
+        retention: AdminRetentionConfig = {"provider_quota_days": 90, "compress_days": 30, "purge_days": 180, "compress_size_gb": 50, "purge_size_gb": 100, "agg_enabled": True}
+        retention_update: AdminRetentionConfigUpdate = {"compress_days": 30, "purge_days": 180, "compress_size_gb": 50, "purge_size_gb": 100, "agg_enabled": True}
+        retention_response: AdminRetentionConfigUpdateResponse = {"success": True, **retention_update}
         series_icon_created: AdminSeriesIconCreateResponse = {"success": True}
         team_member: TeamMember = {"id": 9, "username": "alice", "email": None, "avatar": None, "created_at": "2026-01-01T00:00:00Z"}
         team_model: TeamModelListItem = {"mapping_id": None, "enabled": False, "model_id": "m1", "name": "Model", "provider": "p1", "series": None, "description": None, "input_price_per_1k_tokens": "0.01", "output_price_per_1k_tokens": 0.02, "icon_url": None, "upstream_model_id": None, "alias": None, "model_multiplier": "1.0", "test_ok": None, "test_latency_ms": None, "test_tokens_per_second": None, "test_error": None, "test_tested_at": None, "provider_id": "p1", "provider_name": "Provider", "provider_enabled": True}
@@ -231,6 +237,9 @@ class TypedRequestTests(unittest.TestCase):
         self.assertIsNone(team_model["mapping_id"])
         self.assertEqual(admin_provider_tag["sort_order"], 0)
         self.assertEqual(admin_provider_tag_updated["id"], 4)
+        self.assertEqual(retention["provider_quota_days"], 90)
+        self.assertEqual(retention_update["purge_days"], 180)
+        self.assertTrue(retention_response["success"])
         self.assertEqual(series_icon["name"], "opus")
         self.assertTrue(series_icon_created["success"])
         self.assertEqual(team_rule_request["rule_type"], team_rule_created["rule_type"])

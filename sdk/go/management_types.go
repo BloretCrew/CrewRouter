@@ -126,6 +126,37 @@ type AdminUsageLogsResponse struct {
 	Logs  []AdminUsageLog `json:"logs"`
 }
 
+// AdminRetentionConfig is the current administrator-controlled retention policy.
+type AdminRetentionConfig struct {
+	ProviderQuotaDays int  `json:"provider_quota_days"`
+	CompressDays      int  `json:"compress_days"`
+	PurgeDays         int  `json:"purge_days"`
+	CompressSizeGB    int  `json:"compress_size_gb"`
+	PurgeSizeGB       int  `json:"purge_size_gb"`
+	AggEnabled        bool `json:"agg_enabled"`
+}
+
+// AdminRetentionConfigUpdate is a complete retention policy replacement.
+type AdminRetentionConfigUpdate struct {
+	ProviderQuotaDays *int `json:"provider_quota_days,omitempty"`
+	CompressDays      int  `json:"compress_days"`
+	PurgeDays         int  `json:"purge_days"`
+	CompressSizeGB    int  `json:"compress_size_gb"`
+	PurgeSizeGB       int  `json:"purge_size_gb"`
+	AggEnabled        bool `json:"agg_enabled"`
+}
+
+// AdminRetentionConfigUpdateResponse confirms the updated retention policy.
+type AdminRetentionConfigUpdateResponse struct {
+	Success           bool  `json:"success"`
+	ProviderQuotaDays *int  `json:"provider_quota_days,omitempty"`
+	CompressDays      *int  `json:"compress_days,omitempty"`
+	PurgeDays         *int  `json:"purge_days,omitempty"`
+	CompressSizeGB    *int  `json:"compress_size_gb,omitempty"`
+	PurgeSizeGB       *int  `json:"purge_size_gb,omitempty"`
+	AggEnabled        *bool `json:"agg_enabled,omitempty"`
+}
+
 // AdminSeriesIcon is one named model-series icon configured by an administrator.
 type AdminSeriesIcon struct {
 	Name      string `json:"name"`

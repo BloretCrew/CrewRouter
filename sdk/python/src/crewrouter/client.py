@@ -54,6 +54,28 @@ class TeamMember(TypedDict, total=False):
     created_at: str
 
 
+class AdminRetentionConfig(TypedDict):
+    provider_quota_days: int
+    compress_days: int
+    purge_days: int
+    compress_size_gb: int
+    purge_size_gb: int
+    agg_enabled: bool
+
+
+class AdminRetentionConfigUpdate(TypedDict, total=False):
+    provider_quota_days: Optional[int]
+    compress_days: int
+    purge_days: int
+    compress_size_gb: int
+    purge_size_gb: int
+    agg_enabled: bool
+
+
+class AdminRetentionConfigUpdateResponse(AdminRetentionConfigUpdate, total=False):
+    success: bool
+
+
 class AdminSeriesIcon(TypedDict):
     name: str
     icon_url: str

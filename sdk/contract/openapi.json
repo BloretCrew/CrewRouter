@@ -1270,6 +1270,99 @@
         ],
         "additionalProperties": true
       },
+      "AdminRetentionConfig": {
+        "type": "object",
+        "properties": {
+          "provider_quota_days": {
+            "type": "integer"
+          },
+          "compress_days": {
+            "type": "integer"
+          },
+          "purge_days": {
+            "type": "integer"
+          },
+          "compress_size_gb": {
+            "type": "integer"
+          },
+          "purge_size_gb": {
+            "type": "integer"
+          },
+          "agg_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider_quota_days",
+          "compress_days",
+          "purge_days",
+          "compress_size_gb",
+          "purge_size_gb",
+          "agg_enabled"
+        ],
+        "additionalProperties": true
+      },
+      "AdminRetentionConfigUpdate": {
+        "type": "object",
+        "properties": {
+          "provider_quota_days": {
+            "type": "integer"
+          },
+          "compress_days": {
+            "type": "integer"
+          },
+          "purge_days": {
+            "type": "integer"
+          },
+          "compress_size_gb": {
+            "type": "integer"
+          },
+          "purge_size_gb": {
+            "type": "integer"
+          },
+          "agg_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "compress_days",
+          "purge_days",
+          "compress_size_gb",
+          "purge_size_gb",
+          "agg_enabled"
+        ],
+        "additionalProperties": true
+      },
+      "AdminRetentionConfigUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "provider_quota_days": {
+            "type": "integer"
+          },
+          "compress_days": {
+            "type": "integer"
+          },
+          "purge_days": {
+            "type": "integer"
+          },
+          "compress_size_gb": {
+            "type": "integer"
+          },
+          "purge_size_gb": {
+            "type": "integer"
+          },
+          "agg_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": true
+      },
       "AdminSeriesIcon": {
         "type": "object",
         "properties": {
@@ -11024,8 +11117,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/AdminRetentionConfig"
                 }
               }
             }
@@ -11057,8 +11149,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/AdminRetentionConfigUpdateResponse"
                 }
               }
             }
@@ -11072,12 +11163,11 @@
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true
+                "$ref": "#/components/schemas/AdminRetentionConfigUpdate"
               }
             }
           }

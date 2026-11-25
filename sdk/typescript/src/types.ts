@@ -422,6 +422,28 @@ export interface AdminUsageLogsResponse {
   logs: AdminUsageLog[];
 }
 
+export interface AdminRetentionConfig {
+  provider_quota_days: number;
+  compress_days: number;
+  purge_days: number;
+  compress_size_gb: number;
+  purge_size_gb: number;
+  agg_enabled: boolean;
+}
+
+export interface AdminRetentionConfigUpdate {
+  provider_quota_days?: number;
+  compress_days: number;
+  purge_days: number;
+  compress_size_gb: number;
+  purge_size_gb: number;
+  agg_enabled: boolean;
+}
+
+export interface AdminRetentionConfigUpdateResponse extends Partial<AdminRetentionConfigUpdate> {
+  success: true;
+}
+
 export interface AdminSeriesIcon {
   name: string;
   icon_url: string;

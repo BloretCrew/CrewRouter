@@ -555,6 +555,21 @@ function managementSchemas() {
       sources: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
       projects: { type: 'array', items: { $ref: '#/components/schemas/AdminStatsFilterOption' } },
     }, ['users', 'teams', 'models', 'providers', 'sources', 'projects']),
+    AdminRetentionConfig: object({
+      provider_quota_days: { type: 'integer' }, compress_days: { type: 'integer' },
+      purge_days: { type: 'integer' }, compress_size_gb: { type: 'integer' },
+      purge_size_gb: { type: 'integer' }, agg_enabled: { type: 'boolean' },
+    }, ['provider_quota_days', 'compress_days', 'purge_days', 'compress_size_gb', 'purge_size_gb', 'agg_enabled']),
+    AdminRetentionConfigUpdate: object({
+      provider_quota_days: { type: 'integer' }, compress_days: { type: 'integer' },
+      purge_days: { type: 'integer' }, compress_size_gb: { type: 'integer' },
+      purge_size_gb: { type: 'integer' }, agg_enabled: { type: 'boolean' },
+    }, ['compress_days', 'purge_days', 'compress_size_gb', 'purge_size_gb', 'agg_enabled']),
+    AdminRetentionConfigUpdateResponse: object({
+      success: { const: true }, provider_quota_days: { type: 'integer' }, compress_days: { type: 'integer' },
+      purge_days: { type: 'integer' }, compress_size_gb: { type: 'integer' },
+      purge_size_gb: { type: 'integer' }, agg_enabled: { type: 'boolean' },
+    }, ['success']),
     AdminSeriesIcon: object({
       name: { type: 'string' }, icon_url: { type: 'string' }, created_at: { type: 'string', format: 'date-time' },
     }, ['name', 'icon_url', 'created_at']),
@@ -805,6 +820,8 @@ function managementResponseSchema(operationId) {
     'admin.products.byId.update': { $ref: '#/components/schemas/AdminProduct' },
     'admin.products.byId.delete': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.seriesIcons.list': { type: 'array', items: { $ref: '#/components/schemas/AdminSeriesIcon' } },
+    'admin.retentionConfig.list': { $ref: '#/components/schemas/AdminRetentionConfig' },
+    'admin.retentionConfig.update': { $ref: '#/components/schemas/AdminRetentionConfigUpdateResponse' },
     'admin.seriesIcons.create': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },
     'admin.stats.multi.filters.list': { $ref: '#/components/schemas/AdminStatsFiltersResponse' },
@@ -953,6 +970,12 @@ function buildOpenApi(operations) {
       operation.requestBody = {
         required: true,
         content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } },
+      };
+    }
+    if (op.operationId === 'admin.retentionConfig.update') {
+      operation.requestBody = {
+        required: true,
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/AdminRetentionConfigUpdate' } } },
       };
     }
     if (op.operationId === 'admin.teams.byId.rules.create') {

@@ -220,6 +220,22 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(teamModels) != 1 || teamModels[0].MappingID != nil || teamModels[0].ModelID != "m1" {
 		t.Fatalf("unexpected Team model response: %#v", teamModels)
 	}
+	var retention crewrouter.AdminRetentionConfig
+	if err := json.Unmarshal([]byte(`{"provider_quota_days":90,"compress_days":30,"purge_days":180,"compress_size_gb":50,"purge_size_gb":100,"agg_enabled":true}`), &retention); err != nil {
+		t.Fatalf("decode retention config: %v", err)
+	}
+	var retentionResponse crewrouter.AdminRetentionConfigUpdateResponse
+	if err := json.Unmarshal([]byte(`{"success":true,"compress_days":30,"purge_days":180,"compress_size_gb":50,"purge_size_gb":100,"agg_enabled":true}`), &retentionResponse); err != nil || !retentionResponse.Success {
+		t.Fatalf("decode retention update response: %#v, %v", retentionResponse, err)
+	}
+	var retentionUpdate crewrouter.AdminRetentionConfigUpdate
+	if err := json.Unmarshal([]byte(`{"compress_days":30,"purge_days":180,"compress_size_gb":50,"purge_size_gb":100,"agg_enabled":true}`), &retentionUpdate); err != nil {
+		t.Fatalf("decode retention update: %v", err)
+	}
+	if retention.ProviderQuotaDays != 90 || retentionUpdate.PurgeDays != 180 {
+		t.Fatalf("unexpected retention config: %#v / %#v", retention, retentionUpdate)
+	}
+
 	var seriesIcons []crewrouter.AdminSeriesIcon
 	if err := json.Unmarshal([]byte(`[{"name":"opus","icon_url":"https://example.invalid/opus.svg","created_at":"2026-01-01T00:00:00Z"}]`), &seriesIcons); err != nil {
 		t.Fatalf("decode admin series icons: %v", err)
