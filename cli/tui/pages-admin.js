@@ -1166,17 +1166,43 @@ function createAdminPages(runtime) {
       },
     },
     {
-      id: 'settings', label: '用户设置', description: '网页个人设置页面。',
+      id: 'settings', label: '设置', description: '个人资料、API 签名及网页专属设置状态。',
       async load(api) {
         const [signature, profile] = await Promise.allSettled([api('/api/user/signature'), api('/auth/me')]);
         const signatureData = signature.status === 'fulfilled' ? signature.value : {};
         const user = profile.status === 'fulfilled' ? profile.value : {};
         return { sections: [
-          { title: '账户资料', rows: [{ label: `用户名：${text(user.username)}` }, { label: `邮箱：${text(user.email)}` }, ...(profile.status === 'rejected' ? [{ label: profile.reason.message || '账户资料暂不可用' }] : [])] },
-          { title: 'API 签名', rows: [{ label: `状态：${signatureData.enabled ? '已启用' : '未启用'}` }, { label: `模板：${text(signatureData.template, '默认模板')}` }, ...(signature.status === 'rejected' ? [{ label: signature.reason.message || '签名设置暂不可用' }] : [])] },
+          { title: '个人资料', rows: [
+            { label: `用户名：${text(user.username, '未知')}` },
+            { label: `邮箱：${text(user.email, '未设置')}` },
+            { label: `头像：${user.avatar ? '已设置' : '未设置'}`, detail: '头像上传需要网页文件选择器。' },
+            ...(profile.status === 'rejected' ? [{ label: profile.reason.message || '账户资料暂不可用' }] : []),
+          ] },
+          { title: 'API 签名', description: '签名会按用户设置注入 AI 回复；API Key 可单独继承或覆盖。', rows: [
+            { label: `AI 回复签名：${signatureData.enabled ? '已启用' : '已关闭'}` },
+            { label: '签名模板', detail: text(signatureData.template, '未设置模板') },
+            ...(Array.isArray(signatureData.defaults?.variables) ? [{ label: `可用变量：${signatureData.defaults.variables.map(item => typeof item === 'string' ? item : item.name || item.key).join('、')}` }] : []),
+            ...(signature.status === 'rejected' ? [{ label: signature.reason.message || '签名设置暂不可用' }] : []),
+          ] },
+          { title: '网页专属设置', rows: [
+            { label: '界面背景与主题', detail: '壁纸上传及主题插件选择需要浏览器图形界面。' },
+            { label: '插件偏好授权', detail: '授权开关可在网页设置的“插件”分类管理。' },
+            { label: 'API 签名预览', detail: 'TUI 显示签名模板；依赖网页即时预览的变量渲染在此不支持。' },
+          ] },
         ], actions: [
-          { label: signatureData.enabled ? '关闭 API 签名' : '开启 API 签名', run: async ctx => { await api('/api/user/signature', { method: 'PUT', body: { enabled: !signatureData.enabled, template: signatureData.template } }); ctx.notify('签名设置已更新。'); await ctx.refresh(); } },
+          { label: '编辑 API 签名', run: async ctx => {
+            const values = await ctx.form('编辑 API 签名', [
+              { name: 'enabled', label: '启用 AI 回复签名', type: 'boolean', value: signatureData.enabled === true },
+              { name: 'template', label: '签名模板（最多 2000 字符）', value: signatureData.template || '' },
+            ], { description: '关闭总开关会使所有 API Key 不注入用户级签名。API Key 的单独覆盖仍由 Key 设置控制。' });
+            if (!values) return;
+            if (String(values.template || '').length > 2000) { await ctx.show('签名模板过长', '签名模板最多 2000 个字符。'); return; }
+            if (!await ctx.confirm('保存 API 签名', `总开关：${values.enabled ? '开启' : '关闭'}\n模板长度：${String(values.template || '').length} 个字符`)) return;
+            await api('/api/user/signature', { method: 'PUT', body: { enabled: values.enabled === true, template: String(values.template || '') } });
+            ctx.notify('API 签名设置已保存。'); await ctx.refresh();
+          } },
           { label: '修改邮箱', run: async ctx => { const email = await ctx.ask('新邮箱地址', { defaultValue: user.email || '' }); if (email === null) return; await api('/api/user/settings', { method: 'PUT', body: { email } }); ctx.notify('邮箱设置已更新。'); await ctx.refresh(); } },
+          { label: '在浏览器打开完整设置', run: async ctx => { const url = `${runtime.client.baseUrl}/console#settings`; const opened = require('../lib/context').openBrowser(url); ctx.notify(opened ? '已在浏览器打开完整设置。' : `请在浏览器访问：${url}`); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },

@@ -34,6 +34,29 @@ test('admin user edits confirm before sending profile and quota fields', async (
   assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
 });
 
+test('user settings show readable profile/signature fields and edit the complete signature form', async () => {
+  const calls = [];
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/user/signature') return { enabled: true, template: 'Hello {{username}}', defaults: { variables: [{ name: 'username' }, { name: 'model' }] } };
+    if (path === '/auth/me') return { username: 'alice', email: 'alice@example.test', avatar: 'https://example.test/avatar.png' };
+    return {};
+  };
+  const page = pageById('settings');
+  const data = await page.load(api);
+  assert.deepEqual(data.sections.map(section => section.title), ['个人资料', 'API 签名', '网页专属设置']);
+  assert.ok(data.sections[0].rows.some(row => row.label.includes('alice@example.test')));
+  assert.ok(data.sections[1].rows.some(row => row.label.includes('可用变量：username、model')));
+  assert.ok(data.sections[2].rows.some(row => row.label.includes('界面背景与主题')));
+  const edit = data.actions.find(action => action.label === '编辑 API 签名');
+  let fields;
+  await edit.run({ form: async (_title, input) => { fields = input; return { enabled: false, template: 'Updated {{model}}' }; }, confirm: async () => false, notify() {}, refresh: async () => {} });
+  assert.deepEqual(fields.map(field => field.name), ['enabled', 'template']);
+  assert.equal(calls.some(call => call.path === '/api/user/signature' && call.options.method === 'PUT'), false);
+  await edit.run({ form: async () => ({ enabled: false, template: 'Updated {{model}}' }), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.path === '/api/user/signature' && call.options.method === 'PUT').options.body, { enabled: false, template: 'Updated {{model}}' });
+});
+
 test('admin OAuth clients mirror web columns and support scoped client lifecycle actions', async () => {
   const calls = [];
   const scopeCatalog = [{ scope: 'gateway:invoke', description: '通过网关调用模型接口' }, { scope: 'events:report', description: '仅向 CrewRouter 上报客户端使用事件' }];
