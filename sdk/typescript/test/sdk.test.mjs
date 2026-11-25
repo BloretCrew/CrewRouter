@@ -157,6 +157,14 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { users: [{ id: 9, name: 'alice' }], teams: [{ id: 2, name: 'Team' }], models: [{ id: 'm1', name: 'Model' }], providers: [{ id: 'p1', name: 'Provider' }], sources: [{ id: 'claude_code', name: 'Claude Code' }], projects: [{ id: '/workspace', name: '/workspace' }] });
       return;
     }
+    if (req.url === '/api/cache/status') {
+      json(res, 200, { success: true, data: { isValid: true, remainingTTL: 3000, lastFetchTime: null, providerCount: 4, stats: { hits: 2, misses: 1, hitRate: '66.67%', totalRequests: 3, lastHitTime: null, lastMissTime: null } } });
+      return;
+    }
+    if (req.url === '/api/cache/reset' && req.method === 'POST') {
+      json(res, 200, { success: true, message: 'Cache stats reset' });
+      return;
+    }
     if (req.url === '/api/admin/retention-config' && req.method === 'GET') {
       json(res, 200, { provider_quota_days: 90, compress_days: 30, purge_days: 180, compress_size_gb: 50, purge_size_gb: 100, agg_enabled: true });
       return;
@@ -351,6 +359,8 @@ test('management wrappers preserve their documented response payload shapes', as
   const adminUsageLogs = await client.admin.usageLogs.list({ page: 1 });
   const adminStatsFilters = await client.admin.stats.filters();
   const adminUptime = await client.admin.models.getUptime({ days: 7 });
+  const cacheStatus = await client.admin.cache.getStatus();
+  const cacheReset = await client.admin.cache.reset();
   const retentionConfig = await client.admin.retention.getConfig();
   const retentionUpdated = await client.admin.retention.updateConfig({ compress_days: 30, purge_days: 180, compress_size_gb: 50, purge_size_gb: 100, agg_enabled: true });
   const adminSeriesIcons = await client.admin.seriesIcons.list();
@@ -422,6 +432,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminUsageLogs.data.logs[0].username, 'alice');
   assert.equal(adminStatsFilters.data.projects[0].id, '/workspace');
   assert.equal(adminUptime.data.granularity, '15m');
+  assert.equal(cacheStatus.data.data.stats.hitRate, '66.67%');
+  assert.equal(cacheReset.data.success, true);
   assert.equal(retentionConfig.data.provider_quota_days, 90);
   assert.equal(retentionUpdated.data.agg_enabled, true);
   assert.equal(adminSeriesIcons.data[0].name, 'opus');

@@ -60,8 +60,20 @@ if (beta.jobs['npm-beta-publish'].steps.find(step => step.uses === 'actions/down
 if (beta.jobs['github-release-manual'].needs.includes('npm-beta-publish') !== true) throw new Error('manual GitHub release must await npm publish if publish was explicitly selected');
 const electronGate = beta.jobs.gate.steps.find(step => step.name === 'Desktop behavior, sandboxed launcher and syntax');
 if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-sandbox') || !electronGate.run.includes('chmod 4755 node_modules/electron/dist/chrome-sandbox') || electronGate.run.includes('--no-sandbox')) throw new Error('Electron launcher gate must retain sandbox and configure the isolated SUID helper');
+const sdkOperations = JSON.parse(await readFile('sdk/contract/operations.json', 'utf8')).operations.filter(operation => operation.sdkStatus !== 'excluded');
 for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']) {
   const openapi = JSON.parse(await readFile(openapiPath, 'utf8'));
+  const untypedSdkOperations = sdkOperations.filter(operation => {
+    const path = operation.path.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
+    const endpoint = openapi.paths[path]?.[operation.method.toLowerCase()];
+    return !Object.values(endpoint?.responses || {}).some(response => {
+      const schema = response.content?.['application/json']?.schema || response.content?.['text/event-stream']?.schema;
+      return schema && (schema.$ref || schema.type || schema.oneOf || schema.allOf || schema.anyOf);
+    });
+  });
+  if (untypedSdkOperations.length) throw new Error(`${openapiPath} leaves SDK operations without an explicit response schema: ${untypedSdkOperations.map(operation => operation.operationId).join(', ')}`);
+  const cacheStatus = openapi.paths['/api/cache/status']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const cacheReset = openapi.paths['/api/cache/reset']?.post?.responses?.[200]?.content?.['application/json']?.schema;
   const adminUsers = openapi.paths['/api/admin/users']?.get;
   const adminCodeBalances = openapi.paths['/api/admin/users/{id}/code-balances']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProducts = openapi.paths['/api/admin/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
@@ -117,6 +129,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const fusionConfigPut = openapi.paths['/api/user/api-keys/{id}/fusion-config']?.put;
   const harnessModels = openapi.paths['/api/user/api-keys/{id}/harness-models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const requestModelBindings = openapi.paths['/api/user/api-keys/{id}/request-model-bindings']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  if (cacheStatus?.$ref !== '#/components/schemas/CacheStatusResponse' || cacheReset?.$ref !== '#/components/schemas/CacheResetResponse') throw new Error(`${openapiPath} must type cache status/reset responses`);
   if (adminUsers?.['x-crewrouter-permission'] !== 'admin.users.read' || adminUsers.responses?.[200]?.content?.['application/json']?.schema?.oneOf?.length !== 2) throw new Error(`${openapiPath} must document admin user list pagination variants`);
   if (adminCodeBalances?.type !== 'array' || adminCodeBalances.items?.$ref !== '#/components/schemas/AdminUserCodeBalanceItem') throw new Error(`${openapiPath} must define administrator refundable balance rows`);
   if (adminUsers.responses[200].content['application/json'].schema.oneOf[0].items?.$ref !== '#/components/schemas/AdminUser' || adminUsers.responses[200].content['application/json'].schema.oneOf[1].$ref !== '#/components/schemas/AdminUsersPage') throw new Error(`${openapiPath} must define admin user list row and page schemas`);

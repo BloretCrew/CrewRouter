@@ -14,6 +14,10 @@ from crewrouter import (
     ApiKeySwallowImagesUpdateResponse,
     ApiKeyCommandsUpdateResponse,
     AdminUser,
+    CacheStats,
+    CacheStatus,
+    CacheStatusResponse,
+    CacheResetResponse,
     AdminUserCodeBalanceItem,
     AdminProduct,
     AdminProductCreateRequest,
@@ -200,6 +204,10 @@ class TypedRequestTests(unittest.TestCase):
         enabled_response: ApiKeyEnabledUpdateResponse = {"success": True, "enabled": True}
         swallow_response: ApiKeySwallowImagesUpdateResponse = {"success": True, "swallow_images": False}
         commands_response: ApiKeyCommandsUpdateResponse = {"success": True, "crewrouter_commands": True}
+        cache_stats: CacheStats = {"hits": 2, "misses": 1, "hitRate": "66.67%", "totalRequests": 3, "lastHitTime": None, "lastMissTime": None}
+        cache_status: CacheStatus = {"isValid": True, "remainingTTL": 3000, "lastFetchTime": None, "providerCount": 4, "stats": cache_stats}
+        cache_status_response: CacheStatusResponse = {"success": True, "data": cache_status}
+        cache_reset_response: CacheResetResponse = {"success": True, "message": "Cache stats reset"}
         admin_user: AdminUser = {"id": 9, "username": "alice", "email": None, "email_verified": False, "avatar": None, "balance": "1.5", "refund_balance": "0", "is_admin": False, "tags": [], "rate_limit_rpm": 0, "rate_limit_tpm": 0, "created_at": "2026-01-01T00:00:00Z", "team_id": None, "team_name": None}
         admin_code_balance: AdminUserCodeBalanceItem = {"id": 1, "amount": "5.0", "fee_rate": "0.1", "code": "refund-1", "net_amount": "4.5454"}
         admin_usage_log: AdminUsageLog = {**usage_log, "username": "alice", "custom_instruction_count": 0}
@@ -229,6 +237,8 @@ class TypedRequestTests(unittest.TestCase):
         self.assertFalse(swallow_response["swallow_images"])
         self.assertTrue(commands_response["crewrouter_commands"])
         self.assertEqual(admin_page["items"][0]["username"], "alice")
+        self.assertEqual(cache_status_response["data"]["stats"]["hitRate"], "66.67%")
+        self.assertTrue(cache_reset_response["success"])
         self.assertEqual(admin_code_balance["net_amount"], "4.5454")
         self.assertEqual(admin_usage_logs["logs"][0]["custom_instruction_count"], 0)
         self.assertEqual(admin_product_create["name"], admin_product_update["name"])

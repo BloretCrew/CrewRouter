@@ -54,6 +54,33 @@ class TeamMember(TypedDict, total=False):
     created_at: str
 
 
+class CacheStats(TypedDict):
+    hits: int
+    misses: int
+    hitRate: str
+    totalRequests: int
+    lastHitTime: Optional[str]
+    lastMissTime: Optional[str]
+
+
+class CacheStatus(TypedDict):
+    isValid: bool
+    remainingTTL: Union[int, float]
+    lastFetchTime: Optional[str]
+    providerCount: int
+    stats: CacheStats
+
+
+class CacheStatusResponse(TypedDict):
+    success: bool
+    data: CacheStatus
+
+
+class CacheResetResponse(TypedDict):
+    success: bool
+    message: str
+
+
 class AdminRetentionConfig(TypedDict):
     provider_quota_days: int
     compress_days: int

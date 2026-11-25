@@ -16,6 +16,8 @@ import type {
   AdminRetentionConfigUpdate,
   AdminRetentionConfigUpdateResponse,
   AdminProviderTag,
+  CacheStatusResponse,
+  CacheResetResponse,
   AdminProviderTagUpdateResponse,
   TeamMember,
   TeamModelListItem,
@@ -307,6 +309,12 @@ export class CrewRouter {
   };
 
   readonly admin = {
+    cache: {
+      getStatus: <T = CacheStatusResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('cache.status.list', options),
+      reset: <T = CacheResetResponse>(body: JsonObject = {}, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('cache.reset', { ...options, body }),
+    },
     users: {
       list: <T = AdminUsersResponse>(options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.users.list', options),

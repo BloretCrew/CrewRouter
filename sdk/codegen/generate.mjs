@@ -483,6 +483,18 @@ function managementSchemas() {
       description: 'Distinct panel_models are limited to 10 after trimming and deduplication; repeated entries do not consume extra slots.',
     },
     ApiKeyActionSuccess: object({ success: { const: true } }),
+    CacheResetResponse: object({ success: { type: 'boolean' }, message: { type: 'string' } }),
+    CacheStatusResponse: object({
+      success: { type: 'boolean' }, data: { $ref: '#/components/schemas/CacheStatus' },
+    }),
+    CacheStatus: object({
+      isValid: { type: 'boolean' }, remainingTTL: { type: 'number' }, lastFetchTime: nullableString,
+      providerCount: { type: 'integer' }, stats: { $ref: '#/components/schemas/CacheStats' },
+    }, ['isValid', 'remainingTTL', 'lastFetchTime', 'providerCount', 'stats']),
+    CacheStats: object({
+      hits: { type: 'integer' }, misses: { type: 'integer' }, hitRate: { type: 'string' },
+      totalRequests: { type: 'integer' }, lastHitTime: nullableString, lastMissTime: nullableString,
+    }, ['hits', 'misses', 'hitRate', 'totalRequests', 'lastHitTime', 'lastMissTime']),
     ApiKeyEnabledUpdateResponse: object({ success: { const: true }, enabled: { type: 'boolean' } }),
     ApiKeySwallowImagesUpdateResponse: object({ success: { const: true }, swallow_images: { type: 'boolean' } }),
     ApiKeyCommandsUpdateResponse: object({ success: { const: true }, crewrouter_commands: { type: 'boolean' } }),
@@ -821,6 +833,8 @@ function managementResponseSchema(operationId) {
     'admin.products.byId.delete': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.seriesIcons.list': { type: 'array', items: { $ref: '#/components/schemas/AdminSeriesIcon' } },
     'admin.retentionConfig.list': { $ref: '#/components/schemas/AdminRetentionConfig' },
+    'cache.status.list': { $ref: '#/components/schemas/CacheStatusResponse' },
+    'cache.reset': { $ref: '#/components/schemas/CacheResetResponse' },
     'admin.retentionConfig.update': { $ref: '#/components/schemas/AdminRetentionConfigUpdateResponse' },
     'admin.seriesIcons.create': { $ref: '#/components/schemas/ApiKeyActionSuccess' },
     'admin.usageLogs.list': { $ref: '#/components/schemas/AdminUsageLogsResponse' },

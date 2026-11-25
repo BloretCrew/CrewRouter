@@ -220,6 +220,15 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(teamModels) != 1 || teamModels[0].MappingID != nil || teamModels[0].ModelID != "m1" {
 		t.Fatalf("unexpected Team model response: %#v", teamModels)
 	}
+	var cacheStatus crewrouter.CacheStatusResponse
+	if err := json.Unmarshal([]byte(`{"success":true,"data":{"isValid":true,"remainingTTL":3000,"lastFetchTime":null,"providerCount":4,"stats":{"hits":2,"misses":1,"hitRate":"66.67%","totalRequests":3,"lastHitTime":null,"lastMissTime":null}}}`), &cacheStatus); err != nil {
+		t.Fatalf("decode cache status: %v", err)
+	}
+	var cacheReset crewrouter.CacheResetResponse
+	if err := json.Unmarshal([]byte(`{"success":true,"message":"Cache stats reset"}`), &cacheReset); err != nil || !cacheReset.Success {
+		t.Fatalf("decode cache reset: %#v, %v", cacheReset, err)
+	}
+
 	var retention crewrouter.AdminRetentionConfig
 	if err := json.Unmarshal([]byte(`{"provider_quota_days":90,"compress_days":30,"purge_days":180,"compress_size_gb":50,"purge_size_gb":100,"agg_enabled":true}`), &retention); err != nil {
 		t.Fatalf("decode retention config: %v", err)

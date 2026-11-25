@@ -783,6 +783,101 @@
         "required": [],
         "additionalProperties": true
       },
+      "CacheResetResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": true
+      },
+      "CacheStatusResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CacheStatus"
+          }
+        },
+        "required": [],
+        "additionalProperties": true
+      },
+      "CacheStatus": {
+        "type": "object",
+        "properties": {
+          "isValid": {
+            "type": "boolean"
+          },
+          "remainingTTL": {
+            "type": "number"
+          },
+          "lastFetchTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "providerCount": {
+            "type": "integer"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/CacheStats"
+          }
+        },
+        "required": [
+          "isValid",
+          "remainingTTL",
+          "lastFetchTime",
+          "providerCount",
+          "stats"
+        ],
+        "additionalProperties": true
+      },
+      "CacheStats": {
+        "type": "object",
+        "properties": {
+          "hits": {
+            "type": "integer"
+          },
+          "misses": {
+            "type": "integer"
+          },
+          "hitRate": {
+            "type": "string"
+          },
+          "totalRequests": {
+            "type": "integer"
+          },
+          "lastHitTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastMissTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "hits",
+          "misses",
+          "hitRate",
+          "totalRequests",
+          "lastHitTime",
+          "lastMissTime"
+        ],
+        "additionalProperties": true
+      },
       "ApiKeyEnabledUpdateResponse": {
         "type": "object",
         "properties": {
@@ -14106,8 +14201,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/CacheResetResponse"
                 }
               }
             }
@@ -14155,8 +14249,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/CacheStatusResponse"
                 }
               }
             }

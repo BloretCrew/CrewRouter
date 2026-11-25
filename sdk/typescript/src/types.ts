@@ -422,6 +422,33 @@ export interface AdminUsageLogsResponse {
   logs: AdminUsageLog[];
 }
 
+export interface CacheStats {
+  hits: number;
+  misses: number;
+  hitRate: string;
+  totalRequests: number;
+  lastHitTime: string | null;
+  lastMissTime: string | null;
+}
+
+export interface CacheStatus {
+  isValid: boolean;
+  remainingTTL: number;
+  lastFetchTime: string | null;
+  providerCount: number;
+  stats: CacheStats;
+}
+
+export interface CacheStatusResponse {
+  success: boolean;
+  data: CacheStatus;
+}
+
+export interface CacheResetResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface AdminRetentionConfig {
   provider_quota_days: number;
   compress_days: number;

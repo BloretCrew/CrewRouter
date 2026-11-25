@@ -126,6 +126,37 @@ type AdminUsageLogsResponse struct {
 	Logs  []AdminUsageLog `json:"logs"`
 }
 
+// CacheStats contains in-memory provider index cache counters.
+type CacheStats struct {
+	Hits          int64   `json:"hits"`
+	Misses        int64   `json:"misses"`
+	HitRate       string  `json:"hitRate"`
+	TotalRequests int64   `json:"totalRequests"`
+	LastHitTime   *string `json:"lastHitTime"`
+	LastMissTime  *string `json:"lastMissTime"`
+}
+
+// CacheStatus describes the provider index cache and its counters.
+type CacheStatus struct {
+	IsValid       bool       `json:"isValid"`
+	RemainingTTL  int64      `json:"remainingTTL"`
+	LastFetchTime *string    `json:"lastFetchTime"`
+	ProviderCount int        `json:"providerCount"`
+	Stats         CacheStats `json:"stats"`
+}
+
+// CacheStatusResponse is returned by the administrator cache status endpoint.
+type CacheStatusResponse struct {
+	Success bool        `json:"success"`
+	Data    CacheStatus `json:"data"`
+}
+
+// CacheResetResponse confirms cache counter reset.
+type CacheResetResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
 // AdminRetentionConfig is the current administrator-controlled retention policy.
 type AdminRetentionConfig struct {
 	ProviderQuotaDays int  `json:"provider_quota_days"`
