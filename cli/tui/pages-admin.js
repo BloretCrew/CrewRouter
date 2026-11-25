@@ -37,6 +37,45 @@ const clientSourceLabel = value => ({ claude_code: 'Claude Code', codex: 'Codex'
 const itemsOf = payload => Array.isArray(payload) ? payload : array(payload && (payload.items || payload.records || payload.data));
 const display = (...values) => values.map(value => String(value || '').trim()).filter(Boolean).join(' · ');
 
+async function editOAuthClient(ctx, api, client, scopeOptions) {
+  const currentScopes = new Set(array(client?.scopes).length ? array(client.scopes) : ['gateway:invoke']);
+  const scopes = array(scopeOptions);
+  while (true) {
+    const selected = await ctx.choose('选择 OAuth 权限', [
+      ...scopes.map(item => ({ label: `${currentScopes.has(item.scope) ? '☑' : '☐'} ${item.scope} · ${item.description || ''}`, value: item.scope })),
+      { label: `完成选择（${currentScopes.size} 项）`, value: '__done__' },
+    ], { description: '至少选择一个可分配权限。' });
+    if (selected === null) return;
+    if (selected === '__done__') break;
+    if (currentScopes.has(selected)) currentScopes.delete(selected); else currentScopes.add(selected);
+  }
+  if (!currentScopes.size) { await ctx.show('权限无效', '至少选择一个 OAuth 权限。'); return; }
+  const formFields = [
+    { name: 'name', label: '应用名称', value: client?.name || '' },
+    ...(!client ? [{ name: 'clientId', label: '客户端 ID（留空自动生成）', value: '' }] : []),
+    { name: 'type', label: '客户端类型', value: client?.type || 'public', options: [{ value: 'public', label: '公共客户端（原生应用 / CLI / SPA，无密钥，强制 PKCE）' }, { value: 'confidential', label: '机密客户端（服务端应用，需要密钥）' }] },
+    { name: 'redirects', label: '回调地址（每行一个）', value: array(client?.redirect_uris).join('\n') },
+    { name: 'allowLoopbackAnyPath', label: '允许任意回环路径', type: 'boolean', value: client?.allow_loopback_any_path === true },
+    { name: 'description', label: '说明', value: client?.description || '' },
+    { name: 'enabled', label: '启用该应用', type: 'boolean', value: client ? client.enabled === true : true },
+    ...(client ? [{ name: 'rotateSecret', label: '同时轮换客户端密钥', type: 'boolean', value: false }] : []),
+  ];
+  const values = await ctx.form(client ? `编辑 OAuth 应用 · ${client.name}` : '新建 OAuth 应用', formFields, { description: 'HTTPS 回调地址需精确匹配；回环地址忽略端口；自定义 scheme 仅限公共客户端。' });
+  if (!values) return;
+  const name = String(values.name || '').trim();
+  const redirectUris = String(values.redirects || '').split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+  if (!name || (!redirectUris.length && values.allowLoopbackAnyPath !== true)) { await ctx.show('应用信息无效', '名称不能为空；至少填写一个回调地址，或明确启用任意回环路径。'); return; }
+  const payload = { name, type: values.type, redirectUris, allowLoopbackAnyPath: values.allowLoopbackAnyPath === true, scopes: [...currentScopes], description: String(values.description || '').trim(), enabled: values.enabled === true, rotateSecret: values.rotateSecret === true };
+  if (!client && String(values.clientId || '').trim()) payload.clientId = String(values.clientId).trim();
+  if (!await ctx.confirm(client ? '保存 OAuth 应用' : '创建 OAuth 应用', `${name}\n类型：${payload.type === 'confidential' ? '机密客户端' : '公共客户端'}\n权限：${payload.scopes.join('、')}\n回调：${redirectUris.length} 个${payload.allowLoopbackAnyPath ? ' · 允许任意回环路径' : ''}${payload.rotateSecret ? '\n同时轮换密钥，旧密钥及令牌会失效。' : ''}`)) return;
+  const path = client ? `/api/admin/oauth-clients/${encodeURIComponent(client.client_id)}` : '/api/admin/oauth-clients';
+  const result = await api(path, { method: client ? 'PUT' : 'POST', body: payload });
+  if (result.client_secret) await ctx.show('客户端密钥（仅显示一次）', `${result.warning || '请立即安全保存此密钥。'}\n\n${result.client_secret}`);
+  if (result.revokedTokens) await ctx.show('已撤销授权令牌', `有 ${result.revokedTokens} 个旧令牌已立即失效。`);
+  ctx.notify(client ? 'OAuth 应用已更新。' : 'OAuth 应用已创建。');
+  await ctx.refresh();
+}
+
 async function runRetentionTask(api, ctx, kind, dryRun) {
   const label = kind === 'compress' ? '压缩' : '清除';
   if (!dryRun && !await ctx.confirm(`立即执行数据${label}`, '此操作可能修改或删除历史数据。确认启动任务？')) return;
@@ -1200,14 +1239,37 @@ function createAdminPages(runtime) {
       },
     }),
     adminOnly({
-      id: 'admin-oauth-clients', label: 'OAuth 客户端', description: '管理客户端只读目录。Secret 不回显；创建、轮换和删除请在网页端完成。',
+      id: 'admin-oauth-clients', label: 'OAuth 客户端', description: '供 OAuth 2.0 + PKCE 客户端使用；内置客户端和配置文件客户端只读。',
       async load(api) {
         const payload = await api('/api/admin/oauth-clients');
         const clients = array(payload && payload.clients);
+        const scopes = array(payload && payload.scopes);
+        const renderClient = client => {
+          const source = ({ builtin: '内置', config: '配置文件', database: '数据库' })[client.source] || '未知来源';
+          const type = client.type === 'confidential' ? '机密客户端' : '公共客户端';
+          const redirects = client.allow_loopback_any_path ? '允许任意回环路径' : `${array(client.redirect_uris).length} 个回调地址`;
+          return {
+            label: display(client.name, type, source, client.enabled ? '启用' : '停用'),
+            detail: display(`客户端 ID：${client.client_id}`, `权限：${array(client.scopes).join('、') || '无'}`, redirects, client.has_secret ? `密钥：已设置（前缀 ${client.secret_hint || '隐藏'}…）` : '密钥：不使用', client.description || '无说明'),
+            run: async ctx => {
+              const options = [{ label: '查看详情', value: 'detail' }];
+              if (client.editable) options.push({ label: '编辑', value: 'edit' }, { label: '删除', value: 'delete' });
+              if (client.editable && client.type === 'confidential') options.push({ label: '轮换密钥', value: 'rotate' });
+              const choice = await ctx.choose(`OAuth 应用 · ${client.name}`, options);
+              if (choice === 'detail') await ctx.show(`OAuth 应用 · ${client.name}`, `${type}\n来源：${source}\n客户端 ID：${client.client_id}\n权限：${array(client.scopes).join('、') || '无'}\n回调地址：${client.allow_loopback_any_path ? '任意回环路径' : array(client.redirect_uris).join('\n') || '无'}\n密钥：${client.has_secret ? `已设置（前缀 ${client.secret_hint || '隐藏'}…）` : '不使用'}\n启用：${client.enabled ? '是' : '否'}\n说明：${client.description || '无'}`);
+              if (choice === 'edit') await editOAuthClient(ctx, api, client, scopes);
+              if (choice === 'delete') { if (!await ctx.confirm('删除 OAuth 应用', `${client.name}（${client.client_id}）\n关联授权码与全部令牌将立即失效。此操作不可撤销。`)) return; const result = await api(`/api/admin/oauth-clients/${encodeURIComponent(client.client_id)}`, { method: 'DELETE' }); ctx.notify(`OAuth 应用已删除；${result.revokedTokens || 0} 个令牌已失效。`); await ctx.refresh(); }
+              if (choice === 'rotate') { if (!await ctx.confirm('轮换客户端密钥', `${client.name}\n旧密钥及关联令牌将立即失效，新密钥只显示一次。`)) return; const result = await api(`/api/admin/oauth-clients/${encodeURIComponent(client.client_id)}/rotate-secret`, { method: 'POST', body: {} }); await ctx.show('客户端密钥（仅显示一次）', `${result.warning || '请立即安全保存此密钥。'}\n\n${result.client_secret || ''}\n\n已失效令牌：${result.revokedTokens || 0}`); await ctx.refresh(); }
+            },
+          };
+        };
         return { sections: [
-          { title: 'OAuth 客户端', description: `${clients.length} 个客户端 · ${array(payload && payload.scopes).length} 种可分配 scope`, rows: clients.map(client => ({ label: display(client.name, client.client_id, client.type === 'confidential' ? 'Confidential' : 'Public', client.enabled ? '启用' : '停用'), detail: display(`Scopes：${array(client.scopes).join(', ') || '默认'}`, `重定向 URI：${array(client.redirect_uris).join(', ') || '无'}`, client.has_secret ? `Secret 已配置 (${client.secret_hint || '隐藏'})` : '无 Secret', client.builtin ? '内置' : '自定义'), run: async ctx => await ctx.show(`OAuth 客户端 · ${client.name}`, JSON.stringify(client, null, 2)) })) },
-          { title: '可分配权限', rows: array(payload && payload.scopes).map(scope => ({ label: scope.scope, detail: scope.description })) },
-        ], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+          { title: 'OAuth 应用', description: `${clients.length} 个客户端 · ${scopes.length} 种可分配权限`, columns: [{ key: 'name', label: '应用' }, { key: 'type', label: '类型' }, { key: 'scopes', label: '权限 / 回调' }, { key: 'secret', label: '客户端密钥' }, { key: 'status', label: '状态' }, { key: 'actions', label: '操作' }], rows: clients.map(client => ({ ...renderClient(client), cells: { name: display(client.name, client.client_id), type: `${client.type === 'confidential' ? '机密客户端' : '公共客户端'} · ${({ builtin: '内置', config: '配置文件', database: '数据库' })[client.source] || '未知来源'}`, scopes: `${array(client.scopes).join(', ') || '无'} · ${client.allow_loopback_any_path ? '任意回环路径' : `${array(client.redirect_uris).length} 个回调`}`, secret: client.has_secret ? `已设置 ${client.secret_hint || ''}…` : '不使用', status: client.enabled ? '启用' : '停用', actions: client.editable ? '管理' : '只读' } })) },
+          { title: '可分配权限', rows: scopes.map(scope => ({ label: scope.scope, detail: scope.description })) },
+        ], actions: [
+          { label: '新建 OAuth 应用', toolbar: true, run: ctx => editOAuthClient(ctx, api, null, scopes) },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
       },
     }),
     adminOnly({

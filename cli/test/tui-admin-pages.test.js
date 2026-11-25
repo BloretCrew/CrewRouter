@@ -34,6 +34,36 @@ test('admin user edits confirm before sending profile and quota fields', async (
   assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
 });
 
+test('admin OAuth clients mirror web columns and support scoped client lifecycle actions', async () => {
+  const calls = [];
+  const scopeCatalog = [{ scope: 'gateway:invoke', description: '通过网关调用模型接口' }, { scope: 'events:report', description: '仅向 CrewRouter 上报客户端使用事件' }];
+  const clients = [{ client_id: 'custom-app', name: 'Custom App', type: 'confidential', source: 'database', editable: true, enabled: true, scopes: ['gateway:invoke'], redirect_uris: ['https://app.example/callback'], has_secret: true, secret_hint: 'abc123', description: 'Internal' }, { client_id: 'builtin-cli', name: 'Built-in CLI', type: 'public', source: 'builtin', editable: false, enabled: true, scopes: ['gateway:invoke'], redirect_uris: ['http://127.0.0.1/callback'], has_secret: false }];
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/admin/oauth-clients') return { clients, scopes: scopeCatalog };
+    if (path === '/api/admin/oauth-clients/custom-app') return { client: clients[0], revokedTokens: 0 };
+    return {};
+  };
+  const data = await pageById('admin-oauth-clients').load(api);
+  assert.deepEqual(data.sections[0].columns.map(column => column.label), ['应用', '类型', '权限 / 回调', '客户端密钥', '状态', '操作']);
+  const builtInOptions = [];
+  await data.sections[0].rows[1].run({ choose: async (_title, options) => { builtInOptions.push(...options); return 'detail'; }, show: async () => {} });
+  assert.deepEqual(builtInOptions.map(option => option.value), ['detail']);
+  const choices = ['events:report', '__done__'];
+  const formData = { name: 'New Client', clientId: '', type: 'public', redirects: 'https://client.example/cb', allowLoopbackAnyPath: false, description: '', enabled: true };
+  await data.actions.find(action => action.label === '新建 OAuth 应用').run({
+    choose: async () => choices.shift(),
+    form: async () => formData,
+    confirm: async () => true,
+    show: async (_title, content) => { assert.match(content, /仅显示一次/); },
+    notify() {}, refresh: async () => {},
+  });
+  const create = calls.find(call => call.path === '/api/admin/oauth-clients' && call.options.method === 'POST');
+  assert.deepEqual(create.options.body.scopes, ['gateway:invoke', 'events:report']);
+  assert.deepEqual(create.options.body.redirectUris, ['https://client.example/cb']);
+  assert.equal(create.options.body.type, 'public');
+});
+
 test('admin retention page mirrors web thresholds, validates saves and runs preview tasks', async () => {
   const calls = [];
   const config = { compress_days: 30, compress_size_gb: 10, purge_days: 90, purge_size_gb: 20, provider_quota_days: 60, agg_enabled: true };
