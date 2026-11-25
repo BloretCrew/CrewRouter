@@ -1451,19 +1451,69 @@ function createAdminPages(runtime) {
       },
     }),
     adminOnly({
-      id: 'admin-popups', label: '弹窗通知', description: '已发布弹窗的只读状态与内容。TUI 不会修改或重置用户已读状态。',
+      id: 'admin-popups', label: '弹窗通知', description: '管理用户打开控制台时展示的一次性弹窗。',
       async load(api) {
         const data = await api('/api/admin/popup-notices');
         const items = array(data && data.items);
         const rows = items.map(item => ({
-          label: display(item.title, item.enabled ? '启用' : '停用', `${item.seenCount || 0} 人已读`, formatTime(item.updatedAt || item.createdAt)),
-          detail: `关闭按钮：${item.closeText || '知道了'} · ${String(item.body || '').replace(/\\s+/g, ' ').slice(0, 120)}`,
+          label: `${item.title || '未命名通知'} · ${item.enabled ? '已启用' : '已停用'}`,
+          cells: { title: item.title || '未命名通知', status: item.enabled ? '已启用' : '已停用', seen: `${Number(item.seenCount || 0).toLocaleString()} 人已读`, close: item.closeText || '知道了', updated: formatTime(item.updatedAt || item.createdAt), actions: 'Enter 管理' },
+          detail: String(item.body || '').replace(/\\s+/g, ' ').slice(0, 160) || '无正文',
           run: async ctx => {
-            const detail = `状态：${item.enabled ? '启用' : '停用'}\n已读人数：${item.seenCount || 0}\n创建：${formatTime(item.createdAt)}\n更新：${formatTime(item.updatedAt)}\n关闭按钮：${item.closeText || '知道了'}\n\n${item.body || ''}`;
-            await ctx.show(`弹窗通知 · ${item.title}`, detail);
+            const choice = await ctx.choose(`弹窗通知 · ${item.title || item.id}`, [
+              { label: '预览通知', value: 'preview' }, { label: '编辑通知', value: 'edit' },
+              { label: item.enabled ? '停用通知' : '启用通知', value: 'toggle' }, { label: '重置已读记录', value: 'reset' }, { label: '删除通知', value: 'delete' },
+            ]);
+            if (!choice) return;
+            if (choice === 'preview') { await ctx.show(`弹窗预览 · ${item.title}`, `${item.body || '（无正文）'}\n\n关闭按钮：${item.closeText || '知道了'}\n当前：${item.enabled ? '已启用' : '已停用'} · ${Number(item.seenCount || 0)} 人已读`); return; }
+            if (choice === 'edit') {
+              const values = await ctx.form('编辑弹窗通知', [
+                { name: 'title', label: '标题（必填，最多 200 字符）', value: item.title || '' },
+                { name: 'body', label: '正文（最多 4000 字符）', value: item.body || '' },
+                { name: 'closeText', label: '关闭按钮文字（最多 40 字符）', value: item.closeText || '知道了' },
+                { name: 'enabled', label: '启用通知', type: 'boolean', value: item.enabled === true },
+              ]);
+              if (!values) return;
+              if (!String(values.title || '').trim() || [...String(values.title)].length > 200 || [...String(values.body || '')].length > 4000 || [...String(values.closeText || '')].length > 40) { await ctx.show('弹窗通知内容无效', '标题必填且最多 200 字符；正文最多 4000 字符；关闭按钮文字最多 40 字符。'); return; }
+              if (!await ctx.confirm('保存弹窗通知', `${values.title.trim()}\n状态：${values.enabled ? '启用' : '停用'}\n修改正文不会自动重置用户的已读记录。`)) return;
+              await api(`/api/admin/popup-notices/${encodeURIComponent(item.id)}`, { method: 'PUT', body: { title: values.title.trim(), body: String(values.body || '').trim(), closeText: String(values.closeText || '').trim(), enabled: values.enabled === true } });
+              ctx.notify('弹窗通知已更新。'); await ctx.refresh(); return;
+            }
+            if (choice === 'toggle') {
+              const enabled = item.enabled !== true;
+              if (!await ctx.confirm(enabled ? '启用弹窗通知' : '停用弹窗通知', `${item.title}\n${enabled ? '启用后将向尚未读过的用户展示。' : '停用后用户将不再看到此通知。'}`)) return;
+              await api(`/api/admin/popup-notices/${encodeURIComponent(item.id)}/enabled`, { method: 'PUT', body: { enabled } });
+              ctx.notify(`弹窗通知已${enabled ? '启用' : '停用'}。`); await ctx.refresh(); return;
+            }
+            if (choice === 'reset') {
+              if (!await ctx.confirm('重置已读记录', `将清除「${item.title}」的 ${Number(item.seenCount || 0)} 条已读记录；已启用的通知会再次展示给这些用户。`)) return;
+              const result = await api(`/api/admin/popup-notices/${encodeURIComponent(item.id)}/reset`, { method: 'POST' });
+              ctx.notify(`已重置已读记录${result.cleared != null ? `：${result.cleared} 人` : ''}。`); await ctx.refresh(); return;
+            }
+            if (choice === 'delete') {
+              if (!await ctx.confirm('删除弹窗通知', `确定删除「${item.title}」？${Number(item.seenCount || 0)} 条已读记录会一并清除，此操作不可撤销。`)) return;
+              await api(`/api/admin/popup-notices/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+              ctx.notify('弹窗通知及已读记录已删除。'); await ctx.refresh();
+            }
           },
         }));
-        return { sections: [{ title: '弹窗通知', description: `${items.length} 条通知`, rows: rows.length ? rows : [{ label: '暂无弹窗通知。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+        return { sections: [{ title: '弹窗通知', tableMinWidth: 100, description: `${items.length} 条通知 · 用户打开控制台时显示一次，支持预览、启停、重置已读和删除。`, columns: [
+          { key: 'title', label: '标题', ratio: 0.27 }, { key: 'status', label: '状态', ratio: 0.12 }, { key: 'seen', label: '已读人数', ratio: 0.14 },
+          { key: 'close', label: '关闭按钮', ratio: 0.14 }, { key: 'updated', label: '更新时间', ratio: 0.2 }, { key: 'actions', label: '操作', ratio: 0.13 },
+        ], rows: rows.length ? rows : [{ label: '暂无弹窗通知。' }] }], actions: [
+          { label: '新建弹窗通知', toolbar: true, run: async ctx => {
+            const values = await ctx.form('新建弹窗通知', [
+              { name: 'title', label: '标题（必填，最多 200 字符）' }, { name: 'body', label: '正文（最多 4000 字符）' },
+              { name: 'closeText', label: '关闭按钮文字（最多 40 字符）', value: '知道了' }, { name: 'enabled', label: '立即启用', type: 'boolean', value: true },
+            ]);
+            if (!values) return;
+            if (!String(values.title || '').trim() || [...String(values.title)].length > 200 || [...String(values.body || '')].length > 4000 || [...String(values.closeText || '')].length > 40) { await ctx.show('弹窗通知内容无效', '标题必填且最多 200 字符；正文最多 4000 字符；关闭按钮文字最多 40 字符。'); return; }
+            if (!await ctx.confirm('创建弹窗通知', `${values.title.trim()}\n状态：${values.enabled ? '启用' : '停用'}\n启用时会向尚未读过的用户展示。`)) return;
+            await api('/api/admin/popup-notices', { method: 'POST', body: { title: values.title.trim(), body: String(values.body || '').trim(), closeText: String(values.closeText || '').trim(), enabled: values.enabled === true } });
+            ctx.notify('弹窗通知已创建。'); await ctx.refresh();
+          } },
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ] };
       },
     }),
     adminOnly({

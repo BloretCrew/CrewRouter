@@ -394,13 +394,36 @@ test('admin error details use readable basic fields and separate original respon
   assert.match(body, /"type": "timeout"/);
 });
 
-test('admin popup notices are read-only and route to the actual list endpoint', async () => {
+test('admin popup notices mirror web fields and confirmed lifecycle operations', async () => {
   const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [{ id: 2, title: 'Maintenance', body: 'Service notice', closeText: 'OK', enabled: true, seenCount: 5, createdAt: '2026-11-01' }] }; };
-  const data = await pageById('admin-popups').load(api);
+  const notice = { id: 2, title: 'Maintenance', body: 'Service notice', closeText: 'OK', enabled: true, seenCount: 5, createdAt: '2026-11-01', updatedAt: '2026-11-02' };
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/popup-notices') return { items: [notice] }; if (path.endsWith('/reset')) return { success: true, cleared: 5 }; return { success: true }; };
+  const page = pageById('admin-popups');
+  const data = await page.load(api);
   assert.equal(calls[0].path, '/api/admin/popup-notices');
-  assert.ok(data.sections[0].rows[0].label.includes('Maintenance'));
-  assert.ok(!data.actions.some(action => /删除|创建|重置|启用|停用/.test(action.label)));
+  assert.deepEqual(data.sections[0].columns.map(column => column.label), ['标题', '状态', '已读人数', '关闭按钮', '更新时间', '操作']);
+  assert.deepEqual(data.sections[0].rows[0].cells, { title: 'Maintenance', status: '已启用', seen: '5 人已读', close: 'OK', updated: data.sections[0].rows[0].cells.updated, actions: 'Enter 管理' });
+  assert.ok(data.actions.some(action => action.label === '新建弹窗通知'));
+  const row = data.sections[0].rows[0];
+  const choices = [];
+  await row.run({ choose: async (_title, options) => { choices.push(...options); return 'preview'; }, show: async (_title, body) => { assert.match(body, /Service notice/); assert.match(body, /5 人已读/); } });
+  assert.deepEqual(choices.map(option => option.value), ['preview', 'edit', 'toggle', 'reset', 'delete']);
+
+  let fields;
+  await row.run({ choose: async () => 'edit', form: async (_title, values) => { fields = values; return { title: 'Updated', body: 'New body', closeText: 'Done', enabled: true }; }, confirm: async () => false });
+  assert.deepEqual(fields.map(field => field.name), ['title', 'body', 'closeText', 'enabled']);
+  assert.equal(calls.some(call => call.options.method === 'PUT' && call.path === '/api/admin/popup-notices/2'), false);
+  await row.run({ choose: async () => 'edit', form: async () => ({ title: 'Updated', body: 'New body', closeText: 'Done', enabled: false }), confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.deepEqual(calls.find(call => call.options.method === 'PUT' && call.path === '/api/admin/popup-notices/2').options.body, { title: 'Updated', body: 'New body', closeText: 'Done', enabled: false });
+
+  let resetConfirmed = false;
+  await row.run({ choose: async () => 'reset', confirm: async (_title, message) => { resetConfirmed = true; assert.match(message, /5 条已读记录/); return false; } });
+  assert.equal(resetConfirmed, true);
+  assert.equal(calls.some(call => call.path.endsWith('/reset')), false);
+  let deleteConfirmed = false;
+  await row.run({ choose: async () => 'delete', confirm: async (_title, message) => { deleteConfirmed = true; assert.match(message, /不可撤销/); return false; } });
+  assert.equal(deleteConfirmed, true);
+  assert.equal(calls.some(call => call.options.method === 'DELETE'), false);
 });
 
 test('admin invite page renders readable rows, confirms revoke and creates a one-time link with web payload', async () => {
