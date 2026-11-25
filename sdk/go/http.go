@@ -29,7 +29,7 @@ const (
 	defaultManagementTimeout = 30 * time.Second
 	defaultGatewayTimeout    = 600 * time.Second
 	defaultStreamIdleTimeout = 120 * time.Second
-	defaultUserAgent         = "crewrouter-sdk-go/27.0.0-beta.1"
+	defaultUserAgent         = "crewrouter-sdk-go/27.0.0-beta.2"
 )
 
 // Response is a parsed CrewRouter response. Data holds the raw body unless

@@ -10,7 +10,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'ut
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 
 test('beta product and kernel versions agree', () => {
-  assert.equal(manifest.version, '27.0.0-beta.1');
+  assert.equal(manifest.version, '27.0.0-beta.2');
   assert.equal(lock.version, manifest.version);
   assert.equal(lock.packages[''].version, manifest.version);
 });

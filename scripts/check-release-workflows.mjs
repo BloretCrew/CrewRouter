@@ -14,12 +14,25 @@ for (const file of files) {
   if (!doc || typeof doc !== 'object' || !doc.jobs) throw new Error(`${file} did not parse into jobs`);
 }
 const beta = parse(await readFile(files[2], 'utf8'));
-if (JSON.stringify(beta.on.push.tags) !== JSON.stringify(['v27.0.0-beta.1'])) throw new Error('beta workflow must only publish the explicitly versioned candidate tag');
+if (JSON.stringify(beta.on.push.tags) !== JSON.stringify(['v27.0.0-beta.2'])) throw new Error('beta workflow must only publish the explicitly versioned candidate tag');
 const manualDryRun = beta.jobs.desktop.if?.includes('inputs.dry_run') && beta.jobs['npm-beta-candidate'].if?.includes('inputs.dry_run');
 if (!manualDryRun || beta.jobs['npm-beta-candidate'].needs.join(',') !== 'gate,server,desktop') throw new Error('manual dry-run must build server, desktop and npm candidate assets from one SHA');
 const prereleaseDownloadNames = beta.jobs['github-prerelease'].steps.filter(step => step.uses === 'actions/download-artifact@v4').map(step => step.with?.pattern);
 if (JSON.stringify(prereleaseDownloadNames) !== JSON.stringify(['beta-server-*', 'beta-crewrouter-desktop-*'])) throw new Error('GitHub release must download only server and Desktop assets');
-if (!beta.jobs['gate'].steps.some(step => step.name === 'Validate beta tag and all npm manifests' && step.run?.includes('Publishing requires dispatch from') && step.run?.includes('git rev-parse'))) throw new Error('manual publish must require the checked-out commit to match the release tag');
+const versionGate = beta.jobs['gate'].steps.find(step => step.name === 'Validate beta tag and all npm manifests');
+for (const manifest of ['package.json', 'package-lock.json', 'CrewRouter-Desktop/package.json', 'CrewRouter-Desktop/package-lock.json', 'CrewRouter-Desktop/server-staging/package.json', 'CrewRouter-Desktop/server-staging/package-lock.json', 'sdk/typescript/package.json', 'sdk/typescript/package-lock.json', 'cli/npm/package.json']) {
+  if (!versionGate?.run?.includes(`'${manifest}'`)) throw new Error(`Beta version gate omits ${manifest}`);
+}
+if (!versionGate?.run?.includes('Publishing requires dispatch from') || !versionGate.run.includes('git rev-parse')) throw new Error('manual publish must require the checked-out commit to match the release tag');
+if (!versionGate.run.includes("sdk/python/pyproject.toml") || !versionGate.run.includes("replace('-beta.', 'b')")) throw new Error('Beta version gate must validate Python PEP 440 version');
+const betaGoModule = await readFile('sdk/go/go.mod', 'utf8');
+const betaGoClient = await readFile('sdk/go/http.go', 'utf8');
+const betaPythonClient = await readFile('sdk/python/src/crewrouter/_http.py', 'utf8');
+const betaPythonInit = await readFile('sdk/python/src/crewrouter/__init__.py', 'utf8');
+const betaNodeClient = await readFile('sdk/typescript/src/http.ts', 'utf8');
+if (!betaGoModule.includes('27.0.0-beta.2') || !betaGoClient.includes('crewrouter-sdk-go/27.0.0-beta.2') || !betaPythonClient.includes('crewrouter-sdk-python/27.0.0-beta.2') || !betaPythonInit.includes('__version__ = "27.0.0b2"') || !betaNodeClient.includes('crewrouter-sdk-node/27.0.0-beta.2')) throw new Error('Beta SDK module and user-agent versions are not synchronized');
+if (beta.jobs['npm-beta-publish'].steps.find(step => step.name === 'Confirm npm package ownership and publish candidate packages')?.run?.includes('--tag latest')) throw new Error('Beta npm publication must not move the latest dist-tag');
+if (!versionGate?.env?.DISPATCH_VERSION?.endsWith('-beta.2') || beta.env?.PRODUCT_VERSION !== versionGate.env?.DISPATCH_VERSION) throw new Error('Beta release workflow version constants disagree');
 if (!beta.jobs['gate'].steps.some(step => step.name === 'Verify npm beta names are unclaimed' && step.if?.includes("github.event_name == 'push'"))) throw new Error('npm package ownership must be checked only on tag publish');
 const desktopWorkflow = parse(await readFile(files[1], 'utf8'));
 for (const event of ['push', 'pull_request']) {
@@ -57,7 +70,8 @@ if (beta.jobs['github-prerelease'].needs.join(',') !== 'gate,server,desktop,npm-
 const npmPublish = beta.jobs['npm-beta-publish'];
 if (!npmPublish || !npmPublish.needs.includes('npm-beta-candidate') || !npmPublish.permissions?.['id-token']) throw new Error('manual npm publish must use the separately approved candidate artifact and OIDC permissions');
 if (beta.jobs['npm-beta-publish'].steps.find(step => step.uses === 'actions/download-artifact@v4')?.with?.name !== 'crewrouter-27-beta-npm-candidates-${{ github.sha }}') throw new Error('npm publish must download candidate tarballs from this workflow run');
-if (beta.jobs['github-release-manual'].needs.includes('npm-beta-publish') !== true) throw new Error('manual GitHub release must await npm publish if publish was explicitly selected');
+if (beta.jobs['github-release-manual']) throw new Error('GitHub pre-release must have a single tag-triggered creator; do not duplicate it in manual publish');
+if (!beta.jobs.server.if?.includes('inputs.dry_run')) throw new Error('Manual beta dry-run must build the server asset as well as Desktop and npm candidates');
 const electronGate = beta.jobs.gate.steps.find(step => step.name === 'Desktop behavior, sandboxed launcher and syntax');
 if (!electronGate?.run?.includes('chown root node_modules/electron/dist/chrome-sandbox') || !electronGate.run.includes('chmod 4755 node_modules/electron/dist/chrome-sandbox') || electronGate.run.includes('--no-sandbox')) throw new Error('Electron launcher gate must retain sandbox and configure the isolated SUID helper');
 const sdkOperations = JSON.parse(await readFile('sdk/contract/operations.json', 'utf8')).operations.filter(operation => operation.sdkStatus !== 'excluded');

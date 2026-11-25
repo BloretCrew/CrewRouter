@@ -111,12 +111,12 @@ resp = client.chat.completions.create(
 
 | 形态 | 包 | 状态 |
 |------|-----|------|
-| Node/TypeScript SDK | npm `@bloret-crew/crewrouter-sdk@beta` | 27.0 Beta 已发布 |
-| Python 客户端 | PyPI | 27.0 Beta 版本待决定与发布 |
-| Go 客户端 | Go module | 27.0 Beta 版本待发布 |
+| Node/TypeScript SDK | npm `@bloret-crew/crewrouter-sdk@beta` | beta.1 已发布；beta.2 candidate |
+| Python 客户端 | PyPI | beta.2 candidate，待发布 |
+| Go 客户端 | Go module | beta.2 candidate，待发布 |
 | 可嵌入服务端 SDK | `crewrouter/embedded` | 预览可用（Node） |
 
-Beta SDK 已发布到 npm `beta` 标签；需要固定版本时可使用 `@bloret-crew/crewrouter-sdk@27.0.0-beta.1`。
+npm `beta` 标签当前仍指向已发布的 beta.1；beta.2 候选通过发布 dry-run 后才会进入该标签。固定已发布版本可使用 `@bloret-crew/crewrouter-sdk@27.0.0-beta.1`。
 
 ### TypeScript SDK 安装（beta）
 

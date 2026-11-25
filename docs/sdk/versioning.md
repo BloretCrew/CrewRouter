@@ -4,9 +4,9 @@
 
 | Package | Current | Tag scheme |
 | --- | --- | --- |
-| `@bloret-crew/crewrouter-sdk` (npm) | 27.0.0-beta.1 | `sdk/typescript/vX.Y.Z` |
-| `crewrouter-sdk` (PyPI) | 27.0.0b1 (repository metadata; registry publication status must be verified per release) | `sdk/python/vX.Y.Z` |
-| Go module | 27.0.0-beta.1 (repository metadata; tag/publication status must be verified per release) | `sdk/go/vX.Y.Z` |
+| `@bloret-crew/crewrouter-sdk` (npm) | 27.0.0-beta.2 candidate | `sdk/typescript/vX.Y.Z` |
+| `crewrouter-sdk` (PyPI) | 27.0.0b2 candidate (registry publication pending) | `sdk/python/vX.Y.Z` |
+| Go module | 27.0.0-beta.2 candidate (tag/publication pending) | `sdk/go/vX.Y.Z` |
 | `crewrouter/embedded` | limited preview; excluded from client SDK stable commitment | root `vX.Y.Z` |
 
 Go requires the module tag to be prefixed with the module subdirectory. For
@@ -28,8 +28,9 @@ contract version. The Node SDK exports `CONTRACT_VERSION`.
 
 ## Compatibility policy
 
-- The packages are currently pre-release: npm `27.0.0-beta.1`, Python
-  `27.0.0b1`, and Go `27.0.0-beta.1`. Treat their convenience APIs and operation
+- The packages are currently pre-release candidates: npm `27.0.0-beta.2`, Python
+  `27.0.0b2`, and Go `27.0.0-beta.2`. beta.1 remains the published version until
+  the candidate release workflow completes. Treat their convenience APIs and operation
   catalogs as beta contracts; pin exact versions in production and expect that a
   later beta may require migration.
 - A stable `1.0` release requires a published support matrix and compatibility

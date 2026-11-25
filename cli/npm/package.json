@@ -1,6 +1,6 @@
 {
   "name": "@bloret-crew/crewrouter",
-  "version": "27.0.0-beta.1",
+  "version": "27.0.0-beta.2",
   "private": false,
   "description": "CrewRouter CLI for managing remote instances or starting a local server",
   "license": "GPL-3.0",
