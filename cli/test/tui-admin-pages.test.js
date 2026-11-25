@@ -10,19 +10,18 @@ const { buildPages } = require('../tui/pages');
 const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
 const pageById = id => buildPages(runtime).find(page => page.id === id);
 
-test('user audit log filters send action/resource_type and page size', async () => {
+test('user audit log uses the web action-category filter and page size', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { items: [], total: 0, page: 1 }; };
   const page = pageById('audit-logs');
-  runtime.userAuditAction = 'provider';
-  runtime.userAuditResourceType = 'team';
+  runtime.userAuditResourceType = 'provider';
   await page.load(api);
-  assert.deepEqual(calls.at(-1).options.query, { page: 1, limit: 50, action: 'provider', resource_type: 'team' });
+  assert.deepEqual(calls.at(-1).options.query, { page: 1, limit: 50, resource_type: 'provider' });
+  assert.equal(Object.hasOwn(calls.at(-1).options.query, 'action'), false);
 });
 
 test('user audit log uses web resource filter and renders readable event details with bounded pagination', async () => {
   const calls = [];
-  runtime.userAuditAction = '';
   runtime.userAuditResourceType = '';
   runtime.userAuditPage = 2;
   const page = pageById('audit-logs');
@@ -32,17 +31,21 @@ test('user audit log uses web resource filter and renders readable event details
   };
   const data = await page.load(api);
   const section = data.sections[0];
-  assert.match(section.description, /第 2\/2 页.*资源：全部资源/);
+  assert.match(section.description, /第 2\/2 页.*操作：全部资源/);
   assert.equal(section.rows[0].label.split(' · ')[1], '创建 API Key');
   for (const value of ['目标：API Key #17', '结果：HTTP 201', '耗时：12 毫秒', 'IP 地址：127.0.0.1', '详细信息：name=Main · enabled=true']) assert.ok(section.rows[0].detail.includes(value));
-  const resourceAction = data.actions.find(action => action.label === '筛选资源类型');
-  await resourceAction.run({ choose: async (_title, options) => { assert.ok(options.some(option => option.value === 'auth')); return 'api_key'; }, refresh: async () => {} });
+  const filterAction = data.actions.find(action => action.label === '筛选操作');
+  await filterAction.run({ choose: async (_title, options) => { assert.deepEqual(options.map(option => option.label), ['全部操作', 'API Key', 'Co-Key', '用户', '认证', '供应商', '模型']); return 'api_key'; }, refresh: async () => {} });
   assert.equal(runtime.userAuditResourceType, 'api_key');
   assert.equal(runtime.userAuditPage, 1);
   assert.equal(data.actions.find(action => action.label === '上一页').disabled, false);
   assert.equal(data.actions.find(action => action.label === '下一页').disabled, true);
-  assert.equal(runtime.userAuditPage, 1, 'choosing a resource filter restarts pagination at page one');
+  assert.equal(runtime.userAuditPage, 1, 'choosing a web action category restarts pagination at page one');
   assert.equal(runtime.userAuditResourceType, 'api_key');
+  const lastPage = await page.load(async (_path, options) => { assert.equal(options.query.page, 1); return { page: 1, limit: 50, total: 0, items: [] }; });
+  assert.equal(lastPage.actions.find(action => action.label === '上一页').disabled, true);
+  assert.equal(lastPage.actions.find(action => action.label === '下一页').disabled, true);
+  assert.equal(lastPage.sections[0].rows[0].label, '暂无操作日志。');
 });
 
 test('admin user list mirrors web summary cards, columns, readable details and bounded pagination', async () => {

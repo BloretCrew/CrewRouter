@@ -192,9 +192,8 @@ function createAdminPages(runtime) {
       id: 'audit-logs', label: '操作日志', description: '查看当前账号的操作记录。',
       async load(api) {
         const page = runtime.userAuditPage || 1;
-        const action = runtime.userAuditAction || '';
         const resourceType = runtime.userAuditResourceType || '';
-        const data = await api('/api/user/audit-logs', { query: { page, limit: 50, action, resource_type: resourceType } });
+        const data = await api('/api/user/audit-logs', { query: { page, limit: 50, resource_type: resourceType } });
         const items = array(data && data.items);
         const total = Number(data.total || 0);
         const currentPage = Number(data.page || page);
@@ -212,10 +211,9 @@ function createAdminPages(runtime) {
           ].filter(Boolean);
           return { label: display(formatTime(item.created_at), actionLabel(item.action)), detail: detailLines.join('\n') || '没有额外说明。' };
         });
-        const filters = `资源：${resourceLabel(resourceType)} · 操作：${action ? actionLabel(action) : '全部操作'}`;
+        const filters = `操作：${resourceLabel(resourceType)}`;
         return { sections: [{ title: '操作日志', description: `第 ${currentPage}/${totalPages} 页 · 共 ${total} 条 · ${filters}`, rows: rows.length ? rows : [{ label: '暂无操作日志。' }] }], actions: [
-          { label: '筛选资源类型', toolbar: true, run: async ctx => { const value = await ctx.choose('资源类型', [['', '全部资源'], ['api_key', 'API Key'], ['auth', '认证'], ['user', '账户'], ['provider', '供应商'], ['model', '模型'], ['team', '团队']].map(([id, label]) => ({ label, value: id })), { description: `当前：${resourceLabel(resourceType)}` }); if (value !== null) { runtime.userAuditResourceType = value; runtime.userAuditPage = 1; await ctx.refresh(); } } },
-          { label: '筛选操作类型', run: async ctx => { const commonActions = [...new Set(items.map(item => item.action).filter(Boolean))]; const options = [{ label: '全部操作', value: '' }, ...commonActions.map(value => ({ label: actionLabel(value), value }))]; const value = await ctx.choose('操作类型', options, { description: `当前：${action ? actionLabel(action) : '全部操作'}；选项来自当前页记录。` }); if (value !== null) { runtime.userAuditAction = value; runtime.userAuditPage = 1; await ctx.refresh(); } } },
+          { label: '筛选操作', toolbar: true, run: async ctx => { const options = [['', '全部操作'], ['api_key', 'API Key'], ['cokey', 'Co-Key'], ['user', '用户'], ['auth', '认证'], ['provider', '供应商'], ['model', '模型']]; const value = await ctx.choose('操作类型', options.map(([id, label]) => ({ label, value: id })), { description: `当前：${resourceLabel(resourceType)}` }); if (value !== null) { runtime.userAuditResourceType = value; runtime.userAuditPage = 1; await ctx.refresh(); } } },
           { label: '上一页', toolbar: true, disabled: currentPage <= 1, run: async ctx => { runtime.userAuditPage = Math.max(1, currentPage - 1); await ctx.refresh(); } },
           { label: '下一页', toolbar: true, disabled: currentPage >= totalPages, run: async ctx => { runtime.userAuditPage = Math.min(totalPages, currentPage + 1); await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
