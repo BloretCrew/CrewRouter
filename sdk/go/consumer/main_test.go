@@ -95,6 +95,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(keyModels.Queue) != 1 || keyModels.Queue[0].SortOrder != 0 || len(keyModels.Models) != 1 {
 		t.Fatalf("unexpected API key models payload: %#v", keyModels)
 	}
+	var modelsUpdate crewrouter.ApiKeyModelsUpdateResponse
+	if err := json.Unmarshal([]byte(`{"success":true,"modelIds":["m1"],"current_model_id":"m1"}`), &modelsUpdate); err != nil {
+		t.Fatalf("decode API key models update: %v", err)
+	}
+	if !modelsUpdate.Success || modelsUpdate.CurrentModelID == nil || *modelsUpdate.CurrentModelID != "m1" {
+		t.Fatalf("unexpected API key models update payload: %#v", modelsUpdate)
+	}
 
 	var products []crewrouter.UserProduct
 	if err := json.Unmarshal([]byte(`[{"id":1,"name":"Product","description":null,"image_url":null,"link":null,"sort_order":0}]`), &products); err != nil {

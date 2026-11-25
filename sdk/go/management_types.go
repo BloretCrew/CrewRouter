@@ -193,6 +193,13 @@ type ApiKeyModelsResponse struct {
 	Queue  []ApiKeyQueueItem      `json:"queue"`
 }
 
+// ApiKeyModelsUpdateResponse is returned after replacing an API Key model queue.
+type ApiKeyModelsUpdateResponse struct {
+	Success        bool     `json:"success"`
+	ModelIDs       []string `json:"modelIds"`
+	CurrentModelID *string  `json:"current_model_id"`
+}
+
 // ApiKeyAvailableModel is an enabled model available to the owning user's Teams.
 type ApiKeyAvailableModel struct {
 	ID                     string  `json:"id"`

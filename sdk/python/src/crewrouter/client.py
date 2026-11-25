@@ -59,6 +59,12 @@ class ApiKeyModelsResponse(TypedDict):
     queue: list[ApiKeyQueueItem]
 
 
+class ApiKeyModelsUpdateResponse(TypedDict):
+    success: bool
+    modelIds: list[str]
+    current_model_id: Optional[str]
+
+
 class ApiKeyListItem(TypedDict, total=False):
     id: Union[int, str]
     name: str

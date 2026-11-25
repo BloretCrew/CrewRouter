@@ -995,6 +995,32 @@
         ],
         "additionalProperties": true
       },
+      "ApiKeyModelsUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "modelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "current_model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "modelIds",
+          "current_model_id"
+        ],
+        "additionalProperties": true
+      },
       "UserModelListItem": {
         "type": "object",
         "properties": {
@@ -14644,8 +14670,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ApiKeyModelsUpdateResponse"
                 }
               }
             }

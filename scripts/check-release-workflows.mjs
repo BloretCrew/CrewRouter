@@ -82,6 +82,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const currentModel = openapi.paths['/api/user/current-model']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const usageLogs = openapi.paths['/api/user/usage-logs']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const apiKeyModels = openapi.paths['/api/user/api-keys/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const apiKeyModelsUpdate = openapi.paths['/api/user/api-keys/{id}/models']?.put?.responses?.[200]?.content?.['application/json']?.schema;
   if (apiKeyList?.type !== 'array' || apiKeyList.items?.$ref !== '#/components/schemas/ApiKeyListItem') throw new Error(`${openapiPath} must define API key list responses`);
   if (!openapi.components.schemas.ApiKeyListItem?.properties?.key_value?.type?.includes('null')) throw new Error(`${openapiPath} must document nullable/redacted API keys`);
   if (usage?.type !== 'array' || usage.items?.$ref !== '#/components/schemas/DailyUsageItem') throw new Error(`${openapiPath} must define daily usage responses`);
@@ -115,6 +116,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (usageLogs?.$ref !== '#/components/schemas/UserUsageLogsResponse' || openapi.components.schemas.UserUsageLogsResponse?.properties?.logs?.items?.$ref !== '#/components/schemas/UserUsageLog') throw new Error(`${openapiPath} must define paginated usage-log responses`);
   if (apiKeyModels?.$ref !== '#/components/schemas/ApiKeyModelsResponse' || openapi.components.schemas.ApiKeyModelsResponse?.properties?.queue?.items?.$ref !== '#/components/schemas/ApiKeyQueueItem') throw new Error(`${openapiPath} must define API Key model queue responses`);
   if (!openapi.components.schemas.ApiKeyQueueItem?.properties?.sort_order || !openapi.components.schemas.ApiKeyModelsResponse?.properties?.models?.items?.$ref?.endsWith('/ApiKeyAvailableModel')) throw new Error(`${openapiPath} must define API Key available models and ordered queue fields`);
+  if (apiKeyModelsUpdate?.$ref !== '#/components/schemas/ApiKeyModelsUpdateResponse') throw new Error(`${openapiPath} must define model queue update responses`);
 }
 const embeddedSdkDocs = await readFile('docs/sdk/embedded-server.md', 'utf8');
 for (const required of ['limited preview', 'GA readiness gate', 'release owner approves', 'externally owned pools are never closed']) {

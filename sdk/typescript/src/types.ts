@@ -123,6 +123,12 @@ export interface ApiKeyModelsResponse {
   queue: ApiKeyModelQueueItem[];
 }
 
+export interface ApiKeyModelsUpdateResponse {
+  success: true;
+  modelIds: string[];
+  current_model_id: string | null;
+}
+
 export interface ApiKeyListItem {
   id: number | string;
   name: string;

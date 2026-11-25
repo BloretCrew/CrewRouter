@@ -120,7 +120,9 @@ created, err := client.Keys.Create(ctx, map[string]any{
     "expiresIn":   720,
     "permissions": []string{"gateway.chat", "gateway.messages"},
 })
-client.Keys.SetModels(ctx, id, map[string]any{"models": []string{"claude-fable-5"}})
+modelsUpdated, err := client.Keys.SetModels(ctx, id, map[string]any{"modelIds": []string{"claude-fable-5"}})
+var modelsUpdate crewrouter.ApiKeyModelsUpdateResponse
+if err := modelsUpdated.JSON(&modelsUpdate); err != nil { panic(err) }
 
 ```
 

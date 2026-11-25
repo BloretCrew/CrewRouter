@@ -74,7 +74,7 @@ const created = await client.keys.create({
   permissions: ['gateway.chat', 'gateway.messages'],
 });
 
-await client.keys.setModels(created.data.id, { models: ['claude-fable-5'] });
+const savedModels = await client.keys.setModels(created.data.id, { modelIds: ['claude-fable-5'] }); // ApiKeyModelsUpdateResponse
 const keyUsage = await client.keys.getUsage(created.data.id); // ApiKeyDailyUsageItem[]
 const keyModels = await client.keys.getModels(created.data.id); // ApiKeyModelsResponse
 const membership = await client.keys.getMembers(created.data.id); // ApiKeyMembersResponse

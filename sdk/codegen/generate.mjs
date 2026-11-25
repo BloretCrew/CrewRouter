@@ -493,6 +493,10 @@ function managementSchemas() {
       models: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyAvailableModel' } },
       queue: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyQueueItem' } },
     }, ['models', 'queue']),
+    ApiKeyModelsUpdateResponse: object({
+      success: { const: true }, modelIds: { type: 'array', items: { type: 'string' } },
+      current_model_id: nullableString,
+    }, ['success', 'modelIds', 'current_model_id']),
     UserModelListItem: object({
       id: { type: 'string' }, upstream_model_id: { type: 'string' }, name: { type: 'string' },
       alias: nullableString, provider: { type: 'string' }, provider_name: { type: 'string' },
@@ -590,6 +594,7 @@ function managementResponseSchema(operationId) {
     'user.models.byId.uptime.list': { $ref: '#/components/schemas/ModelUptimeDetailResponse' },
     'user.apiKeys.byId.usage.list': { type: 'array', items: { $ref: '#/components/schemas/ApiKeyDailyUsageItem' } },
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
+    'user.apiKeys.byId.models.update': { $ref: '#/components/schemas/ApiKeyModelsUpdateResponse' },
     'user.keyTags.list': { type: 'array', items: { $ref: '#/components/schemas/UserKeyTag' } },
     'user.keyTags.create': { $ref: '#/components/schemas/UserKeyTag' },
     'user.keyTags.byId.update': { $ref: '#/components/schemas/UserKeyTag' },

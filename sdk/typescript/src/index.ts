@@ -34,6 +34,7 @@ export type {
   ApiKeyModelQueueItem,
   ApiKeyAvailableModel,
   ApiKeyModelsResponse,
+  ApiKeyModelsUpdateResponse,
   ApiKeyListItem,
   ApiKeyDailyUsageItem,
   ApiKeyMember,

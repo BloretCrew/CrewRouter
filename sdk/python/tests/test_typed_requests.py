@@ -7,6 +7,7 @@ from crewrouter import (
     AnthropicMessagesRequest,
     ApiKeyListItem,
     ApiKeyModelsResponse,
+    ApiKeyModelsUpdateResponse,
     ApiKeyAvailableModel,
     ApiKeyModelQueueItem,
     ApiKeyQueueItem,
@@ -140,10 +141,12 @@ class TypedRequestTests(unittest.TestCase):
             "series": "s1", "icon_url": None, "sort_order": 0,
         }
         key_models: ApiKeyModelsResponse = {"models": [available_model], "queue": [queue_item]}
+        key_models_updated: ApiKeyModelsUpdateResponse = {"success": True, "modelIds": ["m1"], "current_model_id": "m1"}
         self.assertEqual(selected_model["id"], "m1")
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")
         product: UserProduct = {"id": 1, "name": "Product", "description": None, "image_url": None, "link": None, "sort_order": 0}
         self.assertEqual(key_models["queue"][0]["sort_order"], 0)
+        self.assertEqual(key_models_updated["current_model_id"], "m1")
         code_balance: UserCodeBalanceItem = {
             "amount": "2.5", "fee_rate": "0.1", "code": "redeem-1",
             "code_amount": "3", "net_amount": "2.2727",

@@ -22,7 +22,7 @@ Requires Python >= 3.9. The only runtime dependency is `httpx`.
 
 ```python
 import os
-from crewrouter import CrewRouter, ApiKeyListItem, DailyUsageItem, UserBalance, UserModelListItem, UserProviderListItem, UserCodeBalanceItem, ProviderTag, ApiKeyMembersResponse
+from crewrouter import CrewRouter, ApiKeyListItem, DailyUsageItem, UserBalance, UserModelListItem, UserProviderListItem, UserCodeBalanceItem, ProviderTag, ApiKeyMembersResponse, ApiKeyModelsUpdateResponse
 
 client = CrewRouter(
     base_url=os.environ["CREWROUTER_BASE_URL"],
@@ -81,7 +81,8 @@ created = client.keys.create({
     "expiresIn": 720,
     "permissions": ["gateway.chat", "gateway.messages"],
 })
-client.keys.set_models(created.data["id"], {"models": ["claude-fable-5"]})
+updated_models = client.keys.set_models(created.data["id"], {"modelIds": ["claude-fable-5"]})
+updated_models_data: ApiKeyModelsUpdateResponse = updated_models.data
 
 ```
 
