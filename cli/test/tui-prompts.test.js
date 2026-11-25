@@ -47,6 +47,32 @@ test('prompt history detail uses readable content, occurrence and source labels 
   assert.doesNotMatch(body, /fingerprint|occurrence_count|recent_refs/);
 });
 
+test('inject prompt edit validates fields and updates content without changing key bindings', async () => {
+  const calls = [];
+  const runtime = makeRuntime();
+  runtime.client.get = async path => path === '/api/user/custom-instructions' ? { items: [], total: 0, page: 1 } : [{ id: 3, name: 'Context', content: 'old body', enabled: true, bound_key_ids: [9] }];
+  const page = buildPages(runtime).find(item => item.id === 'prompts');
+  const writes = [];
+  const ctx = {
+    choose: async (_title, options) => { assert.ok(options.some(option => option.value === 'edit')); return 'edit'; },
+    form: async () => ({ name: '  Updated  ', content: 'new body' }),
+    confirm: async () => true,
+    show: async () => {},
+    notify() {},
+    refresh: async () => {},
+  };
+  const api = async (path, options = {}) => { if (options.method) writes.push({ path, ...options }); else return runtime.client.get(path); };
+  const loaded = await page.load(api);
+  await loaded.sections.find(section => section.title === '注入提示词').rows[0].run({ ...ctx, api, form: async () => ({ name: 'Updated', content: 'new body' }) });
+  assert.deepEqual(writes[0], { path: '/api/user/inject-prompts/3', method: 'PUT', body: { name: 'Updated', content: 'new body' } });
+  assert.equal(writes.some(call => call.path.endsWith('/keys')), false);
+
+  const invalidWrites = [];
+  const invalidPage = await page.load(async path => runtime.client.get(path));
+  await invalidPage.sections.find(section => section.title === '注入提示词').rows[0].run({ ...ctx, form: async () => ({ name: '', content: 'body' }), show: async () => {}, api: async (...args) => invalidWrites.push(args) });
+  assert.equal(invalidWrites.length, 0);
+});
+
 test('injected prompt detail displays its purpose, effective scope and content with labels', async () => {
   const runtime = makeRuntime();
   runtime.client.get = async path => path === '/api/user/custom-instructions' ? { items: [], total: 0, page: 1 } : [{ id: 3, name: 'Context', content: 'Add source attribution.', enabled: true, bound_key_ids: [9], bound_keys: [{ id: 9, name: 'Main' }], created_at: '2026-11-20T00:00:00Z', updated_at: '2026-11-24T00:00:00Z' }];
