@@ -17,16 +17,34 @@ function balancePage(runtime) {
       ]);
       const balance = balanceResult.status === 'fulfilled' ? balanceResult.value || {} : {};
       const codes = codesResult.status === 'fulfilled' ? (Array.isArray(codesResult.value) ? codesResult.value : codesResult.value?.items || []) : [];
+      const codeSection = codesResult.status === 'fulfilled' && codes.length ? {
+        title: '可退款兑换码明细（补充信息）',
+        description: '该明细在网页积分页未单独展示；兑换码仅显示首尾字符，避免泄露完整凭证。',
+        tableMinWidth: 88,
+        columns: [
+          { key: 'code', label: '兑换码（遮掩）', ratio: 0.25 }, { key: 'amount', label: '充值金额', ratio: 0.2 },
+          { key: 'fee', label: '手续费率', ratio: 0.18 }, { key: 'net', label: '可退净额', ratio: 0.22 },
+        ],
+        rows: codes.map(item => {
+          const amount = Number(item.amount || 0);
+          const feeRate = Number(item.fee_rate || 0);
+          const netAmount = item.net_amount == null ? amount / (1 + feeRate) : Number(item.net_amount);
+          const code = String(item.code || '未知兑换码');
+          const masked = code.length > 8 ? `${code.slice(0, 3)}…${code.slice(-3)}` : '已隐藏';
+          return { label: `兑换码 ${masked}`, cells: { code: masked, amount: `${amount.toFixed(4)} 积分`, fee: `${(feeRate * 100).toFixed(2)}%`, net: `${netAmount.toFixed(4)} 积分` } };
+        }),
+      } : null;
       const sections = [{
         title: '当前积分',
         cards: [{ label: '当前积分', value: `${Number(balance.balance || 0).toFixed(0)} 积分`, detail: '可用于支付超出 Team 限额的用量' }],
         rows: [
           ...(balanceResult.status === 'rejected' ? [{ label: `余额读取失败：${balanceResult.reason.message || '未知错误'}` }] : []),
           { label: `可退款余额：${Number(balance.refund_balance || 0).toFixed(4)} 积分`, detail: '兑换码充值余额扣除手续费后的可退金额' },
-          ...(Number(balance.rate_limit_rpm || 0) > 0 ? [{ label: `个人速率限制：每分钟 ${Number(balance.rate_limit_rpm).toLocaleString()} 次请求 · ${formatBigNumber(balance.rate_limit_tpm)} Token` }] : []),
-          ...(codesResult.status === 'rejected' ? [{ label: `兑换码余额读取失败：${codesResult.reason.message || '未知错误'}` }] : codes.length ? [{ label: `兑换码余额：${codes.length} 条充值记录`, detail: '明细请在网页端账户页面查看。' }] : []),
+          ...(Number(balance.rate_limit_rpm || 0) > 0 || Number(balance.rate_limit_tpm || 0) > 0 ? [{ label: '个人请求限额', detail: `${Number(balance.rate_limit_rpm || 0) > 0 ? `每分钟 ${Number(balance.rate_limit_rpm).toLocaleString()} 次请求` : '请求数不限制'} · ${Number(balance.rate_limit_tpm || 0) > 0 ? `每分钟 ${formatBigNumber(balance.rate_limit_tpm)} Token` : 'Token 数不限制'}` }] : []),
+          ...(codesResult.status === 'rejected' ? [{ label: `补充兑换码余额明细读取失败：${codesResult.reason.message || '未知错误'}` }] : []),
         ],
       }];
+      if (codeSection) sections.push(codeSection);
       const group = balance.group;
       const rules = Array.isArray(group?.rules) ? group.rules : [];
       sections.push({

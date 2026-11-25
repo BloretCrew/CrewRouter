@@ -79,9 +79,15 @@ test('user console pages query matching endpoints and expose equivalent controls
   const leaderboard = await pages.get('leaderboard').load(api);
   assert.ok(leaderboard.sections[0].rows[0].label.includes('alice'));
   assert.ok(leaderboard.actions.some(action => action.label === '按缓存命中率排序'));
-  const balance = await pages.get('balance').load(api);
-  assert.deepEqual(balance.sections.map(section => section.title), ['当前积分', 'Team 与限额']);
+  const balance = await pages.get('balance').load(async (path, options) => path === '/api/user/balance' ? { balance: 40, refund_balance: 12.5, rate_limit_rpm: 60, rate_limit_tpm: 1000, group: { name: 'Team A', rules: [{ rule_type: 'requests', rule_value: 100, duration_hours: 24, current: 8 }] } } : [{ code: 'SECRET-CODE-12345', amount: 10, fee_rate: 0.1, net_amount: 9.0909 }]);
+  assert.deepEqual(balance.sections.map(section => section.title), ['当前积分', '可退款兑换码明细（补充信息）', 'Team 与限额']);
   assert.ok(balance.sections[0].cards.some(card => card.label === '当前积分'));
+  assert.match(balance.sections[0].rows.find(row => row.label === '个人请求限额').detail, /60 次请求.*1\.0K Token/);
+  const codeSection = balance.sections[1];
+  assert.deepEqual(codeSection.columns.map(column => column.label), ['兑换码（遮掩）', '充值金额', '手续费率', '可退净额']);
+  assert.deepEqual(codeSection.rows[0].cells, { code: 'SEC…345', amount: '10.0000 积分', fee: '10.00%', net: '9.0909 积分' });
+  assert.doesNotMatch(JSON.stringify(codeSection.rows[0]), /SECRET-CODE/);
+  assert.equal(balance.sections[2].rows.length, 1);
   const audit = await pages.get('audit-logs').load(api);
   assert.ok(audit.sections[0].rows[0].label.includes('API Key'));
   assert.ok(audit.actions.some(action => action.label === '下一页'));
