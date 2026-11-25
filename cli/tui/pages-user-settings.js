@@ -78,6 +78,12 @@ function notificationSettingsPage(runtime) {
             await api('/api/user/notification-settings', { method: 'PUT', body: values });
             ctx.notify('通知设置已保存。'); await ctx.refresh();
           } },
+          { label: '清空所有通知', disabled: notifications.length === 0 || notificationsResult.status === 'rejected', run: async ctx => {
+            if (notificationsResult.status === 'rejected' || notifications.length === 0) return;
+            if (!await ctx.confirm('清空所有通知', `将永久删除当前账号的全部站内通知（网页最多显示 50 条；服务端会清空全部通知）。此操作不可撤销。继续？`)) return;
+            await api('/api/user/notifications', { method: 'DELETE', body: {} });
+            ctx.notify('所有通知已清空。'); await ctx.refresh();
+          } },
           { label: '发送 Bark 测试通知', run: async ctx => {
             if (!await ctx.confirm('发送测试通知', `将向配置的 Bark Endpoint 发送测试消息：${settings.barkEndpoint || 'https://api.day.app'}。继续？`)) return;
             const result = await api('/api/user/notification-settings/test', { method: 'POST', body: {} });

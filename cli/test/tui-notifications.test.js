@@ -22,6 +22,23 @@ test('notification settings never display saved Bark key and require a new key w
   assert.equal(calls.some(call => call.options.method === 'PUT'), false);
 });
 
+test('clear notifications requires confirmation and uses the web clear-all endpoint', async () => {
+  const calls = [];
+  const page = notificationSettingsPage({ client: {} });
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/user/notification-settings') return {};
+    if (path === '/api/user/notifications') return [{ id: 1, title: 'Notice', body: 'Body', read_at: null }];
+    return { success: true };
+  };
+  const data = await page.load(api);
+  const clear = data.actions.find(action => action.label === '清空所有通知');
+  await clear.run({ confirm: async () => false, notify() {}, refresh: async () => {} });
+  assert.equal(calls.some(call => call.options.method === 'DELETE'), false);
+  await clear.run({ confirm: async () => true, notify() {}, refresh: async () => {} });
+  assert.ok(calls.some(call => call.path === '/api/user/notifications' && call.options.method === 'DELETE'));
+});
+
 test('Bark test notification requires confirmation before external request', async () => {
   const calls = [];
   const page = notificationSettingsPage({ client: {} });
