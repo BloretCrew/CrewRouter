@@ -30,6 +30,15 @@ test('session row opens the paginated web message timeline with readable event l
   assert.match(rows[1], /模型回复：第二页模型回复/);
 });
 
+test('session content search reads the web results array and renders matching excerpts', async () => {
+  const runtime = { client: { get: async (path, options = {}) => ({ q: 'workflow', days: 7, totalSessions: 1, results: [{ sessionKey: 'session-search', harness: 'codex', matchCount: 3, firstSeen: '2026-11-20T00:00:00Z', lastSeen: '2026-11-21T00:00:00Z', previews: [{ ts: '2026-11-21T00:00:00Z', excerpt: 'The workflow finished successfully.' }] }] }) }, cfg: { tui: { days: 7 } }, profileName: 'test', sessionsSearch: 'workflow', sessionsDays: 7 };
+  const page = buildPages(runtime).find(item => item.id === 'sessions');
+  const data = await page.load();
+  assert.equal(data.sections[0].description, '最近 7 天 · 搜索“workflow” · 共 1 个匹配会话');
+  assert.equal(data.sections[0].rows[0].label, 'session-search · Codex · 3 条匹配消息');
+  assert.match(data.sections[0].rows[0].detail, /The workflow finished successfully/);
+});
+
 test('session row opens cached summary through the web read endpoint', async () => {
   const runtime = { client: { get: async path => ({ summary: 'cached summary', createdAt: '2026-11-20T00:00:00Z', path }) }, cfg: { tui: { days: 30 } }, profileName: 'test' };
   const page = buildPages(runtime).find(item => item.id === 'sessions');

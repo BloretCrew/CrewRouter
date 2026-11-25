@@ -161,10 +161,16 @@ function sessionsPage(runtime) {
       const data = search
         ? await searchSessions(runtime.client, { q: search, days })
         : await listSessions(runtime.client, { days, page: runtime.sessionsPageNumber, pageSize: 30 });
-      const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
+      const items = search
+        ? (Array.isArray(data.results) ? data.results : [])
+        : (Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
       const rows = items.map(item => ({
-        label: `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token`,
-        detail: `${item.lastSeen ? `最后活动 ${formatTime(item.lastSeen)}` : ''}${item.models && item.models.length ? ` · 模型 ${item.models.slice(0, 3).join(', ')}` : ''}${item.summary ? ' · 有摘要' : ''}`,
+        label: search
+          ? `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.matchCount || 0).toLocaleString()} 条匹配消息`
+          : `${item.sessionKey || '未知会话'} · ${clientDisplay(item.harness)} · ${Number(item.requestCount || 0).toLocaleString()} 次请求 · ${formatBigNumber(item.totalTokens)} Token`,
+        detail: search
+          ? `最近匹配：${item.lastSeen ? formatTime(item.lastSeen) : '未知'}${item.previews?.[0]?.excerpt ? ` · 摘要：${String(item.previews[0].excerpt).slice(0, 160)}` : ''}`
+          : `${item.lastSeen ? `最后活动 ${formatTime(item.lastSeen)}` : ''}${item.models && item.models.length ? ` · 模型 ${item.models.slice(0, 3).join(', ')}` : ''}${item.summary ? ' · 有摘要' : ''}`,
         run: async ctx => {
           const choice = await ctx.choose(`会话 · ${item.sessionKey}`, [{ label: '查看消息', value: 'messages' }, { label: '查看已缓存摘要', value: 'summary' }]);
           if (choice === 'messages') await showSessionMessages(ctx, runtime, item);
@@ -174,7 +180,7 @@ function sessionsPage(runtime) {
       return {
         sections: [{
           title: '会话',
-          description: `最近 ${days} 天${search ? ` · 搜索“${search}”` : ` · 第 ${data.page || runtime.sessionsPageNumber} 页`} · 共 ${data.total || items.length} 个`,
+          description: search ? `最近 ${days} 天 · 搜索“${search}” · 共 ${data.totalSessions ?? items.length} 个匹配会话` : `最近 ${days} 天 · 第 ${data.page || runtime.sessionsPageNumber} 页 · 共 ${data.total || items.length} 个会话`,
           rows: rows.length ? rows : [{ label: '暂无会话记录。' }],
         }],
         actions: [
