@@ -114,28 +114,30 @@ function usagePage(runtime) {
           if (query.include_quota && result.provider_quota) sections.push({ title: '供应商额度参照', tab: 'multi', description: '额度是独立上游账户观测值，不应与请求消费金额直接相加。', rows: arrayOrEmpty(result.provider_quota.accounts).slice(0, 30).map(account => ({ label: `${account.provider_name || account.provider_id || '未知供应商'} · ${account.label || account.account_id || '额度账户'}`, detail: `${account.used ?? '未知'} / ${account.total ?? '未知'}${account.unit ? ` ${account.unit}` : ''} · ${account.used_percent == null ? '使用率未知' : `${Number(account.used_percent).toFixed(1)}%`}` })) });
         }
       }
-      if (runtime.usageTab === 'daily') sections.push({ title: '每日用量', tab: 'daily', toolbar: true, tableMinWidth: 112, columns: [
-        { key: 'date', label: '日期', ratio: 0.2 }, { key: 'requests', label: '请求数', ratio: 0.16 }, { key: 'input', label: '输入 Token', ratio: 0.16 },
-        { key: 'output', label: '输出 Token', ratio: 0.16 }, { key: 'tokens', label: '总 Token', ratio: 0.16 }, { key: 'cost', label: '费用（积分）', ratio: 0.16 },
-      ], description: periodLabel, rows: summary.daily.slice(-30).map(row => ({ label: row.date || '未知日期', cells: {
-        date: row.date || '未知日期', requests: `${Number(row.requests || 0).toLocaleString()} 次`, input: `${formatBigNumber(row.prompt_tokens)} Token`,
-        output: `${formatBigNumber(row.completion_tokens)} Token`, tokens: `${formatBigNumber(row.tokens)} Token`, cost: `${formatCost(row.cost)} 积分`,
+      if (runtime.usageTab === 'daily') sections.push({ title: '每日详细数据', tab: 'daily', toolbar: true, tableMinWidth: 128, columns: [
+        { key: 'date', label: '日期', ratio: 0.18 }, { key: 'requests', label: '请求数', ratio: 0.13 }, { key: 'input', label: 'Prompt Token', ratio: 0.15 },
+        { key: 'output', label: 'Completion Token', ratio: 0.15 }, { key: 'cached', label: '缓存命中', ratio: 0.14 }, { key: 'cost', label: '积分', ratio: 0.12 }, { key: 'latency', label: '平均延迟', ratio: 0.13 },
+      ], description: `每日请求、Token、缓存命中、积分与平均延迟 · ${periodLabel}`, rows: summary.daily.slice(-30).map(row => ({ label: row.date || '未知日期', cells: {
+        date: row.date || '未知日期', requests: Number(row.requests || 0).toLocaleString(), input: formatBigNumber(row.prompt_tokens),
+        output: formatBigNumber(row.completion_tokens), cached: `${formatBigNumber(row.cached_tokens)} Token`, cost: formatCost(row.cost), latency: `${Math.round(Number(row.avg_latency || 0))} 毫秒`,
       } })) });
       if (runtime.usageTab === 'hourly') {
         const hourly = Array.from({ length: 24 }, (_, hour) => {
           const row = (Array.isArray(stats.hourly) ? stats.hourly : []).find(item => Number(item.hour) === hour) || {};
-          return { hour, requests: Number(row.requests || 0), tokens: Number(row.tokens || 0), cached: Number(row.cached_tokens || 0), cost: Number(row.cost || 0) };
+          return { hour, requests: Number(row.requests || 0), tokens: Number(row.tokens || 0) };
         });
-        const peak = [...hourly].sort((a, b) => b.requests - a.requests)[0];
-        sections.push({ title: '按小时用量', tab: 'hourly', toolbar: true, tableMinWidth: 104,
-          description: `最近 ${runtime.usageDays} 天 · 按请求发生时的小时汇总 · 高峰时段 ${String(peak.hour).padStart(2, '0')}:00（${peak.requests} 次请求）`,
+        const peakRequests = [...hourly].sort((a, b) => b.requests - a.requests)[0];
+        const peakTokens = [...hourly].sort((a, b) => b.tokens - a.tokens)[0];
+        const maxRequests = Math.max(1, ...hourly.map(item => item.requests));
+        const maxTokens = Math.max(1, ...hourly.map(item => item.tokens));
+        sections.push({ title: '每小时请求分布（24 小时）', tab: 'hourly', toolbar: true, tableMinWidth: 92,
+          description: `最近 ${runtime.usageDays} 天 · 请求高峰 ${String(peakRequests.hour).padStart(2, '0')}:00（${peakRequests.requests.toLocaleString()} 次）· Token 高峰 ${String(peakTokens.hour).padStart(2, '0')}:00（${formatBigNumber(peakTokens.tokens)} Token）`,
           columns: [
-            { key: 'hour', label: '小时', ratio: 0.16 }, { key: 'requests', label: '请求数', ratio: 0.2 },
-            { key: 'tokens', label: 'Token 用量', ratio: 0.22 }, { key: 'cached', label: '缓存 Token', ratio: 0.2 }, { key: 'cost', label: '费用（积分）', ratio: 0.22 },
-          ], rows: hourly.map(item => ({ label: `${String(item.hour).padStart(2, '0')}:00`, cells: {
-            hour: `${String(item.hour).padStart(2, '0')}:00`, requests: `${item.requests.toLocaleString()} 次`, tokens: `${formatBigNumber(item.tokens)} Token`,
-            cached: `${formatBigNumber(item.cached)} Token`, cost: `${formatCost(item.cost)} 积分`,
-          } })) });
+            { key: 'hour', label: '小时', ratio: 0.16 }, { key: 'requests', label: '请求数', ratio: 0.25 },
+            { key: 'requests_bar', label: '请求分布', ratio: 0.29 }, { key: 'tokens', label: 'Token', ratio: 0.16 }, { key: 'tokens_bar', label: 'Token 分布', ratio: 0.14 },
+          ], rows: hourly.map(item => { const requestWidth = Math.round(item.requests / maxRequests * 12); const tokenWidth = Math.round(item.tokens / maxTokens * 8); return { label: `${String(item.hour).padStart(2, '0')}:00`, cells: {
+            hour: `${String(item.hour).padStart(2, '0')}:00`, requests: item.requests.toLocaleString(), requests_bar: `[${'█'.repeat(requestWidth)}${'░'.repeat(12 - requestWidth)}]`, tokens: formatBigNumber(item.tokens), tokens_bar: `[${'█'.repeat(tokenWidth)}${'░'.repeat(8 - tokenWidth)}]`,
+          } }; }) });
       }
       if (runtime.usageTab === 'models') sections.push({ title: '按模型统计', tab: 'models', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byModel || [], row => row.model_name || row.model_id || '未知模型') });
       if (runtime.usageTab === 'providers') sections.push({ title: '按供应商统计', tab: 'providers', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byProvider || [], row => row.provider_name || row.provider_id || '未知供应商') });
