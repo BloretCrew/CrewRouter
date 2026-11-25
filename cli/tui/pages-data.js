@@ -139,7 +139,28 @@ function usagePage(runtime) {
             hour: `${String(item.hour).padStart(2, '0')}:00`, requests: item.requests.toLocaleString(), requests_bar: `[${'█'.repeat(requestWidth)}${'░'.repeat(12 - requestWidth)}]`, tokens: formatBigNumber(item.tokens), tokens_bar: `[${'█'.repeat(tokenWidth)}${'░'.repeat(8 - tokenWidth)}]`,
           } }; }) });
       }
-      if (runtime.usageTab === 'models') sections.push({ title: '按模型统计', tab: 'models', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byModel || [], row => row.model_name || row.model_id || '未知模型') });
+      if (runtime.usageTab === 'models') {
+        const modelRows = (summary.byModel || []).map(row => {
+          const promptTokens = Number(row.prompt_tokens || 0);
+          const cachedTokens = Number(row.cached_tokens || 0);
+          const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
+          const modelName = row.model_name || '（已删除）';
+          return { label: modelName, cells: {
+            model: modelName,
+            requests: Number(row.requests || 0).toLocaleString(),
+            prompt: formatBigNumber(promptTokens),
+            completion: formatBigNumber(row.completion_tokens),
+            cached: `${formatBigNumber(cachedTokens)} (${cacheRate}%)`,
+            cost: formatCost(row.cost),
+            latency: `${Math.round(Number(row.avg_latency || 0))} 毫秒`,
+          } };
+        });
+        sections.push({ title: '模型详细数据', tab: 'models', toolbar: true, tableMinWidth: 126, columns: [
+          { key: 'model', label: '模型', ratio: 0.22 }, { key: 'requests', label: '请求数', ratio: 0.12 },
+          { key: 'prompt', label: 'Prompt Token', ratio: 0.14 }, { key: 'completion', label: 'Completion Token', ratio: 0.16 },
+          { key: 'cached', label: '缓存命中', ratio: 0.14 }, { key: 'cost', label: '积分', ratio: 0.1 }, { key: 'latency', label: '平均延迟', ratio: 0.12 },
+        ], description: `共 ${modelRows.length} 个模型 · 按请求数排序 · ${periodLabel}`, rows: modelRows.length ? modelRows : [{ label: '当前范围没有模型用量。' }] });
+      }
       if (runtime.usageTab === 'providers') sections.push({ title: '按供应商统计', tab: 'providers', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byProvider || [], row => row.provider_name || row.provider_id || '未知供应商') });
       if (runtime.usageTab === 'keys') sections.push({ title: '按 API Key 统计', tab: 'keys', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.byApiKey || [], row => row.key_name || row.key_prefix || '未知 API Key') });
       if (runtime.usageTab === 'sources') sections.push({ title: '按客户端统计', tab: 'sources', toolbar: true, tableMinWidth: 112, columns: dimensionColumns, rows: dimensionRows(summary.bySource || [], row => clientDisplay(row.request_source)) });
