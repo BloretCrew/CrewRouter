@@ -501,6 +501,52 @@ function modelsPage(runtime) {
   };
 }
 
+async function loadPermissionCatalog(runtime) {
+  const catalog = await runtime.client.get('/js/api-key-permissions.json?v=1');
+  if (!catalog || !Array.isArray(catalog.groups)) throw new Error('服务器未提供 API Key 权限目录');
+  return {
+    groups: catalog.groups.filter(group => group && Array.isArray(group.permissions)).map(group => ({
+      id: group.id, name: group.name || group.id, description: group.description || '',
+      permissions: group.permissions.filter(permission => permission && permission.id).map(permission => ({ ...permission, adminOnly: permission.adminOnly === true })),
+    })),
+    defaultPermissions: catalog.groups.filter(group => group.id === 'gateway').flatMap(group => arrayOrEmpty(group.permissions).map(permission => permission.id)),
+  };
+}
+
+function arrayOrEmpty(value) { return Array.isArray(value) ? value : []; }
+
+async function chooseApiKeyPermissions(ctx, catalog, currentPermissions = []) {
+  const all = catalog.groups.flatMap(group => group.permissions.map(permission => ({ ...permission, groupName: group.name })));
+  const enabled = new Set(currentPermissions);
+  for (;;) {
+    const options = [
+      ...catalog.groups.map(group => ({ label: `分类：${group.name}（${group.permissions.filter(permission => enabled.has(permission.id)).length}/${group.permissions.length} 已选）`, value: `group:${group.id}` })),
+      { label: `查看已选权限（${enabled.size}）`, value: '__selected__' },
+      { label: '完成权限选择', value: '__done__' },
+    ];
+    const selected = await ctx.choose('API Key 权限目录', options, { description: '按网页权限目录分类，选择分类后逐项切换；新建 Key 默认启用模型网关权限。' });
+    if (!selected || selected === '__done__') break;
+    if (selected === '__selected__') {
+      const chosen = all.filter(permission => enabled.has(permission.id));
+      await ctx.show('已选权限', chosen.length ? chosen.map(permission => `${permission.groupName} · ${permission.name}（${permission.id}）`).join('\\n') : '当前没有显式授权项。');
+      continue;
+    }
+    const group = catalog.groups.find(item => selected === `group:${item.id}`);
+    if (!group) continue;
+    for (;;) {
+      const permissionChoices = group.permissions.map(permission => ({
+        label: `${enabled.has(permission.id) ? '✓' : '○'} ${permission.name}${permission.adminOnly ? ' · 仅管理员' : ''}`,
+        value: permission.id,
+      }));
+      permissionChoices.push({ label: '返回权限分类', value: '__back__' });
+      const permissionId = await ctx.choose(`权限分类 · ${group.name}`, permissionChoices, { description: group.description || '选择权限项以切换授权状态；操作只修改本地待保存选择。' });
+      if (!permissionId || permissionId === '__back__') break;
+      if (enabled.has(permissionId)) enabled.delete(permissionId); else enabled.add(permissionId);
+    }
+  }
+  return [...enabled];
+}
+
 function keysPage(runtime) {
   return {
     id: 'keys',
@@ -538,8 +584,10 @@ function keysPage(runtime) {
         run: async ctx => {
           const actions = [
             { label: '查看详情', value: 'detail' },
-            ...(key.is_owner === true ? [{ label: '设置标签', value: 'tags' }, { label: `管理共同成员（${Array.isArray(key.members) ? key.members.length : 0}）`, value: 'members' }] : []),
-            { label: '查看 Claude Code 配置', value: 'config' },
+            ...(key.is_owner === true ? [{ label: '设置标签', value: 'tags' }, { label: `管理共同成员（${Array.isArray(key.members) ? key.members.length : 0}）`, value: 'members' }, { label: '管理 API Key 权限', value: 'permissions' }] : []),
+            ...(key.is_owner === true ? [{ label: '查看 Claude Code 配置（包含 Key 明文）', value: 'config' }] : []),
+            { label: 'API Key 附加选项', value: 'options' },
+            { label: 'API Key 签名设置', value: 'signature' },
             { label: key.enabled === false ? '启用 Key' : '停用 Key', value: 'toggle' },
             { label: '重命名', value: 'rename' },
             { label: '删除 Key', value: 'delete' },
@@ -559,7 +607,56 @@ function keysPage(runtime) {
               key.is_owner === true && `共同成员：${memberList.length ? memberList.map(member => `${member.username || '未知'}（${member.email || '无邮箱'}）`).join('、') : '无'}`,
             ].filter(Boolean).join('\\n'));
           }
-          else if (choice === 'members') {
+          else if (choice === 'permissions') {
+            if (key.is_owner !== true) { await ctx.show('权限不可修改', '只有 API Key 发起者可以修改权限。'); return; }
+            let catalog;
+            try { catalog = await loadPermissionCatalog(runtime); }
+            catch (error) { await ctx.show('权限目录不可用', `无法加载服务器提供的权限目录：${error.message}`); return; }
+            const permissions = await chooseApiKeyPermissions(ctx, catalog, Array.isArray(key.permissions) ? key.permissions : []);
+            if (!await ctx.confirm('保存 API Key 权限', `${key.name || key.key_prefix}\n显式授权 ${permissions.length} 项；关闭全部权限后，此 Key 将无法调用任何接口。`)) return;
+            await runtime.client.put(`/api/user/api-keys/${encodeURIComponent(key.id)}`, { permissions });
+            ctx.notify('API Key 权限已保存。'); await ctx.refresh();
+          } else if (choice === 'options') {
+            const [quotaResult, signatureResult] = await Promise.allSettled([
+              runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/quota-warning`),
+              runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/signature`),
+            ]);
+            const current = {
+              quota_warning_enabled: quotaResult.status === 'fulfilled' ? quotaResult.value.quota_warning_enabled === true : key.quota_warning_enabled === true,
+              swallow_images: key.swallow_images === true, crewrouter_commands: key.crewrouter_commands === true,
+            };
+            const fields = [
+              { name: 'quota_warning_enabled', label: '额度预警', type: 'boolean', value: current.quota_warning_enabled },
+              { name: 'swallow_images', label: '吞图（不向上游转发图片）', type: 'boolean', value: current.swallow_images },
+              { name: 'crewrouter_commands', label: '允许 @CrewRouter 指令', type: 'boolean', value: current.crewrouter_commands },
+            ];
+            const values = await ctx.form('API Key 附加选项', fields, { description: '修改只影响此 API Key。' });
+            if (!values) return;
+            const changed = fields.filter(field => values[field.name] !== current[field.name]);
+            if (!changed.length) { await ctx.show('API Key 选项', '选项未发生变化。'); return; }
+            if (!await ctx.confirm('保存 API Key 选项', `${changed.map(field => `${field.label}：${values[field.name] ? '开启' : '关闭'}`).join('\\n')}\\n以上选项将立即影响此 Key 的请求处理。`)) return;
+            const endpoints = { quota_warning_enabled: 'quota-warning', swallow_images: 'swallow-images', crewrouter_commands: 'crewrouter-commands' };
+            for (const field of changed) await runtime.client.put(`/api/user/api-keys/${encodeURIComponent(key.id)}/${endpoints[field.name]}`, { [field.name]: values[field.name] });
+            ctx.notify('API Key 选项已更新。'); await ctx.refresh();
+          } else if (choice === 'signature') {
+            let signature;
+            try { signature = await runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/signature`); }
+            catch (error) { await ctx.show('签名配置读取失败', error.message || '无法读取此 API Key 的签名配置。'); return; }
+            if (!signature.inherited || !signature.effective) { await ctx.show('签名配置异常', '服务器未返回完整的签名继承配置，为防止覆盖现有设置，未开放保存。'); return; }
+            const modeValue = signature.enabled == null ? 'inherit' : signature.enabled ? 'enable' : 'disable';
+            const mode = await ctx.choose('签名模式', [
+              { label: `继承用户默认${signature.user_signature_enabled ? '（当前默认开启）' : '（当前默认关闭）'}`, value: 'inherit' },
+              { label: '强制启用', value: 'enable' }, { label: '强制禁用', value: 'disable' },
+            ], { description: '启用状态和模板分别继承；模板留空表示使用用户默认模板。' });
+            if (mode === null) return;
+            const template = await ctx.ask('自定义签名模板（留空使用用户模板）', { defaultValue: signature.template || '', description: '最多 2000 个字符；签名可能被追加到转发请求。' });
+            if (template === null) return;
+            if ([...template].length > 2000) { await ctx.show('签名模板过长', '签名模板最多 2000 个字符。'); return; }
+            const enabled = mode === 'inherit' ? null : mode === 'enable';
+            if (!await ctx.confirm('保存 API Key 签名设置', `模式：${mode === 'inherit' ? '继承用户默认' : mode === 'enable' ? '强制启用' : '强制禁用'}\\n模板：${template.trim() || '使用用户默认模板'}`)) return;
+            await runtime.client.put(`/api/user/api-keys/${encodeURIComponent(key.id)}/signature`, { enabled, template: template.trim() || null });
+            ctx.notify('API Key 签名设置已保存。'); await ctx.refresh();
+          } else if (choice === 'members') {
             let membersResult = await runtime.client.get(`/api/user/api-keys/${encodeURIComponent(key.id)}/members`);
             for (;;) {
               const members = Array.isArray(membersResult.members) ? membersResult.members : [];
@@ -602,8 +699,20 @@ function keysPage(runtime) {
             ctx.notify('API Key 标签已更新。'); await ctx.refresh();
           }
           else if (choice === 'config') {
+            if (key.is_owner !== true) { await ctx.show('配置不可查看', '只有 API Key 发起者可读取包含密钥明文的配置。'); return; }
+            if (!await ctx.confirm('显示 Claude Code 配置', '即将显示包含 API Key 明文的环境变量。请确保周围没有其他人查看终端。')) return;
             const config = await getApiKeyConfig(runtime.client, key.id);
-            await ctx.show('Claude Code 配置', JSON.stringify(config, null, 2));
+            const env = config.env || {};
+            const lines = [
+              `API 基础地址：${env.ANTHROPIC_BASE_URL || '未知'}`,
+              `API Key 明文：${env.ANTHROPIC_AUTH_TOKEN || '服务器未返回'}`,
+              `默认模型：${env.ANTHROPIC_MODEL || config.model || '未知'}`,
+              `Haiku 模型：${env.ANTHROPIC_DEFAULT_HAIKU_MODEL || '未设置'}`,
+              `Sonnet 模型：${env.ANTHROPIC_DEFAULT_SONNET_MODEL || '未设置'}`,
+              `Opus 模型：${env.ANTHROPIC_DEFAULT_OPUS_MODEL || '未设置'}`,
+              `思考强度：${config.effortLevel || '未设置'}`,
+            ];
+            await ctx.show('Claude Code 环境变量（含密钥）', lines.join('\\n'));
           } else if (choice === 'toggle') {
             const enabled = key.enabled === false;
             if (!await ctx.confirm(enabled ? '启用 API Key' : '停用 API Key', `${key.name || key.key_prefix}\n停用后使用该 Key 的客户端将无法调用。`)) return;
@@ -669,12 +778,19 @@ function keysPage(runtime) {
               { name: 'name', label: '名称', value: 'CrewRouter CLI' },
               { name: 'expiresIn', label: '有效小时数（留空永久）', value: '' },
               { name: 'customModelName', label: '自定义模型名（可选）', value: '' },
-            ], { description: '创建后原始 Key 只显示一次。', submitLabel: '创建' });
+            ], { description: '创建后原始 Key 只显示一次。默认权限与服务器一致，仅开放模型网关调用。', submitLabel: '继续' });
             if (!values) return;
-            const result = await createApiKey(runtime.client, {
+            let permissions;
+            try {
+              const catalog = await loadPermissionCatalog(runtime);
+              permissions = await chooseApiKeyPermissions(ctx, catalog, catalog.defaultPermissions);
+            } catch (error) { await ctx.show('API Key 权限目录不可用', `无法安全读取服务器权限目录，未创建 Key：${error.message}`); return; }
+            if (!await ctx.confirm('确认创建 API Key', `名称：${values.name || 'CrewRouter CLI'}\\n有效期：${values.expiresIn ? `${values.expiresIn} 小时` : '永久'}\\n权限：${permissions.length} 项。原始 Key 只会显示一次，请安全保存。`)) return;
+            const result = await runtime.client.post('/api/user/api-keys', {
               name: values.name || 'CrewRouter CLI',
-              expiresIn: values.expiresIn ? Number(values.expiresIn) : undefined,
-              customModelName: values.customModelName || undefined,
+              ...(values.expiresIn ? { expiresIn: Number(values.expiresIn) } : {}),
+              ...(values.customModelName ? { customModelName: values.customModelName } : {}),
+              permissions,
             });
             await ctx.show('API Key 已创建', `${result.name || values.name}\n\n${result.key || result.key_value || '响应未返回原始 Key'}\n\n请立即保存；关闭后无法再次查看。`);
             await ctx.refresh();

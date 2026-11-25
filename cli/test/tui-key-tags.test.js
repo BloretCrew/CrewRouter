@@ -16,6 +16,10 @@ function makeRuntime(isOwner = true) {
       if (path === '/oauth/authorizations') return { authorizations: [] };
       if (path === '/api/user/key-tags') return [{ id: 3, name: 'Ops', color: '#123456' }, { id: 4, name: 'Dev', color: '#654321' }];
       if (path === '/api/user/api-keys/1/members') return { is_owner: isOwner, members: [{ id: 9, username: 'alice', email: 'alice@example.test', created_at: '2026-11-20T00:00:00Z' }] };
+      if (path === '/api/user/api-keys/1/quota-warning') return { quota_warning_enabled: true };
+      if (path === '/api/user/api-keys/1/signature') return { enabled: null, template: '', user_signature_enabled: true, inherited: { enabled: true, template: 'Default signature' }, effective: { enabled: true, template: 'Default signature' } };
+      if (path === '/api/user/api-keys/1/config') return { env: { ANTHROPIC_BASE_URL: 'https://router.example', ANTHROPIC_AUTH_TOKEN: 'secret-token', ANTHROPIC_MODEL: 'claude-fable-5' }, effortLevel: 'high' };
+      if (path === '/js/api-key-permissions.json?v=1') return { version: 1, groups: [{ id: 'gateway', name: '模型网关', description: '模型 API', permissions: [{ id: 'gateway.chat', name: 'Chat Completions', description: '对话接口' }, { id: 'gateway.messages', name: 'Anthropic Messages', description: '消息接口' }] }, { id: 'account', name: '账号', permissions: [{ id: 'account.profile.read', name: '读取资料', description: '用户资料' }] }] };
       return {};
     },
     put: async (path, body) => { calls.push({ path, method: 'PUT', body }); return {}; },
@@ -111,6 +115,66 @@ test('API Key detail uses readable labels and discloses shared member count', as
   assert.match(detail, /身份：共同成员访问/);
   assert.match(detail, /Token 消耗：100 Token/);
   assert.doesNotMatch(detail, /total_requests|current_model|key_prefix/);
+});
+
+test('API Key option toggles call each web endpoint and signature PUT is complete', async () => {
+  const { runtime, calls } = makeRuntime(true);
+  const page = buildPages(runtime).find(item => item.id === 'keys');
+  const data = await page.load(async () => ({}));
+  const row = data.sections.find(section => section.title === 'API Key').rows[0];
+  const choiceQueue = ['options'];
+  await row.run({ choose: async (title, options) => {
+    if (title === 'API Key 操作') return choiceQueue.shift();
+    return null;
+  }, form: async () => ({ quota_warning_enabled: false, swallow_images: true, crewrouter_commands: true }), confirm: async () => true, notify() {}, refresh: async () => {} });
+  for (const [suffix, field, expected] of [['quota-warning', 'quota_warning_enabled', false], ['swallow-images', 'swallow_images', true], ['crewrouter-commands', 'crewrouter_commands', true]]) {
+    assert.ok(calls.some(call => call.method === 'PUT' && call.path.endsWith(`/${suffix}`) && call.body[field] === expected));
+  }
+  choiceQueue.push('signature');
+  await row.run({ choose: async (title, options) => title === 'API Key 操作' ? choiceQueue.shift() : 'inherit', ask: async () => 'Custom footer', confirm: async () => true, notify() {}, refresh: async () => {} });
+  const signatureWrite = calls.find(call => call.method === 'PUT' && call.path.endsWith('/signature'));
+  assert.deepEqual(signatureWrite.body, { enabled: null, template: 'Custom footer' });
+});
+
+test('API Key permissions edit uses shared catalog and owner-only complete permission array', async () => {
+  const { runtime, calls } = makeRuntime(true);
+  runtime.client.get = async path => path === '/api/user/api-keys' ? [{ id: 1, name: 'Main', key_prefix: 'cr_x', enabled: true, is_owner: true, permissions: ['gateway.chat'] }] : path === '/oauth/authorizations' ? { authorizations: [] } : path === '/api/user/key-tags' ? [] : path === '/js/api-key-permissions.json?v=1' ? { version: 1, groups: [{ id: 'gateway', name: '模型网关', permissions: [{ id: 'gateway.chat', name: 'Chat Completions', description: '对话接口' }, { id: 'gateway.messages', name: 'Anthropic Messages', description: '消息接口' }] }] } : {};
+  const page = buildPages(runtime).find(item => item.id === 'keys');
+  const data = await page.load(async () => ({}));
+  const row = data.sections.find(section => section.title === 'API Key').rows[0];
+  let titles = 0;
+  let permissionChosen = false;
+  await row.run({ choose: async (title, options) => {
+    if (title === 'API Key 操作') return 'permissions';
+    if (title === 'API Key 权限目录') return titles++ === 0 ? 'group:gateway' : '__done__';
+    if (options.some(option => option.value === 'gateway.messages') && !permissionChosen) { permissionChosen = true; return 'gateway.messages'; }
+    return '__back__';
+  }, confirm: async () => true, notify() {}, refresh: async () => {} });
+  const permissionWrite = calls.find(call => call.method === 'PUT' && call.path === '/api/user/api-keys/1');
+  assert.deepEqual(permissionWrite.body, { permissions: ['gateway.chat', 'gateway.messages'] });
+
+  const { runtime: sharedRuntime } = makeRuntime(false);
+  sharedRuntime.client.get = async path => path === '/api/user/api-keys' ? [{ id: 1, is_owner: false }] : path === '/oauth/authorizations' ? { authorizations: [] } : [];
+  const sharedData = await buildPages(sharedRuntime).find(item => item.id === 'keys').load(async () => ({}));
+  let sharedOptions = [];
+  await sharedData.sections.find(section => section.title === 'API Key').rows[0].run({ choose: async (_title, options) => { sharedOptions = options; return 'detail'; }, show: async () => {} });
+  assert.ok(!sharedOptions.some(option => option.value === 'permissions'));
+});
+
+test('API Key creation sends default gateway permissions from the server catalog', async () => {
+  const { runtime, calls } = makeRuntime(true);
+  const page = buildPages(runtime).find(item => item.id === 'keys');
+  const data = await page.load(async () => ({}));
+  const create = data.actions.find(action => action.label === '新建 API Key');
+  const choices = ['__selected__', '__done__'];
+  await create.run({ form: async () => ({ name: 'CLI', expiresIn: '', customModelName: '' }), choose: async (title, options) => {
+    if (title === 'API Key 权限目录') return choices.shift();
+    if (title === '已选权限') return null;
+    if (options.some(option => option.value === 'group:gateway')) return 'group:gateway';
+    return options.find(option => option.value === '__done__')?.value;
+  }, confirm: async () => true, show: async () => {}, notify() {}, refresh: async () => {} });
+  const createCall = calls.find(call => call.method === 'POST' && call.path === '/api/user/api-keys');
+  assert.deepEqual(createCall.body.permissions, ['gateway.chat', 'gateway.messages']);
 });
 
 test('API Key tag assignment is owner-only and sends tagIds after confirmation', async () => {
