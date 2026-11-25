@@ -78,8 +78,8 @@ test('user console pages query matching endpoints and expose equivalent controls
   assert.ok(leaderboard.sections[0].rows[0].label.includes('alice'));
   assert.ok(leaderboard.actions.some(action => action.label === '按缓存命中率排序'));
   const balance = await pages.get('balance').load(api);
-  assert.ok(balance.sections.some(section => section.title === '所属团队与个人限额'));
-  assert.ok(balance.sections[0].cards.some(card => card.label === '积分'));
+  assert.deepEqual(balance.sections.map(section => section.title), ['当前积分', 'Team 与限额']);
+  assert.ok(balance.sections[0].cards.some(card => card.label === '当前积分'));
   const audit = await pages.get('audit-logs').load(api);
   assert.ok(audit.sections[0].rows[0].label.includes('api_key'));
   assert.ok(audit.actions.some(action => action.label === '下一页'));

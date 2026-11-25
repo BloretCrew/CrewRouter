@@ -1,6 +1,6 @@
 'use strict';
 
-const { overviewPage, servicePage, accountPage } = require('./pages-core');
+const { overviewPage, servicePage, accountPage, balancePage } = require('./pages-core');
 const { providersPage, myUpstreamPage, providerTagsPage, modelsPage, keysPage } = require('./pages-resources');
 const { usagePage, sessionsPage } = require('./pages-data');
 const { createAdminPages } = require('./pages-admin');
@@ -64,7 +64,7 @@ function buildPages(runtime) {
     usagePage(runtime),
     adminById.get('projects'),
     adminById.get('leaderboard'),
-    adminById.get('balance'),
+    balancePage(runtime),
     adminById.get('audit-logs'),
     adminById.get('prompts'),
     sessionsPage(runtime),

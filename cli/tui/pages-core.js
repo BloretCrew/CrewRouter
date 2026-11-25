@@ -5,6 +5,51 @@ const { serviceStatus, readLogs, probeHealth } = require('../lib/service');
 const { formatBigNumber, formatCost, formatTime, relativePath } = require('../lib/format');
 const { text, loadParts, errorRows, bar } = require('./pages-common');
 
+function balancePage(runtime) {
+  return {
+    id: 'balance',
+    label: '积分',
+    description: '当前积分余额及所属 Team 的用量限额。',
+    async load(api) {
+      const [balanceResult, codesResult] = await Promise.allSettled([
+        api('/api/user/balance'),
+        api('/api/user/code-balances'),
+      ]);
+      const balance = balanceResult.status === 'fulfilled' ? balanceResult.value || {} : {};
+      const codes = codesResult.status === 'fulfilled' ? (Array.isArray(codesResult.value) ? codesResult.value : codesResult.value?.items || []) : [];
+      const sections = [{
+        title: '当前积分',
+        cards: [{ label: '当前积分', value: `${Number(balance.balance || 0).toFixed(0)} 积分`, detail: '可用于支付超出 Team 限额的用量' }],
+        rows: [
+          ...(balanceResult.status === 'rejected' ? [{ label: `余额读取失败：${balanceResult.reason.message || '未知错误'}` }] : []),
+          { label: `可退款余额：${Number(balance.refund_balance || 0).toFixed(4)} 积分`, detail: '兑换码充值余额扣除手续费后的可退金额' },
+          ...(Number(balance.rate_limit_rpm || 0) > 0 ? [{ label: `个人速率限制：每分钟 ${Number(balance.rate_limit_rpm).toLocaleString()} 次请求 · ${formatBigNumber(balance.rate_limit_tpm)} Token` }] : []),
+          ...(codesResult.status === 'rejected' ? [{ label: `兑换码余额读取失败：${codesResult.reason.message || '未知错误'}` }] : codes.length ? [{ label: `兑换码余额：${codes.length} 条充值记录`, detail: '明细请在网页端账户页面查看。' }] : []),
+        ],
+      }];
+      const group = balance.group;
+      const rules = Array.isArray(group?.rules) ? group.rules : [];
+      sections.push({
+        title: 'Team 与限额',
+        description: group?.name ? `所属 Team：${group.name}${group.description ? ` · ${group.description}` : ''}` : '当前没有 Team 限额规则。',
+        rows: rules.length ? rules.map(rule => {
+          const limit = Number(rule.rule_value) || 0;
+          const current = Number(rule.current) || 0;
+          const duration = Number(rule.duration_hours) || 24;
+          const durationLabel = duration % 24 === 0 ? `${duration / 24} 天` : `${duration} 小时`;
+          const isTokens = rule.rule_type === 'tokens';
+          const currentText = isTokens ? formatBigNumber(current) : current.toLocaleString();
+          const limitText = isTokens ? formatBigNumber(limit) : limit.toLocaleString();
+          const percent = limit > 0 ? Math.min(100, current / limit * 100) : 0;
+          const filled = Math.round(percent / 100 * 20);
+          return { label: `${durationLabel} · ${isTokens ? 'Token 用量' : '请求次数'}：${currentText} / ${limitText} · ${percent.toFixed(1)}%`, detail: `[${'█'.repeat(filled)}${'░'.repeat(20 - filled)}]${rule.description ? `\n${rule.description}` : ''}` };
+        }) : [{ label: '不限制', detail: '暂无限额规则。' }],
+      });
+      return { sections, actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+    },
+  };
+}
+
 function overviewPage(runtime) {
   return {
     id: 'overview',
@@ -234,4 +279,4 @@ function accountPage(runtime) {
   };
 }
 
-module.exports = { overviewPage, servicePage, accountPage };
+module.exports = { overviewPage, servicePage, accountPage, balancePage };
