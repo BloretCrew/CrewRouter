@@ -170,6 +170,13 @@ func TestManagementResponseTypesDecode(t *testing.T) {
 	if len(teamMembers) != 1 || teamMembers[0].Email != nil {
 		t.Fatalf("unexpected Team member response: %#v", teamMembers)
 	}
+	var teamModels []crewrouter.TeamModelListItem
+	if err := json.Unmarshal([]byte(`[{"mapping_id":null,"enabled":false,"model_id":"m1","name":"Model","provider":"p1","series":null,"description":null,"input_price_per_1k_tokens":"0.01","output_price_per_1k_tokens":0.02,"icon_url":null,"upstream_model_id":null,"alias":null,"model_multiplier":"1.0","test_ok":null,"test_latency_ms":null,"test_tokens_per_second":null,"test_error":null,"test_tested_at":null,"provider_id":"p1","provider_name":"Provider","provider_enabled":true}]`), &teamModels); err != nil {
+		t.Fatalf("decode Team models: %v", err)
+	}
+	if len(teamModels) != 1 || teamModels[0].MappingID != nil || teamModels[0].ModelID != "m1" {
+		t.Fatalf("unexpected Team model response: %#v", teamModels)
+	}
 	var adminProviderTags []crewrouter.AdminProviderTag
 	if err := json.Unmarshal([]byte(`[{"id":4,"name":"global","color":"#123456","sort_order":0,"created_at":"2026-01-01T00:00:00Z"}]`), &adminProviderTags); err != nil {
 		t.Fatalf("decode administrator provider tags: %v", err)

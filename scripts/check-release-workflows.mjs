@@ -66,6 +66,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   const adminProducts = openapi.paths['/api/admin/products']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminUsageLogs = openapi.paths['/api/admin/usage-logs']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminTeamMembers = openapi.paths['/api/admin/teams/{id}/members']?.get?.responses?.[200]?.content?.['application/json']?.schema;
+  const adminTeamModels = openapi.paths['/api/admin/teams/{id}/models']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const teamRules = openapi.paths['/api/admin/teams/{id}/rules']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProviderTags = openapi.paths['/api/admin/provider-tags']?.get?.responses?.[200]?.content?.['application/json']?.schema;
   const adminProviderTagCreate = openapi.paths['/api/admin/provider-tags']?.post?.responses?.[200]?.content?.['application/json']?.schema;
@@ -110,6 +111,7 @@ for (const openapiPath of ['sdk/contract/openapi.json', 'docs/api/openapi.json']
   if (adminUsageLogs?.$ref !== '#/components/schemas/AdminUsageLogsResponse' || openapi.components.schemas.AdminUsageLogsResponse?.properties?.logs?.items?.$ref !== '#/components/schemas/AdminUsageLog') throw new Error(`${openapiPath} must define paginated administrator usage logs`);
   if (openapi.components.schemas.AdminUsersPage?.properties?.stats?.$ref !== '#/components/schemas/AdminUserStats') throw new Error(`${openapiPath} must define paginated admin user stats`);
   if (adminTeamMembers?.type !== 'array' || adminTeamMembers.items?.$ref !== '#/components/schemas/TeamMember') throw new Error(`${openapiPath} must define administrator Team member list responses`);
+  if (adminTeamModels?.type !== 'array' || adminTeamModels.items?.$ref !== '#/components/schemas/TeamModelListItem') throw new Error(`${openapiPath} must define administrator Team model list responses`);
   if (teamRules?.type !== 'array' || teamRules.items?.$ref !== '#/components/schemas/TeamQuotaRule') throw new Error(`${openapiPath} must define Team quota rule lists`);
   if (!openapi.components.schemas.TeamQuotaRule?.additionalProperties || openapi.components.schemas.TeamQuotaRule?.properties?.rule_type?.enum?.join(',') !== 'requests,tokens') throw new Error(`${openapiPath} must describe extensible legacy Team quota rules`);
   if (adminProviderTags?.type !== 'array' || adminProviderTags.items?.$ref !== '#/components/schemas/AdminProviderTag') throw new Error(`${openapiPath} must define administrator provider tag list responses`);

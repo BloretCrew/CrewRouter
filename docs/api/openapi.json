@@ -1243,6 +1243,154 @@
         ],
         "additionalProperties": true
       },
+      "TeamModelListItem": {
+        "type": "object",
+        "properties": {
+          "mapping_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "series": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "input_price_per_1k_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output_price_per_1k_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "icon_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "upstream_model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "alias": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_multiplier": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "test_ok": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "test_latency_ms": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "test_tokens_per_second": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "test_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "test_tested_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "model_id",
+          "name"
+        ],
+        "additionalProperties": true
+      },
       "UserUsageLog": {
         "type": "object",
         "properties": {
@@ -11271,8 +11419,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamModelListItem"
+                  }
                 }
               }
             }

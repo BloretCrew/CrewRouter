@@ -153,6 +153,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, [{ id: 9, username: 'alice', email: null, avatar: null, created_at: '2026-01-01T00:00:00.000Z' }]);
       return;
     }
+    if (req.url === '/api/admin/teams/2/models') {
+      json(res, 200, [{ mapping_id: null, enabled: false, model_id: 'm1', name: 'Model', provider: 'p1', series: null, description: null, input_price_per_1k_tokens: '0.01', output_price_per_1k_tokens: 0.02, icon_url: null, upstream_model_id: null, alias: null, model_multiplier: '1.0', test_ok: null, test_latency_ms: null, test_tokens_per_second: null, test_error: null, test_tested_at: null, provider_id: 'p1', provider_name: 'Provider', provider_enabled: true }]);
+      return;
+    }
     if (req.url === '/api/admin/teams/2/rules') {
       json(res, 200, [{ id: 'team-rule-1', rule_type: 'requests', rule_value: 100, duration_hours: 24, description: 'daily cap' }]);
       return;
@@ -294,6 +298,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const adminUptime = await client.admin.models.getUptime({ days: 7 });
   const adminProducts = await client.admin.products.list();
   const teamMembers = await client.admin.teams.getMembers(2);
+  const teamModels = await client.admin.teams.getModels(2);
   const teamRules = await client.admin.teams.getRules(2);
   const adminProviderTags = await client.admin.providerTags.list();
   const createdAdminTag = await client.admin.providerTags.create({ name: 'global' });
@@ -350,6 +355,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(adminUptime.data.granularity, '15m');
   assert.equal(adminProducts.data[0].price, '2.5');
   assert.equal(teamMembers.data[0].email, null);
+  assert.equal(teamModels.data[0].model_id, 'm1');
+  assert.equal(teamModels.data[0].mapping_id, null);
   assert.equal(teamRules.data[0].rule_type, 'requests');
   assert.equal(adminProviderTags.data[0].created_at, '2026-01-01T00:00:00.000Z');
   assert.equal(createdAdminTag.data.id, 4);

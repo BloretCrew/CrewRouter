@@ -9,6 +9,7 @@ import type {
   AdminProviderTag,
   AdminProviderTagUpdateResponse,
   TeamMember,
+  TeamModelListItem,
   TeamQuotaRule,
   TeamRuleDeleteResponse,
   ApiKeyActionSuccess,
@@ -318,6 +319,8 @@ export class CrewRouter {
         this.call<T>('admin.teams.list', options),
       getMembers: <T = TeamMember[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.teams.byId.members.list', mergePathParams(options, { id })),
+      getModels: <T = TeamModelListItem[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+        this.call<T>('admin.teams.byId.models.list', mergePathParams(options, { id })),
       getRules: <T = TeamQuotaRule[]>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
         this.call<T>('admin.teams.byId.rules.list', mergePathParams(options, { id })),
       createRule: <T = TeamQuotaRule>(id: string | number, body: Pick<TeamQuotaRule, 'rule_type' | 'rule_value' | 'duration_hours'> & Partial<Pick<TeamQuotaRule, 'description'>>, options?: CallOptions): Promise<CrewRouterResponse<T>> =>

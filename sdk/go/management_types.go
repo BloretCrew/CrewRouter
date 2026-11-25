@@ -205,6 +205,31 @@ type DailyUsageItem struct {
 	TotalRequests any    `json:"total_requests"`
 }
 
+// TeamModelListItem is one model entry returned by GET /api/admin/teams/:id/models.
+type TeamModelListItem struct {
+	MappingID              *int64  `json:"mapping_id"`
+	Enabled                bool    `json:"enabled"`
+	ModelID                string  `json:"model_id"`
+	Name                   string  `json:"name"`
+	Provider               *string `json:"provider"`
+	Series                 *string `json:"series"`
+	Description            *string `json:"description"`
+	InputPricePer1KTokens  any     `json:"input_price_per_1k_tokens"`
+	OutputPricePer1KTokens any     `json:"output_price_per_1k_tokens"`
+	IconURL                *string `json:"icon_url"`
+	UpstreamModelID        *string `json:"upstream_model_id"`
+	Alias                  *string `json:"alias"`
+	ModelMultiplier        any     `json:"model_multiplier"`
+	TestOK                 *bool   `json:"test_ok"`
+	TestLatencyMS          any     `json:"test_latency_ms"`
+	TestTokensPerSecond    any     `json:"test_tokens_per_second"`
+	TestError              *string `json:"test_error"`
+	TestTestedAt           *string `json:"test_tested_at"`
+	ProviderID             *string `json:"provider_id"`
+	ProviderName           *string `json:"provider_name"`
+	ProviderEnabled        *bool   `json:"provider_enabled"`
+}
+
 // TeamQuotaRule is a quota rule returned with the balance summary.
 type TeamQuotaRule struct {
 	ID            string `json:"id,omitempty"`

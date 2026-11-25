@@ -35,6 +35,7 @@ export type {
   AdminProviderTag,
   AdminProviderTagUpdateResponse,
   TeamMember,
+  TeamModelListItem,
   TeamQuotaRule,
   TeamRuleDeleteResponse,
   AdminUserStats,

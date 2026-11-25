@@ -21,6 +21,7 @@ from crewrouter import (
     AdminProviderTagUpdateResponse,
     AdminUsersPage,
     TeamMember,
+    TeamModelListItem,
     ApiKeyModelsResponse,
     ApiKeyModelsUpdateResponse,
     ApiKeyHarnessModelsResponse,
@@ -189,6 +190,7 @@ class TypedRequestTests(unittest.TestCase):
         team_rule: TeamQuotaRule = {"id": "team-rule-1", "rule_type": "requests", "rule_value": 100, "duration_hours": 24, "description": "daily cap"}
         admin_product: AdminProduct = {"id": 1, "name": "Product", "description": None, "price": "2.5", "image_url": None, "link": None, "is_active": True, "sort_order": 0, "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z"}
         team_member: TeamMember = {"id": 9, "username": "alice", "email": None, "avatar": None, "created_at": "2026-01-01T00:00:00Z"}
+        team_model: TeamModelListItem = {"mapping_id": None, "enabled": False, "model_id": "m1", "name": "Model", "provider": "p1", "series": None, "description": None, "input_price_per_1k_tokens": "0.01", "output_price_per_1k_tokens": 0.02, "icon_url": None, "upstream_model_id": None, "alias": None, "model_multiplier": "1.0", "test_ok": None, "test_latency_ms": None, "test_tokens_per_second": None, "test_error": None, "test_tested_at": None, "provider_id": "p1", "provider_name": "Provider", "provider_enabled": True}
         admin_provider_tag: AdminProviderTag = {"id": 4, "name": "global", "color": "#123456", "sort_order": 0, "created_at": "2026-01-01T00:00:00Z"}
         admin_provider_tag_updated: AdminProviderTagUpdateResponse = {"id": 4, "name": "global", "color": "#123456", "sort_order": 0}
         self.assertEqual(selected_model["id"], "m1")
@@ -201,6 +203,7 @@ class TypedRequestTests(unittest.TestCase):
         self.assertEqual(admin_page["items"][0]["username"], "alice")
         self.assertEqual(admin_usage_logs["logs"][0]["custom_instruction_count"], 0)
         self.assertIsNone(team_member["email"])
+        self.assertIsNone(team_model["mapping_id"])
         self.assertEqual(admin_provider_tag["sort_order"], 0)
         self.assertEqual(admin_provider_tag_updated["id"], 4)
         self.assertEqual(usage_logs["logs"][0]["tokens_used"], "12")

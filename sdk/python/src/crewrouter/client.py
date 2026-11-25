@@ -300,6 +300,30 @@ class DailyUsageItem(TypedDict, total=False):
     total_requests: Union[int, str]
 
 
+class TeamModelListItem(TypedDict, total=False):
+    mapping_id: Optional[int]
+    enabled: bool
+    model_id: str
+    name: str
+    provider: Optional[str]
+    series: Optional[str]
+    description: Optional[str]
+    input_price_per_1k_tokens: Optional[Union[float, str]]
+    output_price_per_1k_tokens: Optional[Union[float, str]]
+    icon_url: Optional[str]
+    upstream_model_id: Optional[str]
+    alias: Optional[str]
+    model_multiplier: Union[float, str]
+    test_ok: Optional[bool]
+    test_latency_ms: Optional[Union[float, str]]
+    test_tokens_per_second: Optional[Union[float, str]]
+    test_error: Optional[str]
+    test_tested_at: Optional[str]
+    provider_id: Optional[str]
+    provider_name: Optional[str]
+    provider_enabled: Optional[bool]
+
+
 class TeamQuotaRule(TypedDict, total=False):
     id: str
     rule_type: str

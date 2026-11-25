@@ -327,6 +327,30 @@ export interface AdminProviderTagUpdateResponse {
   sort_order: number;
 }
 
+export interface TeamModelListItem {
+  mapping_id: number | null;
+  enabled: boolean;
+  model_id: string;
+  name: string;
+  provider: string | null;
+  series: string | null;
+  description: string | null;
+  input_price_per_1k_tokens: number | string | null;
+  output_price_per_1k_tokens: number | string | null;
+  icon_url: string | null;
+  upstream_model_id: string | null;
+  alias: string | null;
+  model_multiplier: number | string;
+  test_ok: boolean | null;
+  test_latency_ms: number | string | null;
+  test_tokens_per_second: number | string | null;
+  test_error: string | null;
+  test_tested_at: string | null;
+  provider_id: string | null;
+  provider_name: string | null;
+  provider_enabled: boolean | null;
+}
+
 export interface TeamQuotaRule {
   id?: string;
   rule_type: string;
