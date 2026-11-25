@@ -76,7 +76,12 @@ function createAdminPages(runtime) {
             { label: 'AI 请求次数', value: text(summary.requests, '0') }, { label: 'Token 用量', value: formatBigNumber(summary.tokens) },
             { label: '最近活动', value: summary.last_activity ? formatTime(summary.last_activity) : '—' },
           ], rows: summary.analysis_status ? [{ label: `待整理请求：${summary.analysis_status.pending_requests || 0}` }] : [] },
-          { title: '最近活跃项目', rows: projects.slice(0, 4).map((item, index) => ({ label: display(`#${index + 1}`, item.workspace_path), detail: display(`${Number(item.requests || 0).toLocaleString()} 次请求`, `${formatBigNumber(item.tokens)} Token`, item.last_activity && formatTime(item.last_activity)) })) },
+          { title: '最近活跃项目', rows: projects.slice(0, 4).map((item, index) => ({ label: display(`#${index + 1}`, item.workspace_path), detail: display(`${Number(item.requests || 0).toLocaleString()} 次请求`, `${formatBigNumber(item.tokens)} Token`, item.last_activity && formatTime(item.last_activity)), run: async ctx => {
+            const workspace = String(item.workspace_path || '');
+            if (!workspace) { await ctx.show('工作区路径不可用', '此项目没有记录工作区路径。'); return; }
+            const shellPath = `'${workspace.replace(/'/g, `'\\''`)}'`;
+            await ctx.show('工作区路径', `项目：${workspace}\n切换目录命令：cd -- ${shellPath}\n\n请使用终端的复制快捷键复制命令或路径；CLI 不会调用系统剪贴板。`);
+          } })) },
           { title: '项目工作台', tableMinWidth: 118, columns: [
             { key: 'workspace', label: '工作区', ratio: 0.38 }, { key: 'requests', label: '请求数', ratio: 0.15 }, { key: 'tokens', label: 'Token 用量', ratio: 0.16 },
             { key: 'active_days', label: '活跃天数', ratio: 0.13 }, { key: 'cost', label: '费用（积分）', ratio: 0.18 },
@@ -1137,12 +1142,43 @@ function createAdminPages(runtime) {
       },
     }),
     adminOnly({
-      id: 'admin-invites', label: '邀请链接', description: '邀请列表不含原始 token；新建一次性凭证请在网页端完成。',
+      id: 'admin-invites', label: '邀请链接', description: '创建一次性注册链接；原始链接与 token 仅在生成时显示一次。',
       async load(api) {
         const invites = array(await api('/api/auth-invites'));
-        const rows = invites.map(invite => ({ label: display(`#${invite.id}`, invite.team_name || (invite.team_id ? `团队 ${invite.team_id}` : '默认团队'), invite.status, `${invite.used_count || 0}/${invite.max_uses || 1} 次`), detail: display(`创建 ${formatTime(invite.created_at)}`, `到期 ${formatTime(invite.expires_at)}`, invite.created_by_name && `创建者 ${invite.created_by_name}`, invite.used_by_name && `使用者 ${invite.used_by_name}`), run: async ctx => { await ctx.show(`邀请 #${invite.id}`, JSON.stringify(invite, null, 2)); if (invite.status !== 'active') return; if (!await ctx.confirm('撤销邀请链接', `撤销 #${invite.id}？该邀请将立即无法注册，且撤销不可恢复。`)) return; await api(`/api/auth-invites/${encodeURIComponent(invite.id)}/revoke`, { method: 'POST', body: {} }); ctx.notify('邀请链接已撤销。'); await ctx.refresh(); } }));
-        return { sections: [{ title: '邀请链接', description: `${invites.length} 条 · 原始邀请 token 不可再次读取`, rows: rows.length ? rows : [{ label: '暂无邀请链接。' }] }], actions: [
-          { label: '生成邀请链接', run: async ctx => await ctx.show('邀请链接生成', '生成操作会创建可用于注册的一次性凭证并仅在当次响应显示。为降低误发风险，请在网页管理后台生成。') },
+        const rows = invites.map(invite => {
+          const status = { active: '有效', used: '已用完', expired: '已过期' }[invite.status] || invite.status || '未知';
+          return { label: `邀请 #${invite.id} · ${status}`, detail: `${invite.team_name ? `Team：${invite.team_name}` : '未指定 Team'} · 使用 ${Number(invite.used_count || 0)}/${Number(invite.max_uses || 1)} 次 · ${invite.expires_at ? `到期 ${formatTime(invite.expires_at)}` : '无到期时间'}`, run: async ctx => {
+            const details = [
+              `邀请编号：${invite.id}`, `状态：${status}`, `使用情况：${Number(invite.used_count || 0)} / ${Number(invite.max_uses || 1)} 次`,
+              `有效期至：${formatTime(invite.expires_at)}`, `加入 Team：${invite.team_name || '未指定'}`,
+              `创建人：${invite.created_by_name || '未知'}`, `创建时间：${formatTime(invite.created_at)}`,
+              `最近使用者：${invite.used_by_name || '尚未使用'}`, invite.used_at && `使用时间：${formatTime(invite.used_at)}`,
+              '原始 token 只在创建响应中出现；列表不会回显。',
+            ].filter(Boolean).join('\\n');
+            const actions = [{ label: '查看详情', value: 'detail' }, ...(invite.status === 'active' ? [{ label: '撤销邀请', value: 'revoke' }] : [])];
+            const choice = await ctx.choose(`邀请链接 · #${invite.id}`, actions);
+            if (choice === 'detail') await ctx.show(`邀请链接详情 · #${invite.id}`, details);
+            if (choice === 'revoke') { if (!await ctx.confirm('撤销邀请链接', `撤销 #${invite.id}？该链接将立即无法注册，且此操作不可撤销。`)) return; await api(`/api/auth-invites/${encodeURIComponent(invite.id)}/revoke`, { method: 'POST', body: {} }); ctx.notify('邀请链接已撤销。'); await ctx.refresh(); }
+          } };
+        });
+        return { sections: [{ title: '邀请链接', description: `${invites.length} 条 · 列表不含原始 token`, rows: rows.length ? rows : [{ label: '暂无邀请链接。' }] }], actions: [
+          { label: '生成邀请链接', toolbar: true, run: async ctx => {
+            const teams = array(await api('/api/admin/teams'));
+            const values = await ctx.form('生成邀请链接', [
+              { name: 'maxUses', label: '使用人数（1-10000）', value: '1' },
+              { name: 'days', label: '有效天数（1-365）', value: '7' },
+              { name: 'teamId', label: '加入 Team', value: '', options: [{ label: '不指定 Team', value: '' }, ...teams.map(team => ({ label: team.name, value: String(team.id) }))] },
+            ], { description: '链接和 token 只在本次生成结果显示，请及时保存。' });
+            if (!values) return;
+            const maxUses = Number(values.maxUses); const days = Number(values.days);
+            if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 10000 || !Number.isInteger(days) || days < 1 || days > 365) { await ctx.show('邀请参数无效', '使用人数须为 1 到 10000；有效天数须为 1 到 365。'); return; }
+            const team = teams.find(item => String(item.id) === String(values.teamId));
+            if (!await ctx.confirm('确认生成邀请链接', `使用人数：${maxUses}\n有效天数：${days}\n加入 Team：${team?.name || '不指定'}\n该链接可用于创建新账户。`)) return;
+            const result = await api('/api/auth-invites', { method: 'POST', body: { maxUses, days, teamId: values.teamId || '' } });
+            const content = [`邀请链接：${result.url || '服务器未返回链接'}`, `一次性 token：${result.token || '服务器未返回 token'}`, `使用人数：${result.max_uses ?? maxUses}`, `有效期至：${formatTime(result.expires_at)}`, `加入 Team：${result.team_name || '不指定'}`, '', '请立即保存链接与 token；关闭后无法再次从列表读取。'].join('\\n');
+            await ctx.show('邀请链接已生成', content);
+            ctx.notify('邀请链接已生成；请从当前结果复制并安全发送。'); await ctx.refresh();
+          } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },

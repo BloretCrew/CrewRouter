@@ -214,6 +214,37 @@ test('admin popup notices are read-only and route to the actual list endpoint', 
   assert.ok(!data.actions.some(action => /删除|创建|重置|启用|停用/.test(action.label)));
 });
 
+test('admin invite page renders readable rows, confirms revoke and creates a one-time link with web payload', async () => {
+  const calls = [];
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/auth-invites' && options.method === 'POST') return { id: 5, token: 'one-time-token', url: 'https://router.example/?invite=one-time-token', max_uses: 3, expires_at: '2026-12-02T00:00:00Z', team_name: 'Team Two' };
+    if (path === '/api/auth-invites') return [{ id: 4, status: 'active', max_uses: 5, used_count: 2, expires_at: '2026-12-01T00:00:00Z', team_id: 2, team_name: 'Team Two', created_by_name: 'admin', created_at: '2026-11-20T00:00:00Z', used_by_name: 'alice', used_at: '2026-11-21T00:00:00Z' }];
+    if (path === '/api/admin/teams') return [{ id: 2, name: 'Team Two' }];
+    return {};
+  };
+  const page = pageById('admin-invites');
+  const data = await page.load(api);
+  assert.match(data.sections[0].rows[0].detail, /Team：Team Two.*使用 2\/5 次/);
+  let inviteDetails = '';
+  await data.sections[0].rows[0].run({ choose: async () => 'detail', show: async (_title, body) => { inviteDetails = body; } });
+  assert.match(inviteDetails, /原始 token 只在创建响应中出现/);
+  let revokeWarning = '';
+  await data.sections[0].rows[0].run({ choose: async () => 'revoke', confirm: async (_title, message) => { revokeWarning = message; return false; } });
+  assert.match(revokeWarning, /不可撤销/);
+  assert.equal(calls.some(call => call.path.endsWith('/4/revoke')), false);
+  const create = data.actions.find(action => action.label === '生成邀请链接');
+  const values = { maxUses: '3', days: '14', teamId: '2' };
+  await create.run({ form: async () => values, confirm: async () => false });
+  assert.equal(calls.some(call => call.options.method === 'POST' && call.path === '/api/auth-invites'), false);
+  let createdDetails = '';
+  await create.run({ form: async () => values, confirm: async () => true, show: async (_title, content) => { createdDetails = content; }, notify() {}, refresh: async () => {} });
+  const write = calls.find(call => call.path === '/api/auth-invites' && call.options.method === 'POST');
+  assert.deepEqual(write.options.body, { maxUses: 3, days: 14, teamId: '2' });
+  assert.match(createdDetails, /https:\/\/router.example/);
+  assert.match(createdDetails, /one-time-token/);
+});
+
 test('admin updates page only performs the confirmed version check and never applies an update', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return path.endsWith('/runtime') ? { currentVersion: '1.0', status: { state: 'idle' } } : { hasUpdate: true, latestVersion: '1.1' }; };
@@ -243,4 +274,15 @@ test('Team page separates member, model access and quota sections in web order',
   const labels = section.rows.map(row => row.label);
   assert.ok(labels.findIndex(label => label.startsWith('成员列表')) < labels.findIndex(label => label.startsWith('模型授权')));
   assert.ok(labels.findIndex(label => label.startsWith('模型授权')) < labels.findIndex(label => label.startsWith('限额规则')));
+});
+
+test('project recent workspace opens a safely quoted terminal copy command', async () => {
+  const page = pageById('projects');
+  const data = await page.load(async () => ({ summary: { projects: 1 }, projects: [{ workspace_path: "/work/O'Brien", requests: 2, tokens: 30, cost: 0.5 }], daily: [] }));
+  const recent = data.sections.find(section => section.title === '最近活跃项目');
+  let detail = '';
+  await recent.rows[0].run({ show: async (_title, body) => { detail = body; } });
+  assert.match(detail, /项目：\/work\/O'Brien/);
+  assert.match(detail, /cd -- '\/work\/O'\\''Brien'/);
+  assert.match(detail, /CLI 不会调用系统剪贴板/);
 });
