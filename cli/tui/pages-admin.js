@@ -182,7 +182,7 @@ function createAdminPages(runtime) {
             ...(currentUserRank > 0 ? [{ label: `您的排名：第 ${currentUserRank} 名` }] : []),
           ] },
         ], actions: [
-          ...[7, 30, 90, 365].map(value => ({ label: `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.leaderboardDays = value; await ctx.refresh(); } })),
+          ...[7, 30, 90, 365].map(value => ({ label: value === 365 ? '最近 1 年' : `最近 ${value} 天`, toolbar: true, run: async ctx => { runtime.leaderboardDays = value; await ctx.refresh(); } })),
           ...[['tokens', '按 Token 用量排序'], ['requests', '按请求次数排序'], ['points', '按消费积分排序'], ['cache', '按缓存命中率排序'], ['balance', '按余额积分排序']].map(([value, label]) => ({ label, toolbar: true, run: async ctx => { runtime.leaderboardSort = value; await ctx.refresh(); } })),
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };

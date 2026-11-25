@@ -237,4 +237,6 @@ test('leaderboard presents token, request, points, cache and balance fields as w
   assert.deepEqual(section.rows[0].cells, { rank: '#4', username: 'alice · 我', requests: '12', tokens: '2.4K', points: '3.25', cache: '20.0%', balance: '9.50' });
   assert.deepEqual(data.sections[1].rows.map(row => row.label), ['共 23 名活跃用户', '您的排名：第 4 名']);
   assert.ok(data.actions.some(action => action.label === '最近 30 天' && action.toolbar));
+  assert.ok(data.actions.some(action => action.label === '最近 1 年' && action.toolbar));
+  assert.equal(data.actions.some(action => action.label === '最近 365 天'), false);
 });
