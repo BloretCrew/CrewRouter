@@ -823,13 +823,12 @@ function createAdminPages(runtime) {
           return { label: provider.name || '未知供应商', detail: [quota.planName, headline, state, provider.last_valid_at && `最后有效观测 ${formatTime(provider.last_valid_at)}`].filter(Boolean).join(' · '), run: async ctx => await ctx.show(`供应商额度 · ${provider.name || '未知'}`, detailLines.join('\n')) };
         });
         const shortError = (value, max = 72) => { const normalized = String(value || '').replace(/\s+/g, ' ').trim(); return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized; };
-        const modelRows = searchedModels.map(item => {
+        const modelCards = searchedModels.map(item => {
           const id = String(item.model_id || item.id);
-          const testLabel = item.test_ok === true ? `测试通过 · ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? `测试失败 · ${shortError(item.test_error)}` : '尚未测试';
           const name = item.alias || item.name || id;
           const assigned = assignedIds.has(id);
           const stateLabel = [item.test_ok === true ? `通过 ${item.test_latency_ms || 0}毫秒` : item.test_ok === false ? '测试失败' : '未测试', item.is_starred ? '已收藏' : '', item.is_hidden ? '已隐藏' : ''].filter(Boolean).join(' · ');
-          return { label: name, cells: { name, series: item.series || '—', multiplier: modelMultiplierLabel(item.model_multiplier), test: stateLabel, description: shortError(item.description, 54) || '—', queue: assigned ? '已加入' : '未加入', actions: 'Enter 管理' }, detail: display(`上游模型 ID：${item.upstream_model_id || item.name || id}`, `供应商：${item.provider_name || item.provider || '—'}`, `输入 ${item.input_price_per_1k_tokens ?? '—'} 人民币/千Token`, `输出 ${item.output_price_per_1k_tokens ?? '—'} 人民币/千Token`, `测试吞吐：${item.test_tokens_per_second == null ? '未采集' : `${Number(item.test_tokens_per_second).toFixed(2)} Token/秒`}`, item.description, array(item.tags).map(tag => tag.name).join('、')), run: async ctx => {
+          return { label: name, value: assigned ? '已加入当前 Key' : '未加入当前 Key', detail: display(`${item.team_name || `团队 ${item.team_id}`} · ${item.provider_name || item.provider || '未知供应商'}`, `系列：${item.series || '—'} · 倍率：${modelMultiplierLabel(item.model_multiplier)}`, `输入价：${item.input_price_per_1k_tokens ?? '—'} · 输出价：${item.output_price_per_1k_tokens ?? '—'} 人民币/千Token`, item.test_ok === true ? `测试通过 · ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? `测试失败 · ${shortError(item.test_error)}` : '尚未测试', `状态：${stateLabel}`, `说明：${shortError(item.description, 80) || '—'}`, `上游 ID：${item.upstream_model_id || item.name || id}`, array(item.tags).map(tag => tag.name).join('、')), run: async ctx => {
             const choice = await ctx.choose(`模型 · ${name}`, [
               { label: '查看详情', value: 'detail' },
               { label: '测试模型（真实请求，可能扣费）', value: 'test' },
@@ -921,13 +920,11 @@ function createAdminPages(runtime) {
               item.test_error && `测试失败原因：${shortError(item.test_error, 500)}`, item.description && `模型说明：${item.description}`,
             ].filter(Boolean).join('\n'); await ctx.show(`模型详情 · ${item.alias || item.name || item.model_id}`, details); } if (choice === 'unstar') { if (!await ctx.confirm('取消模型收藏', `${item.alias || item.name || item.model_id}\n${item.provider_name || ''}`)) return; await api('/api/user/model-library/star', { method: 'PUT', body: { teamId: item.team_id, providerId: item.provider, modelId: item.model_id, starred: false } }); ctx.notify('模型收藏已取消。'); await ctx.refresh(); } } })) }] : []),
           { title: '供应商', description: `${providerCards.length} 个供应商 · 选择“搜索与筛选”中的供应商可展开模型目录`, cards: providerCards, rows: providerCards.length ? [] : [{ label: libraryResult.status === 'rejected' ? libraryResult.reason.message : '暂无可用供应商。' }] },
-          ...(selectedProvider || globalSearch ? [{ title: `${globalSearch ? '全库搜索' : selectedProvider.provider_name} · 模型目录`, tableMinWidth: 150, columns: [
-            { key: 'name', label: '模型名称', ratio: 0.2 }, { key: 'series', label: '系列', ratio: 0.1 }, { key: 'multiplier', label: '倍率', ratio: 0.1 },
-            { key: 'test', label: '测试状态', ratio: 0.17 }, { key: 'description', label: '模型说明', ratio: 0.2 }, { key: 'queue', label: 'Key 队列', ratio: 0.1 }, { key: 'actions', label: '操作', ratio: 0.13 },
-          ], description: `${globalSearch ? `全库筛选 · ${runtime.librarySearch || '无关键词'} · ` : ''}第 ${searchData.pagination?.page || runtime.libraryPage || 1}/${searchData.pagination?.total_pages || 1} 页 · 共 ${searchData.pagination?.total ?? searchData.total ?? searchedModels.length} 个模型`, rows: modelRows.length ? modelRows : [{ label: '没有符合筛选条件的模型。' }] }] : []),
+          ...(selectedProvider || globalSearch ? [{ title: `${globalSearch ? '全库搜索' : selectedProvider.provider_name} · 模型目录`, description: `${globalSearch ? `全库筛选 · ${runtime.librarySearch || '无关键词'} · ` : ''}第 ${searchData.pagination?.page || runtime.libraryPage || 1}/${searchData.pagination?.total_pages || 1} 页 · 共 ${searchData.pagination?.total ?? searchData.total ?? searchedModels.length} 个模型`, cards: modelCards.length ? modelCards : undefined, rows: modelCards.length ? [] : [{ label: '没有符合筛选条件的模型。' }] }] : []),
           ...(libraryResult.status === 'rejected' ? [{ title: '加载失败', rows: [{ label: libraryResult.reason.message || '模型目录不可用' }] }] : []),
         ];
-        return { sections, actions: [
+        return { sections, pageToolbar: true, actions: [
+          keySelectAction,
           ...(selectedProvider || globalSearch ? [
             { label: '搜索结果上一页', disabled: searchData?.pagination ? !searchData.pagination.has_prev : (runtime.libraryPage || 1) <= 1, run: async ctx => { runtime.libraryPage = Math.max(1, (runtime.libraryPage || 1) - 1); await ctx.refresh(); } },
             { label: '搜索结果下一页', disabled: searchData?.pagination ? !searchData.pagination.has_next : searchedModels.length < 30, run: async ctx => { runtime.libraryPage = (runtime.libraryPage || 1) + 1; await ctx.refresh(); } },

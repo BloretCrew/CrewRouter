@@ -143,7 +143,7 @@ test('model library requires confirmation and sends the ordered key model queue'
   await providerAction.run({ choose: async () => 0, refresh: async () => {} });
   const expanded = await page.load(api);
   assert.ok(calls.some(call => call.path === '/api/user/team/2/provider/p1/models'));
-  const row = expanded.sections.find(section => section.title.includes('模型目录')).rows[0];
+  const row = expanded.sections.find(section => section.title.includes('模型目录')).cards[0];
   let confirmCount = 0;
   await row.run({ choose: async () => 'bind', confirm: async () => { confirmCount++; return false; }, notify() {}, refresh: async () => {} });
   assert.equal(confirmCount, 1);
