@@ -132,6 +132,7 @@ test('admin general settings and request capture use readable web fields with va
   const generalSection = data.sections.find(section => section.title === '常规设置');
   assert.deepEqual(generalSection.cards.map(card => card.label), ['系统名称', '默认新用户积分', '默认 Key 有效期', '统计刷新间隔']);
   assert.ok(generalSection.rows.some(row => row.label === '计费模式：按请求计费 · 0.0500 积分/次'));
+  assert.ok(generalSection.rows.some(row => row.label === '登录状态上报：关闭'), 'explicit false disables login reporting');
   assert.ok(generalSection.rows.some(row => row.label === '匿名统计上报：开启' && row.detail.includes('仅聚合计数')));
   assert.ok(generalSection.rows.some(row => row.label === '可用模型：2 个' && row.detail === 'fusion、model-a'));
   const generalAction = data.actions.find(action => action.label === '编辑常规设置');
@@ -169,6 +170,15 @@ test('admin general settings and request capture use readable web fields with va
   assert.match(quotaNotice, /batch_size.*1–100/);
   await quotaAction.run({ form: async () => quotaValues, confirm: async () => true, notify() {}, refresh: async () => {} });
   assert.deepEqual(calls.find(call => call.path === '/api/admin/request-quota-config' && call.options.method === 'PUT').options.body, { enabled: false, mode: 'async', reconciliation_seconds: 0, max_tries: 2, worker_interval_ms: 1000, batch_size: 8, lease_seconds: 90 });
+});
+
+test('admin reporting settings preserve the web defaults when optional keys are absent', async () => {
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const page = buildPages(runtime).find(item => item.id === 'admin-settings');
+  const data = await page.load(async path => path === '/api/admin/settings' ? { model_list: ['fusion', 'model-a'] } : {});
+  const section = data.sections.find(item => item.title === '常规设置');
+  assert.ok(section.rows.some(row => row.label === '登录状态上报：开启'));
+  assert.ok(section.rows.some(row => row.label === '匿名统计上报：开启' && row.detail.includes('含模型与供应商明细')));
 });
 
 test('admin Agent Web settings expose web fields with masked keys and validated complete updates', async () => {
