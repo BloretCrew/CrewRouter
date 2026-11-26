@@ -51,12 +51,15 @@ jobs:
           runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/beta-release.yml/runs?head_sha=$release_sha&event=push&per_page=100")"
           run_id="$(printf '%s' "$runs" | jq -r --arg sha "$release_sha" '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .status == "completed" and .conclusion == "success")] | sort_by(.run_number) | last | .id // empty')"
           test -n "$run_id" || { echo "No successful beta-release run exists for $RELEASE_TAG ($release_sha)"; exit 1; }
-          printf 'sha=%s\nversion=%s\nrun-id=%s\n' "$release_sha" "$version" "$run_id" >> "$GITHUB_OUTPUT"
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")"
+          artifact_name="$(printf '%s' "$artifacts" | jq -r --arg prefix "crewrouter-27-beta-npm-candidates-$release_sha" '[.artifacts[] | select(.name == $prefix and .expired == false)] | if length == 1 then .[0].name else empty end')"
+          test -n "$artifact_name" || { echo "Expected exactly one unexpired npm candidate artifact for $release_sha"; exit 1; }
+          printf 'sha=%s\nversion=%s\nrun-id=%s\nartifact-name=%s\n' "$release_sha" "$version" "$run_id" "$artifact_name" >> "$GITHUB_OUTPUT"
       - name: Download candidate packages from the exact release run
         uses: actions/download-artifact@v4
         with:
-          name: crewrouter-27-beta-npm-candidates-${{ steps.release.outputs.release-sha }}
-          run-id: ${{ steps.release.outputs.source-run-id }}
+          name: ${{ steps.release.outputs.artifact-name }}
+          run-id: ${{ steps.release.outputs.run-id }}
           github-token: ${{ github.token }}
           path: candidates
       - name: Validate both package names and versions
