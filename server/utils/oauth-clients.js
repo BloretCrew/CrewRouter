@@ -62,7 +62,7 @@ const BUILTIN_BY_ID = new Map(BUILTIN_CLIENTS.map((client) => [client.client_id,
 const SCOPE_DEFINITIONS = Object.freeze({
   'events:report': Object.freeze({ description: '仅向 CrewRouter 上报客户端使用事件', assignable: true }),
   'gateway:invoke': Object.freeze({ description: '通过网关调用模型接口', assignable: true }),
-  'console:read': Object.freeze({ description: '读取控制台数据（预留）', assignable: false }),
+  'console:read': Object.freeze({ description: '读取控制台数据（当前暂无 OAuth 保护的控制台读取端点）', assignable: true }),
 });
 
 const ASSIGNABLE_SCOPES = Object.freeze(

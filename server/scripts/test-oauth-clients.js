@@ -109,7 +109,8 @@ test('scopes default to the client set and never escape it', async () => {
   assert.equal(clients.normalizeScopeRequest('gateway:invoke', publicClient), 'gateway:invoke');
   assert.equal(clients.normalizeScopeRequest('gateway:invoke events:report', publicClient), null);
   assert.equal(clients.normalizeScopeRequest('console:read', publicClient), null);
-  assert.equal(clients.normalizeScopes(['console:read']), null);
+  assert.deepEqual(clients.normalizeScopes(['console:read']), ['console:read']);
+  assert.deepEqual(clients.normalizeScopes(['gateway:invoke', 'events:report', 'console:read']), ['gateway:invoke', 'events:report', 'console:read']);
   assert.deepEqual(clients.normalizeScopes(['gateway:invoke', 'events:report']), ['gateway:invoke', 'events:report']);
 });
 

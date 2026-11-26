@@ -1,6 +1,6 @@
 # CrewRouter OAuth 登录与授权整理
 
-> 核对时间：2026-11-09（main `ce54c9a7`）。本文是现状梳理，不改变任何协议或配置。
+> 更新：2026-11-26。说明 CrewRouter 自有 OAuth 授权服务的授权码与设备码流程、权限范围和客户端支持；不代表 OAuth 已成为 CLI 的交互式登录方式。
 > 仓库里同时存在多个容易混淆的“OAuth”概念，先按职责分开：
 
 | 编号 | 体系 | 谁登录谁 | 是否使用 OAuth | 当前状态 |
@@ -8,7 +8,7 @@
 | 1 | Bloret PassPort 主登录 | 用户 → CrewRouter | CrewRouter 是 OAuth 客户端 | Personal / Desktop Local 唯一登录方式；Team 可选 |
 | 2 | 飞书企业登录 | 用户 → CrewRouter | CrewRouter 是 OAuth 客户端 | Team 实例可选；与密码登录并存 |
 | 3 | 插件商店 PassPort | 商店访客 → CrewRouter 商店 | CrewRouter 商店是 OAuth 客户端 | 仅 `demo: true` 时挂载，身份与主站隔离 |
-| 4 | CrewRouter OAuth 2.0 授权服务 | CLI / Desktop / Helper / 第三方应用 → CrewRouter | CrewRouter 是授权服务器 | 正式；PKCE + 授权码 + 刷新令牌 |
+| 4 | CrewRouter OAuth 2.0 授权服务 | 已实现 OAuth 的 Desktop / Helper / 第三方应用 → CrewRouter | CrewRouter 是授权服务器 | 正式；PKCE + 授权码 + 刷新令牌 + 设备授权 grant；`cr login` 尚未实现 OAuth 登录 |
 | — | 旧版 GitHub 登录 | 用户 → CrewRouter | 原 OAuth 客户端 | 已停用，路由固定返回 410 |
 | 附 | 上游供应商 OAuth Token | CrewRouter → 上游供应商 | 用于额度查询/调用，不是用户登录 | 管理端导入 `auth.json`，不在 CrewRouter 内走登录流程 |
 
@@ -313,7 +313,7 @@ scope：
 | --- | --- | --- | --- |
 | `events:report` | 上报客户端使用事件 | `POST /api/client-events` | 是 |
 | `gateway:invoke` | 通过网关调用模型 | `/v1/*` 网关端点 | 是 |
-| `console:read` | 预留，暂无客户端使用 | — | 否 |
+| `console:read` | 预留给控制台读取类资源 | 当前没有 OAuth Bearer 保护的控制台读取端点；授予后目前不会额外开放控制台 API | 是，但暂未生效于资源访问 |
 
 管理接口（仅管理员）：
 
@@ -362,7 +362,10 @@ scope：
 | GET | `/oauth/authorize` | 授权入口；要求控制台 session；校验参数后返回确认页 `public/pages/oauth-consent.html` |
 | GET | `/oauth/authorize/info` | 确认页数据：客户端名、scope、回调地址、state、当前用户可用 API Key |
 | POST | `/oauth/authorize/approve` | 同意/拒绝；同意时签发 10 分钟一次性授权码并 302 回 loopback |
-| POST | `/oauth/token` | `authorization_code` 与 `refresh_token` 两种 grant |
+| POST | `/oauth/device/code` | RFC 8628 设备授权申请，返回 `device_code`、`user_code`、验证 URI、有效期与轮询间隔 |
+| GET | `/oauth/device` | 登录后输入用户码并查看客户端名称及请求 scope |
+| POST | `/oauth/device/authorize` | CSRF 保护下同意或拒绝设备授权 |
+| POST | `/oauth/token` | `authorization_code`、`refresh_token` 与 `urn:ietf:params:oauth:grant-type:device_code` 三种 grant |
 | POST | `/oauth/desktop-session` | Desktop 用授权码 + PKCE 换取 Web Session Cookie |
 | GET | `/oauth/authorizations` | 当前用户的活跃授权链列表（控制台“授权管理”） |
 | POST | `/oauth/authorizations/revoke` | 吊销当前用户指定授权链 |
@@ -379,10 +382,10 @@ scope：
 
 1. `GET /oauth/authorize` 参数校验：
    - `client_id` 必须能解析到已启用客户端（内置、配置或数据库）；
-   - `response_type` 缺省或 `code`；
+   - `response_type=code` 必须显式提供；
    - `redirect_uri` 按该客户端的回调策略匹配：内置客户端允许任意 loopback 路径；注册客户端精确匹配登记地址，回环地址忽略端口；
    - `scope` 必须是该客户端白名单子集；为空时取客户端默认全集；
-   - `code_challenge` 必填；`code_challenge_method` 缺省或 `S256`。
+   - PKCE challenge 必须符合 RFC 7636 长度/字符集，且 `code_challenge_method=S256` 必须显式提供；客户端还应生成随机 `state` 并在回调时核验，授权服务器会原样带回成功或拒绝结果中的 state。
    - 未登录的 HTML 导航跳 `/?error=login_required`。
 2. `POST /oauth/authorize/approve`：
    - `decision=deny` → 302 到回调地址，带 `error=access_denied` 与 state；
@@ -390,7 +393,7 @@ scope：
    - 授权码为 32 字节随机 base64url，10 分钟、一次性，存入 `oauth_auth_codes`（含 client、user、api_key、scope、PKCE challenge）；
    - 302 回调，带 `code` 与 `state`。
 3. `POST /oauth/token` 的 `authorization_code`：
-   - 必须提供 `code`、`client_id`、`code_verifier`；
+   - 必须通过 POST `application/x-www-form-urlencoded` 提交 `code`、`client_id`、原始 `redirect_uri`、`code_verifier`；机密客户端还须按注册方式认证；
    - **先原子认领 code（`used=TRUE`），再校验 PKCE**，错误 verifier 也会烧掉 code，防止暴力枚举；
    - 校验过期与 `S256(verifier) == challenge`（恒时比较）；
    - 签发：
@@ -405,7 +408,17 @@ scope：
    - 若该 refresh 已有子代 refresh → 视为重用，吊销整条链；
    - 否则轮换出新 access + 新 refresh，更新旧 refresh 的 `last_used_at`。
 
-### 5.4 令牌校验与使用
+### 5.4 RFC 8628 设备授权流程
+
+适用于不能方便地打开浏览器或接收回调的 CLI、电视、远程主机等客户端。当前服务端协议已实现；CLI 命令 `cr login` 尚未接入该流程。
+
+1. 客户端 POST 表单到 `/oauth/device/code`，提交 `client_id` 和可选 `scope`。机密客户端按注册要求提供 Basic 或表单 secret；公共客户端不得依赖共享 secret。
+2. 成功响应包含 `device_code`（仅设备端持有）、`user_code`（用户输入）、`verification_uri`、`verification_uri_complete`、`expires_in`（当前 600 秒）和 `interval`（当前 5 秒）。数据库只存 device code 的 SHA-256；不要记录或向用户展示 device code。
+3. 用户在浏览器登录后打开 `verification_uri`，输入用户码；确认页显示客户端名和请求的 scope。用户同意/拒绝需通过 session 与 CSRF 校验，用户码只可完成一次授权决定。
+4. 设备端按 interval 轮询 `/oauth/token`，提交 `grant_type=urn:ietf:params:oauth:grant-type:device_code`、`device_code` 与 `client_id`。`authorization_pending` 表示继续等待，`slow_down` 表示轮询过快且后续 interval 增加 5 秒，`access_denied` 表示用户拒绝，`expired_token` 表示设备码失效。
+5. 用户批准后设备端只可兑换一次 access token。该 grant 当前不发 refresh token；token 响应含 `access_token`、`token_type=Bearer`、`expires_in` 和 `scope`。重复兑换返回 `invalid_grant`。
+
+### 5.5 令牌校验与使用
 
 `server/middleware/oauth-bearer.js` 提供双鉴权：
 
@@ -432,7 +445,7 @@ scope：
 
 `/api/client-events` 的读接口允许控制台 session 或 OAuth。
 
-### 5.5 Desktop 官方站登录
+### 5.6 Desktop 官方站登录
 
 链路：Desktop → 官方站 `/store` → 目标实例 `/oauth/authorize` → Desktop 回环回调 → `/oauth/desktop-session`。
 
@@ -450,7 +463,7 @@ scope：
 
 `/oauth/desktop-session` 的 CSRF 例外只适用于：POST、JSON Content-Type、且没有浏览器 `Origin`/`Referer`/`Sec-Fetch-*` 头。浏览器表单或跨源 fetch 仍走正常 CSRF 校验。
 
-### 5.6 授权码、令牌与吊销的数据模型
+### 5.7 授权码、令牌与吊销的数据模型
 
 `ensureOAuthTables()` 在首次使用时懒建，不修改 `init-db.js`：
 
@@ -469,19 +482,23 @@ scope：
 - 使用 `pg_advisory_xact_lock(hashtext('crewrouter-oauth-token-principal'), hashtext([userId, clientId]))` 与轮换串行化；
 - 吊销失败或超时返回 503，不谎报成功。
 
-### 5.7 控制台与确认页
+### 5.8 控制台与确认页
 
 - 确认页：`public/pages/oauth-consent.html` + `public/js/oauth-consent.js`
   - 读取 URL 参数，请求 `/oauth/authorize/info`；
   - 展示客户端名、scope 说明、API Key 选择；
   - 非首方客户端显示第三方警告和实际回调地址；
   - 用原生表单 POST `/oauth/authorize/approve`，隐藏域回填全部授权参数；
-  - scope 文案：`events:report` = 上报客户端使用事件，`gateway:invoke` = 通过网关调用模型接口，`console:read` = 读取控制台数据（预留）。
+  - scope 文案：`events:report` = 上报客户端使用事件，`gateway:invoke` = 通过网关调用模型接口，`console:read` = 控制台读取 scope（当前没有对应 OAuth 保护端点，因此授予后不增加实际访问能力）。
 - 授权管理：`public/js/app.js` 的 `loadAuthorizations()` / `revokeAuthorization()`，调用 `/oauth/authorizations` 与 `/oauth/authorizations/revoke`。
 - 应用管理：管理后台「系统设置 → 登录与认证 → OAuth 应用」可创建、编辑、轮换密钥和删除数据库客户端；内置与配置文件客户端显示为只读。客户端密钥只在创建或轮换后显示一次。
 - Demo 模式使用 `server/demo/oauth.js` 返回只读示例授权列表，吊销只返回成功。
 
-### 5.8 内部 OAuth 令牌
+### 5.9 CLI 支持状态
+
+虽然内置客户端注册表保留了 `crewrouter-cli`（允许 `gateway:invoke`），且服务端已经提供授权码和设备授权 grant，当前 `cr login` 命令尚未实现 OAuth 浏览器/设备码流程。CLI 目前支持用户名/密码（含 2FA）或 API Key 登录；不要把 CLI 当前的登录界面或 `crewrouter-cli` 客户端登记误认为已能通过 OAuth 登录。
+
+### 5.10 内部 OAuth 令牌
 
 `server/utils/internal-oauth.js` 为服务端内部调用签发令牌：
 
@@ -492,7 +509,7 @@ scope：
 - 并发签发用 `pendingTokens` 去重；
 - 主要用途：会话总结（`server/routes/sessions-view.js`）调用本地 `/v1/chat/completions`，避免读取 API Key 明文。
 
-### 5.9 第三方应用接入示例
+### 5.11 第三方应用接入示例
 
 **公共客户端（原生 / CLI）**
 
@@ -750,8 +767,8 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 5. **商店仅在 Demo 模式可用**：`app.use('/store', createStoreRoutes())` 位于 `if (isDemo)` 内；非 demo 部署不会暴露商店 OAuth。
 6. **商店 GET 交换会暴露 `app_secret` 到查询串**：这是历史契约；若提供方支持 POST，应优先迁移，但当前代码没有自动重试或回退。
 7. **提供方是否保留 `redirect_uri` 上的 state 未验证**：代码同时把 state 放在 `state` 参数和回调 URI 中，兼容两种行为；跨实例的一次性仍依赖 IdP 的一次性 code。
-8. **当前不支持的能力**：没有 RFC 7591 动态客户端注册（需管理员在后台或配置文件中登记）；没有 Device Authorization Grant（无浏览器/SSH 场景仍需 loopback 回调）；不签发 `id_token`，不是 OpenID Connect；未为浏览器 SPA 配置 CORS，SPA 建议使用后端代理或原生客户端模式。
-9. **`console:read` 是预留 scope**：元数据会公布，但没有客户端使用，也没有对应端点校验。
+8. **当前不支持的能力**：没有 RFC 7591 动态客户端注册（需管理员在后台或配置文件中登记）；CLI `cr login` 尚未接入 OAuth 授权码或设备码流程；不签发 `id_token`，不是 OpenID Connect；未为浏览器 SPA 配置 CORS，SPA 建议使用后端代理或原生客户端模式。
+9. **`console:read` 可分配但尚无资源端点**：管理员可给客户端配置此 scope，用户也可在授权时批准；但当前没有 OAuth Bearer 保护的控制台读取端点，故 token 不会因此获得控制台 API 访问能力。新增端点前必须实现 scope 检查和测试。
 10. **Desktop 官方登录与商店耦合**：`helper_login=1` 的实例列表按访问者 IP/设备弱关联，不要求商店 PassPort 会话；这是有意设计，但需要理解其隐私与冒用边界。
 
 ---
