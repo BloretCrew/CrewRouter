@@ -55,6 +55,29 @@ test('admin-only pages require a verified admin identity before calling APIs', a
   }
 });
 
+test('CLI overview shows clearly labeled balance, usage, API Key count and unknown latency', async () => {
+  const page = buildPages(runtime(false)).find(item => item.id === 'overview');
+  const api = async path => {
+    if (path === '/api/version') return { name: 'CrewRouter', version: '1.2.3' };
+    if (path === '/api/instance') return { edition: 'team', runtime: 'server', auth: { methods: ['password'] } };
+    if (path === '/api/user/balance') return { balance: 12.5, group: { name: 'Team A' } };
+    if (path === '/api/user/stats') return { summary: { total_requests: 3, total_tokens: 1234, total_cost: 0.75 }, daily: [{ date: '2026-11-25', requests: 3, tokens: 1234, cost: 0.75 }] };
+    if (path === '/api/user/api-keys') return [{ id: 1 }, { id: 2 }];
+    if (path === '/api/user/current-model') return { currentModel: { name: 'Model A' } };
+    return {};
+  };
+  const data = await page.load(api);
+  const usage = data.sections.find(section => section.title === '账户与用量');
+  assert.deepEqual(usage.cards.map(card => card.label), ['余额', '请求', 'Token 用量', '费用（积分）', 'API Key']);
+  assert.deepEqual(usage.cards.map(card => card.value), ['12.5000 积分', '3', '1.2K Token', '0.7500 积分', '2 个']);
+  assert.equal(usage.cards[3].detail, '平均响应时间：暂无数据');
+  assert.ok(usage.rows.some(row => row.label === '当前模型：Model A'));
+  assert.ok(!usage.rows.some(row => row.label.startsWith('API Key：')));
+  assert.equal(data.sections.find(section => section.title === '最近每日用量').rows[0].label, '2026-11-25 · 3 次请求 · 1.2K Token · 0.7500 积分');
+  const measured = await page.load(async path => path === '/api/user/stats' ? { summary: { avg_latency: 45 } } : path === '/api/user/balance' ? { balance: 0 } : path === '/api/user/api-keys' ? [] : {});
+  assert.equal(measured.sections.find(section => section.title === '账户与用量').cards[3].detail, '平均响应时间 45 毫秒');
+});
+
 test('user console pages query matching endpoints and expose equivalent controls', async () => {
   const pages = new Map(buildPages(runtime(false)).map(page => [page.id, page]));
   const calls = [];

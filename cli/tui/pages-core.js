@@ -106,14 +106,14 @@ function overviewPage(runtime) {
           title: '账户与用量',
           description: `最近 ${days} 天。`,
           cards: [
-            { label: '余额', value: text(values.balance && values.balance.balance, '未知'), detail: values.balance && values.balance.group ? `所属团队：${values.balance.group.name || ''}` : '' },
+            { label: '余额', value: `${formatCost(values.balance && values.balance.balance)} 积分`, detail: values.balance && values.balance.group ? `所属团队：${values.balance.group.name || ''}` : '' },
             { label: '请求', value: Number(summary.total_requests || 0).toLocaleString(), detail: '成功计费的请求' },
-            { label: 'Token 用量', value: formatBigNumber(summary.total_tokens), detail: '含缓存命中量' },
-            { label: '费用（积分）', value: `${formatCost(summary.total_cost)} 积分`, detail: `平均响应时间 ${Math.round(Number(summary.avg_latency || 0))} 毫秒` },
+            { label: 'Token 用量', value: `${formatBigNumber(summary.total_tokens)} Token`, detail: '输入与输出 Token 合计' },
+            { label: '费用（积分）', value: `${formatCost(summary.total_cost)} 积分`, detail: Number.isFinite(Number(summary.avg_latency)) && summary.avg_latency != null ? `平均响应时间 ${Math.round(Number(summary.avg_latency))} 毫秒` : '平均响应时间：暂无数据' },
+            ...(Array.isArray(values.keys) ? [{ label: 'API Key', value: `${values.keys.length} 个` }] : []),
           ],
           rows: [
             ...(values.current && values.current.currentModel ? [{ label: `当前模型：${values.current.currentModel.name || values.current.currentModel.id}` }] : []),
-            ...(Array.isArray(values.keys) ? [{ label: `API Key：${values.keys.length} 个` }] : []),
           ],
         });
         if (daily.length) {
