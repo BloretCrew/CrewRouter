@@ -30,7 +30,7 @@ GitHub workflow 生成所有资产的 SHA-256 清单并将其一并附加。Pre-
 
 - [x] beta.1 GitHub Pre-release 和 npm `beta` 包已存在（历史发布）。
 - [x] beta.3 workflow 配置完整版本门禁、四平台构建与 checksum 生成步骤。
-- [ ] beta.3 release dry-run 全部 jobs 通过。
-- [ ] beta.3 GitHub tag workflow 构建并创建 Pre-release；资产来自同一 commit 并附 SHA-256。
+- [x] beta.3 release dry-run 全部构建与 gate jobs 通过。
+- [x] beta.3 GitHub tag workflow 构建并创建 Pre-release；server 与四个平台 Desktop 资产来自同一 commit 并附 SHA-256。
 - [ ] beta.3 npm 候选包经单独的手动 publish job 发布到 `beta`；不移动 npm `latest`。
-- [ ] 发布后复核 beta.3 release/tag 和 npm dist-tags；既有 beta.1 `latest` 不变。
+- [x] 发布后复核 beta.3 release/tag 与全部 9 个资产；npm dist-tags 仍指向 beta.1，本次不移动 `latest`。
