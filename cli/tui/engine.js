@@ -431,7 +431,8 @@ async function runPagedTui({
     }
     function sidebarLines() {
       const groups = Array.isArray(navGroups) && navGroups.length
-        ? groupsForArea(areaById(activeArea)) : [{ id: 'all', label: '', pages: pages.map(page => page.id) }];
+        ? groupsForArea(areaById(activeArea)).filter(group => !group.hidden)
+        : [{ id: 'all', label: '', pages: pages.map(page => page.id) }];
       const entries = [];
       if (Array.isArray(navAreas) && navAreas.length) entries.push(...visibleAreas().map(area => ({ type: 'area', id: area.id, label: area.label })));
       const activeAreaConfig = areaById(activeArea);
@@ -441,13 +442,11 @@ async function runPagedTui({
         if (group.label && group.id !== activeAreaConfig?.id) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
         entries.push(...members.map(entry => ({ type: 'page', ...entry })));
       }
-      const areaCount = Array.isArray(navAreas) && navAreas.length ? visibleAreas().length : 0;
-      const menuEntries = entries.slice(areaCount);
-      const room = Math.max(1, height - 6 - areaCount);
-      const activeEntry = menuEntries.findIndex(entry => entry.type === 'page' && entry.index === active);
+      const room = Math.max(1, height - 6);
+      const activeEntry = entries.findIndex(entry => entry.type === 'page' && entry.index === active);
       let start = Math.max(0, activeEntry - room + 1);
-      if (activeEntry >= 0 && start > 0 && menuEntries[start - 1]?.type === 'group') start--;
-      navHitEntries = [...entries.slice(0, areaCount), ...menuEntries.slice(start, start + room)];
+      if (activeEntry >= 0 && start > 0 && entries[start - 1]?.type === 'group') start--;
+      navHitEntries = entries.slice(start, start + room);
       return navHitEntries;
     }
 

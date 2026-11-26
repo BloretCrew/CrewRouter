@@ -31,7 +31,7 @@ test('mouse clicks switch pages and activate action rows', { timeout: 15000 }, a
   assert.equal(tty.input.isRaw, false);
 });
 
-test('console and admin are top-level tabs whose sidebars swap after verified admin auth', { timeout: 15000 }, async () => {
+test('console and admin areas are switched without sidebar tabs, and hidden groups stay out of the menu', { timeout: 15000 }, async () => {
   const tty = terminal(120, 28);
   let isAdmin = null;
   let authenticated;
@@ -44,7 +44,7 @@ test('console and admin are top-level tabs whose sidebars swap after verified ad
   const navGroups = [
     { id: 'console', label: '控制台', pages: ['console-home'] },
     { id: 'admin', label: '管理后台', pages: ['admin-home'] },
-    { id: 'admin-subpages', label: '管理子页面', pages: ['admin-last'] },
+    { id: 'admin-subpages', label: '管理子页面', hidden: true, pages: ['admin-last'] },
   ];
   const navAreas = [
     { id: 'console', label: '控制台', groups: ['console'] },
@@ -52,24 +52,24 @@ test('console and admin are top-level tabs whose sidebars swap after verified ad
   ];
   const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: async () => ({}), pages, navGroups, navAreas, canEnterAdmin: () => isAdmin === true, authenticate: async () => { await authReady; return true; } });
   try {
-    await until(() => tty.screen().includes('[控制台]'));
+    await until(() => tty.screen().includes('控制台首页'));
+    assert.ok(tty.screen().includes('[控制台]'), 'area switching remains available');
+    assert.ok(!tty.screen().includes('最后管理页'), 'hidden deep pages stay out of the sidebar');
     assert.ok(!tty.screen().includes('管理后台'));
     isAdmin = true;
     authenticated();
-    await until(() => tty.screen().includes('管理后台') && tty.screen().includes('控制台首页'));
-    assert.ok(!tty.screen().includes('后台首页'), 'admin children stay hidden while console tab is selected');
     await clickText(tty, '管理后台');
-    await until(() => tty.screen().includes('[管理后台]') && tty.screen().includes('后台内容'));
+    await until(() => tty.screen().includes('后台内容'));
     assert.ok(tty.screen().includes('后台首页'));
-    assert.ok(tty.screen().includes('管理子页面'));
-    assert.ok(!tty.screen().includes('控制台首页'), 'admin tab replaces console children');
+    assert.ok(!tty.screen().includes('管理子页面'));
+    assert.ok(!tty.screen().includes('最后管理页'));
+    assert.ok(!tty.screen().includes('控制台首页'), 'admin area replaces console pages');
     await clickText(tty, '控制台');
-    await until(() => tty.screen().includes('[控制台]') && tty.screen().includes('控制台内容'));
+    await until(() => tty.screen().includes('控制台内容'));
     assert.ok(!tty.screen().includes('后台首页'));
-    tty.input.write('\x1b[C');
-    await until(() => tty.screen().includes('[管理后台]') && tty.screen().includes('后台内容'));
-    tty.input.write('\x1b[D');
-    await until(() => tty.screen().includes('[控制台]') && tty.screen().includes('控制台内容'));
+    assert.ok(tty.screen().includes('管理后台'));
+    assert.ok(!tty.screen().includes('终端工具'));
+    assert.ok(!tty.screen().includes('管理子页面'));
   } finally { tty.input.write('q'); await task; }
 });
 

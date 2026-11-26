@@ -18,6 +18,7 @@ test('TUI pages map every console and admin navigation entry', () => {
   assert.ok(ids.has('service'), 'CLI retains its local service/profile page');
   assert.ok(ids.has('overview'), 'CLI retains its overview page');
   assert.deepEqual(navGroups.map(group => group.id), ['console', 'console-settings', 'admin', 'admin-system', 'admin-subpages', 'tools', 'cli']);
+  assert.deepEqual(navGroups.filter(group => !group.hidden).map(group => group.id), ['console', 'console-settings', 'admin', 'admin-system']);
   assert.deepEqual(PAGE_CAPABILITIES, {
     'my-upstream': 'personalProviders', projects: 'projects', 'audit-logs': 'auditLogs', 'policy-center': 'teamPolicies',
     'admin-users': 'multiUser', 'admin-policies': 'teamPolicies', 'admin-policy-settings': 'teamPolicies',
@@ -28,6 +29,7 @@ test('TUI pages map every console and admin navigation entry', () => {
     { id: 'console', label: '控制台', groups: ['console', 'console-settings', 'tools', 'cli'] },
     { id: 'admin', label: '管理后台', groups: ['admin', 'admin-system', 'admin-subpages'], adminOnly: true },
   ]);
+  assert.deepEqual(navGroups.map(group => group.hidden || false), [false, false, false, false, true, true, true]);
   assert.deepEqual(navGroups[0].pages, ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent']);
   assert.deepEqual(navGroups[1].pages, ['policy-center', 'settings']);
   assert.deepEqual(navGroups[2].pages, ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins']);
