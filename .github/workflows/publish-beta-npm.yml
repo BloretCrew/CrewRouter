@@ -109,7 +109,7 @@ jobs:
           node-version: '22'
           registry-url: https://registry.npmjs.org
       - name: Use npm with trusted publishing and dist-tag support
-        run: npm install --global npm@11.16.0
+        run: npm install --global npm@11.21.0
       - run: npm --version
       - uses: actions/download-artifact@v4
         with:
