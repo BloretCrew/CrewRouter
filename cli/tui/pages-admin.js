@@ -428,15 +428,48 @@ function createAdminPages(runtime) {
       async load(api) {
         const payload = await api('/api/admin/plugins');
         const plugins = array(payload && payload.plugins);
-        return { sections: [{ title: '插件管理', rows: plugins.length ? plugins.map(plugin => ({ label: display(plugin.name, plugin.id, plugin.version, plugin.enabled ? '启用' : '停用'), detail: display(plugin.executionMode || plugin.execution_mode, array(plugin.permissions).join(', '), plugin.description), run: async ctx => {
-          const trusted = (plugin.executionMode || plugin.execution_mode) === 'trusted-in-process';
-          const actions = [{ label: '查看详情', value: 'detail' }, { label: '重载代码', value: 'reload' }];
-          if (!trusted) actions.push({ label: plugin.enabled ? '停用插件' : '启用插件', value: 'toggle' });
-          const choice = await ctx.choose(`插件 · ${plugin.name || plugin.id}`, actions, { description: trusted ? '受信任进程插件不会在此处快速启用。' : plugin.description || '' });
-          if (choice === 'detail') await ctx.show(`插件详情 · ${plugin.name || plugin.id}`, JSON.stringify(plugin, null, 2));
-          if (choice === 'reload') { if (!await ctx.confirm('重载插件代码', `重载 ${plugin.name || plugin.id}？运行中的任务可能受到影响。`)) return; await api(`/api/admin/plugins/${encodeURIComponent(plugin.id)}/reload`, { method: 'POST', body: {} }); ctx.notify('插件已重载。'); await ctx.refresh(); }
-          if (choice === 'toggle') { const enabled = !plugin.enabled; if (!await ctx.confirm(enabled ? '启用插件' : '停用插件', `${plugin.name || plugin.id}\n${plugin.description || ''}`)) return; await api(`/api/admin/plugins/${encodeURIComponent(plugin.id)}/toggle`, { method: 'POST', body: {} }); ctx.notify(`插件已${enabled ? '启用' : '停用'}。`); await ctx.refresh(); }
-        } })) : [{ label: '暂无插件。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+        const modeLabels = { 'trusted-in-process': '受信任进程内运行', 'isolated-task': 'Linux 隔离任务', 'isolated-hooks': 'Linux 隔离 Hooks', 'isolated-routes': 'Linux 隔离 Routes' };
+        const permissionLabels = { storage: '私有数据存储', network: '访问外部网络', 'gateway:modify': '修改网关请求或响应', 'provider:register': '注册供应商适配', 'apikey:modify': '修改 API Key 行为', 'billing:modify': '修改计费逻辑', 'cron:register': '注册定时任务', 'pages:register': '添加页面与插槽', 'routes:register': '注册自有 API', 'themes:register': '注册主题', 'stats:record': '扩展统计维度', 'models:list': '修改模型列表', 'tasks:register': '注册持久化任务' };
+        const pluginsWithErrors = plugins.filter(plugin => Number(plugin.errorCount || 0) > 0 || plugin.lastError).length;
+        const stats = [
+          { label: '插件总数', value: String(plugins.length) }, { label: '已启用', value: String(plugins.filter(plugin => plugin.enabled).length) },
+          { label: '已禁用', value: String(plugins.filter(plugin => !plugin.enabled).length) }, { label: '磁盘缺失', value: String(plugins.filter(plugin => !plugin.onDisk).length) },
+          { label: '存在错误', value: String(pluginsWithErrors) },
+        ];
+        const rows = plugins.map(plugin => {
+          const mode = plugin.executionMode || plugin.execution_mode || 'trusted-in-process';
+          const capabilities = [
+            array(plugin.pages).length && `${plugin.pages.length} 个页面`, array(plugin.slots).length && `${plugin.slots.length} 个页面插槽`,
+            array(plugin.routes).length && `${plugin.routes.length} 个 API`, array(plugin.cron).length && `${plugin.cron.length} 个定时任务`,
+            array(plugin.themes).length && `${plugin.themes.length} 个主题`, array(plugin.permissions).includes('tasks:register') && '持久化任务',
+          ].filter(Boolean);
+          const status = [plugin.enabled ? '已启用' : '已禁用', !plugin.onDisk && '磁盘缺失', plugin.loaded && '运行中', modeLabels[mode] || mode, pluginsWithErrors && (plugin.errorCount || plugin.lastError) && `错误 ${plugin.errorCount || 1}`, plugin.storeUpdateAvailable && `有更新 v${plugin.storeLatestVersion || '未知'}`].filter(Boolean);
+          return { label: display(plugin.name || plugin.id, `v${plugin.version || '未知'}`, plugin.id, ...status), detail: display(plugin.author && `作者：${plugin.author}`, plugin.description, `能力：${capabilities.join('、') || '无能力注册'}`), run: async ctx => {
+            const trusted = mode === 'trusted-in-process';
+            const actions = [{ label: '查看详情', value: 'detail' }, { label: '重载代码', value: 'reload' }];
+            if (!trusted) actions.push({ label: plugin.enabled ? '停用插件' : '启用插件', value: 'toggle' });
+            const choice = await ctx.choose(`插件 · ${plugin.name || plugin.id}`, actions, { description: trusted ? '受信任进程插件不会在此处快速启用。网页端另提供配置编辑和插件数据查看。' : '网页端另提供配置编辑和插件数据查看。' });
+            if (choice === 'detail') {
+              const permissions = array(plugin.permissions).map(permission => `• ${permissionLabels[permission] || permission}（${permission}）`);
+              const routes = array(plugin.routes).map(route => `${String(route.method || 'GET').toUpperCase()} /api/plugins/${plugin.id}${route.path || '/'} · ${route.auth || 'user'} 身份验证`);
+              const schedules = array(plugin.cron).map(job => `${job.expr || '未指定周期'} · ${job.handler || '未指定任务'}`);
+              const themes = array(plugin.themes).map(theme => theme.name || theme.id || '未命名主题');
+              const detail = [
+                `插件：${plugin.name || plugin.id}`, `插件 ID：${plugin.id}`, `版本：${plugin.version || '未知'}`, `作者：${plugin.author || '未提供'}`,
+                `状态：${plugin.enabled ? '已启用' : '已禁用'}${plugin.onDisk ? '' : ' · 磁盘缺失'}${plugin.loaded ? ' · 运行中' : ''}`, `执行方式：${modeLabels[mode] || mode}`, `说明：${plugin.description || '无'}`, `能力：${capabilities.join('、') || '无能力注册'}`,
+                `权限声明：${permissions.length ? `\\n${permissions.join('\\n')}` : '无额外权限'}`,
+                routes.length && `自有 API：\\n${routes.join('\\n')}`, schedules.length && `定时任务：\\n${schedules.join('\\n')}`,
+                themes.length && `主题：${themes.join('、')}`, plugin.errorCount > 0 && `累计错误：${plugin.errorCount}`,
+                plugin.lastError && `最近错误：${plugin.lastError}`, plugin.storeUpdateAvailable && `商店更新：${plugin.storeLatestVersion || '有新版本'}`,
+                `配置和插件数据：请在网页端插件管理页查看或编辑。`,
+              ].filter(Boolean).join('\\n');
+              await ctx.show(`插件详情 · ${plugin.name || plugin.id}`, detail);
+            }
+            if (choice === 'reload') { if (!await ctx.confirm('重载插件代码', `重载 ${plugin.name || plugin.id}？运行中的任务可能受到影响。`)) return; await api(`/api/admin/plugins/${encodeURIComponent(plugin.id)}/reload`, { method: 'POST', body: {} }); ctx.notify('插件已重载。'); await ctx.refresh(); }
+            if (choice === 'toggle') { const enabled = !plugin.enabled; if (!await ctx.confirm(enabled ? '启用插件' : '停用插件', `${plugin.name || plugin.id}\\n${plugin.description || ''}`)) return; await api(`/api/admin/plugins/${encodeURIComponent(plugin.id)}/toggle`, { method: 'POST', body: {} }); ctx.notify(`插件已${enabled ? '启用' : '停用'}。`); await ctx.refresh(); }
+          } };
+        });
+        return { sections: [{ title: '插件管理', cards: stats, description: '状态、执行方式、权限与扩展能力；配置、插件数据及卸载请使用网页端插件管理。', rows: rows.length ? rows : [{ label: '暂无插件。' }] }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
       },
     }),
     adminOnly({

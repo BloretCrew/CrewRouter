@@ -440,6 +440,32 @@ test('admin retention page mirrors web thresholds, validates saves and runs prev
   assert.equal(calls.length, 0, 'destructive purge must not start when confirmation is declined');
 });
 
+test('admin plugins show web status and capability summaries with readable non-JSON details', async () => {
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const plugin = { id: 'sample-plugin', name: 'Sample Plugin', version: '1.2.3', author: 'Crew', description: 'A sample extension', enabled: true, permissions: ['storage', 'pages:register', 'tasks:register'], config: { privateValue: 'hidden-from-summary' }, errorCount: 2, lastError: 'Task failed', onDisk: true, loaded: true, executionMode: 'isolated-task', mainEntry: true, pages: [{ id: 'one' }], slots: [{ id: 'slot' }], routes: [{ method: 'get', path: '/status', auth: 'admin' }], cron: [{ expr: '0 * * * *', handler: 'runCleanup' }], themes: [{ id: 'dark', name: 'Dark' }], storeUpdateAvailable: true, storeLatestVersion: '1.3.0' };
+  const calls = [];
+  const api = async (path, options = {}) => { calls.push({ path, options }); return { plugins: [plugin] }; };
+  const page = buildPages(runtime).find(item => item.id === 'admin-plugins');
+  const data = await page.load(api);
+  assert.deepEqual(data.sections[0].cards.map(card => [card.label, card.value]), [['插件总数', '1'], ['已启用', '1'], ['已禁用', '0'], ['磁盘缺失', '0'], ['存在错误', '1']]);
+  const row = data.sections[0].rows[0];
+  assert.match(row.label, /Sample Plugin.*v1\.2\.3.*已启用.*运行中.*Linux 隔离任务.*错误 2.*有更新 v1\.3\.0/);
+  assert.match(row.detail, /作者：Crew.*1 个页面.*1 个页面插槽.*1 个 API.*1 个定时任务.*1 个主题.*持久化任务/);
+  const choices = [];
+  let details = '';
+  await row.run({ choose: async (_title, options) => { choices.push(...options); return 'detail'; }, show: async (_title, body) => { details = body; } });
+  assert.deepEqual(choices.map(option => option.value), ['detail', 'reload', 'toggle']);
+  for (const value of ['执行方式', '权限声明', '私有数据存储', '添加页面与插槽', '自有 API', 'GET /api/plugins/sample-plugin/status', '定时任务', '0 * * * *', '主题：Dark', '累计错误：2', '最近错误：Task failed', '商店更新：1.3.0', '配置和插件数据：请在网页端']) assert.ok(details.includes(value), `detail should include ${value}`);
+  assert.doesNotMatch(details, /privateValue|hidden-from-summary|\\"permissions\\"/);
+  const trusted = { ...plugin, executionMode: 'trusted-in-process' };
+  const trustedData = await page.load(async () => ({ plugins: [trusted] }));
+  let trustedOptions;
+  await trustedData.sections[0].rows[0].run({ choose: async (_title, options) => { trustedOptions = options; return null; } });
+  assert.ok(!trustedOptions.some(option => option.value === 'toggle'), 'trusted in-process plugins must not expose quick enable or disable');
+  assert.match(trustedData.sections[0].description, /网页端插件管理/);
+  assert.equal(calls[0].path, '/api/admin/plugins');
+});
+
 test('admin prompts mirror web columns, filters, sorting, pagination and three-part details', async () => {
   const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
   runtime.adminPromptPage = 2;
