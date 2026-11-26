@@ -542,16 +542,32 @@ test('admin policy exceptions and appeals filter, revoke, approve and reject wit
   assert.deepEqual(calls.filter(call => call.path.endsWith('/21/decide')).at(-1).options.body, { decision: 'reject' });
 });
 
-test('admin error logs pass user/model/provider/status/date filters to API', async () => {
+test('admin error logs mirror web columns, filters and bounded pagination', async () => {
   const calls = [];
-  const api = async (path, options = {}) => { calls.push({ path, options }); return { logs: [], total: 0, page: 1 }; };
-  const page = pageById('admin-error-logs');
+  const api = async (path, options = {}) => { calls.push({ path, options }); return { logs: [], total: 51, page: options.query.page, limit: options.query.limit, retention_days: 14 }; };
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
   runtime.errorPage = 2;
-  runtime.errorFilters = { user_q: 'alice', model_q: 'm1', provider_q: 'P', status_code: '500', start_date: '2026-11-01', end_date: '2026-11-07', final_only: '1' };
+  runtime.errorFilters = { user_q: 'alice', model_q: 'm1', provider_q: 'P', status_code: '500', error_type: 'timeout', start_date: '2026-11-01', end_date: '2026-11-07', final_only: '1' };
+  const page = buildPages(runtime).find(item => item.id === 'admin-error-logs');
   const data = await page.load(api);
-  assert.deepEqual(calls[0].options.query, { page: 2, limit: 30, ...runtime.errorFilters });
+  assert.deepEqual(calls[0].options.query, { page: 2, limit: 50, ...runtime.errorFilters });
+  assert.deepEqual(data.sections[0].columns.map(column => column.label), ['时间', '用户', '模型', '供应商', '状态码', '错误类型', '错误信息', '延迟', '详情']);
+  assert.match(data.sections[0].description, /第 2\/2 页.*每页 50 条.*仅最终错误/);
   assert.ok(data.actions.some(action => action.label === '设置日期范围'));
   assert.ok(data.actions.some(action => action.label === '筛选供应商'));
+  assert.equal(data.actions.find(action => action.label === '上一页').disabled, false);
+  assert.equal(data.actions.find(action => action.label === '下一页').disabled, true);
+  const finalAction = data.actions.find(action => action.label === '筛选错误范围');
+  await finalAction.run({ choose: async (_title, options) => { assert.deepEqual(options.map(option => option.value), ['1', '0', '']); return '0'; }, refresh: async () => {} });
+  assert.equal(runtime.errorFilters.final_only, '0');
+  assert.equal(runtime.errorPage, 1);
+  let dateNotice = '';
+  const callsBeforeInvalidDate = calls.length;
+  await data.actions.find(action => action.label === '设置日期范围').run({ form: async () => ({ start_date: '2026-11-05', end_date: '' }), show: async (_title, message) => { dateNotice = message; } });
+  assert.match(dateNotice, /同时提供真实有效/);
+  assert.equal(calls.length, callsBeforeInvalidDate, 'invalid date filters must not trigger a request');
+  assert.equal(runtime.errorFilters.final_only, '0', 'invalid date filters must preserve the previous error-scope selection');
+  assert.equal(runtime.errorPage, 1);
 });
 
 test('admin error details use readable basic fields and separate original response', async () => {
@@ -559,6 +575,10 @@ test('admin error details use readable basic fields and separate original respon
   const api = async () => ({ logs: [{ created_at: '2026-11-25T08:00:00Z', user_id: 7, username: 'alice', model_id: 'm1', upstream_model_id: 'up-model', series: 'Test Series', provider_name: 'Provider', status_code: 500, error_type: 'upstream_timeout', error_message: 'Upstream timed out', error_body: '{"type":"timeout"}', latency_ms: 123, ip_address: '127.0.0.1', key_prefix: 'cr_live_x', key_name: 'Main', is_final: false }], total: 1, page: 1, retention_days: 30 });
   const data = await page.load(api);
   const row = data.sections[0].rows[0];
+  assert.equal(data.sections[0].columns.map(column => column.label).join(','), '时间,用户,模型,供应商,状态码,错误类型,错误信息,延迟,详情');
+  assert.equal(row.cells.type, 'upstream_timeout');
+  assert.equal(row.cells.latency, '123 ms');
+  assert.match(row.cells.model, /重试中/);
   let body = '';
   await row.run({ choose: async () => 'overview', show: async (_title, content) => { body = content; } });
   assert.match(body, /请求状态码：500/);

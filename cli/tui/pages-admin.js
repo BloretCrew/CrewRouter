@@ -324,9 +324,20 @@ function createAdminPages(runtime) {
       async load(api) {
         const page = runtime.errorPage || 1;
         const filters = runtime.errorFilters || {};
-        const data = await api('/api/admin/error-logs', { query: { page, limit: 30, ...filters } });
+        const data = await api('/api/admin/error-logs', { query: { page, limit: 50, ...filters } });
         const items = array(data && data.logs);
-        return { sections: [{ title: '调用错误', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条 · 保留 ${data.retention_days || '—'} 天`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.model_name || item.model_id || '未知模型', item.provider_name || '未知供应商', item.status_code ? `状态码 ${item.status_code}` : '无状态码', item.is_final === false ? '仍在回退' : '最终错误'), detail: display(item.error_message, item.username || (item.user_id ? `用户编号 ${item.user_id}` : ''), item.latency_ms != null && `响应时间 ${item.latency_ms} 毫秒`), run: async ctx => {
+        const total = Number(data.total || 0);
+        const currentPage = Number(data.page || page);
+        const pageSize = Number(data.limit || 50);
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const errorColumns = [
+          { key: 'time', label: '时间', ratio: 0.14 }, { key: 'user', label: '用户', ratio: 0.1 }, { key: 'model', label: '模型', ratio: 0.16 },
+          { key: 'provider', label: '供应商', ratio: 0.12 }, { key: 'status', label: '状态码', ratio: 0.08 }, { key: 'type', label: '错误类型', ratio: 0.13 },
+          { key: 'message', label: '错误信息', ratio: 0.17 }, { key: 'latency', label: '延迟', ratio: 0.06 }, { key: 'detail', label: '详情', ratio: 0.04 },
+        ];
+        return { sections: [{ title: '调用错误', tableMinWidth: 145, columns: errorColumns, description: `第 ${currentPage}/${totalPages} 页 · 共 ${total} 条 · 每页 ${pageSize} 条 · 保留 ${data.retention_days || 14} 天 · ${filters.final_only === '1' ? '仅最终错误' : '包括回退错误'}`, rows: items.length ? items.map(item => ({ label: formatTime(item.created_at), cells: {
+          time: formatTime(item.created_at), user: item.username || (item.user_id ? `用户 ${item.user_id}` : '未知用户'), model: `${item.model_name || item.model_id || '未知模型'}${item.is_final === false ? ' · 重试中' : ''}`, provider: item.provider_name || item.provider_id || '未知供应商', status: item.status_code == null ? '—' : String(item.status_code), type: item.error_type || '未分类', message: String(item.error_message || '—').replace(/\\s+/g, ' ').slice(0, 72), latency: item.latency_ms == null ? '—' : `${Math.round(Number(item.latency_ms))} ms`, detail: 'Enter 查看',
+        }, detail: display(item.ip_address && `来源 IP ${item.ip_address}`, item.key_prefix && `Key ${item.key_prefix}••••`), run: async ctx => {
           const choice = await ctx.choose('错误详情', [{ label: '基本信息', value: 'overview' }, { label: '错误信息', value: 'message' }, { label: '原始响应', value: 'response' }], { description: `${item.model_name || item.model_id || '未知模型'} · ${item.provider_name || item.provider_id || '未知供应商'}` });
           if (choice === 'overview') {
             const rows = [
@@ -345,17 +356,17 @@ function createAdminPages(runtime) {
             try { if (body) body = JSON.stringify(JSON.parse(body), null, 2); } catch (_) {}
             await ctx.show('原始响应', body || '此记录没有原始响应。');
           }
-        } })) }], actions: [
+        } })) : [{ label: '暂无错误记录。' }] }], actions: [
           { label: '筛选错误类型', run: async ctx => { const value = await ctx.ask('错误类型（留空全部）', { defaultValue: filters.error_type || '' }); if (value !== null) { runtime.errorFilters = { ...filters, error_type: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
-          { label: '仅最终错误', run: async ctx => { runtime.errorFilters = { ...filters, final_only: filters.final_only === '1' ? '' : '1' }; runtime.errorPage = 1; await ctx.refresh(); } },
-          { label: '筛选状态码', run: async ctx => { const value = await ctx.ask('HTTP 状态码（留空全部）', { defaultValue: filters.status_code || '' }); if (value !== null) { runtime.errorFilters = { ...filters, status_code: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '筛选错误范围', toolbar: 'page', run: async ctx => { const currentScope = filters.final_only === '1' ? '仅最终错误' : filters.final_only === '0' ? '仅回退错误' : '最终与回退错误'; const value = await ctx.choose('错误范围', [{ label: '仅最终错误（网页默认）', value: '1' }, { label: '仅回退错误', value: '0' }, { label: '最终与回退错误', value: '' }], { description: `当前：${currentScope}` }); if (value !== null) { runtime.errorFilters = { ...filters, final_only: value }; runtime.errorPage = 1; await ctx.refresh(); } } },
+          { label: '筛选状态码', run: async ctx => { const value = await ctx.ask('HTTP 状态码（100-599，留空全部）', { defaultValue: filters.status_code || '' }); if (value === null) return; const status = String(value).trim(); if (status && (!/^\\d+$/.test(status) || Number(status) < 100 || Number(status) > 599)) { await ctx.show('状态码无效', 'HTTP 状态码须为 100 到 599 的整数。'); return; } runtime.errorFilters = { ...filters, status_code: status }; runtime.errorPage = 1; await ctx.refresh(); } },
           { label: '筛选模型', run: async ctx => { const value = await ctx.ask('模型名称或 ID（留空全部）', { defaultValue: filters.model_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, model_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
           { label: '筛选用户', run: async ctx => { const value = await ctx.ask('用户名或用户 ID（留空全部）', { defaultValue: filters.user_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, user_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
           { label: '筛选供应商', run: async ctx => { const value = await ctx.ask('供应商名称或 ID（留空全部）', { defaultValue: filters.provider_q || '' }); if (value !== null) { runtime.errorFilters = { ...filters, provider_q: String(value).trim() }; runtime.errorPage = 1; await ctx.refresh(); } } },
-          { label: '设置日期范围', run: async ctx => { const values = await ctx.form('错误日志日期范围', [{ name: 'start_date', label: '开始日期（YYYY-MM-DD）', value: filters.start_date || '' }, { name: 'end_date', label: '结束日期（YYYY-MM-DD）', value: filters.end_date || '' }]); if (!values) return; runtime.errorFilters = { ...filters, start_date: values.start_date, end_date: values.end_date }; runtime.errorPage = 1; await ctx.refresh(); } },
-          { label: '清除筛选', run: async ctx => { runtime.errorFilters = {}; runtime.errorPage = 1; await ctx.refresh(); } },
-          { label: '上一页', run: async ctx => { runtime.errorPage = Math.max(1, page - 1); await ctx.refresh(); } },
-          { label: '下一页', run: async ctx => { runtime.errorPage = page + 1; await ctx.refresh(); } },
+          { label: '设置日期范围', run: async ctx => { const values = await ctx.form('错误日志日期范围', [{ name: 'start_date', label: '开始日期（YYYY-MM-DD）', value: filters.start_date || '' }, { name: 'end_date', label: '结束日期（YYYY-MM-DD）', value: filters.end_date || '' }]); if (!values) return; const start = String(values.start_date || '').trim(); const end = String(values.end_date || '').trim(); const validDate = value => !value || (/^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value); if (!!start !== !!end || !validDate(start) || !validDate(end) || start && end && start > end) { await ctx.show('日期范围无效', '请同时提供真实有效的开始和结束日期，且开始日期不得晚于结束日期。'); return; } const next = { ...filters }; if (start) { next.start_date = start; next.end_date = end; } else { delete next.start_date; delete next.end_date; } runtime.errorFilters = next; runtime.errorPage = 1; await ctx.refresh(); } },
+          { label: '清除筛选', toolbar: 'page', run: async ctx => { runtime.errorFilters = { final_only: '1' }; runtime.errorPage = 1; await ctx.refresh(); } },
+          { label: '上一页', toolbar: 'page', disabled: currentPage <= 1, run: async ctx => { runtime.errorPage = Math.max(1, currentPage - 1); await ctx.refresh(); } },
+          { label: '下一页', toolbar: 'page', disabled: currentPage >= totalPages, run: async ctx => { runtime.errorPage = Math.min(totalPages, currentPage + 1); await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },

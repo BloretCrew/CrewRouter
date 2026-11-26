@@ -132,8 +132,8 @@ test('error log filters use the actual admin API parameter names', async () => {
   const calls = [];
   const api = async (path, options = {}) => { calls.push({ path, options }); return { logs: [], total: 0, page: 1, retention_days: 30 }; };
   const first = await page.load(api);
-  const finalOnly = first.actions.find(action => action.label === '仅最终错误');
-  await finalOnly.run({ refresh: async () => page.load(api) });
+  const finalOnly = first.actions.find(action => action.label === '筛选错误范围');
+  await finalOnly.run({ choose: async (_title, options) => { assert.deepEqual(options.map(option => option.value), ['1', '0', '']); return '1'; }, refresh: async () => page.load(api) });
   assert.equal(calls.at(-1).options.query.final_only, '1');
   assert.equal(calls.at(-1).options.query.is_final, undefined);
 });
