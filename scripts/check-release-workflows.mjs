@@ -228,11 +228,12 @@ const npmPublisher = parse(await readFile('.github/workflows/publish-beta-npm.ym
 const publisherInputs = npmPublisher.on.workflow_dispatch.inputs;
 const publisherValidation = npmPublisher.jobs['validate-candidate'];
 const publisherRun = publisherValidation.steps.find(step => step.name === 'Resolve exact tag and successful source run')?.run || '';
-const publisherManifestCheck = publisherValidation.steps.find(step => step.name === 'Validate both package names and versions')?.run || '';
+const publisherManifestStep = publisherValidation.steps.find(step => step.name === 'Validate both package names and versions');
+const publisherManifestCheck = publisherManifestStep?.run || '';
 const publisherPublish = npmPublisher.jobs.publish;
 const publisherPublishRun = publisherPublish.steps.find(step => step.name === 'Publish only the validated versions to beta')?.run || '';
 if (publisherInputs.publish?.default !== false || publisherPublish.if !== "${{ inputs.publish }}" || publisherPublish.environment !== 'npm-beta' || publisherPublish.permissions?.['id-token'] !== 'write') throw new Error('Standalone npm publisher must require explicit publish approval and protected OIDC environment');
-if (!publisherRun.includes('refs/tags/$RELEASE_TAG') || !publisherRun.includes('head_sha == $sha') || !publisherRun.includes('event == "push"') || !publisherRun.includes('conclusion == "success"') || !publisherRun.includes('actions/runs/$run_id/artifacts') || !publisherRun.includes('artifact-name=%s') || !publisherRun.includes('artifact_name')) throw new Error('Standalone npm publisher must source a named candidate artifact from the successful exact tag workflow run');
+if (!publisherRun.includes('refs/tags/$RELEASE_TAG') || !publisherRun.includes('head_sha == $sha') || !publisherRun.includes('event == "push"') || !publisherRun.includes('conclusion == "success"') || !publisherRun.includes('actions/runs/$run_id/artifacts') || !publisherRun.includes('artifact-name=%s') || !publisherRun.includes('artifact_name') || !publisherRun.includes('release-version=%s') || publisherValidation.outputs?.['release-version'] !== '${{ steps.release.outputs.release-version }}' || publisherManifestStep?.env?.EXPECTED_VERSION !== '${{ steps.release.outputs.release-version }}') throw new Error('Standalone npm publisher must source a named candidate artifact from the successful exact tag workflow run');
 for (const required of ['manifest.name !== name', 'manifest.version !== process.env.EXPECTED_VERSION', 'Unexpected candidate files']) if (!publisherManifestCheck.includes(required)) throw new Error(`Standalone npm publisher candidate validation omits ${required}`);
 if (!publisherPublishRun.includes('--tag beta') || publisherPublishRun.includes('--tag latest')) throw new Error('Standalone npm publisher must never move the latest dist-tag');
 const sdkVersioning = await readFile('docs/sdk/versioning.md', 'utf8');

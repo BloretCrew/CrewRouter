@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release-sha: ${{ steps.release.outputs.sha }}
-      release-version: ${{ steps.release.outputs.version }}
+      release-version: ${{ steps.release.outputs.release-version }}
       source-run-id: ${{ steps.release.outputs.run-id }}
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
           artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")"
           artifact_name="$(printf '%s' "$artifacts" | jq -r --arg prefix "crewrouter-27-beta-npm-candidates-$release_sha" '[.artifacts[] | select(.name == $prefix and .expired == false)] | if length == 1 then .[0].name else empty end')"
           test -n "$artifact_name" || { echo "Expected exactly one unexpired npm candidate artifact for $release_sha"; exit 1; }
-          printf 'sha=%s\nversion=%s\nrun-id=%s\nartifact-name=%s\n' "$release_sha" "$version" "$run_id" "$artifact_name" >> "$GITHUB_OUTPUT"
+          printf 'sha=%s\nrelease-version=%s\nrun-id=%s\nartifact-name=%s\n' "$release_sha" "$version" "$run_id" "$artifact_name" >> "$GITHUB_OUTPUT"
       - name: Download candidate packages from the exact release run
         uses: actions/download-artifact@v4
         with:
