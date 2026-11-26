@@ -11,6 +11,7 @@ const {
   normalizeBaseUrl,
 } = require('../lib/config');
 const { createContext, persistClientSession, openBrowser } = require('../lib/context');
+const { loginDeviceCode } = require('../lib/commands/auth');
 const { verifySession, verifyApiKey, loginPassword, completeTwoFactor, loginApiKey, TwoFactorRequired } = require('../lib/auth');
 const { probeHealth, startLocalService, stopLocalService, readLogs } = require('../lib/service');
 const { buildPages } = require('./pages');
@@ -34,6 +35,7 @@ function setTarget(runtime, { name, profile, baseUrl, save = true }) {
   const reusable = saved && saved.baseUrl === next ? saved : null;
   if (reusable) {
     if (reusable.authType === 'api-key' && reusable.apiKey) runtime.client.setApiKey(reusable.apiKey);
+    else if (reusable.authType === 'oauth' && reusable.oauthAccessToken) runtime.client.setOAuthToken(reusable.oauthAccessToken);
     else if (reusable.authType === 'session') runtime.client.setSession({ cookieJar: reusable.cookieJar, csrfToken: reusable.csrfToken, username: reusable.username, isAdmin: reusable.isAdmin });
   }
   runtime.context = { cfg: loadConfig(), target: runtime.target, profile, profileName: name, client: runtime.client, saved: reusable };
@@ -146,6 +148,18 @@ async function authenticate(ctx, runtime) {
   if (!health) return false;
   if (!(await ensureSetup(ctx, runtime))) return false;
 
+  if (runtime.client.oauthAccessToken) {
+    try {
+      await runtime.client.get('/v1/models');
+      runtime.user = { username: runtime.client.username, isAdmin: null };
+      return true;
+    } catch (error) {
+      if (error.statusCode !== 401) throw error;
+      runtime.client.clearAuth();
+      if (!runtime.target?.adHoc) clearSession(runtime.profileName);
+    }
+  }
+
   if (runtime.client.apiKey) {
     const ok = await verifyApiKey(runtime.client);
     if (ok) { runtime.user = { username: runtime.client.username, isAdmin: runtime.client.isAdmin }; return true; }
@@ -167,6 +181,7 @@ async function authenticate(ctx, runtime) {
   for (;;) {
     const options = [];
     if (canPassword) options.push({ label: '用户名 / 密码登录', value: 'password' });
+    options.push({ label: 'OAuth 设备码登录（推荐用于 CLI）', value: 'oauth' });
     options.push({ label: 'API Key 登录', value: 'api-key' });
     options.push({ label: '切换服务器', value: 'switch' });
     options.push({ label: '退出', value: 'quit' });
@@ -180,6 +195,22 @@ async function authenticate(ctx, runtime) {
       return authenticate(ctx, runtime);
     }
     try {
+      if (method === 'oauth') {
+        const result = await loginDeviceCode(runtime.context, {
+          async onProgress(event) {
+            if (event.type === 'authorization-required') {
+              const opened = (runtime.openBrowser || openBrowser)(event.verificationUrl);
+              const description = `${opened ? '已尝试打开浏览器。' : '请手动打开以下页面。'}\n\n${event.verificationUrl}\n\n用户码：${event.userCode}\n\n授权有效期约 ${Math.ceil(event.expiresIn / 60)} 分钟。请在网页确认客户端与权限；关闭此窗口会停止等待。`;
+              await ctx.show('等待 OAuth 设备授权', description);
+            } else if (event.type === 'approved') {
+              ctx.notify('设备授权成功，正在连接网关…');
+            }
+          },
+        });
+        runtime.user = { username: runtime.client.username, isAdmin: null };
+        runtime.saved = runtime.context.saved;
+        return result === 0;
+      }
       if (method === 'api-key') {
         const key = await ctx.ask('API Key', { secret: true, description: 'API Key 需要具备管理接口权限；仅有 gateway 权限的 Key 只能读取部分数据。' });
         if (!key) continue;
@@ -212,6 +243,8 @@ async function authenticate(ctx, runtime) {
         await ctx.show('登录失败', '用户名、密码、验证码或 API Key 不正确，请重试。');
       } else if (error && error.statusCode === 429) {
         await ctx.show('登录失败', '尝试过于频繁，请稍后再试。');
+      } else if (error && error.code === 'auth_required') {
+        await ctx.show('OAuth 登录失败', error.message);
       } else if (error && error.statusCode === 403) {
         await ctx.show('权限不足', `${error.message}\n\nAPI Key 默认只有 gateway 权限；请在 Web 控制台为 Key 授予管理权限，或改用密码会话登录。`);
       } else {

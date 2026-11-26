@@ -41,7 +41,7 @@ async function requestOAuthForm(url, fields, timeoutMs = 15000) {
   return response;
 }
 
-async function loginDeviceCode(context, { json = false, pollIntervalMs = 5000, maxPolls = 360 } = {}) {
+async function loginDeviceCode(context, { json = false, pollIntervalMs = 5000, maxPolls = 360, onProgress = null } = {}) {
   const base = context.client.baseUrl.replace(/\/+$/, '');
   const discovery = await context.client.get('/.well-known/oauth-authorization-server');
   const issuer = new URL(discovery.issuer);
@@ -68,12 +68,15 @@ async function loginDeviceCode(context, { json = false, pollIntervalMs = 5000, m
     throw new Error('verification_uri_complete 与 OAuth issuer 不同源，拒绝打开');
   }
 
-  if (!json) {
+  if (typeof onProgress === 'function') {
+    await onProgress({ type: 'authorization-required', verificationUrl, userCode: grant.user_code, expiresIn: Number(grant.expires_in) || 600, interval: Number(grant.interval) || 5 });
+  }
+  if (!json && !onProgress) {
     console.log(`请在浏览器打开：${verificationUrl}`);
     console.log(`输入用户码：${grant.user_code}`);
     if (!openBrowser(verificationUrl)) console.log(dim('无法自动打开浏览器，请复制上面的地址。'));
     console.log('等待浏览器确认授权……');
-  } else {
+  } else if (json && !onProgress) {
     console.error(`请在浏览器打开：${verificationUrl}`);
     console.error(`输入用户码：${grant.user_code}`);
   }
@@ -108,6 +111,7 @@ async function loginDeviceCode(context, { json = false, pollIntervalMs = 5000, m
     }
   }
   if (!token) throw new Error('等待设备授权超时，请重新执行 cr login --oauth');
+  if (typeof onProgress === 'function') await onProgress({ type: 'approved', scope: token.scope || CLI_OAUTH_SCOPE, expiresIn: Number(token.expires_in) || 0 });
 
   context.client.setOAuthToken(token.access_token);
   context.client.username = `OAuth (${CLI_OAUTH_CLIENT_ID})`;
@@ -116,8 +120,8 @@ async function loginDeviceCode(context, { json = false, pollIntervalMs = 5000, m
     if (error.statusCode === 401) throw new Error('OAuth token 已签发，但网关拒绝了它；请检查关联 API Key 状态及 scope 配置。');
     if (error.statusCode !== 403) throw error;
   }
-  persistClientSession(context, { username: context.client.username, isAdmin: null });
-  if (!json) {
+  context.saved = persistClientSession(context, { username: context.client.username, isAdmin: null });
+  if (!json && !onProgress) {
     console.log(green('OAuth 设备码登录成功。'));
     console.log(dim(`scope：${scopeLabel(token.scope || CLI_OAUTH_SCOPE)}；access token 有效期约 ${Number(token.expires_in) || 0} 秒。`));
     console.log(dim('当前服务端设备码 grant 不签发 refresh token；过期后需重新登录。'));
@@ -332,6 +336,7 @@ function useCommand(args, { json = false } = {}) {
 
 module.exports = {
   loginCommand,
+  loginDeviceCode,
   logoutCommand,
   connectCommand,
   profilesCommand,
