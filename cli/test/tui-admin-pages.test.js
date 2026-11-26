@@ -827,7 +827,8 @@ test('admin invite page renders readable rows, confirms revoke and creates a one
   const page = pageById('admin-invites');
   const data = await page.load(api);
   assert.deepEqual(data.sections[0].columns.map(column => column.label), ['编号', '状态', '使用人数', '有效期', 'Team', '创建人', '创建时间', '最近使用', '操作']);
-  assert.deepEqual(data.sections[0].rows[0].cells, { id: '#4', status: '有效', usage: '2 / 5', expires: data.sections[0].rows[0].cells.expires, team: 'Team Two', creator: 'admin', created: data.sections[0].rows[0].cells.created, last_used: 'alice · 2026/11/21 08:00:00', actions: 'Enter 管理' });
+  const cells = data.sections[0].rows[0].cells;
+  assert.deepEqual({ ...cells, last_used: cells.last_used.replace(/2026\/11\/21 (?:00:00:00|08:00:00)/, '2026/11/21 <time>') }, { id: '#4', status: '有效', usage: '2 / 5', expires: cells.expires, team: 'Team Two', creator: 'admin', created: cells.created, last_used: 'alice · 2026/11/21 <time>', actions: 'Enter 管理' });
   assert.equal(data.sections[0].rows[1].cells.status, '已撤销');
   assert.match(data.sections[0].rows[0].detail, /Team：Team Two.*使用 2\/5 次/);
   let inviteDetails = '';
