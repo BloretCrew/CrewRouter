@@ -260,7 +260,7 @@ async function runPagedTui({
         }
         const cards = Array.isArray(section.cards) ? section.cards : [];
         if (cards.length) {
-          const count = w >= 68 ? 3 : w >= 44 ? 2 : 1;
+          const count = w >= 116 ? 3 : w >= 76 ? 2 : 1;
           for (let start = 0; start < cards.length; start += count) {
             const group = cards.slice(start, start + count);
             const gap = 2;
@@ -272,9 +272,10 @@ async function runPagedTui({
               const value = clean(text(card.value));
               const labelWidth = Math.max(6, Math.min(cell - 3, width(label)));
               const shortLabel = cut(label, labelWidth);
-              details.push({ card, action: groupActions[index], label: `${shortLabel}  ${cut(value, Math.max(1, cell - width(shortLabel) - 2))}`, lines: wrap(text(card.detail), Math.max(1, cell - 4)) });
+              const labelLine = wrap(`${shortLabel}  ${cut(value, Math.max(1, cell - width(shortLabel) - 2))}`, Math.max(1, cell - 4));
+              details.push({ card, action: groupActions[index], label: labelLine, lines: wrap(text(card.detail), Math.max(1, cell - 4)) });
             });
-            const cardHeight = Math.max(1, ...details.map(item => item.lines.length + 1));
+            const cardHeight = Math.max(1, ...details.map(item => item.lines.length + item.label.length));
             const borderTop = [];
             details.forEach((item, index) => { if (index) borderTop.push({ text: '  ', fg: 'fg' }); borderTop.push({ text: '┌' + '─'.repeat(Math.max(1, cell - 2)) + '┐', fg: 'line' }); });
             addSpans(borderTop, 'muted', null, 0);
@@ -282,8 +283,10 @@ async function runPagedTui({
               const cardSpans = [];
               details.forEach((item, index) => {
                 if (index) cardSpans.push({ text: '  ', fg: 'fg' });
-                const content = line === 0 ? item.label : item.lines[line - 1] || '';
-                cardSpans.push({ text: '│ ', fg: 'line' }, { text: content, fg: line === 0 ? 'rose' : 'mute', bold: line === 0 });
+                const labelLineCount = item.label.length;
+                const isLabel = line < labelLineCount;
+                const content = isLabel ? item.label[line] : item.lines[line - labelLineCount] || '';
+                cardSpans.push({ text: '│ ', fg: 'line' }, { text: content, fg: isLabel ? 'rose' : 'mute', bold: isLabel });
                 cardSpans.push({ text: ' '.repeat(Math.max(0, cell - 2 - width(content))), fg: 'fg' }, { text: '│', fg: 'line' });
               });
               const actions = details.map(item => item.action);
@@ -302,8 +305,11 @@ async function runPagedTui({
         }
         const sectionActions = Array.isArray(section.actions) ? section.actions : [];
         if (section.toolbar === true && toolbarActions.length || sectionActions.length) {
-          addSpans([{ text: '▸ ', fg: 'rose' }, { text: section.toolbarLabel || (section.title === '搜索与筛选' ? '筛选操作' : '常用操作'), fg: 'dim', bold: true }], 'heading', null, 0);
-          for (const action of [...(section.toolbar === true ? toolbarActions : []), ...sectionActions]) add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
+          const sectionToolbarActions = section.toolbar === true ? toolbarActions : [];
+          if (sectionToolbarActions.length || sectionActions.length) {
+            addSpans([{ text: '▸ ', fg: 'rose' }, { text: section.toolbarLabel || (section.title === '搜索与筛选' ? '筛选操作' : '常用操作'), fg: 'dim', bold: true }], 'heading', null, 0);
+            for (const action of [...sectionToolbarActions, ...sectionActions]) add(action.label, action.disabled ? 'dim' : 'text', action.disabled ? null : action, 0);
+          }
         }
         const columns = Array.isArray(section.columns) ? section.columns : [];
         if (columns.length && w >= (Number(section.tableMinWidth) || 92)) {

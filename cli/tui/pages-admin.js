@@ -792,6 +792,7 @@ function createAdminPages(runtime) {
           label: provider.provider_name || provider.provider_id,
           value: `${provider.visible_model_count || 0}/${provider.model_count || 0}`,
           detail: display(team.team_name, `${provider.test_summary?.success || 0}/${provider.test_summary?.tested || 0} 项测试通过`, formatLatency(provider.test_summary?.avg_latency_ms), provider.is_hidden ? '已隐藏' : ''),
+          run: async ctx => { runtime.libraryProvider = { team_id: team.team_id, provider_id: provider.provider_id, provider_name: provider.provider_name }; runtime.libraryPage = 1; await ctx.refresh(); },
         }));
         const globalSearchTeams = new Map();
         for (const model of searchedModels) {
@@ -910,8 +911,9 @@ function createAdminPages(runtime) {
         ];
         const sections = [
           { title: '当前 Key 绑定', rows: bindingRows },
+          ...(selectedProvider || globalSearch ? [{ title: `${globalSearch ? '全库搜索' : selectedProvider.provider_name} · 模型目录`, description: `${globalSearch ? `全库筛选 · ${runtime.librarySearch || '无关键词'} · ` : ''}第 ${searchData.pagination?.page || runtime.libraryPage || 1}/${searchData.pagination?.total_pages || 1} 页 · 共 ${searchData.pagination?.total ?? searchData.total ?? searchedModels.length} 个模型`, cards: modelCards.length ? modelCards : undefined, rows: modelCards.length ? [] : [{ label: '没有符合筛选条件的模型。' }] }] : []),
           ...(quotaProviders.length ? [{ title: '供应商额度', description: '显示上次刷新（定时 / 手动）的结果。', rows: quotaRows, actions: [quotaRefreshAction] }] : quotaResult.status === 'rejected' ? [{ title: '供应商额度', rows: [{ label: `额度缓存暂不可用：${quotaResult.reason.message || '请求失败'}` }], actions: [quotaRefreshAction] }] : []),
-          { title: '搜索与筛选', description: '按供应商、模型、Team、系列、标签和测试状态筛选。', toolbar: true, actions: filterControls, rows: [{ label: '按名称筛选供应商与模型；选择供应商后可继续查看并筛选其模型。' }] },
+          { title: '搜索与筛选', description: '按供应商、模型、Team、系列、标签和测试状态筛选。', toolbar: true, actions: filterControls, rows: [{ label: '按名称筛选供应商与模型；选择供应商卡片即可展开模型。' }] },
           ...(stars.length ? [{ title: '已收藏模型', rows: stars.slice(0, 20).map(item => ({ label: display(item.alias || item.name || item.model_id, item.provider_name, item.series), detail: display(item.is_hidden ? '已隐藏' : '可用', item.test_ok === true ? `测试通过 · 响应时间 ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? `测试失败 · ${shortError(item.test_error)}` : '尚未测试'), run: async ctx => { const choice = await ctx.choose(`收藏模型 · ${item.alias || item.name || item.model_id}`, [{ label: '查看详情', value: 'detail' }, { label: '取消收藏', value: 'unstar' }]); if (choice === 'detail') { const starId = String(item.model_id || item.id); const details = [
               `模型名称：${item.alias || item.name || starId}`, `上游模型 ID：${item.upstream_model_id || item.name || starId}`,
               `供应商：${item.provider_name || item.provider || '未知'}`, `模型系列：${item.series || '无'}`,
@@ -920,8 +922,7 @@ function createAdminPages(runtime) {
               `接口测试：${item.test_ok === true ? `通过 · 响应时间 ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? '失败' : '尚未测试'}`,
               item.test_error && `测试失败原因：${shortError(item.test_error, 500)}`, item.description && `模型说明：${item.description}`,
             ].filter(Boolean).join('\n'); await ctx.show(`模型详情 · ${item.alias || item.name || item.model_id}`, details); } if (choice === 'unstar') { if (!await ctx.confirm('取消模型收藏', `${item.alias || item.name || item.model_id}\n${item.provider_name || ''}`)) return; await api('/api/user/model-library/star', { method: 'PUT', body: { teamId: item.team_id, providerId: item.provider, modelId: item.model_id, starred: false } }); ctx.notify('模型收藏已取消。'); await ctx.refresh(); } } })) }] : []),
-          { title: '供应商', description: `${providerCards.length} 个供应商 · 选择“搜索与筛选”中的供应商可展开模型目录`, cards: providerCards, rows: providerCards.length ? [] : [{ label: libraryResult.status === 'rejected' ? libraryResult.reason.message : '暂无可用供应商。' }] },
-          ...(selectedProvider || globalSearch ? [{ title: `${globalSearch ? '全库搜索' : selectedProvider.provider_name} · 模型目录`, description: `${globalSearch ? `全库筛选 · ${runtime.librarySearch || '无关键词'} · ` : ''}第 ${searchData.pagination?.page || runtime.libraryPage || 1}/${searchData.pagination?.total_pages || 1} 页 · 共 ${searchData.pagination?.total ?? searchData.total ?? searchedModels.length} 个模型`, cards: modelCards.length ? modelCards : undefined, rows: modelCards.length ? [] : [{ label: '没有符合筛选条件的模型。' }] }] : []),
+          { title: '供应商', description: `${providerCards.length} 个供应商 · 选择卡片展开模型目录`, cards: providerCards, toolbar: true, toolbarLabel: '供应商卡片', rows: providerCards.length ? [] : [{ label: libraryResult.status === 'rejected' ? libraryResult.reason.message : '暂无可用供应商。' }] },
           ...(libraryResult.status === 'rejected' ? [{ title: '加载失败', rows: [{ label: libraryResult.reason.message || '模型目录不可用' }] }] : []),
         ];
         return { sections, pageToolbar: true, pageToolbarLabel: '当前 Key', status: libraryStatus, actions: [
