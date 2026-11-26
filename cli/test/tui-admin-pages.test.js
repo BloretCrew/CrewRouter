@@ -134,12 +134,21 @@ test('admin general settings and request capture use readable web fields with va
   assert.ok(generalSection.rows.some(row => row.label === '可用模型：2 个' && row.detail === 'fusion、model-a'));
   const generalAction = data.actions.find(action => action.label === '编辑常规设置');
   let generalFields;
-  const generalValues = { site_name: 'Router Two', defaultBalance: '300', defaultKeyExpiry: '0', billing_mode: 'rate', rate_price_per_request: '0.08', stats_refresh_interval_sec: '25', login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed', model_list: 'model-b\nmodel-c' };
-  await generalAction.run({ form: async (_title, fields) => { generalFields = fields; return generalValues; }, confirm: async () => false });
-  assert.deepEqual(generalFields.map(field => field.name), ['site_name', 'defaultBalance', 'defaultKeyExpiry', 'billing_mode', 'rate_price_per_request', 'stats_refresh_interval_sec', 'login_report_enabled', 'stats_report_enabled', 'stats_report_granularity', 'model_list']);
+  const generalValues = { site_name: 'Router Two', defaultBalance: '300', defaultKeyExpiry: '0', billing_mode: 'rate', rate_price_per_request: '0.08', stats_refresh_interval_sec: '25', login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed' };
+  const modelChoices = ['add', 'add', 'add', 'done'];
+  const modelInputs = ['fusion', 'model-b', 'model-b'];
+  const runGeneralEdit = confirm => generalAction.run({
+    form: async (_title, fields) => { generalFields = fields; return generalValues; },
+    choose: async (_title, options) => { assert.ok(options.some(option => option.label === '完成模型列表')); return modelChoices.shift(); },
+    ask: async () => modelInputs.shift(), show: async (_title, message) => { assert.match(message, /fusion 已固定保留|已在可用列表中/); },
+    confirm, notify() {}, refresh: async () => {},
+  });
+  await runGeneralEdit(async () => false);
+  assert.deepEqual(generalFields.map(field => field.name), ['site_name', 'defaultBalance', 'defaultKeyExpiry', 'billing_mode', 'rate_price_per_request', 'stats_refresh_interval_sec', 'login_report_enabled', 'stats_report_enabled', 'stats_report_granularity']);
   assert.equal(calls.some(call => call.path === '/api/admin/settings' && call.options.method === 'PUT'), false);
-  await generalAction.run({ form: async () => generalValues, confirm: async () => true, notify() {}, refresh: async () => {} });
-  assert.deepEqual(calls.find(call => call.path === '/api/admin/settings' && call.options.method === 'PUT').options.body, { site_name: 'Router Two', defaultBalance: 300, defaultKeyExpiry: 0, billing_mode: 'rate', rate_price_per_request: 0.08, stats_refresh_interval_sec: 25, login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed', model_list: ['fusion', 'model-b', 'model-c'] });
+  modelChoices.push('add', 'add', 'done'); modelInputs.push('model-b', 'model-c');
+  await runGeneralEdit(async () => true);
+  assert.deepEqual(calls.find(call => call.path === '/api/admin/settings' && call.options.method === 'PUT').options.body, { site_name: 'Router Two', defaultBalance: 300, defaultKeyExpiry: 0, billing_mode: 'rate', rate_price_per_request: 0.08, stats_refresh_interval_sec: 25, login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed', model_list: ['fusion', 'model-a', 'model-b', 'model-c'] });
 
   const quotaSection = data.sections.find(section => section.title === '请求额度采集');
   assert.ok(quotaSection.cards.some(card => card.label === '采集模式' && card.value === '请求前后精细采集'));

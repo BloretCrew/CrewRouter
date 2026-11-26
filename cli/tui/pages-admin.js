@@ -1716,16 +1716,21 @@ function createAdminPages(runtime) {
               { name: 'login_report_enabled', label: '匿名登录状态上报', type: 'boolean', value: loginReportEnabled },
               { name: 'stats_report_enabled', label: '匿名使用统计上报', type: 'boolean', value: statsReportEnabled },
               { name: 'stats_report_granularity', label: '匿名上报粒度', value: statsGranularity, options: [{ value: 'detailed', label: '含模型与供应商明细' }, { value: 'counts', label: '仅聚合计数' }] },
-              { name: 'model_list', label: '可用模型 ID（每行一个；fusion 固定保留）', value: modelList.filter(value => value !== 'fusion').join('\n') },
             ], { description: '登录/统计上报仅发送匿名数据；仅聚合计数不会包含模型和供应商名称。默认积分须为非负数；有效期填 0 表示不设默认到期时间。' });
             if (!values) return;
+            let nextModels = [...new Set(modelList.filter(value => value && value !== 'fusion'))];
+            while (true) {
+              const choice = await ctx.choose(`可用模型列表 · ${nextModels.length + 1} 个（fusion 固定保留）`, [...nextModels.map(model => ({ label: `移除模型 ID：${model}`, value: `remove:${model}` })), { label: '添加模型 ID', value: 'add' }, { label: '完成模型列表', value: 'done' }], { description: `当前：fusion${nextModels.length ? `、${nextModels.join('、')}` : ''}。至少保留一个非 fusion 模型。` });
+              if (choice === null) return;
+              if (choice === 'done') break;
+              if (choice === 'add') { const modelId = String(await ctx.ask('添加模型 ID', { description: 'fusion 为固定系统模型，不能重复添加。' }) || '').trim(); if (!modelId) continue; if (modelId.toLowerCase() === 'fusion') { await ctx.show('固定模型', 'fusion 已固定保留，无需添加。'); continue; } if (nextModels.includes(modelId)) { await ctx.show('模型 ID 已存在', `${modelId} 已在可用列表中。`); continue; } nextModels.push(modelId); continue; }
+              if (choice.startsWith('remove:')) { nextModels = nextModels.filter(model => model !== choice.slice(7)); if (!nextModels.length) { await ctx.show('至少保留一个模型', 'fusion 固定保留，但还必须至少保留一个非 fusion 模型。'); } }
+            }
             const seconds = Number(values.stats_refresh_interval_sec), defaultBalance = Number(values.defaultBalance), defaultKeyExpiry = Number(values.defaultKeyExpiry), ratePrice = Number(values.rate_price_per_request);
             if (!Number.isInteger(seconds) || seconds < 3 || seconds > 300 || !Number.isFinite(defaultBalance) || defaultBalance < 0 || !Number.isInteger(defaultKeyExpiry) || defaultKeyExpiry < 0 || !Number.isFinite(ratePrice) || ratePrice < 0) { await ctx.show('系统设置无效', '刷新间隔须为 3–300 秒整数；默认积分和请求价格须为非负数；Key 有效期须为非负整数。'); return; }
-            const models = [...new Set(String(values.model_list || '').split(/\r?\n/).map(value => value.trim()).filter(Boolean))];
-            if (models.some(value => value.toLowerCase() === 'fusion')) { await ctx.show('模型列表无效', 'fusion 为固定模型，无需填写；请删除该行后再保存。'); return; }
-            if (!models.length) { await ctx.show('模型列表无效', '至少保留一个非 Fusion 模型 ID。'); return; }
+            const models = nextModels;
             const body = { site_name: String(values.site_name || '').trim(), defaultBalance, defaultKeyExpiry, billing_mode: values.billing_mode === 'rate' ? 'rate' : 'token', rate_price_per_request: ratePrice, stats_refresh_interval_sec: seconds, login_report_enabled: values.login_report_enabled === true, stats_report_enabled: values.stats_report_enabled === true, stats_report_granularity: values.stats_report_granularity === 'counts' ? 'counts' : 'detailed', model_list: ['fusion', ...models] };
-            if (!await ctx.confirm('保存常规设置', `系统名称：${body.site_name || '未设置'}\n默认积分：${defaultBalance} · Key 有效期：${defaultKeyExpiry || '不设默认到期'} 天\n计费方式：${body.billing_mode === 'rate' ? `每请求 ${ratePrice} 积分` : '按 Token'}\n统计刷新：${seconds} 秒 · 可用模型 ${models.length} 个\n登录上报：${body.login_report_enabled ? '开启' : '关闭'} · 统计上报：${body.stats_report_enabled ? '开启' : '关闭'}（${body.stats_report_granularity === 'counts' ? '仅计数' : '含模型/供应商'}）`)) return;
+            if (!await ctx.confirm('保存常规设置', `系统名称：${body.site_name || '未设置'}\n默认积分：${defaultBalance} · Key 有效期：${defaultKeyExpiry || '不设默认到期'} 天\n计费方式：${body.billing_mode === 'rate' ? `每请求 ${ratePrice} 积分` : '按 Token'}\n统计刷新：${seconds} 秒 · 可用模型 ${models.length + 1} 个\n登录上报：${body.login_report_enabled ? '开启' : '关闭'} · 统计上报：${body.stats_report_enabled ? '开启' : '关闭'}（${body.stats_report_granularity === 'counts' ? '仅计数' : '含模型/供应商'}）`)) return;
             await api('/api/admin/settings', { method: 'PUT', body }); ctx.notify('常规设置已保存。'); await ctx.refresh();
           } },
           { label: quotaResult.status === 'rejected' ? '编辑请求额度采集（不可用）' : '编辑请求额度采集', disabled: quotaResult.status === 'rejected', run: async ctx => {
