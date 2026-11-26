@@ -4,6 +4,7 @@
   "private": false,
   "description": "CrewRouter CLI for managing remote instances or starting a local server",
   "license": "GPL-3.0",
+  "repository": "github:BloretCrew/CrewRouter",
   "type": "commonjs",
   "main": "index.js",
   "bin": {

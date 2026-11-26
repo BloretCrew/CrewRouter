@@ -56,6 +56,10 @@ const sdkPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name ===
 if (!sdkPack?.run?.includes('cd sdk/typescript') || !sdkPack.run.includes('test -f "$RUNNER_TEMP/bloret-crew-crewrouter-sdk-${PRODUCT_VERSION}.tgz"')) throw new Error('SDK candidate must pack from sdk/typescript and verify its tarball name');
 const cliPack = beta.jobs['npm-beta-candidate'].steps.find(step => step.name === 'Build and pack CLI candidate');
 if (!cliPack?.run?.includes('test -f "$RUNNER_TEMP/bloret-crew-crewrouter-${PRODUCT_VERSION}.tgz"')) throw new Error('CLI candidate must verify its tarball name');
+for (const packageFile of ['cli/npm/package.json', 'sdk/typescript/package.json']) {
+  const manifest = JSON.parse(await readFile(packageFile, 'utf8'));
+  if (manifest.repository !== 'github:BloretCrew/CrewRouter') throw new Error(`${packageFile} must declare the GitHub repository required by npm trusted publishing`);
+}
 const npmPublishStep = beta.jobs['npm-beta-publish'].steps.find(step => step.name === 'Confirm npm package ownership and publish candidate packages');
 if (!npmPublishStep?.run?.includes('npm publish candidates/bloret-crew-crewrouter-sdk-${PRODUCT_VERSION}.tgz') || !npmPublishStep.run.includes('npm publish candidates/bloret-crew-crewrouter-${PRODUCT_VERSION}.tgz')) throw new Error('npm publish must publish both scoped candidates');
 if (!npmPublishStep.run.includes('@bloret-crew/crewrouter-sdk @bloret-crew/crewrouter')) throw new Error('npm publish must target the scoped package names');

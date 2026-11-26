@@ -78,8 +78,8 @@ jobs:
             if (!fs.existsSync(path)) throw new Error(`Missing candidate artifact ${file}`);
             const raw = execFileSync('tar', ['-xOf', path, 'package/package.json'], { encoding: 'utf8' });
             const manifest = JSON.parse(raw);
-            if (manifest.name !== name || manifest.version !== process.env.EXPECTED_VERSION) {
-              throw new Error(`${file}: expected ${name}@${process.env.EXPECTED_VERSION}, received ${manifest.name}@${manifest.version}`);
+            if (manifest.name !== name || manifest.version !== process.env.EXPECTED_VERSION || manifest.repository !== 'github:BloretCrew/CrewRouter') {
+              throw new Error(`${file}: candidate name, version or repository metadata does not match the configured npm trusted publisher`);
             }
           }
           const extras = fs.readdirSync('candidates').filter(file => !expected.has(file));

@@ -3,6 +3,7 @@
   "version": "27.0.0-beta.3",
   "description": "CrewRouter SDK for OpenAI/Anthropic-compatible gateway and management APIs",
   "license": "GPL-3.0",
+  "repository": "github:BloretCrew/CrewRouter",
   "type": "module",
   "main": "./dist/esm/index.js",
   "module": "./dist/esm/index.js",
