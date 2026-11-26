@@ -54,6 +54,7 @@ test('console and admin areas are switched without sidebar tabs, and hidden grou
   try {
     await until(() => tty.screen().includes('控制台首页'));
     assert.ok(tty.screen().includes('[控制台]'), 'area switching remains available');
+    assert.ok(tty.screen().includes('控制台'), 'the main web navigation group has a heading');
     assert.ok(!tty.screen().includes('最后管理页'), 'hidden deep pages stay out of the sidebar');
     assert.ok(!tty.screen().includes('管理后台'));
     isAdmin = true;
@@ -61,6 +62,7 @@ test('console and admin areas are switched without sidebar tabs, and hidden grou
     await clickText(tty, '管理后台');
     await until(() => tty.screen().includes('后台内容'));
     assert.ok(tty.screen().includes('后台首页'));
+    assert.ok(tty.screen().includes('管理后台'), 'the admin web navigation group has a heading');
     assert.ok(!tty.screen().includes('管理子页面'));
     assert.ok(!tty.screen().includes('最后管理页'));
     assert.ok(!tty.screen().includes('控制台首页'), 'admin area replaces console pages');

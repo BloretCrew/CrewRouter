@@ -439,7 +439,7 @@ async function runPagedTui({
       for (const group of groups) {
         const members = pageIndexesForIds(group.pages).map(index => ({ page: pages[index], index }));
         if (!members.length) continue;
-        if (group.label && group.id !== activeAreaConfig?.id) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
+        if (group.label) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
         entries.push(...members.map(entry => ({ type: 'page', ...entry })));
       }
       const room = Math.max(1, height - 6);
