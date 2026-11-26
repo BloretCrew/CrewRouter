@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { runPagedTui } = require('../tui/engine');
 const { buildPages, navGroups, navAreas, PAGE_CAPABILITIES } = require('../tui/pages');
-const { terminal, tick, until, findText, findAnsiText, clickText, clickAnsiText } = require('./helpers/tty');
+const { terminal, tick, until, plain, findText, findAnsiText, clickText, clickAnsiText } = require('./helpers/tty');
 
 const page = (id, label, load) => ({ id, label, description: '详情', load });
 
@@ -24,14 +24,21 @@ test('production sidebar renders web group dividers and hides CLI-only groups', 
   });
   try {
     await until(() => tty.screen().includes('模型库'));
-    assert.ok(tty.screen().includes('── 控制台 ──'));
-    assert.ok(tty.screen().includes('── 设置 ──'));
+    assert.ok(tty.screen().includes('控制台'));
+    assert.ok(tty.screen().includes('设置'));
+    assert.ok(!plain(tty.screen()).includes('── 控制台 ──'), 'group headings avoid decorative divider glyphs');
+    const consoleHeadingRow = findText(tty, '控制台')?.y;
+    const settingsHeadingRow = findText(tty, '设置')?.y;
+    assert.ok(consoleHeadingRow && settingsHeadingRow > consoleHeadingRow + 1, 'groups are separated by a blank row');
     assert.ok(!tty.screen().includes('终端工具'));
     assert.ok(!tty.screen().includes('CLI 服务'));
     tty.input.write('\x1b[C');
     await until(() => tty.screen().includes('用户管理'));
-    assert.ok(tty.screen().includes('── 管理后台 ──'));
-    assert.ok(tty.screen().includes('── 系统 ──'));
+    assert.ok(tty.screen().includes('管理后台'));
+    assert.ok(tty.screen().includes('系统'));
+    const adminHeadingRow = findText(tty, '管理后台')?.y;
+    const systemHeadingRow = findText(tty, '系统')?.y;
+    assert.ok(adminHeadingRow && systemHeadingRow > adminHeadingRow + 1, 'admin groups are separated by a blank row');
     assert.ok(!tty.screen().includes('系统设置子页面'));
   } finally { tty.input.write('q'); await task; }
 });
@@ -83,8 +90,8 @@ test('console and admin areas are switched without sidebar tabs, and hidden grou
   try {
     await until(() => tty.screen().includes('控制台首页'));
     assert.ok(tty.screen().includes('[控制台]'), 'area switching remains available');
-    assert.ok(tty.screen().includes('── 控制台 ──'), 'the main web navigation group has a visible divider heading');
-    assert.ok(!tty.screen().includes('── 设置 ──'), 'the fixture has no settings group');
+    assert.ok(tty.screen().includes('控制台'), 'the main web navigation group has a visible heading');
+    assert.ok(!tty.screen().includes('设置'), 'the fixture has no settings group');
     assert.ok(!tty.screen().includes('最后管理页'), 'hidden deep pages stay out of the sidebar');
     assert.ok(!tty.screen().includes('管理后台'));
     isAdmin = true;
@@ -92,8 +99,8 @@ test('console and admin areas are switched without sidebar tabs, and hidden grou
     await clickText(tty, '管理后台');
     await until(() => tty.screen().includes('后台内容'));
     assert.ok(tty.screen().includes('后台首页'));
-    assert.ok(tty.screen().includes('── 管理后台 ──'), 'the admin web navigation group has a visible divider heading');
-    assert.ok(!tty.screen().includes('── 系统 ──'), 'the fixture has no system settings group');
+    assert.ok(tty.screen().includes('管理后台'), 'the admin web navigation group has a visible heading');
+    assert.ok(!tty.screen().includes('系统'), 'the fixture has no system settings group');
     assert.ok(!tty.screen().includes('管理子页面'));
     assert.ok(!tty.screen().includes('最后管理页'));
     assert.ok(!tty.screen().includes('控制台首页'), 'admin area replaces console pages');

@@ -421,7 +421,8 @@ async function runPagedTui({
       const entry = navLines[lineIndex - 2];
       if (entry) {
         if (entry.type === 'area') return `${entry.id === activeArea ? '›' : ' '} ${entry.id === activeArea ? `[${entry.label}]` : entry.label}`;
-        if (entry.type === 'group') return `  ── ${entry.label} ──`;
+        if (entry.type === 'group') return `  ${entry.label}`;
+        if (entry.type === 'spacer') return '';
         return `${entry.index === active ? '›' : ' '} ${entry.page.label}`;
       }
       const footer = typeof sidebarFooter === 'function' ? sidebarFooter() : null;
@@ -439,7 +440,10 @@ async function runPagedTui({
       for (const group of groups) {
         const members = pageIndexesForIds(group.pages).map(index => ({ page: pages[index], index }));
         if (!members.length) continue;
-        if (group.label) entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
+        if (group.label) {
+          if (entries.length) entries.push({ type: 'spacer', id: `spacer:${group.id}` });
+          entries.push({ type: 'group', id: `group:${group.id}`, label: group.label });
+        }
         entries.push(...members.map(entry => ({ type: 'page', ...entry })));
       }
       const room = Math.max(1, height - 6);
@@ -484,7 +488,7 @@ async function runPagedTui({
         const selected = compactMenu && compactMenuIndex === menuEntryIndex;
         const selectedArea = Boolean(entry && entry.type === 'area' && entry.id === activeArea);
         const selectedPage = Boolean(entry && entry.type === 'page' && entry.index === active);
-        const label = !entry ? '' : entry.type === 'group' ? `── ${entry.label} ──` : entry.type === 'area' ? `${selectedArea ? '›' : ' '} ${entry.label}` : `${selectedPage ? '›' : ' '} ${menuPage.label}`;
+        const label = !entry || entry.type === 'spacer' ? '' : entry.type === 'group' ? entry.label : entry.type === 'area' ? `${selectedArea ? '›' : ' '} ${entry.label}` : `${selectedPage ? '›' : ' '} ${menuPage.label}`;
         const textLine = pad(label, innerW);
         put(i, sidebarText(i), leftPad + ui(textLine, selected ? 'rose' : entry?.type === 'group' ? 'sage' : 'dim', selected ? 'select' : 'bg', selected) + leftPad);
         if (menuPage) hit.rows.push({ y: i + 1, type: 'page', index: entry.index });
