@@ -45,7 +45,7 @@ jobs:
           TAG_VERSION: ${{ github.ref_name }}
           DISPATCH_VERSION: 27.0.0-beta.3
           PUBLISH: ${{ inputs.publish }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
           PRODUCT_VERSION: 27.0.0-beta.3
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
