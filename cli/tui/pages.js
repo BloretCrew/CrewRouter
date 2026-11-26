@@ -124,16 +124,18 @@ const PAGE_CAPABILITIES = Object.freeze({
 });
 
 const navGroups = [
-  { id: 'console', label: '控制台', pages: ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings'] },
-  { id: 'admin', label: '管理后台', pages: ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings'] },
+  { id: 'console', label: '', pages: ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent'] },
+  { id: 'console-settings', label: '设置', pages: ['policy-center', 'settings'] },
+  { id: 'admin', label: '', pages: ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins'] },
+  { id: 'admin-system', label: '系统', pages: ['admin-settings'] },
   { id: 'admin-subpages', label: '管理子页面', pages: ['admin-policy-settings', 'admin-policy-members', 'admin-policy-hits', 'admin-policy-exceptions', 'admin-policy-approvals', 'admin-policy-clients', 'admin-policy-notifications', 'admin-models', 'admin-teams', 'admin-oauth-clients', 'admin-popups', 'admin-retention', 'admin-invites', 'admin-updates'] },
-  { id: 'tools', label: '终端工具', pages: ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings'] },
+  { id: 'tools', label: '终端工具', pages: ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings', 'notification-settings'] },
   { id: 'cli', label: 'CLI 服务', pages: ['service'] },
 ];
 
 const navAreas = [
-  { id: 'console', label: '控制台', groups: ['console', 'tools', 'cli'] },
-  { id: 'admin', label: '管理后台', groups: ['admin', 'admin-subpages'], adminOnly: true },
+  { id: 'console', label: '控制台', groups: ['console', 'console-settings', 'tools', 'cli'] },
+  { id: 'admin', label: '管理后台', groups: ['admin', 'admin-system', 'admin-subpages'], adminOnly: true },
 ];
 
 module.exports = { buildPages, WEB_PAGE_MAP, navGroups, navAreas, PAGE_CAPABILITIES };

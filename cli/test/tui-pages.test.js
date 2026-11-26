@@ -17,7 +17,7 @@ test('TUI pages map every console and admin navigation entry', () => {
   for (const mapping of WEB_PAGE_MAP) assert.ok(ids.has(mapping.cli), `${mapping.area}.${mapping.web} maps to ${mapping.cli}`);
   assert.ok(ids.has('service'), 'CLI retains its local service/profile page');
   assert.ok(ids.has('overview'), 'CLI retains its overview page');
-  assert.deepEqual(navGroups.map(group => group.id), ['console', 'admin', 'admin-subpages', 'tools', 'cli']);
+  assert.deepEqual(navGroups.map(group => group.id), ['console', 'console-settings', 'admin', 'admin-system', 'admin-subpages', 'tools', 'cli']);
   assert.deepEqual(PAGE_CAPABILITIES, {
     'my-upstream': 'personalProviders', projects: 'projects', 'audit-logs': 'auditLogs', 'policy-center': 'teamPolicies',
     'admin-users': 'multiUser', 'admin-policies': 'teamPolicies', 'admin-policy-settings': 'teamPolicies',
@@ -25,14 +25,16 @@ test('TUI pages map every console and admin navigation entry', () => {
     'admin-policy-notifications': 'teamPolicies', 'admin-teams': 'multiUser', 'admin-stats': 'adminStats', 'admin-audit-logs': 'teamAuditLogs',
   });
   assert.deepEqual(navAreas.map(area => ({ ...area })), [
-    { id: 'console', label: '控制台', groups: ['console', 'tools', 'cli'] },
-    { id: 'admin', label: '管理后台', groups: ['admin', 'admin-subpages'], adminOnly: true },
+    { id: 'console', label: '控制台', groups: ['console', 'console-settings', 'tools', 'cli'] },
+    { id: 'admin', label: '管理后台', groups: ['admin', 'admin-system', 'admin-subpages'], adminOnly: true },
   ]);
-  assert.deepEqual(navGroups[0].pages, ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent', 'policy-center', 'settings', 'notification-settings']);
-  assert.deepEqual(navGroups[1].pages, ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins', 'admin-settings']);
-  assert.deepEqual(navGroups[3].pages, ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings']);
-  assert.ok(navGroups[2].pages.includes('admin-policy-hits'));
-  assert.ok(navGroups[2].pages.includes('admin-policy-exceptions'));
+  assert.deepEqual(navGroups[0].pages, ['model-library', 'my-upstream', 'keys', 'usage', 'projects', 'leaderboard', 'balance', 'audit-logs', 'prompts', 'sessions', 'blora-agent']);
+  assert.deepEqual(navGroups[1].pages, ['policy-center', 'settings']);
+  assert.deepEqual(navGroups[2].pages, ['admin-users', 'admin-policies', 'admin-model-library', 'admin-stats', 'admin-error-logs', 'admin-audit-logs', 'admin-prompts', 'admin-plugins']);
+  assert.deepEqual(navGroups[3].pages, ['admin-settings']);
+  assert.deepEqual(navGroups[5].pages, ['providers', 'provider-tags', 'models', 'account', 'overview', 'security-settings', 'notification-settings']);
+  assert.ok(navGroups[4].pages.includes('admin-policy-hits'));
+  assert.ok(navGroups[4].pages.includes('admin-policy-exceptions'));
   assert.ok(WEB_PAGE_MAP.some(mapping => mapping.cli === 'admin-policy-hits'));
   assert.ok(WEB_PAGE_MAP.some(mapping => mapping.cli === 'admin-policy-exceptions'));
   assert.equal(WEB_PAGE_MAP.find(mapping => mapping.area === 'admin' && mapping.web === 'adminPolicies').kind, 'tabbed-page');
