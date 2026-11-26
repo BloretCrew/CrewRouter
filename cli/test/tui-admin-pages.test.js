@@ -357,13 +357,14 @@ test('admin OAuth clients mirror web columns and support scoped client lifecycle
 
 test('admin retention page mirrors web thresholds, validates saves and runs preview tasks', async () => {
   const calls = [];
+  let failNextTaskPoll = false;
   const config = { compress_days: 30, compress_size_gb: 10, purge_days: 90, purge_size_gb: 20, provider_quota_days: 60, agg_enabled: true };
   const api = async (path, options = {}) => {
     calls.push({ path, options });
     if (path === '/api/admin/retention-config') return config;
     if (path === '/api/admin/retention/run-compress') return { taskId: 'task-1', status: 'queued' };
     if (path === '/api/admin/retention/run-purge') return { taskId: 'task-2', status: 'queued' };
-    if (path === '/api/admin/retention/tasks/task-1') return { status: 'completed', result: { compressed: 0 } };
+    if (path === '/api/admin/retention/tasks/task-1') { if (failNextTaskPoll) { failNextTaskPoll = false; throw new Error('连接暂时中断'); } return { status: 'completed', result: { compressed: 0 } }; }
     if (path === '/api/admin/retention/tasks/task-2') return { status: 'completed', result: { purged: 0 } };
     return {};
   };
@@ -383,8 +384,14 @@ test('admin retention page mirrors web thresholds, validates saves and runs prev
   assert.deepEqual(save.options.body, config);
 
   let result = '';
-  await data.actions.find(action => action.label === '预览压缩（dry-run）').run({ confirm: async () => false, show: async (_title, body) => { result = body; } });
+  failNextTaskPoll = true;
+  let retryPrompt = '';
+  const recoveryChoices = [true];
+  await data.actions.find(action => action.label === '预览压缩（dry-run）').run({ confirm: async (_title, message) => { retryPrompt = message; return recoveryChoices.shift(); }, show: async (_title, body) => { result = body; } });
   assert.ok(calls.some(call => call.path === '/api/admin/retention/run-compress' && call.options.body.dry_run === true));
+  assert.match(retryPrompt, /仍可能在后台执行/);
+  assert.match(retryPrompt, /不会重新启动任务/);
+  assert.equal(calls.filter(call => call.path === '/api/admin/retention/run-compress').length, 1, 'poll recovery must not start a duplicate retention task');
   assert.match(result, /已压缩：0/);
   assert.doesNotMatch(result, /"compressed"/);
   calls.length = 0;

@@ -86,7 +86,13 @@ async function runRetentionTask(api, ctx, kind, dryRun) {
   const resultLabels = { compressed: '已压缩', deleted: '已清除', purged: '已删除', scanned: '已检查', skipped: '已跳过', tables: '涉及表数', rows: '记录数', bytes: '字节数', dryRun: '预览模式' };
   for (let attempt = 0; attempt < 600; attempt++) {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const task = await api(`/api/admin/retention/tasks/${encodeURIComponent(started.taskId)}`);
+    let task;
+    try { task = await api(`/api/admin/retention/tasks/${encodeURIComponent(started.taskId)}`); }
+    catch (error) {
+      const retry = await ctx.confirm('获取任务状态失败', `任务 ${started.taskId} 仍可能在后台执行。\n${error.message || '无法连接任务状态接口'}\n是否继续尝试读取同一任务状态？不会重新启动任务。`);
+      if (retry) { attempt--; continue; }
+      await ctx.show('已停止轮询', `任务编号：${started.taskId}\n后台任务状态未知；可稍后使用此任务编号重新检查，切勿重复启动可能删除数据的任务。`); return;
+    }
     if (task.status === 'completed') {
       const result = task.result || {};
       const details = Object.entries(result).map(([key, value]) => `${resultLabels[key] || key.replace(/_/g, ' ')}：${typeof value === 'boolean' ? value ? '是' : '否' : typeof value === 'object' ? JSON.stringify(value) : value}`).join('\n');
