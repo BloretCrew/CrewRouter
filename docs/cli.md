@@ -26,9 +26,10 @@ cr login
 
 - 用户名/邮箱 + 密码（可用 `--password-stdin` 从管道读取，不会保存密码）；
 - TOTP 2FA；
-- API Key 登录（`cr login --api-key-stdin`）。
+- API Key 登录（`cr login --api-key-stdin`）；
+- OAuth 设备码登录（`cr login --oauth --url https://router.example.com --profile prod`，也可用 `--method oauth`）。OAuth 登录会打开或提示访问设备验证页，展示用户码并轮询等待用户批准。
 
-登录成功后只保存会话 Cookie/CSRF 或 API Key，文件权限为 `0600`；不会保存密码或 TOTP 密钥。
+OAuth 设备码登录要求命名 profile（已有当前 profile 时可省略 `--profile`）；access token 保存于 `sessions.json` 的独立 OAuth 凭据字段，文件权限为 `0600`。CLI 当前固定请求 `gateway:invoke`，批准页面需选择要绑定的启用 API Key。OAuth token 只允许网关操作，不是控制台 session，管理后台命令仍需密码 session 或具备所需权限的 API Key。设备码 grant 当前不签发 refresh token，access token 过期后需重新执行 `cr login --oauth`。
 
 ### 从本机启动服务
 
@@ -49,7 +50,7 @@ cr status
 ```text
 cr status [--json]
 cr connect <URL> [--name NAME]
-cr login [--url URL] [--username U] [--password-stdin|--api-key-stdin]
+cr login [--url URL] [--profile NAME] [--oauth] [--username U] [--password-stdin|--api-key-stdin]
 cr logout
 cr profiles [--json]
 cr use <NAME>
@@ -128,4 +129,4 @@ cr dsh-plugin uninstall --profile standard
 
 ## 版本
 
-CLI 预发布版本使用年号版本 **27.0 Beta**。独立 npm 包 `@bloret-crew/crewrouter@27.0.0-beta.1` 已发布到 `beta` 标签；27.0.0-beta.3 是待 dry-run 的候选版本。可执行 `npm install -g @bloret-crew/crewrouter@27.0.0-beta.1` 固定安装已发布版。
+CLI 预发布版本使用年号版本 **27.0 Beta**。独立 npm 包 `@bloret-crew/crewrouter@27.0.0-beta.1` 已发布到 `beta` 标签；27.0.0-beta.4 是待 dry-run 的候选版本。可执行 `npm install -g @bloret-crew/crewrouter@27.0.0-beta.1` 固定安装已发布版。

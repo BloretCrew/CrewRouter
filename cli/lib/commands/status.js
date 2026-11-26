@@ -18,7 +18,7 @@ const HELP_TEXT = `CrewRouter CLI (cr) — 连接远程实例或从本机启动 
 用法：
   cr [tui]                         打开全屏 TUI（默认）
   cr status [--json]               查看连接、服务与登录状态
-  cr login [--url URL]             登录（密码或 API Key）
+  cr login [--url URL]             登录（密码、API Key 或 --oauth 设备码）；OAuth 需命名 profile
   cr logout                        退出登录并删除本地凭证
   cr connect <URL> [--name NAME]   添加/切换远程服务器
   cr profiles [--json]             列出服务器 profile

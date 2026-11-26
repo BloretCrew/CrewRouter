@@ -10,6 +10,9 @@ function readBody(req) {
     req.on('data', chunk => { data += chunk; });
     req.on('end', () => {
       if (!data) return resolve(null);
+      if (/application\/x-www-form-urlencoded/i.test(String(req.headers['content-type'] || ''))) {
+        return resolve(Object.fromEntries(new URLSearchParams(data)));
+      }
       try { resolve(JSON.parse(data)); } catch (_) { resolve(data); }
     });
     req.on('error', reject);
@@ -32,12 +35,14 @@ function createFakeServer(options = {}) {
     user: options.user || { id: 1, username: 'admin', email: 'admin@example.com', isAdmin: true },
     apiAdmin: options.apiAdmin !== false,
     twoFactor: options.twoFactor === true,
+    oauthDeviceApproved: options.oauthDeviceApproved === true,
     loginCalls: 0,
     meCalls: 0,
     requests: [],
     keys: [{ id: 1, name: 'demo', key_prefix: 'sk-demo', enabled: true, total_requests: 2, total_tokens: 10, total_cost: 0.1, current_model_name: 'm1' }],
     providers: [{ id: 'p1', name: 'Provider', format: 'openai', enabled: true, base_url: 'https://p.example' }],
     models: [{ id: 'm1', name: 'Model 1', provider: 'p1', provider_name: 'Provider', enabled: true, input_price_per_1k_tokens: 0.1, output_price_per_1k_tokens: 0.2 }],
+    oauthPolls: 0,
   };
   function newSession() {
     const sid = crypto.randomBytes(8).toString('hex');
@@ -54,14 +59,17 @@ function createFakeServer(options = {}) {
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     const path = url.pathname;
+    const fakeBaseUrl = `http://${req.headers.host}`;
     const body = await readBody(req);
     const jar = cookies(req);
     const sid = jar['connect.sid'];
     let session = sid ? sessions.get(sid) : null;
     state.requests.push({ method: req.method, path, query: Object.fromEntries(url.searchParams), headers: req.headers, body });
     const isApiKey = Boolean(req.headers['x-api-key']);
+    const bearerToken = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const isOAuth = bearerToken === 'oauth-access-token';
     const apiAdmin = state.apiAdmin && req.headers['x-api-key'] === 'sk-admin';
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !isApiKey) {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !isApiKey && !isOAuth && !path.startsWith('/oauth/')) {
       const token = req.headers['x-csrf-token'];
       const origin = req.headers.origin;
       if (!session || (token !== session.csrf && !(origin && options.strictCsrf !== true))) {
@@ -70,11 +78,29 @@ function createFakeServer(options = {}) {
     }
     if (path === '/api/version' && req.method === 'GET') return send(res, 200, { name: 'CrewRouter', version: '1.0.0' });
     if (path === '/api/setup/status' && req.method === 'GET') return send(res, 200, { needsSetup: false, needsEdition: false, dbReady: true });
-    if (path === '/api/instance' && req.method === 'GET') return send(res, 200, { runtime: 'server', edition: 'team', auth: { required: true, methods: ['password'] } });
+    if (path === '/api/instance' && req.method === 'GET') return send(res, 200, { runtime: 'server', edition: 'team', auth: { required: true, methods: options.passwordDisabled ? [] : ['password'] } });
+    if (path === '/.well-known/oauth-authorization-server' && req.method === 'GET') return send(res, 200, {
+      issuer: fakeBaseUrl,
+      token_endpoint: `${fakeBaseUrl}/oauth/token`,
+      device_authorization_endpoint: `${fakeBaseUrl}/oauth/device/code`,
+      grant_types_supported: ['authorization_code', 'refresh_token', 'urn:ietf:params:oauth:grant-type:device_code'],
+    });
+    if (path === '/oauth/device/code' && req.method === 'POST') return send(res, 200, {
+      device_code: 'oauth-device-code', user_code: 'ABCD-EFGH', verification_uri: `${fakeBaseUrl}/oauth/device`,
+      verification_uri_complete: `${fakeBaseUrl}/oauth/device?user_code=ABCD-EFGH`, expires_in: 60, interval: 1,
+    });
+    if (path === '/oauth/token' && req.method === 'POST') {
+      if (body.grant_type !== 'urn:ietf:params:oauth:grant-type:device_code' || body.device_code !== 'oauth-device-code') return send(res, 400, { error: 'invalid_grant' });
+      state.oauthPolls++;
+      if (state.oauthDeviceApproved === 'denied') return send(res, 400, { error: 'access_denied' });
+      if (!state.oauthDeviceApproved) return send(res, 400, { error: 'authorization_pending' });
+      return send(res, 200, { access_token: 'oauth-access-token', token_type: 'Bearer', expires_in: 3600, scope: 'gateway:invoke' });
+    }
     if (path === '/api/csrf-token' && req.method === 'GET') {
       if (!session) { const next = newSession(); session = sessions.get(next); return send(res, 200, { token: session.csrf }, next); }
       return send(res, 200, { token: session.csrf });
     }
+    if (path === '/v1/models' && req.method === 'GET' && isOAuth) return send(res, 200, { data: state.models.map(model => ({ id: model.name })) });
     if (path === '/auth/login' && req.method === 'POST') {
       state.loginCalls++;
       if (!session) return send(res, 403, { error: 'csrf' }, newSession());
@@ -104,8 +130,9 @@ function createFakeServer(options = {}) {
       res.writeHead(302, { Location: '/' });
       return res.end();
     }
-    const authed = Boolean((session && session.user) || (isApiKey && (req.headers['x-api-key'] === 'sk-user' || req.headers['x-api-key'] === 'sk-admin')));
+    const authed = Boolean((session && session.user) || isOAuth || (isApiKey && (req.headers['x-api-key'] === 'sk-user' || req.headers['x-api-key'] === 'sk-admin')));
     if (!authed) return send(res, 401, { error: '请先登录' });
+    if (isOAuth && path.startsWith('/api/')) return send(res, 403, { error: 'OAuth scope 不允许控制台 API', code: 'insufficient_scope' });
     const admin = Boolean((session && session.user.isAdmin) || apiAdmin);
     if (path === '/api/user/balance') {
       if (options.balance403) return send(res, 403, { error: '缺少权限', code: 'permission_denied' });

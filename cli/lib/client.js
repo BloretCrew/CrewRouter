@@ -26,6 +26,7 @@ class CliClient {
     this.cookieJar = Array.isArray(options.cookieJar) ? options.cookieJar.slice() : [];
     this.csrfToken = typeof options.csrfToken === 'string' ? options.csrfToken : '';
     this.apiKey = typeof options.apiKey === 'string' ? options.apiKey : '';
+    this.oauthAccessToken = typeof options.oauthAccessToken === 'string' ? options.oauthAccessToken : '';
     this.username = options.username || '';
     this.isAdmin = options.isAdmin === true ? true : options.isAdmin === false ? false : null;
     this.authWarning = typeof options.authWarning === 'string' ? options.authWarning : '';
@@ -35,6 +36,7 @@ class CliClient {
   setBaseUrl(value) {
     const next = normalizeBaseUrl(value);
     if (next !== this.baseUrl) {
+      this.oauthAccessToken = '';
       this.cookieJar = [];
       this.csrfToken = '';
     }
@@ -44,6 +46,7 @@ class CliClient {
 
   setSession({ cookieJar, csrfToken, username, isAdmin } = {}) {
     this.apiKey = '';
+    this.oauthAccessToken = '';
     this.authWarning = '';
     this.cookieJar = Array.isArray(cookieJar) ? cookieJar.slice() : [];
     this.csrfToken = typeof csrfToken === 'string' ? csrfToken : '';
@@ -52,8 +55,18 @@ class CliClient {
     return this;
   }
 
+  setOAuthToken(value) {
+    this.apiKey = '';
+    this.cookieJar = [];
+    this.csrfToken = '';
+    this.oauthAccessToken = String(value || '');
+    this.authWarning = '';
+    return this;
+  }
+
   setApiKey(value) {
     this.apiKey = String(value || '');
+    this.oauthAccessToken = '';
     this.authWarning = '';
     this.cookieJar = [];
     this.csrfToken = '';
@@ -62,6 +75,7 @@ class CliClient {
 
   clearAuth() {
     this.apiKey = '';
+    this.oauthAccessToken = '';
     this.cookieJar = [];
     this.csrfToken = '';
     this.username = '';
@@ -71,13 +85,13 @@ class CliClient {
   }
 
   authType() {
-    return this.apiKey ? 'api-key' : 'session';
+    return this.apiKey ? 'api-key' : this.oauthAccessToken ? 'oauth' : 'session';
   }
 
   sessionSnapshot() {
     return {
       authType: this.authType(),
-      ...(this.apiKey ? { apiKey: this.apiKey } : { cookieJar: this.cookieJar, csrfToken: this.csrfToken }),
+      ...(this.apiKey ? { apiKey: this.apiKey } : this.oauthAccessToken ? { oauthAccessToken: this.oauthAccessToken } : { cookieJar: this.cookieJar, csrfToken: this.csrfToken }),
       baseUrl: this.baseUrl,
       username: this.username,
       isAdmin: this.isAdmin,
@@ -106,6 +120,7 @@ class CliClient {
       headers.Referer = `${this.baseUrl}/console`;
     }
     if (this.apiKey) headers['x-api-key'] = this.apiKey;
+    else if (this.oauthAccessToken) headers.Authorization = `Bearer ${this.oauthAccessToken}`;
     else {
       const cookie = cookieHeader(this.cookieJar, url.toString());
       if (cookie) headers.Cookie = cookie;

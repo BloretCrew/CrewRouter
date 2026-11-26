@@ -232,8 +232,9 @@ function normalizeSessions(raw) {
     for (const [name, entry] of Object.entries(source.profiles)) {
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
       profiles[name] = {
-        authType: entry.authType === 'api-key' ? 'api-key' : 'session',
-        ...(entry.authType === 'api-key' ? { apiKey: String(entry.apiKey || '') } : {
+        authType: ['api-key', 'oauth'].includes(entry.authType) ? entry.authType : 'session',
+        ...(entry.authType === 'api-key' ? { apiKey: String(entry.apiKey || '') }
+          : entry.authType === 'oauth' ? { oauthAccessToken: String(entry.oauthAccessToken || '') } : {
           cookieJar: Array.isArray(entry.cookieJar) ? entry.cookieJar.filter(cookie => cookie && typeof cookie.name === 'string') : [],
           csrfToken: typeof entry.csrfToken === 'string' ? entry.csrfToken : '',
         }),

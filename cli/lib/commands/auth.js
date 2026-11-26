@@ -10,12 +10,120 @@ const {
   normalizeBaseUrl,
   isLoopbackBase,
 } = require('../config');
-const { createContext, persistClientSession, ensureAuthenticated } = require('../context');
+const { createContext, persistClientSession, ensureAuthenticated, openBrowser } = require('../context');
+const { request: httpRequest } = require('../http');
 const { loginPassword, completeTwoFactor, loginApiKey, logout, TwoFactorRequired } = require('../auth');
 const { probeHealth } = require('../service');
 const { ask, askSecret, readAll } = require('../input');
 const { printJson, success, describeError } = require('../output');
 const { bold, green, yellow, dim } = require('../format');
+
+const CLI_OAUTH_CLIENT_ID = 'crewrouter-cli';
+const CLI_OAUTH_SCOPE = 'gateway:invoke';
+const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function scopeLabel(scope) {
+  return scope === 'gateway:invoke' ? '通过 CrewRouter 网关调用模型 API' : scope;
+}
+
+async function requestOAuthForm(url, fields, timeoutMs = 15000) {
+  const body = new URLSearchParams(fields).toString();
+  const response = await httpRequest(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body,
+    timeoutMs,
+  });
+  return response;
+}
+
+async function loginDeviceCode(context, { json = false, pollIntervalMs = 5000, maxPolls = 360 } = {}) {
+  const base = context.client.baseUrl.replace(/\/+$/, '');
+  const discovery = await context.client.get('/.well-known/oauth-authorization-server');
+  const issuer = new URL(discovery.issuer);
+  const target = new URL(base);
+  if (issuer.origin !== target.origin) throw new Error('OAuth issuer 与当前 CrewRouter 地址不一致，拒绝向其他主机发送客户端凭据');
+  const deviceEndpoint = new URL(discovery.device_authorization_endpoint);
+  const tokenEndpoint = new URL(discovery.token_endpoint);
+  if (deviceEndpoint.origin !== issuer.origin || tokenEndpoint.origin !== issuer.origin) {
+    throw new Error('OAuth discovery 端点必须与 issuer 同源');
+  }
+  if (!Array.isArray(discovery.grant_types_supported) || !discovery.grant_types_supported.includes(DEVICE_CODE_GRANT)) {
+    throw new Error('该 CrewRouter 实例未公布 RFC 8628 设备授权支持');
+  }
+
+  const started = await requestOAuthForm(deviceEndpoint.toString(), { client_id: CLI_OAUTH_CLIENT_ID, scope: CLI_OAUTH_SCOPE });
+  if (started.statusCode < 200 || started.statusCode >= 300 || !started.json?.device_code || !started.json?.user_code || !started.json?.verification_uri) {
+    throw new Error(`设备授权申请失败：${started.json?.error_description || started.json?.error || `HTTP ${started.statusCode}`}`);
+  }
+  const grant = started.json;
+  const verificationUri = new URL(grant.verification_uri);
+  if (verificationUri.origin !== issuer.origin) throw new Error('verification_uri 与 OAuth issuer 不同源，拒绝打开');
+  const verificationUrl = grant.verification_uri_complete || grant.verification_uri;
+  if (grant.verification_uri_complete && new URL(grant.verification_uri_complete).origin !== issuer.origin) {
+    throw new Error('verification_uri_complete 与 OAuth issuer 不同源，拒绝打开');
+  }
+
+  if (!json) {
+    console.log(`请在浏览器打开：${verificationUrl}`);
+    console.log(`输入用户码：${grant.user_code}`);
+    if (!openBrowser(verificationUrl)) console.log(dim('无法自动打开浏览器，请复制上面的地址。'));
+    console.log('等待浏览器确认授权……');
+  } else {
+    console.error(`请在浏览器打开：${verificationUrl}`);
+    console.error(`输入用户码：${grant.user_code}`);
+  }
+
+  const expiresAt = Date.now() + (Number(grant.expires_in) || 600) * 1000;
+  let intervalMs = Math.max(1, Number(grant.interval) || 5) * 1000;
+  let token = null;
+  for (let attempt = 0; attempt < maxPolls && Date.now() < expiresAt; attempt++) {
+    await wait(Math.min(intervalMs, Math.max(0, expiresAt - Date.now())));
+    const response = await requestOAuthForm(tokenEndpoint.toString(), {
+      grant_type: DEVICE_CODE_GRANT,
+      client_id: CLI_OAUTH_CLIENT_ID,
+      device_code: grant.device_code,
+    });
+    const result = response.json || {};
+    if (response.statusCode >= 200 && response.statusCode < 300 && result.access_token && /^Bearer$/i.test(result.token_type || '')) {
+      token = result;
+      break;
+    }
+    switch (result.error) {
+      case 'authorization_pending':
+        continue;
+      case 'slow_down':
+        intervalMs += 5000;
+        continue;
+      case 'access_denied':
+        throw new Error('用户拒绝了设备授权');
+      case 'expired_token':
+        throw new Error('设备授权码已过期，请重新执行 cr login --oauth');
+      default:
+        throw new Error(`OAuth 设备授权失败：${result.error_description || result.error || `HTTP ${response.statusCode}`}`);
+    }
+  }
+  if (!token) throw new Error('等待设备授权超时，请重新执行 cr login --oauth');
+
+  context.client.setOAuthToken(token.access_token);
+  context.client.username = `OAuth (${CLI_OAUTH_CLIENT_ID})`;
+  context.client.isAdmin = null;
+  try { await context.client.get('/v1/models'); } catch (error) {
+    if (error.statusCode === 401) throw new Error('OAuth token 已签发，但网关拒绝了它；请检查关联 API Key 状态及 scope 配置。');
+    if (error.statusCode !== 403) throw error;
+  }
+  persistClientSession(context, { username: context.client.username, isAdmin: null });
+  if (!json) {
+    console.log(green('OAuth 设备码登录成功。'));
+    console.log(dim(`scope：${scopeLabel(token.scope || CLI_OAUTH_SCOPE)}；access token 有效期约 ${Number(token.expires_in) || 0} 秒。`));
+    console.log(dim('当前服务端设备码 grant 不签发 refresh token；过期后需重新登录。'));
+  }
+  return 0;
+}
 
 function profileNameFromUrl(url) {
   try {
@@ -75,6 +183,13 @@ async function readSecretInput(args, kind) {
 }
 
 async function loginCommand(args, { json = false } = {}) {
+  const oauthMode = args.oauth === true || args.method === 'oauth';
+  if (oauthMode && args.url && !args.profile && !args.name) {
+    throw new Error('OAuth 登录的 token 需要保存在命名 profile；请同时指定 --profile NAME');
+  }
+  if (oauthMode && !args.profile && !args.name && !loadConfig().currentProfile && !process.env.CREWROUTER_URL && !process.env.CR_URL) {
+    throw new Error('OAuth 登录需要命名 profile；请使用 --profile NAME --url URL');
+  }
   const { cfg, name } = prepareProfile(args);
   const context = createContext({ ...args, url: null, profile: name });
   const health = await probeHealth(context.client.baseUrl, { timeoutMs: 2000 });
@@ -89,13 +204,28 @@ async function loginCommand(args, { json = false } = {}) {
   const methods = health.instance && health.instance.auth && Array.isArray(health.instance.auth.methods)
     ? health.instance.auth.methods : ['password'];
   const apiKeyMode = Boolean(args['api-key'] || args.apiKey || args['api-key-stdin']) || args.method === 'api-key';
+  if (apiKeyMode && oauthMode) throw new Error('不能同时指定 OAuth 和 API Key 登录方式');
+  if (oauthMode) {
+    const result = await loginDeviceCode(context, { json });
+    if (json) {
+      printJson(success(name, {
+        profile: name,
+        baseUrl: context.client.baseUrl,
+        username: context.client.username,
+        isAdmin: context.client.isAdmin,
+        authType: context.client.authType(),
+        scope: CLI_OAUTH_SCOPE,
+      }));
+    }
+    return result;
+  }
   let me;
   if (apiKeyMode) {
     const key = await readSecretInput(args, 'api-key');
     me = await loginApiKey(context.client, key);
   } else {
     if (!methods.includes('password')) {
-      throw new Error(`该实例未启用密码登录（支持：${methods.join(', ') || '未知'}）。请使用 cr login --api-key-stdin 或浏览器登录。`);
+      throw new Error(`该实例未启用密码登录（支持：${methods.join(', ') || '未知'}）。请使用 cr login --oauth、cr login --api-key-stdin 或浏览器登录。`);
     }
     const login = args.username || process.env.CREWROUTER_USERNAME || process.env.CR_USERNAME || (await ask('用户名或邮箱：')).trim();
     if (!login) throw new Error('用户名不能为空');
@@ -173,7 +303,7 @@ function profilesCommand(args, { json = false } = {}) {
       current: name === cfg.currentProfile,
       type: profile.type,
       url: profile.baseUrl,
-      loggedIn: Boolean(session && (session.apiKey || (session.cookieJar && session.cookieJar.length))),
+      loggedIn: Boolean(session && (session.apiKey || session.oauthAccessToken || (session.cookieJar && session.cookieJar.length))),
       authType: session ? session.authType : null,
       username: session ? session.username : '',
     };

@@ -176,6 +176,7 @@ async function ensureOAuthTables() {
       user_code TEXT NOT NULL UNIQUE,
       client_id TEXT NOT NULL,
       user_id INTEGER,
+      api_key_id INTEGER,
       scope TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','denied','consumed')),
       expires_at TIMESTAMPTZ NOT NULL,
@@ -184,6 +185,7 @@ async function ensureOAuthTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `);
+  await pool.query(`ALTER TABLE oauth_device_codes ADD COLUMN IF NOT EXISTS api_key_id INTEGER`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_oauth_device_codes_expires ON oauth_device_codes (expires_at)`);
 
   // 内置种子 client：存在即跳过；实际校验始终以代码内置定义为准。
@@ -533,7 +535,10 @@ router.get('/oauth/device', async (req, res) => {
   );
   const row = found.rows[0];
   if (!row) return page('<p>用户码无效、已过期或已使用。</p>');
-  return page(`<h1>授权设备</h1><p>${esc(row.name || row.client_id)} 请求权限：${esc(row.scope)}</p><p>确认此设备和权限后再继续。</p><form method="post" action="/oauth/device/authorize"><input type="hidden" name="_csrf" value="${esc(csrfToken)}"><input type="hidden" name="user_code" value="${esc(row.user_code)}"><button name="decision" value="approve">同意</button><button name="decision" value="deny">拒绝</button></form>`);
+  const keys = await pool.query('SELECT id, name FROM api_keys WHERE user_id = $1 AND enabled = TRUE ORDER BY id ASC LIMIT 100', [req.session.user.id]);
+  if (!keys.rows.length) return page('<p>账号没有可用于本次授权的启用 API Key。请先创建 API Key 后重试。</p>');
+  const options = keys.rows.map((key, index) => `<option value="${Number(key.id)}"${index === 0 ? ' selected' : ''}>${esc(key.name || `API Key #${key.id}`)}</option>`).join('');
+  return page(`<h1>授权设备</h1><p>${esc(row.name || row.client_id)} 请求权限：${esc(row.scope)}</p><p>选择要绑定到访问令牌的 API Key。网关调用仍受此 Key 的模型授权、额度和策略限制。</p><form method="post" action="/oauth/device/authorize"><input type="hidden" name="_csrf" value="${esc(csrfToken)}"><input type="hidden" name="user_code" value="${esc(row.user_code)}"><label>关联 API Key <select name="api_key_id" required>${options}</select></label><button name="decision" value="approve">同意</button><button name="decision" value="deny">拒绝</button></form>`);
 });
 
 router.post('/oauth/device/authorize', requireAuth, csrfProtection, async (req, res) => {
@@ -541,10 +546,17 @@ router.post('/oauth/device/authorize', requireAuth, csrfProtection, async (req, 
   const userCode = String(req.body?.user_code || '').toUpperCase();
   const decision = req.body?.decision;
   if (!/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(userCode) || !['approve', 'deny'].includes(decision)) return res.status(400).send('无效的设备授权请求');
+  let apiKeyId = null;
+  if (decision === 'approve') {
+    apiKeyId = Number(req.body?.api_key_id);
+    if (!Number.isInteger(apiKeyId) || apiKeyId <= 0) return res.status(400).send('所选 API Key 不存在或已停用');
+    const key = await pool.query('SELECT id FROM api_keys WHERE id = $1 AND user_id = $2 AND enabled = TRUE', [apiKeyId, req.session.user.id]);
+    if (!key.rowCount) return res.status(400).send('所选 API Key 不存在或已停用');
+  }
   const result = await pool.query(
-    `UPDATE oauth_device_codes SET status = $2, user_id = $3 WHERE user_code = $1
+    `UPDATE oauth_device_codes SET status = $2, user_id = $3, api_key_id = $4 WHERE user_code = $1
       AND status = 'pending' AND expires_at > now() RETURNING client_id`,
-    [userCode, decision === 'approve' ? 'approved' : 'denied', req.session.user.id]
+    [userCode, decision === 'approve' ? 'approved' : 'denied', req.session.user.id, apiKeyId]
   );
   if (!result.rowCount) return res.status(400).send('用户码无效、已过期或已使用');
   return res.send(decision === 'approve' ? '已批准设备授权，请返回设备继续。' : '已拒绝设备授权。');
@@ -559,6 +571,8 @@ router.post('/oauth/token', async (req, res) => {
       return sendTokenError(res, 'invalid_request', 'token requests must use application/x-www-form-urlencoded');
     }
     const p = req.body || {};
+    const clientCredentials = oauthClients.clientCredentials(req, p);
+    if (clientCredentials.basic && p.client_id && p.client_id !== clientCredentials.basic.clientId) return sendClientAuthError(res, null);
     if (p.grant_type === 'urn:ietf:params:oauth:grant-type:device_code') {
       return await handleDeviceCodeGrant(p, req, res);
     }
@@ -577,7 +591,6 @@ router.post('/oauth/token', async (req, res) => {
 
 async function handleDeviceCodeGrant(p, req, res) {
   const credentials = oauthClients.clientCredentials(req, p);
-  if (credentials.basic && p.client_id && p.client_id !== credentials.basic.clientId) return sendClientAuthError(res, null);
   const clientId = String(credentials.clientId || '');
   const deviceCode = String(p.device_code || '');
   if (!clientId || !deviceCode) return sendTokenError(res, 'invalid_request', 'client_id and device_code are required');
@@ -626,9 +639,9 @@ async function handleDeviceCodeGrant(p, req, res) {
     }
     const accessToken = randomToken();
     await conn.query(
-      `INSERT INTO oauth_tokens (token_hash, user_id, client_id, scope, kind, expires_at)
-       VALUES ($1, $2, $3, $4, 'access', now() + ($5 || ' seconds')::interval)`,
-      [sha256Hex(accessToken), device.user_id, clientId, device.scope, String(ACCESS_TTL_SEC)]
+      `INSERT INTO oauth_tokens (token_hash, user_id, api_key_id, client_id, scope, kind, expires_at)
+       VALUES ($1, $2, $3, $4, $5, 'access', now() + ($6 || ' seconds')::interval)`,
+      [sha256Hex(accessToken), device.user_id, device.api_key_id, clientId, device.scope, String(ACCESS_TTL_SEC)]
     );
     await conn.query("UPDATE oauth_device_codes SET status = 'consumed' WHERE device_code_hash = $1", [hash]);
     await conn.query('COMMIT');

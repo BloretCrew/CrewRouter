@@ -34,6 +34,16 @@ test('URL normalization rejects credentials, query and subpaths', () => {
   assert.throws(() => config.normalizeBaseUrl('ftp://example.com'), /http/);
 });
 
+test('OAuth bearer token is persisted as a distinct 0600 session type', () => {
+  const home = freshHome();
+  const config = require('../lib/config');
+  config.saveSession('oauth', { authType: 'oauth', oauthAccessToken: 'crh_test', baseUrl: 'https://router.example.com', username: 'OAuth user' });
+  const stored = config.getSession('oauth');
+  assert.equal(stored.authType, 'oauth');
+  assert.equal(stored.oauthAccessToken, 'crh_test');
+  assert.equal(fs.statSync(path.join(home, 'sessions.json')).mode & 0o777, 0o600);
+});
+
 test('sessions persist separately and can be cleared per profile', () => {
   freshHome();
   const config = require('../lib/config');

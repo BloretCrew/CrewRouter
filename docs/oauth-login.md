@@ -769,6 +769,7 @@ Desktop 的 PassPort 配置按整组选择，优先级为显式 `config.passport
 7. **提供方是否保留 `redirect_uri` 上的 state 未验证**：代码同时把 state 放在 `state` 参数和回调 URI 中，兼容两种行为；跨实例的一次性仍依赖 IdP 的一次性 code。
 8. **当前不支持的能力**：没有 RFC 7591 动态客户端注册（需管理员在后台或配置文件中登记）；CLI `cr login` 尚未接入 OAuth 授权码或设备码流程；不签发 `id_token`，不是 OpenID Connect；未为浏览器 SPA 配置 CORS，SPA 建议使用后端代理或原生客户端模式。
 9. **`console:read` 可分配但尚无资源端点**：管理员可给客户端配置此 scope，用户也可在授权时批准；但当前没有 OAuth Bearer 保护的控制台读取端点，故 token 不会因此获得控制台 API 访问能力。新增端点前必须实现 scope 检查和测试。
+10. **CLI 设备码支持**：CLI 使用内置 `crewrouter-cli` client 和 `gateway:invoke`，执行 `cr login --oauth`。批准页面选择的启用 API Key 会绑定到 token；CLI 会把 access token 单独存为 OAuth 凭据并仅发送到发现元数据声明的同一 origin。此 access token 当前不支持 refresh grant，过期后需重新授权。
 10. **Desktop 官方登录与商店耦合**：`helper_login=1` 的实例列表按访问者 IP/设备弱关联，不要求商店 PassPort 会话；这是有意设计，但需要理解其隐私与冒用边界。
 
 ---

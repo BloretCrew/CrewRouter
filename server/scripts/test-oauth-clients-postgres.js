@@ -269,6 +269,19 @@ async function main() {
       code_challenge: challenge,
       code_challenge_method: 'S256',
     };
+    const deniedStart = await oauthCall('POST', '/oauth/device/code', {
+      body: { client_id: publicId, scope: 'gateway:invoke' }, session: {},
+    });
+    const deniedDecision = await oauthCall('POST', '/oauth/device/authorize', {
+      body: { user_code: deniedStart.body.user_code, decision: 'deny', _csrf: 'test-csrf-token' },
+      session: { user: { id: 1, username: 'alice' }, csrfToken: 'test-csrf-token' },
+    });
+    assert.equal(deniedDecision.statusCode, 200);
+    const deniedPoll = await oauthCall('POST', '/oauth/token', {
+      body: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: publicId, device_code: deniedStart.body.device_code }, session: {},
+    });
+    assert.equal(deniedPoll.body.error, 'access_denied');
+
     const deviceStart = await oauthCall('POST', '/oauth/device/code', {
       body: { client_id: publicId, scope: 'gateway:invoke' },
       session: {},
@@ -279,9 +292,12 @@ async function main() {
     assert.equal(deviceStart.body.interval, 5);
     assert.match(deviceStart.body.user_code, /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
     const deviceStored = (await pool.query('SELECT * FROM oauth_device_codes WHERE user_code = $1', [deviceStart.body.user_code])).rows[0];
+    await pool.query("UPDATE api_keys SET name = 'Main test key' WHERE id = 1");
     const deviceApprovalPage = await oauthCall('GET', '/oauth/device', { query: { user_code: deviceStart.body.user_code }, session: { user: { id: 1, username: 'alice' } } });
     assert.match(deviceApprovalPage.body, /Public App/);
     assert.match(deviceApprovalPage.body, /gateway:invoke/);
+    assert.match(deviceApprovalPage.body, /name="api_key_id"/);
+    assert.match(deviceApprovalPage.body, /Main test key/);
     assert.match(deviceApprovalPage.body, /name="_csrf" value="test-csrf-token"/);
     const missingDeviceCsrf = await oauthCall('POST', '/oauth/device/authorize', {
       body: { user_code: deviceStart.body.user_code, decision: 'approve' },
@@ -289,10 +305,11 @@ async function main() {
     });
     assert.equal(missingDeviceCsrf.statusCode, 403);
     const deviceApproval = await oauthCall('POST', '/oauth/device/authorize', {
-      body: { user_code: deviceStart.body.user_code, decision: 'approve', _csrf: 'test-csrf-token' },
+      body: { user_code: deviceStart.body.user_code, decision: 'approve', api_key_id: '1', _csrf: 'test-csrf-token' },
       session: { user: { id: 1, username: 'alice' }, csrfToken: 'test-csrf-token' },
     });
     assert.equal(deviceApproval.statusCode, 200);
+    assert.equal((await pool.query('SELECT api_key_id FROM oauth_device_codes WHERE user_code = $1', [deviceStart.body.user_code])).rows[0].api_key_id, 1);
     assert.equal(deviceStored.device_code_hash, oauthClients.sha256Hex(deviceStart.body.device_code));
     assert.notEqual(deviceStored.device_code_hash, deviceStart.body.device_code);
 
@@ -313,7 +330,7 @@ async function main() {
     });
     assert.equal(tooFastDevice.body.error, 'slow_down');
     assert.equal((await pool.query('SELECT interval_seconds FROM oauth_device_codes WHERE device_code_hash = $1', [pollStored.device_code_hash])).rows[0].interval_seconds, 10);
-    await pool.query("UPDATE oauth_device_codes SET last_polled_at = now() - interval '11 seconds', status = 'approved', user_id = 1 WHERE device_code_hash = $1", [pollStored.device_code_hash]);
+    await pool.query("UPDATE oauth_device_codes SET last_polled_at = now() - interval '11 seconds', status = 'approved', user_id = 1, api_key_id = 1 WHERE device_code_hash = $1", [pollStored.device_code_hash]);
     const deviceToken = await oauthCall('POST', '/oauth/token', {
       body: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: publicId, device_code: pollDeviceStart.body.device_code },
       session: {},
@@ -321,6 +338,9 @@ async function main() {
     assert.equal(deviceToken.statusCode, 200);
     assert.equal(deviceToken.body.token_type, 'Bearer');
     assert.equal(deviceToken.body.scope, 'gateway:invoke');
+    const deviceTokenStored = (await pool.query('SELECT api_key_id, user_id FROM oauth_tokens WHERE token_hash = $1', [oauthClients.sha256Hex(deviceToken.body.access_token)])).rows[0];
+    assert.equal(deviceTokenStored.api_key_id, 1);
+    assert.equal(deviceTokenStored.user_id, 1);
     const repeatedDeviceToken = await oauthCall('POST', '/oauth/token', {
       body: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: publicId, device_code: pollDeviceStart.body.device_code },
       session: {},

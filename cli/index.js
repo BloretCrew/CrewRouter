@@ -5,7 +5,7 @@ const { printJson, errorPayload, printError, exitCodeFor, describeError } = requ
 const { permissionHint } = require('./lib/auth');
 
 const BOOLEAN_FLAGS = new Set([
-  'json', 'help', 'yes', 'force', 'follow', 'demo', 'login', 'no-color', 'skip-dsh-plugin',
+  'json', 'help', 'yes', 'force', 'follow', 'demo', 'login', 'oauth', 'no-color', 'skip-dsh-plugin',
   'enabled', 'disabled', 'password-stdin', 'api-key-stdin', 'version',
 ]);
 

@@ -51,6 +51,7 @@ function createContext(args = {}) {
     saved = getSession(target.name);
     if (saved && saved.baseUrl === target.baseUrl) {
       if (saved.authType === 'api-key' && saved.apiKey) client.setApiKey(saved.apiKey);
+      else if (saved.authType === 'oauth' && saved.oauthAccessToken) client.setOAuthToken(saved.oauthAccessToken);
       else if (saved.authType === 'session') {
         client.setSession({ cookieJar: saved.cookieJar, csrfToken: saved.csrfToken, username: saved.username, isAdmin: saved.isAdmin });
       }
@@ -61,11 +62,27 @@ function createContext(args = {}) {
 
 function persistClientSession(context, extra = {}) {
   if (!context || context.target.adHoc) return null;
-  if (!context.client.apiKey && !(context.client.cookieJar && context.client.cookieJar.length)) return null;
+  if (!context.client.apiKey && !context.client.oauthAccessToken && !(context.client.cookieJar && context.client.cookieJar.length)) return null;
   return saveSession(context.profileName, { ...context.client.sessionSnapshot(), ...extra });
 }
 
 async function ensureAuthenticated(context, { revalidate = true } = {}) {
+  if (context.client.oauthAccessToken) {
+    if (context.target.adHoc) throw Object.assign(new Error('OAuth 登录需要命名 profile 才能安全保存 token；请使用 --profile NAME'), { code: 'auth_required' });
+    if (!revalidate) return true;
+    try {
+      const result = await context.client.request('/v1/models', { method: 'GET' });
+      return Boolean(result);
+    } catch (error) {
+      if (error.statusCode === 401) {
+        context.client.clearAuth();
+        clearSession(context.profileName);
+        throw Object.assign(new Error('OAuth access token 已失效，请重新执行 cr login --oauth'), { statusCode: 401, code: 'auth_required' });
+      }
+      if (error.statusCode === 403) return true;
+      throw error;
+    }
+  }
   if (context.client.apiKey) {
     if (!revalidate) return true;
     const ok = await verifyApiKey(context.client);

@@ -24,6 +24,45 @@ test('password login fetches CSRF, persists the session cookie and accepts a ret
   } finally { await fake.close(); }
 });
 
+test('OAuth device-code login polls until approval, stores a bearer token and calls the gateway', async () => {
+  const fake = await createFakeServer({ oauthDeviceApproved: true });
+  const oldHome = process.env.CR_CLI_HOME;
+  process.env.CR_CLI_HOME = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'cr-cli-oauth-'));
+  try {
+    const { loginCommand } = require('../lib/commands/auth');
+    const code = await loginCommand({ url: fake.baseUrl, profile: 'oauth-test', oauth: true }, { json: true });
+    assert.equal(code, 0);
+    const polls = fake.state.requests.filter(item => item.path === '/oauth/token');
+    assert.equal(polls.length, 1);
+    assert.equal(polls[0].body.grant_type, 'urn:ietf:params:oauth:grant-type:device_code');
+    const gateway = fake.state.requests.find(item => item.path === '/v1/models' && item.headers.authorization);
+    assert.equal(gateway.headers.authorization, 'Bearer oauth-access-token');
+    const saved = require('../lib/config').getSession('oauth-test');
+    assert.equal(saved.authType, 'oauth');
+    assert.equal(saved.oauthAccessToken, 'oauth-access-token');
+  } finally {
+    await fake.close();
+    if (oldHome === undefined) delete process.env.CR_CLI_HOME;
+    else process.env.CR_CLI_HOME = oldHome;
+  }
+});
+
+test('OAuth device-code login reports user denial without storing credentials', async () => {
+  const fake = await createFakeServer();
+  const oldHome = process.env.CR_CLI_HOME;
+  process.env.CR_CLI_HOME = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'cr-cli-oauth-deny-'));
+  try {
+    const { loginCommand } = require('../lib/commands/auth');
+    fake.state.oauthDeviceApproved = 'denied';
+    await assert.rejects(() => loginCommand({ url: fake.baseUrl, profile: 'oauth-denied', oauth: true }, { json: true }), /用户拒绝了设备授权/);
+    assert.equal(require('../lib/config').getSession('oauth-denied'), null);
+  } finally {
+    await fake.close();
+    if (oldHome === undefined) delete process.env.CR_CLI_HOME;
+    else process.env.CR_CLI_HOME = oldHome;
+  }
+});
+
 test('wrong password produces a 401 ApiError', async () => {
   const fake = await createFakeServer();
   try {
