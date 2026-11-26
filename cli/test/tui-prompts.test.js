@@ -30,7 +30,7 @@ test('prompt history detail uses readable content, occurrence and source labels 
   const runtime = makeRuntime();
   runtime.client.get = async path => {
     if (path === '/api/user/custom-instructions') return { items: [{ fingerprint: 'f'.repeat(64), file: 'CLAUDE.md', source: 'claude_code', chars: 42, occurrence_count: 3, first_seen: '2026-11-20T00:00:00Z', last_seen: '2026-11-24T00:00:00Z', preview: 'prompt preview' }], total: 1, page: 1 };
-    if (path.endsWith(`/custom-instructions/${'f'.repeat(64)}`)) return { file: 'CLAUDE.md', source: 'claude_code', content: 'Full instruction body', chars: 20, occurrence_count: 3, first_seen: '2026-11-20T00:00:00Z', last_seen: '2026-11-24T00:00:00Z', truncated: false, recent_refs: [{ created_at: '2026-11-24T00:00:00Z', model_id: 'model-a', request_source: 'claude_code' }] };
+    if (path.endsWith(`/custom-instructions/${'f'.repeat(64)}`)) return { file: 'CLAUDE.md', source: 'claude_code', content: 'Full instruction body', chars: 20, occurrence_count: 3, positions: ['system', 'user'], first_seen: '2026-11-20T00:00:00Z', last_seen: '2026-11-24T00:00:00Z', truncated: false, recent_refs: [{ record_id: 42, created_at: '2026-11-24T00:00:00Z', model_id: 'model-a', request_source: 'claude_code' }] };
     if (path === '/api/user/inject-prompts') return [];
     return {};
   };
@@ -45,10 +45,12 @@ test('prompt history detail uses readable content, occurrence and source labels 
   assert.equal(data.actions.find(action => action.label === '下一页').disabled, true);
   let body = '';
   await data.sections[1].rows[0].run({ show: async (_title, text) => { body = text; } });
-  assert.match(body, /客户端来源：Claude Code/);
+  assert.match(body, /客户端：Claude Code/);
   assert.match(body, /出现次数：3 次/);
+  assert.match(body, /注入位置：system、user/);
   assert.match(body, /Full instruction body/);
-  assert.match(body, /最近 1 条调用/);
+  assert.match(body, /最近引用记录（1 条）/);
+  assert.match(body, /记录 42 · .*model-a · Claude Code/);
   assert.doesNotMatch(body, /fingerprint|occurrence_count|recent_refs/);
 });
 
