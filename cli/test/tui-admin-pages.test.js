@@ -150,6 +150,12 @@ test('admin general settings and request capture use readable web fields with va
   await runGeneralEdit(async () => true);
   assert.deepEqual(calls.find(call => call.path === '/api/admin/settings' && call.options.method === 'PUT').options.body, { site_name: 'Router Two', defaultBalance: 300, defaultKeyExpiry: 0, billing_mode: 'rate', rate_price_per_request: 0.08, stats_refresh_interval_sec: 25, login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed', model_list: ['fusion', 'model-a', 'model-b', 'model-c'] });
 
+  const invalidChoices = ['remove:model-a', 'done'];
+  let emptyListNotice = '';
+  await generalAction.run({ form: async () => generalValues, choose: async () => invalidChoices.shift(), show: async (_title, message) => { emptyListNotice = message; } });
+  assert.match(emptyListNotice, /至少保留一个非 fusion 模型/);
+  assert.equal(calls.filter(call => call.path === '/api/admin/settings' && call.options.method === 'PUT').length, 1, 'empty editable model list must be rejected before saving');
+
   const quotaSection = data.sections.find(section => section.title === '请求额度采集');
   assert.ok(quotaSection.cards.some(card => card.label === '采集模式' && card.value === '请求前后精细采集'));
   const quotaAction = data.actions.find(action => action.label === '编辑请求额度采集');

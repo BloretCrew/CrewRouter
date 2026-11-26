@@ -1726,6 +1726,7 @@ function createAdminPages(runtime) {
               if (choice === 'add') { const modelId = String(await ctx.ask('添加模型 ID', { description: 'fusion 为固定系统模型，不能重复添加。' }) || '').trim(); if (!modelId) continue; if (modelId.toLowerCase() === 'fusion') { await ctx.show('固定模型', 'fusion 已固定保留，无需添加。'); continue; } if (nextModels.includes(modelId)) { await ctx.show('模型 ID 已存在', `${modelId} 已在可用列表中。`); continue; } nextModels.push(modelId); continue; }
               if (choice.startsWith('remove:')) { nextModels = nextModels.filter(model => model !== choice.slice(7)); if (!nextModels.length) { await ctx.show('至少保留一个模型', 'fusion 固定保留，但还必须至少保留一个非 fusion 模型。'); } }
             }
+            if (!nextModels.length) { await ctx.show('模型列表无效', '至少保留一个非 fusion 模型 ID；列表尚未保存。'); return; }
             const seconds = Number(values.stats_refresh_interval_sec), defaultBalance = Number(values.defaultBalance), defaultKeyExpiry = Number(values.defaultKeyExpiry), ratePrice = Number(values.rate_price_per_request);
             if (!Number.isInteger(seconds) || seconds < 3 || seconds > 300 || !Number.isFinite(defaultBalance) || defaultBalance < 0 || !Number.isInteger(defaultKeyExpiry) || defaultKeyExpiry < 0 || !Number.isFinite(ratePrice) || ratePrice < 0) { await ctx.show('系统设置无效', '刷新间隔须为 3–300 秒整数；默认积分和请求价格须为非负数；Key 有效期须为非负整数。'); return; }
             const models = nextModels;
