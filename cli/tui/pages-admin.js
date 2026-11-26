@@ -883,6 +883,7 @@ function createAdminPages(runtime) {
         const hiddenItems = teams.flatMap(team => array(team.providers)).reduce((count, provider) => count + Number(provider.is_hidden === true) + Number(provider.hidden_model_count || 0), 0);
         const selectedKey = keys.find(key => String(key.id) === String(keyId));
         const harnessLabels = { claude_code: 'Claude Code', codex: 'Codex', grok: 'Grok', opencode: 'OpenCode', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw', deepseek_harness: 'DeepSeek Harness' };
+        const libraryStatus = `Key：${selectedKey?.name || selectedKey?.key_prefix || '未选择'} · 当前模型：${selectedKey?.current_model_name || selectedKey?.current_model_id || '未选择'} · ${showHidden ? '含隐藏项' : '可见项'}${runtime.librarySearch ? ` · 搜索：${runtime.librarySearch}` : ''}${runtime.librarySeries && runtime.librarySeries !== 'all' ? ` · 系列：${runtime.librarySeries}` : ''}${runtime.libraryTest && runtime.libraryTest !== 'all' ? ` · 测试：${runtime.libraryTest}` : ''}`;
         const bindingRows = [
           { label: `当前 Key：${selectedKey?.name || selectedKey?.key_prefix || (keyId ? `Key ${keyId}` : '未选择')}`, detail: `${selectedKey?.current_model_provider_name ? `供应商：${selectedKey.current_model_provider_name}` : '供应商：未选择'} · 当前模型：${selectedKey?.current_model_name || selectedKey?.current_model_id || '未选择'}` },
           { label: `默认模型队列：${array(assignedData.queue).length} 个`, detail: array(assignedData.queue).length ? array(assignedData.queue).map((item, index) => `${index + 1}. ${item.name || item.model_id || '未知模型'}`).join(' · ') : '未设置模型队列' },
@@ -908,7 +909,7 @@ function createAdminPages(runtime) {
           { label: '清除标签筛选', run: async ctx => { runtime.libraryTag = 'all'; await ctx.refresh(); } },
         ];
         const sections = [
-          { title: '当前 Key 绑定', rows: bindingRows, actions: [keySelectAction] },
+          { title: '当前 Key 绑定', rows: bindingRows },
           ...(quotaProviders.length ? [{ title: '供应商额度', description: '显示上次刷新（定时 / 手动）的结果。', rows: quotaRows, actions: [quotaRefreshAction] }] : quotaResult.status === 'rejected' ? [{ title: '供应商额度', rows: [{ label: `额度缓存暂不可用：${quotaResult.reason.message || '请求失败'}` }], actions: [quotaRefreshAction] }] : []),
           { title: '搜索与筛选', description: '按供应商、模型、Team、系列、标签和测试状态筛选。', toolbar: true, actions: filterControls, rows: [{ label: '按名称筛选供应商与模型；选择供应商后可继续查看并筛选其模型。' }] },
           ...(stars.length ? [{ title: '已收藏模型', rows: stars.slice(0, 20).map(item => ({ label: display(item.alias || item.name || item.model_id, item.provider_name, item.series), detail: display(item.is_hidden ? '已隐藏' : '可用', item.test_ok === true ? `测试通过 · 响应时间 ${item.test_latency_ms || 0} 毫秒` : item.test_ok === false ? `测试失败 · ${shortError(item.test_error)}` : '尚未测试'), run: async ctx => { const choice = await ctx.choose(`收藏模型 · ${item.alias || item.name || item.model_id}`, [{ label: '查看详情', value: 'detail' }, { label: '取消收藏', value: 'unstar' }]); if (choice === 'detail') { const starId = String(item.model_id || item.id); const details = [
@@ -923,7 +924,7 @@ function createAdminPages(runtime) {
           ...(selectedProvider || globalSearch ? [{ title: `${globalSearch ? '全库搜索' : selectedProvider.provider_name} · 模型目录`, description: `${globalSearch ? `全库筛选 · ${runtime.librarySearch || '无关键词'} · ` : ''}第 ${searchData.pagination?.page || runtime.libraryPage || 1}/${searchData.pagination?.total_pages || 1} 页 · 共 ${searchData.pagination?.total ?? searchData.total ?? searchedModels.length} 个模型`, cards: modelCards.length ? modelCards : undefined, rows: modelCards.length ? [] : [{ label: '没有符合筛选条件的模型。' }] }] : []),
           ...(libraryResult.status === 'rejected' ? [{ title: '加载失败', rows: [{ label: libraryResult.reason.message || '模型目录不可用' }] }] : []),
         ];
-        return { sections, pageToolbar: true, actions: [
+        return { sections, pageToolbar: true, status: libraryStatus, actions: [
           keySelectAction,
           ...(selectedProvider || globalSearch ? [
             { label: '搜索结果上一页', disabled: searchData?.pagination ? !searchData.pagination.has_prev : (runtime.libraryPage || 1) <= 1, run: async ctx => { runtime.libraryPage = Math.max(1, (runtime.libraryPage || 1) - 1); await ctx.refresh(); } },

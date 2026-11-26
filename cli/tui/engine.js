@@ -267,6 +267,10 @@ async function runPagedTui({
             const cell = Math.max(8, Math.floor((w - gap * (group.length - 1)) / group.length));
             const spans = [];
             const details = [];
+            const groupAction = { label: '模型卡片', run: async ctx => {
+              const index = group.length === 1 ? 0 : await ctx.choose('选择模型卡片', group.map((card, cardIndex) => ({ label: `${card.label || `模型 ${cardIndex + 1}`} · ${card.value || ''}`, value: cardIndex })));
+              if (index !== null && typeof group[index]?.run === 'function') await group[index].run(ctx);
+            } };
             group.forEach((card, index) => {
               if (index) spans.push({ text: ' '.repeat(gap), fg: 'fg' });
               const label = clean(text(card.label));
@@ -276,16 +280,17 @@ async function runPagedTui({
               spans.push({ text: shortLabel, fg: 'dim' });
               spans.push({ text: '  ', fg: 'fg' });
               spans.push({ text: cut(value, Math.max(1, cell - width(shortLabel) - 2)), fg: 'rose', bold: true });
-              details.push({ text: cut(clean(text(card.detail)), cell), fg: 'mute' });
+              details.push({ card, lines: wrap(text(card.detail), cell) });
             });
-            addSpans(spans, 'text', null, 0);
-            if (details.some(item => item.text)) {
+            addSpans(spans, 'heading', typeof groupAction.run === 'function' ? groupAction : null, 0);
+            const detailHeight = Math.max(0, ...details.map(item => item.lines.length));
+            for (let line = 0; line < detailHeight; line++) {
               const detailSpans = [];
               details.forEach((item, index) => {
                 if (index) detailSpans.push({ text: ' '.repeat(gap), fg: 'fg' });
-                detailSpans.push({ text: pad(item.text, cell), fg: 'mute' });
+                detailSpans.push({ text: pad(item.lines[line] || '', cell), fg: 'mute' });
               });
-              addSpans(detailSpans, 'muted', null, 0);
+              addSpans(detailSpans, 'muted', typeof groupAction.run === 'function' ? groupAction : null, 0);
             }
           }
         }
@@ -536,9 +541,11 @@ async function runPagedTui({
     }
 
     const freshness = st.lastUpdated ? `更新 ${new Date(st.lastUpdated).toLocaleTimeString('zh-CN', { hour12: false })}${Date.now() - st.lastUpdated > 30000 ? ' · 可能过期' : ''}` : '';
+    const pageStatus = st.data?.status ? text(st.data.status) : '';
     const info = st.loading ? '正在加载…' : st.refreshing ? '正在刷新…' : busy ? status || '正在处理…' : status;
-    const statusText = [info, freshness].filter(Boolean).join('  ·  ');
-    put(height - 2, sidebarText(height - 2), leftPad + ui(pad(statusText, innerW), 'mute', 'bg') + leftPad);
+    const statusText = [pageStatus || info, freshness].filter(Boolean).join('  ·  ');
+    const visibleStatus = cut(clean(statusText), innerW);
+    put(height - 2, sidebarText(height - 2), leftPad + ui(pad(visibleStatus, innerW), 'mute', 'bg') + leftPad);
     const hints = [
       { text: '↑↓ 子页', fg: 'mute' },
       ...(visibleAreas().length > 1 ? [{ text: `  ←→ ${visibleAreas().map(area => area.label).join('/')}`, fg: 'mute' }] : []),
