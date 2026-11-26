@@ -448,11 +448,28 @@ function createAdminPages(runtime) {
         const sort = runtime.adminPromptSort || 'count';
         const data = await api('/api/admin/custom-instructions', { query: { page, pageSize: 20, search, source, sort } });
         const items = array(data && data.items);
-        return { sections: [{ title: '管理员提示词', description: `共 ${data.total || 0} 条 · 第 ${data.page || page} 页`, rows: items.map(item => ({ label: display(item.file, item.source, `${item.chars || 0} 字符`, `${item.occurrence_count || 0} 次`), detail: display(item.preview, item.first_seen && formatTime(item.first_seen), item.last_seen && formatTime(item.last_seen)), run: async ctx => { const detail = await api(`/api/admin/custom-instructions/${encodeURIComponent(item.fingerprint)}`); await ctx.show(`提示词 · ${item.file || '未知文件'}`, JSON.stringify(detail, null, 2)); } })) }], actions: [
-          { label: '搜索提示词', run: async ctx => { runtime.adminPromptSearch = String(await ctx.ask('搜索文件或内容', { defaultValue: search }) || '').trim(); runtime.adminPromptPage = 1; await ctx.refresh(); } },
-          ...[['count', '按出现次数'], ['last_seen', '按最近出现'], ['first_seen', '按首次出现']].map(([value, label]) => ({ label, run: async ctx => { runtime.adminPromptSort = value; await ctx.refresh(); } })),
-          { label: '上一页', run: async ctx => { runtime.adminPromptPage = Math.max(1, page - 1); await ctx.refresh(); } },
-          { label: '下一页', run: async ctx => { runtime.adminPromptPage = page + 1; await ctx.refresh(); } },
+        const total = Number(data.total || 0);
+        const currentPage = Number(data.page || page);
+        const pageSize = Number(data.pageSize || 20);
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const rows = items.map(item => ({ label: display(item.file || '未知文件', clientSourceLabel(item.source), `${Number(item.chars || 0).toLocaleString()} 字符`, `${Number(item.occurrence_count || 0).toLocaleString()} 次`, `${Number(item.user_count || 0).toLocaleString()} 位用户`, item.first_seen && formatTime(item.first_seen), item.last_seen && formatTime(item.last_seen)), detail: display(item.truncated && '内容已截断存储', item.preview), run: async ctx => {
+          const detail = await api(`/api/admin/custom-instructions/${encodeURIComponent(item.fingerprint)}`);
+          const overview = [`文件名：${detail.file || '未知文件'}`, `客户端：${clientSourceLabel(detail.source)}`, `字符数：${Number(detail.chars || 0).toLocaleString()}`, `出现次数：${Number(detail.occurrence_count || 0).toLocaleString()}${detail.truncated ? '（内容已截断存储）' : ''}`, `关联用户：${Number(detail.user_count || 0).toLocaleString()}`, `注入位置：${array(detail.positions).join('、') || '未知'}`, `首次出现：${detail.first_seen ? formatTime(detail.first_seen) : '未知'}`, `最近出现：${detail.last_seen ? formatTime(detail.last_seen) : '未知'}`].join('\\n');
+          const refs = array(detail.recent_refs);
+          const refsText = refs.length ? refs.map((ref, index) => `${index + 1}. ${formatTime(ref.created_at)} · ${ref.username || (ref.user_id ? `用户 ${ref.user_id}` : '未知用户')} · ${ref.model_id || '未知模型'} · ${clientSourceLabel(ref.request_source)} · 记录 ${ref.record_id ?? '未知'}`).join('\\n') : '暂无引用记录。';
+          const choice = await ctx.choose(`提示词详情 · ${detail.file || '未知文件'}`, [{ label: '概要', value: 'overview' }, { label: '完整内容', value: 'content' }, { label: '最近引用', value: 'refs' }], { description: `1 次只查看一个区块 · 内容指纹 ${String(detail.fingerprint || item.fingerprint).slice(0, 12)}…` });
+          if (choice === 'overview') await ctx.show('提示词概要', overview);
+          if (choice === 'content') await ctx.show('提示词完整内容', detail.content || '没有可显示的提示词内容；源数据可能已过扫描窗口。');
+          if (choice === 'refs') await ctx.show(`最近引用（${refs.length} 条）`, refsText);
+        } }));
+        const sortLabels = { count: '按出现次数', last_seen: '按最近出现', first_seen: '按首次出现' };
+        return { sections: [{ title: '管理员提示词', description: `共 ${total} 条去重结果 · 第 ${currentPage}/${totalPages} 页 · 每页 ${pageSize} 条${source ? ` · 客户端 ${clientSourceLabel(source)}` : ''}${search ? ` · 搜索“${search}”` : ''} · ${sortLabels[sort] || sort}`, columns: [{ key: 'file', label: '文件名', ratio: 0.27 }, { key: 'source', label: '客户端', ratio: 0.11 }, { key: 'chars', label: '字符数', ratio: 0.09 }, { key: 'count', label: '出现次数', ratio: 0.1 }, { key: 'users', label: '关联用户', ratio: 0.1 }, { key: 'first', label: '首次出现', ratio: 0.12 }, { key: 'last', label: '最近出现', ratio: 0.12 }, { key: 'detail', label: '操作', ratio: 0.09 }], rows: rows.length ? rows : [{ label: '暂无提示词记录。' }] }], actions: [
+          { label: search ? '清除提示词搜索' : '搜索文件名或内容', toolbar: true, run: async ctx => { runtime.adminPromptSearch = search ? '' : String(await ctx.ask('搜索文件名或提示词内容', { defaultValue: search }) || '').trim(); runtime.adminPromptPage = 1; await ctx.refresh(); } },
+          { label: '筛选客户端', toolbar: true, run: async ctx => { const choices = [['', '全部客户端'], ['grok', 'Grok'], ['codex', 'Codex'], ['claude_code', 'Claude Code'], ['opencode', 'OpenCode'], ['qwen_code', 'Qwen Code'], ['hermes', 'Hermes'], ['openclaw', 'OpenClaw'], ['deepseek_harness', 'DeepSeek Harness'], ['unknown', '未知/其他']]; const value = await ctx.choose('客户端来源', choices.map(([id, label]) => ({ label, value: id })), { description: `当前：${source ? clientSourceLabel(source) : '全部客户端'}` }); if (value !== null) { runtime.adminPromptSource = value; runtime.adminPromptPage = 1; await ctx.refresh(); } } },
+          { label: '排序方式', toolbar: true, run: async ctx => { const choices = [['count', '按出现次数排序'], ['last_seen', '按最近出现排序'], ['first_seen', '按首次出现排序']]; const value = await ctx.choose('排序方式', choices.map(([id, label]) => ({ label, value: id })), { description: `当前：${sortLabels[sort] || sort}` }); if (value !== null) { runtime.adminPromptSort = value; runtime.adminPromptPage = 1; await ctx.refresh(); } } },
+          { label: '清除提示词筛选', toolbar: true, run: async ctx => { runtime.adminPromptSearch = ''; runtime.adminPromptSource = ''; runtime.adminPromptSort = 'count'; runtime.adminPromptPage = 1; await ctx.refresh(); } },
+          { label: '上一页', toolbar: true, disabled: currentPage <= 1, run: async ctx => { runtime.adminPromptPage = Math.max(1, currentPage - 1); await ctx.refresh(); } },
+          { label: '下一页', toolbar: true, disabled: currentPage >= totalPages, run: async ctx => { runtime.adminPromptPage = Math.min(totalPages, currentPage + 1); await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },

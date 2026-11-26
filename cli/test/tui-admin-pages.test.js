@@ -440,6 +440,45 @@ test('admin retention page mirrors web thresholds, validates saves and runs prev
   assert.equal(calls.length, 0, 'destructive purge must not start when confirmation is declined');
 });
 
+test('admin prompts mirror web columns, filters, sorting, pagination and three-part details', async () => {
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  runtime.adminPromptPage = 2;
+  runtime.adminPromptSearch = 'instruction';
+  runtime.adminPromptSource = 'codex';
+  runtime.adminPromptSort = 'last_seen';
+  const calls = [];
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path === '/api/admin/custom-instructions') return { page: 2, pageSize: 20, total: 21, items: [{ fingerprint: 'a'.repeat(64), file: 'AGENTS.md', source: 'codex', chars: 340, occurrence_count: 4, user_count: 2, truncated: false, preview: 'Use concise answers.', first_seen: '2026-11-01T00:00:00Z', last_seen: '2026-11-20T00:00:00Z' }] };
+    return { fingerprint: 'a'.repeat(64), file: 'AGENTS.md', source: 'codex', content: 'Full instruction content', chars: 340, occurrence_count: 4, user_count: 2, truncated: false, positions: ['system', 'user'], first_seen: '2026-11-01T00:00:00Z', last_seen: '2026-11-20T00:00:00Z', recent_refs: [{ record_id: 55, created_at: '2026-11-25T00:00:00Z', user_id: 8, username: 'alice', model_id: 'model-a', request_source: 'codex' }] };
+  };
+  const page = buildPages(runtime).find(item => item.id === 'admin-prompts');
+  const data = await page.load(api);
+  assert.deepEqual(calls[0].options.query, { page: 2, pageSize: 20, search: 'instruction', source: 'codex', sort: 'last_seen' });
+  assert.deepEqual(data.sections[0].columns.map(column => column.label), ['文件名', '客户端', '字符数', '出现次数', '关联用户', '首次出现', '最近出现', '操作']);
+  assert.match(data.sections[0].description, /第 2\/2 页 · 每页 20 条.*客户端 Codex.*按最近出现/);
+  assert.equal(data.actions.find(action => action.label === '上一页').disabled, false);
+  assert.equal(data.actions.find(action => action.label === '下一页').disabled, true);
+  const filter = data.actions.find(action => action.label === '筛选客户端');
+  await filter.run({ choose: async (_title, options) => { assert.deepEqual(options.map(option => option.label), ['全部客户端', 'Grok', 'Codex', 'Claude Code', 'OpenCode', 'Qwen Code', 'Hermes', 'OpenClaw', 'DeepSeek Harness', '未知/其他']); return 'hermes'; }, refresh: async () => page.load(api) });
+  assert.equal(runtime.adminPromptSource, 'hermes');
+  assert.equal(runtime.adminPromptPage, 1);
+  assert.equal(calls.at(-1).options.query.source, 'hermes');
+  const row = data.sections[0].rows[0];
+  for (const value of ['AGENTS.md', 'Codex', '340 字符', '4 次', '2 位用户', 'Use concise answers.']) assert.ok(row.label.includes(value) || row.detail.includes(value));
+  for (const section of ['overview', 'content', 'refs']) {
+    let shown = '';
+    await row.run({ choose: async (_title, options) => { assert.deepEqual(options.map(option => option.value), ['overview', 'content', 'refs']); return section; }, show: async (_title, body) => { shown = body; } });
+    if (section === 'overview') { assert.match(shown, /注入位置：system、user/); assert.match(shown, /关联用户：2/); }
+    if (section === 'content') assert.equal(shown, 'Full instruction content');
+    if (section === 'refs') { assert.match(shown, /alice.*model-a.*Codex.*记录 55/); assert.doesNotMatch(shown, /\\"recent_refs\\"/); }
+  }
+  const noResults = await page.load(async (_path, options) => ({ page: options.query.page, pageSize: 20, total: 0, items: [] }));
+  assert.equal(noResults.sections[0].rows[0].label, '暂无提示词记录。');
+  assert.equal(noResults.actions.find(action => action.label === '上一页').disabled, true);
+  assert.equal(noResults.actions.find(action => action.label === '下一页').disabled, true);
+});
+
 test('admin model management presents web columns, selects web filters and avoids raw JSON details', async () => {
   const calls = [];
   const model = { id: 'm1', name: 'Model One', alias: 'Friendly', upstream_model_id: 'up-1', provider: 'p1', provider_name: 'Provider One', series: 'S', enabled: true, input_price_per_1k_tokens: 0.1, output_price_per_1k_tokens: 0.2, cached_output_price_per_1k_tokens: 0.05, reference_input_price_per_1k_tokens: 0.3, reference_output_price_per_1k_tokens: 0.4, model_multiplier: 1.2, completion_multiplier: 1.3, rate_limit_rpm: 10, rate_limit_tpm: 100, test_ok: true, test_latency_ms: 25, test_tokens_per_second: 42.5 };
