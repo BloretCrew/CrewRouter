@@ -135,12 +135,12 @@ test('admin general settings and request capture use readable web fields with va
   const generalAction = data.actions.find(action => action.label === '编辑常规设置');
   let generalFields;
   const generalValues = { site_name: 'Router Two', defaultBalance: '300', defaultKeyExpiry: '0', billing_mode: 'rate', rate_price_per_request: '0.08', stats_refresh_interval_sec: '25', login_report_enabled: true, stats_report_enabled: false, stats_report_granularity: 'detailed' };
-  const modelChoices = ['add', 'add', 'add', 'done'];
+  const modelChoices = ['remove:model-a', 'add', 'add', 'add', 'done'];
   const modelInputs = ['fusion', 'model-b', 'model-b'];
   const runGeneralEdit = confirm => generalAction.run({
     form: async (_title, fields) => { generalFields = fields; return generalValues; },
     choose: async (_title, options) => { assert.ok(options.some(option => option.label === '完成模型列表')); return modelChoices.shift(); },
-    ask: async () => modelInputs.shift(), show: async (_title, message) => { assert.match(message, /fusion 已固定保留|已在可用列表中/); },
+    ask: async () => modelInputs.shift(), show: async (_title, message) => { assert.match(message, /fusion (?:已)?固定保留|已在可用列表中|至少保留一个非 fusion/); },
     confirm, notify() {}, refresh: async () => {},
   });
   await runGeneralEdit(async () => false);
