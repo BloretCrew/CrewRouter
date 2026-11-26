@@ -818,6 +818,8 @@ function createAdminPages(runtime) {
           return { label: name, cells: { name, series: item.series || '—', multiplier: modelMultiplierLabel(item.model_multiplier), test: stateLabel, description: shortError(item.description, 54) || '—', queue: assigned ? '已加入' : '未加入', actions: 'Enter 管理' }, detail: display(`上游模型 ID：${item.upstream_model_id || item.name || id}`, `供应商：${item.provider_name || item.provider || '—'}`, `输入 ${item.input_price_per_1k_tokens ?? '—'} 人民币/千Token`, `输出 ${item.output_price_per_1k_tokens ?? '—'} 人民币/千Token`, `测试吞吐：${item.test_tokens_per_second == null ? '未采集' : `${Number(item.test_tokens_per_second).toFixed(2)} Token/秒`}`, item.description, array(item.tags).map(tag => tag.name).join('、')), run: async ctx => {
             const choice = await ctx.choose(`模型 · ${name}`, [
               { label: '查看详情', value: 'detail' },
+              { label: '测试模型（真实请求，可能扣费）', value: 'test' },
+              { label: '查看模型归因（网页）', value: 'trace' },
               { label: item.is_starred ? '取消星标' : '加入星标', value: 'star' },
               { label: item.is_hidden ? '显示模型' : '隐藏模型', value: 'hide' },
               { label: assignedIds.has(id) ? '从当前 Key 队列移除' : '加入当前 Key 队列', value: 'bind' },
@@ -834,6 +836,17 @@ function createAdminPages(runtime) {
               ].filter(Boolean).join('\n');
               await ctx.show(`模型详情 · ${name}`, details);
             }
+            if (choice === 'test') {
+              if (!await ctx.confirm('确认测试模型', `将向 ${item.provider_name || item.provider || '该供应商'} 的 ${name} 发送一条真实测试请求，并按照正常用量扣除积分。继续？`)) return;
+              const result = await api(`/api/user/models/${encodeURIComponent(id)}/test`, { method: 'POST', body: {} });
+              const summary = result.ok
+                ? [`测试通过：${result.model || name}`, `响应时间：${result.latency_ms == null ? '未知' : `${Math.round(Number(result.latency_ms))} 毫秒`}`, result.tokens_per_second != null && `输出速度：${Number(result.tokens_per_second).toFixed(2)} Token/秒`, result.total_tokens != null && `Token 用量：${result.total_tokens}`]
+                : [`测试失败：${result.model || name}`, `原因：${result.error || '未知错误'}`];
+              await ctx.show('模型测试结果', summary.filter(Boolean).join('\\n'));
+              await ctx.refresh();
+              return;
+            }
+            if (choice === 'trace') { await ctx.show('模型归因', `“模型归因”需要网页端的交互式请求追踪面板。请在网页模型库中打开 ${name}，然后选择“模型归因”。`); return; }
             if (choice === 'star') {
               const starred = item.is_starred !== true;
               if (!await ctx.confirm(starred ? '星标模型' : '取消模型星标', `${item.team_name || `团队 ${item.team_id}`} · ${item.alias || item.name || id}`)) return;
