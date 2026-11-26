@@ -1730,7 +1730,7 @@ function createAdminPages(runtime) {
         const statsReportEnabled = general.stats_report_enabled !== false;
         const statsGranularity = general.stats_report_granularity === 'counts' ? 'counts' : 'detailed';
         const modelList = Array.isArray(general.model_list) ? general.model_list : [];
-        return { sections: [
+        const settingsSections = [
           { title: '网络与代理池', description: '全局代理仅供选择“代理池”模式且已启用的供应商使用；IP 限速时可自动切换。订阅 URL 和代理凭证在界面中脱敏。', rows: [
             { label: `订阅地址：${subscriptionUrl ? maskProxyUrl(subscriptionUrl) : '未配置'}`, detail: '网页设置每 5 分钟拉取一次订阅内容。' },
             ...proxyEntries.map((entry, index) => ({ label: `手动代理 ${index + 1}：${maskProxyUrl(entry.url) || '地址无效'}`, detail: entry.enabled === false ? '已停用' : '已启用', run: async ctx => { const choice = await ctx.choose(`手动代理 ${index + 1}`, [{ label: '查看脱敏地址', value: 'detail' }, { label: '删除代理', value: 'delete' }]); if (choice === 'detail') await ctx.show('代理地址（已脱敏）', maskProxyUrl(entry.url)); if (choice === 'delete') { if (!await ctx.confirm('删除手动代理', `删除代理 ${index + 1}（${maskProxyUrl(entry.url)}）？保存前不会影响当前生效配置。`)) return; runtime.adminProxyPoolDraft = proxyEntries.filter((_, itemIndex) => itemIndex !== index); await ctx.refresh(); } } })),
@@ -1746,6 +1746,13 @@ function createAdminPages(runtime) {
             { label: `匿名统计上报：${statsReportEnabled ? '开启' : '关闭'}`, detail: `上报粒度：${statsGranularity === 'counts' ? '仅聚合计数（不含模型/供应商）' : '含模型与供应商明细'}` },
             { label: `可用模型：${modelList.length} 个`, detail: modelList.join('、') || '未配置模型列表' },
             ...(generalResult.status === 'rejected' ? [{ label: `系统设置读取失败：${generalResult.reason.message || '未知错误'}` }] : []),
+          ] },
+          { title: '数据保留', description: '压缩、清除与每日聚合策略。压缩只回收存储空间；清除会删除符合阈值的历史记录。', rows: [
+            { label: `压缩阈值：${retention.compress_days ?? '—'} 天或 ${retention.compress_size_gb ?? '—'} GB` },
+            { label: `清除阈值：${retention.purge_days ?? '—'} 天或 ${retention.purge_size_gb ?? '—'} GB` },
+            { label: `供应商额度明细保留：${retention.provider_quota_days ?? '—'} 天`, detail: '每日额度聚合数据长期保留。' },
+            { label: `每日聚合：${retention.agg_enabled === true ? '启用' : '关闭'}` },
+            ...(retentionResult.status === 'rejected' ? [{ label: `数据保留配置读取失败：${retentionResult.reason.message || '未知错误'}` }] : []),
           ] },
           { title: '请求额度采集', description: '控制请求额度的异步整理和采集精度；修改后即时更新采集配置。', cards: [
             { label: '采集状态', value: quotaValues.enabled ? '已启用' : '已关闭' },
@@ -1768,7 +1775,6 @@ function createAdminPages(runtime) {
             { label: `链接抓取超时：${Number(agent.fetch?.timeoutMs ?? 10000)} 毫秒` },
             ...(agentResult.status === 'rejected' ? [{ label: `Agent Web 配置读取失败：${agentResult.reason.message || '未知错误'}` }] : []),
           ] },
-          { title: '数据保留', rows: toRows(retention, retentionResult.status === 'rejected' ? retentionResult.reason : null) },
           { title: '飞书登录', description: '使用飞书企业账号登录；App Secret 不会在 TUI 中回显。', cards: [
             { label: '飞书登录', value: feishu.enabled === true ? '已启用' : '已关闭' },
             { label: 'App ID', value: feishu.appId || '未配置' },
@@ -1779,7 +1785,19 @@ function createAdminPages(runtime) {
             { label: 'OAuth 回调地址', detail: feishu.redirectUri || '未生成', run: async ctx => { if (!feishu.redirectUri) return; await ctx.show('飞书 OAuth 回调地址', `${feishu.redirectUri}\n请将此地址配置到飞书开放平台应用的重定向 URL 中；TUI 不访问系统剪贴板。`); } },
             ...(feishuResult.status === 'rejected' ? [{ label: `飞书配置读取失败：${feishuResult.reason.message || '未知错误'}` }] : []),
           ] },
-        ], actions: [
+        ];
+        const category = runtime.adminSettingsCategory || '';
+        const categories = [
+          ['general', '常规', '系统名称、积分与模型列表'], ['appearance', '外观', '默认主题与界面外观'],
+          ['updates', '版本与更新', '检查版本与一键更新'], ['retention', '数据保留', '压缩、清理与聚合策略'],
+          ['auth', '登录与认证', '飞书登录、OAuth 应用与邀请链接'], ['network', '网络', '代理地址与代理池'],
+          ['agent', 'Blora Agent 资料', '联网搜索与链接抓取'], ['popups', '弹窗通知', '向用户广播一次性弹窗'],
+        ];
+        const categorySections = { general: ['常规设置'], network: ['网络与代理池'], agent: ['Agent Web 资料设置'], retention: ['数据保留', '请求额度采集'], auth: ['飞书登录'] };
+        const categoryActions = { general: ['编辑常规设置'], network: ['编辑代理池', '添加手动代理', '从公网 URL 导入代理列表', '检测订阅地址', '保存代理池设置'], agent: ['编辑 Agent Web 设置', '测试 Agent Web 搜索'], retention: ['编辑数据保留配置', '编辑请求额度采集'], auth: ['编辑飞书登录'] };
+        const selectedCategory = categories.find(([id]) => id === category);
+        const selectedSections = selectedCategory ? settingsSections.filter(section => (categorySections[category] || []).includes(section.title)) : [];
+        const actionList = [
           { label: generalResult.status === 'rejected' ? '编辑代理池（设置读取失败）' : '编辑代理池', disabled: generalResult.status === 'rejected', run: async ctx => { const values = await ctx.form('编辑代理池', [
             { name: 'subscriptionUrl', label: '订阅地址（留空表示不使用订阅）', value: subscriptionUrl },
             { name: 'manualProxyLines', label: '手动代理地址（每行一个）', value: (runtime.adminProxyPoolDraft || proxyEntries).map(entry => entry.url).filter(Boolean).join('\\n') },
@@ -1850,9 +1868,23 @@ function createAdminPages(runtime) {
           { label: '查看数据保留', run: async ctx => { await ctx.navigate('admin-retention'); } },
           { label: '编辑飞书登录', run: async ctx => { const values = await ctx.form('编辑飞书登录', [{ name: 'enabled', label: '启用飞书登录', type: 'boolean', value: feishu.enabled === true }, { name: 'appId', label: 'App ID', value: feishu.appId || '' }, { name: 'appSecret', label: `App Secret（${feishu.hasAppSecret ? '留空保留现有密钥' : '尚未配置'}）`, secret: true }, { name: 'tenantKey', label: '企业 Tenant Key（留空表示不限制企业）', value: feishu.tenantKey || '' }], { description: `当前配置来源：${feishu.source === 'config' ? '配置文件/环境变量；保存后写入后台数据库并覆盖回退配置' : feishu.source === 'settings' ? '后台数据库' : '未知'}。OAuth 回调地址可在“飞书登录”详情读取。` }); if (!values) return; if (values.enabled && (!values.appId || (!values.appSecret && !feishu.hasAppSecret))) { await ctx.show('配置不完整', '启用飞书登录需要 App ID 与 App Secret。'); return; } if (!await ctx.confirm('保存飞书登录配置', `启用：${values.enabled}\nApp ID：${values.appId}\n密钥不会回显。`)) return; await api('/api/admin/feishu-login', { method: 'PUT', body: values }); ctx.notify('飞书登录配置已保存。'); await ctx.refresh(); } },
           { label: '测试 Agent Web 搜索', disabled: agentResult.status === 'rejected' || agent.search?.enabled !== true || !(agent.search?.hasApiKey || agent.search?.apiKey === '[configured]'), run: async ctx => { const query = String(await ctx.ask('测试查询词（1-400 字符）') || '').trim(); if (!query) return; if ([...query].length > 400) { await ctx.show('测试查询词无效', '查询词最多 400 个字符。'); return; } if (!await ctx.confirm('确认测试联网搜索', `搜索服务：${agent.search?.provider || 'tavily'}\n查询词：${query}\n最多返回 3 条结果；本操作会向所选搜索服务发送查询并可能计入速率限制。`)) return; const result = await api('/api/admin/agent-web/test', { method: 'POST', body: { query } }); if (result.error) { await ctx.show('Agent Web 搜索未成功', `${result.message || result.error}${result.code ? `\n错误代码：${result.code}` : ''}`); return; } const results = array(result.results).slice(0, 3); await ctx.show('Agent Web 搜索结果', [`搜索服务：${result.provider || agent.search?.provider || '未知'}`, `查询词：${result.query || query}`, `结果数：${results.length}`, ...results.flatMap((item, index) => [`${index + 1}. ${item.title || '无标题'}`, item.url && `链接：${item.url}`, item.snippet && `摘要：${item.snippet}`].filter(Boolean))].join('\\n')); } },
-          { label: '编辑数据保留配置', run: async ctx => { const numeric = ['provider_quota_days', 'compress_days', 'purge_days', 'compress_size_gb', 'purge_size_gb']; const values = await ctx.form('编辑数据保留配置', numeric.map(name => ({ name, label: name, value: String(retention[name] ?? 0) })).concat([{ name: 'agg_enabled', label: '启用聚合', type: 'boolean', value: retention.agg_enabled === true }])); if (!values) return; const body = Object.fromEntries(numeric.map(name => [name, Number(values[name])]).concat([['agg_enabled', values.agg_enabled]])); if (!await ctx.confirm('保存数据保留配置', JSON.stringify(body))) return; await api('/api/admin/retention-config', { method: 'PUT', body }); ctx.notify('数据保留配置已保存；本操作不会立即清理数据。'); await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
-        ] };
+        ];
+        const navActions = {
+          updates: ['admin-updates', '打开版本与更新'], popups: ['admin-popups', '打开弹窗通知'],
+        };
+        if (!selectedCategory) {
+          return { sections: [{ title: '系统设置', description: '选择一个类别以管理相关设置。', columns: [{ key: 'category', label: '设置类别', ratio: 0.3 }, { key: 'description', label: '包含内容', ratio: 0.55 }, { key: 'open', label: '操作', ratio: 0.15 }], rows: categories.map(([id, label, description]) => ({ label, cells: { category: label, description, open: 'Enter 打开' }, detail: description, run: async ctx => { if (navActions[id]) { await ctx.navigate(navActions[id][0]); return; } if (id === 'appearance') { const url = `${runtime.client.baseUrl}/admin#adminSettings`; ctx.notify(`外观设置需在网页中管理：${url}`); return; } runtime.adminSettingsCategory = id; await ctx.refresh(); } })) }], actions: [{ label: '刷新', run: ctx => ctx.refresh() }] };
+        }
+        const categoryActionsForPage = (categoryActions[category] || []).map(label => actionList.find(action => action.label === label)).filter(Boolean);
+        const navigation = navActions[category];
+        const detailActions = [
+          { label: '返回设置类别', toolbar: true, run: async ctx => { runtime.adminSettingsCategory = ''; await ctx.refresh(); } },
+          ...(navigation ? [{ label: navigation[1], toolbar: true, run: async ctx => ctx.navigate(navigation[0]) }] : []),
+          ...categoryActionsForPage,
+          { label: '刷新', run: ctx => ctx.refresh() },
+        ];
+        return { sections: selectedSections.length ? selectedSections : [{ title: selectedCategory[1], rows: [{ label: category === 'appearance' ? '外观设置（默认主题和界面背景）仅在网页端可用。' : `${selectedCategory[1]}设置由独立管理页面提供。` }] }], actions: detailActions };
       },
     }),
     adminOnly({

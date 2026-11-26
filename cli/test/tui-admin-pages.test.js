@@ -9,6 +9,15 @@ const { buildPages } = require('../tui/pages');
 
 const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
 const pageById = id => buildPages(runtime).find(page => page.id === id);
+const settingsPageFor = async (category, api, runtimeState = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' }) => {
+  runtimeState.adminSettingsCategory = '';
+  const page = buildPages(runtimeState).find(item => item.id === 'admin-settings');
+  const overview = await page.load(api);
+  const row = overview.sections[0].rows.find(item => item.cells?.category === category);
+  assert.ok(row, `settings overview should include ${category}`);
+  await row.run({ navigate: async id => { runtimeState.navigatedTo = id; }, refresh: async () => {} });
+  return page.load(api);
+};
 
 test('user audit log uses the web action-category filter and page size', async () => {
   const calls = [];
@@ -122,13 +131,37 @@ test('admin user edits use named Teams and refundable balances with confirmed ne
   assert.match(refundResult, /实际退款：12\.00/);
 });
 
+test('admin settings overview follows web categories and routes standalone pages', async () => {
+  const runtime = { client: { isAdmin: true, baseUrl: 'https://router.example' }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const page = buildPages(runtime).find(item => item.id === 'admin-settings');
+  const api = async () => ({});
+  const data = await page.load(api);
+  assert.deepEqual(data.sections[0].columns.map(column => column.label), ['设置类别', '包含内容', '操作']);
+  assert.deepEqual(data.sections[0].rows.map(row => row.cells.category), ['常规', '外观', '版本与更新', '数据保留', '登录与认证', '网络', 'Blora Agent 资料', '弹窗通知']);
+  assert.deepEqual(data.actions.map(action => action.label), ['刷新']);
+  for (const [category, target] of [['版本与更新', 'admin-updates'], ['弹窗通知', 'admin-popups']]) {
+    await data.sections[0].rows.find(row => row.cells.category === category).run({ navigate: async id => { runtime.navigatedTo = id; } });
+    assert.equal(runtime.navigatedTo, target);
+  }
+  let appearanceNotice = '';
+  await data.sections[0].rows.find(row => row.cells.category === '外观').run({ notify: message => { appearanceNotice = message; } });
+  assert.match(appearanceNotice, /https:\/\/router\.example\/admin#adminSettings/);
+  assert.equal(runtime.adminSettingsCategory, undefined);
+  await data.sections[0].rows.find(row => row.cells.category === '常规').run({ refresh: async () => {} });
+  const detail = await page.load(api);
+  assert.deepEqual(detail.sections.map(section => section.title), ['常规设置']);
+  assert.ok(detail.actions.some(action => action.label === '返回设置类别'));
+  assert.ok(detail.actions.some(action => action.label === '编辑常规设置'));
+  assert.ok(!detail.actions.some(action => action.label === '编辑飞书登录'));
+});
+
 test('admin general settings and request capture use readable web fields with validated payloads', async () => {
   const calls = [];
   const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
   const general = { site_name: 'Router', defaultBalance: 250, defaultKeyExpiry: 90, billing_mode: 'rate', rate_price_per_request: 0.05, stats_refresh_interval_sec: 20, login_report_enabled: false, stats_report_enabled: true, stats_report_granularity: 'counts', model_list: ['fusion', 'model-a'] };
   const quota = { enabled: true, mode: 'strict', reconciliation_seconds: 90, max_tries: 4, worker_interval_ms: 3000, batch_size: 12, lease_seconds: 180 };
-  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/settings') return general; if (path === '/api/admin/request-quota-config') return quota; if (path === '/api/admin/agent-web') return {}; if (path === '/api/admin/retention-config') return {}; if (path === '/api/admin/feishu-login') return {}; return {}; };
-  const data = await pageById('admin-settings').load(api);
+  const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/settings') return general; if (path === '/api/admin/request-quota-config') return quota; if (path === '/api/admin/agent-web') return {}; if (path === '/api/admin/retention-config') return { compress_days: 30, compress_size_gb: 10, purge_days: 90, purge_size_gb: 20, provider_quota_days: 60, agg_enabled: true }; if (path === '/api/admin/feishu-login') return {}; return {}; };
+  const data = await settingsPageFor('常规', api, runtime);
   const generalSection = data.sections.find(section => section.title === '常规设置');
   assert.deepEqual(generalSection.cards.map(card => card.label), ['系统名称', '默认新用户积分', '默认 Key 有效期', '统计刷新间隔']);
   assert.ok(generalSection.rows.some(row => row.label === '计费模式：按请求计费 · 0.0500 积分/次'));
@@ -159,9 +192,18 @@ test('admin general settings and request capture use readable web fields with va
   assert.match(emptyListNotice, /至少保留一个非 fusion 模型/);
   assert.equal(calls.filter(call => call.path === '/api/admin/settings' && call.options.method === 'PUT').length, 1, 'empty editable model list must be rejected before saving');
 
-  const quotaSection = data.sections.find(section => section.title === '请求额度采集');
+  runtime.adminSettingsCategory = '';
+  const settingsPage = buildPages(runtime).find(item => item.id === 'admin-settings');
+  const overviewData = await settingsPage.load(async () => ({}));
+  await overviewData.sections[0].rows.find(row => row.cells.category === '数据保留').run({ navigate: async id => { runtime.navigatedTo = id; }, refresh: async () => {} });
+  assert.equal(runtime.adminSettingsCategory, 'retention');
+  const retentionData = await settingsPage.load(api);
+  assert.deepEqual(retentionData.sections.map(section => section.title), ['数据保留', '请求额度采集']);
+  assert.ok(retentionData.sections[0].rows.some(row => row.label === '压缩阈值：30 天或 10 GB'));
+  assert.ok(retentionData.sections[0].rows.some(row => row.label === '清除阈值：90 天或 20 GB'));
+  const quotaSection = retentionData.sections.find(section => section.title === '请求额度采集');
   assert.ok(quotaSection.cards.some(card => card.label === '采集模式' && card.value === '请求前后精细采集'));
-  const quotaAction = data.actions.find(action => action.label === '编辑请求额度采集');
+  const quotaAction = retentionData.actions.find(action => action.label === '编辑请求额度采集');
   const quotaValues = { enabled: false, mode: 'async', reconciliation_seconds: '0', max_tries: '2', worker_interval_ms: '1000', batch_size: '8', lease_seconds: '90' };
   await quotaAction.run({ form: async () => quotaValues, confirm: async () => false });
   assert.equal(calls.some(call => call.path === '/api/admin/request-quota-config' && call.options.method === 'PUT'), false);
@@ -175,7 +217,8 @@ test('admin general settings and request capture use readable web fields with va
 test('admin reporting settings preserve the web defaults when optional keys are absent', async () => {
   const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
   const page = buildPages(runtime).find(item => item.id === 'admin-settings');
-  const data = await page.load(async path => path === '/api/admin/settings' ? { model_list: ['fusion', 'model-a'] } : {});
+  const api = async path => path === '/api/admin/settings' ? { model_list: ['fusion', 'model-a'] } : {};
+  const data = await settingsPageFor('常规', api, runtime);
   const section = data.sections.find(item => item.title === '常规设置');
   assert.ok(section.rows.some(row => row.label === '登录状态上报：开启'));
   assert.ok(section.rows.some(row => row.label === '匿名统计上报：开启' && row.detail.includes('含模型与供应商明细')));
@@ -188,7 +231,7 @@ test('admin Agent Web settings expose web fields with masked keys and validated 
   let feishuConfig = { enabled: true, appId: 'cli_public_123', appSecret: '[redacted]', hasAppSecret: true, tenantKey: 'tenant-a', redirectUri: 'https://router.example/auth/feishu/callback', source: 'config' };
   const api = async (path, options = {}) => { calls.push({ path, options }); if (path === '/api/admin/settings') return {}; if (path === '/api/admin/request-quota-config') return {}; if (path === '/api/admin/agent-web/test' && options.method === 'POST') return { provider: 'brave', query: options.body.query, results: [{ title: 'Result One', url: 'https://example.test/1', snippet: 'Summary one' }, { title: 'Result Two', url: 'https://example.test/2', snippet: 'Summary two' }] }; if (path === '/api/admin/agent-web') return agentConfig; if (path === '/api/admin/retention-config') return {}; if (path === '/api/admin/feishu-login' && options.method === 'PUT') { assert.equal(options.body.appSecret, ''); assert.equal(options.body.tenantKey, ''); feishuConfig = { ...feishuConfig, ...options.body, appSecret: '[redacted]', hasAppSecret: true, source: 'settings' }; return { success: true, ...feishuConfig }; } if (path === '/api/admin/feishu-login') return feishuConfig; return {}; };
   const page = buildPages(runtime).find(item => item.id === 'admin-settings');
-  const data = await page.load(api);
+  const data = await settingsPageFor('Blora Agent 资料', api, runtime);
   const section = data.sections.find(item => item.title === 'Agent Web 资料设置');
   assert.deepEqual(section.cards.map(card => card.label), ['联网搜索', '搜索结果数', '搜索超时', '链接抓取']);
   assert.match(section.cards[0].detail, /Brave Search.*API Key：已配置（不显示密钥）/);
@@ -217,7 +260,8 @@ test('admin Agent Web settings expose web fields with masked keys and validated 
   assert.match(searchOutput, /搜索服务：brave.*查询词：CrewRouter.*结果数：2/s);
   assert.match(searchOutput, /1\. Result One.*https:\/\/example\.test\/1.*Summary one/s);
   assert.doesNotMatch(searchOutput, /\\"provider\\"|\\"results\\"/);
-  const feishu = data.sections.find(item => item.title === '飞书登录');
+  const authData = await settingsPageFor('登录与认证', api, runtime);
+  const feishu = authData.sections.find(item => item.title === '飞书登录');
   assert.deepEqual(feishu.cards.map(card => [card.label, card.value]), [['飞书登录', '已启用'], ['App ID', 'cli_public_123'], ['App Secret', '已配置（隐藏）'], ['企业限制', '仅允许指定企业']]);
   assert.ok(feishu.rows.some(row => row.label === '配置来源：配置文件/环境变量（尚未保存到后台）'));
   assert.doesNotMatch(JSON.stringify(feishu), /\\[redacted\\]/);
@@ -225,7 +269,7 @@ test('admin Agent Web settings expose web fields with masked keys and validated 
   await feishu.rows.find(row => row.label === 'OAuth 回调地址').run({ show: async (_title, body) => { callbackDetails = body; } });
   assert.match(callbackDetails, /https:\/\/router\.example\/auth\/feishu\/callback/);
   assert.doesNotMatch(callbackDetails, /redacted|secret/i);
-  const editFeishu = data.actions.find(action => action.label === '编辑飞书登录');
+  const editFeishu = authData.actions.find(action => action.label === '编辑飞书登录');
   let feishuFields = [];
   await editFeishu.run({ form: async (_title, fields, options) => { feishuFields = fields; assert.match(options.description, /保存后写入后台数据库/); return { enabled: true, appId: 'cli_public_123', appSecret: '', tenantKey: '' }; }, confirm: async () => true, notify() {}, refresh: async () => {} });
   assert.match(feishuFields.find(field => field.name === 'tenantKey').label, /留空表示不限制企业/);
@@ -239,7 +283,7 @@ test('admin Agent Web search test is disabled until search is enabled and a key 
     { search: { enabled: false, apiKey: '', hasApiKey: false }, fetch: { enabled: true } },
     { search: { enabled: true, apiKey: '', hasApiKey: false }, fetch: { enabled: true } },
   ]) {
-    const data = await page.load(async path => path === '/api/admin/agent-web' ? config : {});
+    const data = await settingsPageFor('Blora Agent 资料', async path => path === '/api/admin/agent-web' ? config : {}, runtime);
     assert.equal(data.actions.find(action => action.label === '测试 Agent Web 搜索').disabled, true);
   }
 });
@@ -254,7 +298,7 @@ test('admin proxy pool settings redact credentials and manage subscription/manua
     return {};
   };
   const page = buildPages(runtime).find(item => item.id === 'admin-settings');
-  const data = await page.load(api);
+  const data = await settingsPageFor('网络', api, runtime);
   const proxySection = data.sections.find(section => section.title === '网络与代理池');
   assert.ok(proxySection.rows.some(row => row.label.includes('•••:•••@proxy.example') && row.label.includes('token=•••')));
   assert.ok(proxySection.rows.some(row => row.label.includes('•••:•••@proxy.example:1080')));
