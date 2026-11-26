@@ -2,7 +2,7 @@
 
 > 27.0 Beta 是预发布测试版，正式版之前的包、镜像和应用均可能变更。面向用户显示 `27.0 Beta`；机器可读的候选版本为 `27.0.0-beta.3`。
 
-beta.1 已有 GitHub Pre-release，SDK 与 CLI 也已发布到 npm `beta` 标签。beta.2 的 tag workflow 曾失败，且未发布。本文记录 beta.3 候选；在 `.3` tag 工作流和手动 npm publish 全部成功前，下列 beta.3 资产尚未发布。SDK 与 CLI 不创建单独的 GitHub Release；npm 包使用 `@bloret-crew` 组织作用域。
+beta.1 已有 GitHub Pre-release，SDK 与 CLI 也已发布到 npm `beta` 标签。beta.2 的 tag workflow 曾失败，且未发布。本文记录 beta.3；GitHub Pre-release 和服务端/Desktop 资产已发布，npm publish 因 registry 对发布 PUT 返回 HTTP 404 尚未完成。SDK 与 CLI 不创建单独的 GitHub Release；npm 包使用 `@bloret-crew` 组织作用域。
 
 ## 发布项
 
@@ -32,5 +32,5 @@ GitHub workflow 生成所有资产的 SHA-256 清单并将其一并附加。Pre-
 - [x] beta.3 workflow 配置完整版本门禁、四平台构建与 checksum 生成步骤。
 - [x] beta.3 release dry-run 全部构建与 gate jobs 通过。
 - [x] beta.3 GitHub tag workflow 构建并创建 Pre-release；server 与四个平台 Desktop 资产来自同一 commit 并附 SHA-256。
-- [ ] beta.3 npm 候选包经单独的手动 publish job 发布到 `beta`；不移动 npm `latest`。
-- [x] 发布后复核 beta.3 release/tag 与全部 9 个资产；npm dist-tags 仍指向 beta.1，本次不移动 `latest`。
+- [ ] beta.3 npm 候选包经单独的手动 publish job 发布到 `beta`；当前 registry PUT 返回 HTTP 404，待修复 npm package publish access。
+- [x] 核验 beta.3 release/tag 与全部 9 个 GitHub 资产；npm dist-tags 仍指向 beta.1，本次未移动 `latest`。
