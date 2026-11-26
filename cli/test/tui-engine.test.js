@@ -43,6 +43,40 @@ test('production sidebar renders web group dividers and hides CLI-only groups', 
   } finally { tty.input.write('q'); await task; }
 });
 
+test('Ctrl+C exits the TUI and restores terminal mode', { timeout: 15000 }, async () => {
+  const tty = terminal(120, 24);
+  const task = runPagedTui({
+    ...tty,
+    env: { NO_COLOR: '1' },
+    api: async () => ({}),
+    pages: [page('home', '首页', async () => ({ sections: [{ title: '首页内容', rows: [] }], actions: [] }))],
+    authenticate: async () => true,
+  });
+  await until(() => tty.screen().includes('首页内容'));
+  tty.input.write('\x03');
+  await task;
+  assert.equal(tty.input.isRaw, false);
+  assert.ok(tty.screen().includes('\x1b[?1049l'));
+});
+
+test('Ctrl+C cancels a modal without exiting the TUI', { timeout: 15000 }, async () => {
+  const tty = terminal(120, 24);
+  const task = runPagedTui({
+    ...tty,
+    env: { NO_COLOR: '1' },
+    api: async () => ({}),
+    pages: [page('home', '首页', async () => ({ sections: [{ title: '首页内容', rows: [] }], actions: [] }))],
+    authenticate: async ctx => { await ctx.confirm('继续吗？', '可取消的确认'); return true; },
+  });
+  await until(() => tty.screen().includes('可取消的确认'));
+  tty.input.write('\x03');
+  await until(() => tty.screen().includes('首页内容'));
+  assert.equal(tty.input.isRaw, true);
+  tty.input.write('q');
+  await task;
+  assert.equal(tty.input.isRaw, false);
+});
+
 test('mouse clicks switch pages and activate action rows', { timeout: 15000 }, async () => {
   const tty = terminal(120, 24);
   let executed = 0;

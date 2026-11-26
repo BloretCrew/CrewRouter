@@ -1285,7 +1285,16 @@ async function runPagedTui({
     afterEscape = false;
     if (rest) filter(rest);
   }
-  const onData = chunk => feed(typeof chunk === 'string' ? chunk : decoder.write(chunk));
+  const onData = chunk => {
+    const value = typeof chunk === 'string' ? chunk : decoder.write(chunk);
+    if (value.includes('\x03')) {
+      if (modal) closeModal(null);
+      else closed = true;
+      render();
+      return;
+    }
+    feed(value);
+  };
   const onEnd = () => { closed = true; if (modal) closeModal(null); };
   const onResize = () => render();
 
