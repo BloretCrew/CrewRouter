@@ -124,5 +124,5 @@ jobs:
             test "$code" = "200" || { echo "npm registry lookup for $name returned HTTP $code"; exit 1; }
             node -e 'const doc = require(process.argv[1]); if (doc.versions && doc.versions[process.env.PRODUCT_VERSION]) { console.error(`npm package ${doc.name} already has ${process.env.PRODUCT_VERSION}`); process.exit(1); }' "$file"
           done
-          npm publish "candidates/bloret-crew-crewrouter-sdk-${PRODUCT_VERSION}.tgz" --access public --tag beta
-          npm publish "candidates/bloret-crew-crewrouter-${PRODUCT_VERSION}.tgz" --access public --tag beta
+          npm publish "./candidates/bloret-crew-crewrouter-sdk-${PRODUCT_VERSION}.tgz" --access public --tag beta
+          npm publish "./candidates/bloret-crew-crewrouter-${PRODUCT_VERSION}.tgz" --access public --tag beta
