@@ -112,10 +112,18 @@ function notificationSettingsPage(runtime) {
               { name: 'notifyErrors', label: '请求错误通知', type: 'boolean', value: settings.notifyErrors !== false },
             ], { description: settings.barkServerKey ? '服务端不提供密钥遮蔽回填；保存配置时若启用 Bark，需要重新输入 Server Key。留空会清除已保存密钥。' : '启用 Bark 需要填写 Server Key。' });
             if (!values) return;
-            if (values.barkEnabled && !String(values.barkServerKey || '').trim()) {
-              await ctx.show('需要 Server Key', '启用 Bark 前请输入 Server Key；留空无法保留现有密钥。'); return;
+            const endpoint = String(values.barkEndpoint || '').trim();
+            let parsedEndpoint;
+            try { parsedEndpoint = new URL(endpoint); } catch (_) { parsedEndpoint = null; }
+            if (!parsedEndpoint || !['http:', 'https:'].includes(parsedEndpoint.protocol) || parsedEndpoint.username || parsedEndpoint.password || parsedEndpoint.search || parsedEndpoint.hash) {
+              await ctx.show('Bark 服务地址无效', '请输入完整的 HTTP 或 HTTPS 地址，不要包含用户名、密码、查询参数或片段。'); return;
             }
-            if (!await ctx.confirm('保存通知设置', `Bark ${values.barkEnabled ? '启用' : '关闭'}\nEndpoint ${values.barkEndpoint}\n额度提醒 ${values.notifyQuota ? '开' : '关'} · 错误提醒 ${values.notifyErrors ? '开' : '关'}\nSecret 不会回显。`)) return;
+            const privateHttpNotice = parsedEndpoint.protocol === 'http:' ? 'HTTP 地址仅适用于本机/内网，并且必须已由管理员加入 CR_BARK_PRIVATE_ORIGINS 白名单；公网地址必须使用 HTTPS。服务器会执行最终校验。\\n' : '';
+            if (values.barkEnabled && !String(values.barkServerKey || '').trim()) {
+              await ctx.show('需要 Server Key', '启用 Bark 前请输入 Server Key。'); return;
+            }
+            const keyAction = String(values.barkServerKey || '').trim() ? '更新已配置密钥' : settings.barkServerKey ? '清除已保存密钥' : '未配置密钥';
+            if (!await ctx.confirm('保存通知设置', `${privateHttpNotice}Bark ${values.barkEnabled ? '启用' : '关闭'}\n服务地址：${endpoint}\nServer Key：${keyAction}\n额度不足通知：${values.notifyQuota ? '开启' : '关闭'} · 请求错误通知：${values.notifyErrors ? '开启' : '关闭'}\n密钥不会回显。`)) return;
             await api('/api/user/notification-settings', { method: 'PUT', body: values });
             ctx.notify('通知设置已保存。'); await ctx.refresh();
           } },
