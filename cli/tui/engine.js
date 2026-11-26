@@ -421,7 +421,7 @@ async function runPagedTui({
       const entry = navLines[lineIndex - 2];
       if (entry) {
         if (entry.type === 'area') return `${entry.id === activeArea ? '›' : ' '} ${entry.id === activeArea ? `[${entry.label}]` : entry.label}`;
-        if (entry.type === 'group') return `  ${entry.label}`;
+        if (entry.type === 'group') return `  ── ${entry.label} ──`;
         return `${entry.index === active ? '›' : ' '} ${entry.page.label}`;
       }
       const footer = typeof sidebarFooter === 'function' ? sidebarFooter() : null;
