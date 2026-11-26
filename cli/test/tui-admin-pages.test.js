@@ -623,6 +623,40 @@ test('admin popup notices mirror web fields and confirmed lifecycle operations',
   assert.equal(calls.some(call => call.options.method === 'DELETE'), false);
 });
 
+test('admin audit log renders readable event metadata and bounds its web-compatible filters/pages', async () => {
+  const calls = [];
+  const runtime = { client: { isAdmin: true }, cfg: { tui: { days: 30 } }, profileName: 'test' };
+  const api = async (path, options = {}) => {
+    calls.push({ path, options });
+    if (path !== '/api/admin/audit-logs') return {};
+    return { page: options.query.page, limit: 50, total: 51, items: [{ id: 9, created_at: '2026-11-25T08:00:00Z', username: 'alice', is_admin: true, action: 'user.update', resource_type: 'user', resource_id: '7', description: '更新账户设置', details: { email_verified: true, rate_limit_rpm: 30 }, ip_address: '127.0.0.1', user_agent: 'TestClient/1', status: 200, duration_ms: 8 }] };
+  };
+  const page = buildPages(runtime).find(item => item.id === 'admin-audit-logs');
+  runtime.adminAuditPage = 2;
+  const data = await page.load(api);
+  assert.match(data.sections[0].description, /第 2\/2 页 · 共 51 条 · 每页 50 条/);
+  const row = data.sections[0].rows[0];
+  assert.ok(row.label.includes('更新用户'));
+  assert.ok(row.label.includes('管理员'));
+  assert.match(row.detail, /用户 #7/);
+  assert.match(row.detail, /HTTP 200/);
+  assert.match(row.detail, /8 毫秒/);
+  let details = '';
+  await row.run({ show: async (_title, body) => { details = body; } });
+  assert.match(details, /操作人：alice（管理员）/);
+  assert.match(details, /目标：用户 #7/);
+  assert.match(details, /客户端：TestClient\/1/);
+  assert.match(details, /邮箱已验证=true · RPM 限额=30/);
+  assert.doesNotMatch(details, /email_verified|rate_limit_rpm/);
+  const filter = data.actions.find(action => action.label === '筛选资源类型');
+  await filter.run({ choose: async (_title, options) => { assert.ok(options.some(option => option.label === '弹窗通知')); return 'user'; }, refresh: async () => page.load(api) });
+  assert.equal(runtime.adminAuditResourceType, 'user');
+  assert.equal(runtime.adminAuditPage, 1);
+  assert.equal(calls.at(-1).options.query.resource_type, 'user');
+  const nextPage = data.actions.find(action => action.label === '下一页');
+  assert.equal(nextPage.disabled, true, 'the last page must disable pagination forward');
+});
+
 test('admin invite page renders readable rows, confirms revoke and creates a one-time link with web payload', async () => {
   const calls = [];
   const api = async (path, options = {}) => {

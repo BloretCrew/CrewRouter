@@ -662,11 +662,28 @@ function createAdminPages(runtime) {
         const resourceType = runtime.adminAuditResourceType || '';
         const data = await api('/api/admin/audit-logs', { query: { page, limit: 50, q: search, resource_type: resourceType } });
         const items = array(data && data.items);
-        return { sections: [{ title: '管理员操作日志', description: `第 ${data.page || page} 页 · 共 ${data.total || 0} 条`, rows: items.map(item => ({ label: display(formatTime(item.created_at), item.username, item.action, item.resource_type), detail: display(item.description, item.status, item.ip_address) })) }], actions: [
-          { label: '搜索日志', run: async ctx => { runtime.adminAuditSearch = String(await ctx.ask('用户名或操作说明', { defaultValue: search }) || '').trim(); runtime.adminAuditPage = 1; await ctx.refresh(); } },
-          { label: '筛选资源类型', run: async ctx => { const value = await ctx.choose('资源类型', [{ label: '全部', value: '' }, ...['api_key', 'user', 'provider', 'model', 'team', 'policy', 'plugin'].map(item => ({ label: item, value: item }))]); if (value !== null) { runtime.adminAuditResourceType = value; runtime.adminAuditPage = 1; await ctx.refresh(); } } },
-          { label: '上一页', run: async ctx => { runtime.adminAuditPage = Math.max(1, page - 1); await ctx.refresh(); } },
-          { label: '下一页', run: async ctx => { runtime.adminAuditPage = page + 1; await ctx.refresh(); } },
+        const total = Number(data.total || 0);
+        const currentPage = Number(data.page || page);
+        const totalPages = Math.max(1, Math.ceil(total / Number(data.limit || 50)));
+        const resourceNames = { api_key: 'API Key', auth: '认证', user: '用户', provider: '供应商', model: '模型', team: 'Team', policy: '策略', plugin: '插件', popup_notice: '弹窗通知', system: '系统设置', invite: '邀请链接' };
+        const actionNames = { 'api_key.create': '创建 API Key', 'api_key.update': '更新 API Key', 'api_key.delete': '删除 API Key', 'api_key.toggle': '启用/停用 API Key', 'api_key.models': '更新 API Key 模型', 'api_key.signature': '更新 API Key 签名', 'user.update': '更新用户', 'user.refund': '退款', 'user.redeem': '兑换充值码', 'user.settings': '更新用户设置', 'team.create': '创建 Team', 'team.update': '更新 Team', 'team.delete': '删除 Team', 'team.member.add': '添加 Team 成员', 'team.member.remove': '移除 Team 成员', 'provider.create': '创建供应商', 'provider.update': '更新供应商', 'provider.delete': '删除供应商', 'model.create': '创建模型', 'model.update': '更新模型', 'model.delete': '删除模型', 'auth.login': '登录', 'auth.logout': '退出登录', 'auth.login_2fa': '双重验证登录', 'admin.settings': '更新系统设置', 'admin.feishu': '更新飞书设置', 'admin.popup_notice': '管理弹窗通知', 'admin.oauth_client': '管理 OAuth 应用' };
+        const humanize = value => String(value || '未知').replace(/[._]+/g, ' ');
+        const actionLabel = value => actionNames[value] || humanize(value);
+        const resourceLabel = value => resourceNames[value] || humanize(value);
+        const detailsLabel = { name: '名称', enabled: '启用', email: '邮箱', email_verified: '邮箱已验证', is_admin: '管理员', balance: '积分', team_id: 'Team ID', tags: '标签', rate_limit_rpm: 'RPM 限额', rate_limit_tpm: 'TPM 限额', provider: '供应商', model_id: '模型 ID', series: '系列', description: '说明', action: '操作', resource_type: '资源类型', revokedTokens: '已撤销令牌数', created_by: '创建人' };
+        const formatDetails = value => typeof value === 'string' ? value : Object.entries(value || {}).map(([key, entry]) => `${detailsLabel[key] || humanize(key)}=${typeof entry === 'object' && entry !== null ? JSON.stringify(entry) : String(entry)}`).join(' · ');
+        const rows = items.map(item => ({ label: display(formatTime(item.created_at), item.username || '未知用户', actionLabel(item.action), item.is_admin ? '管理员' : ''), detail: display(item.description, `${resourceLabel(item.resource_type)}${item.resource_id ? ` #${item.resource_id}` : ''}`, item.ip_address && `IP ${item.ip_address}`, item.status != null && `HTTP ${item.status}`, item.duration_ms != null && `${item.duration_ms} 毫秒`), run: async ctx => await ctx.show(`管理员操作日志 · ${actionLabel(item.action)}`, [
+          `时间：${formatTime(item.created_at)}`, `操作人：${item.username || '未知用户'}${item.is_admin ? '（管理员）' : ''}`,
+          `操作：${actionLabel(item.action)}`, `目标：${resourceLabel(item.resource_type)}${item.resource_id ? ` #${item.resource_id}` : ''}`,
+          item.description && `说明：${item.description}`, item.ip_address && `IP 地址：${item.ip_address}`, item.user_agent && `客户端：${item.user_agent}`,
+          item.status != null && `结果：HTTP ${item.status}`, item.duration_ms != null && `耗时：${item.duration_ms} 毫秒`, item.details && `变更详情：${formatDetails(item.details)}`,
+        ].filter(Boolean).join('\\n')) }));
+        return { sections: [{ title: '管理员操作日志', description: `第 ${currentPage}/${totalPages} 页 · 共 ${total} 条 · 每页 ${data.limit || 50} 条${resourceType ? ` · 资源 ${resourceLabel(resourceType)}` : ''}${search ? ` · 搜索“${search}”` : ''}`, rows: rows.length ? rows : [{ label: '暂无管理员操作日志。' }] }], actions: [
+          { label: search ? '清除日志搜索' : '搜索日志', toolbar: true, run: async ctx => { runtime.adminAuditSearch = search ? '' : String(await ctx.ask('用户名或操作说明', { defaultValue: runtime.adminAuditSearch || '' }) || '').trim(); runtime.adminAuditPage = 1; await ctx.refresh(); } },
+          { label: '筛选资源类型', toolbar: true, run: async ctx => { const choices = [['', '全部资源'], ...Object.entries(resourceNames)]; const value = await ctx.choose('资源类型', choices.map(([id, label]) => ({ label, value: id })), { description: `当前：${resourceLabel(resourceType)}` }); if (value !== null) { runtime.adminAuditResourceType = value; runtime.adminAuditPage = 1; await ctx.refresh(); } } },
+          { label: '清除日志筛选', toolbar: true, run: async ctx => { runtime.adminAuditSearch = ''; runtime.adminAuditResourceType = ''; runtime.adminAuditPage = 1; await ctx.refresh(); } },
+          { label: '上一页', toolbar: true, disabled: currentPage <= 1, run: async ctx => { runtime.adminAuditPage = Math.max(1, currentPage - 1); await ctx.refresh(); } },
+          { label: '下一页', toolbar: true, disabled: currentPage >= totalPages, run: async ctx => { runtime.adminAuditPage = Math.min(totalPages, currentPage + 1); await ctx.refresh(); } },
           { label: '刷新', run: ctx => ctx.refresh() },
         ] };
       },
