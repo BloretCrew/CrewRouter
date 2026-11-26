@@ -7,7 +7,9 @@
  *  - GET  /oauth/authorize                        授权入口（requireAuth，渲染确认页）
  *  - GET  /oauth/authorize/info                   确认页数据（client 名/scope/用户 API Key 列表）
  *  - POST /oauth/authorize/approve                用户同意/拒绝 → 302 回 loopback（10min 一次性 code）
- *  - POST /oauth/token                            authorization_code + refresh_token 双 grant
+ *  - POST /oauth/token                            authorization_code + refresh_token + device_code grants
+ *  - POST /oauth/device/code                      RFC 8628 设备授权申请
+ *  - GET/POST /oauth/device                       用户码确认与授权/拒绝
  *  - GET  /.well-known/oauth-authorization-server RFC 8414 元数据
  *
  * 设计要点：
@@ -29,6 +31,7 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { requireAuth } = require('../middleware/auth');
+const { ensureCsrfToken, csrfProtection } = require('../middleware/csrf');
 const oauthClients = require('../utils/oauth-clients');
 
 const router = express.Router();
@@ -37,6 +40,9 @@ const router = express.Router();
 const ACCESS_TTL_SEC = 24 * 3600;          // access 24h
 const REFRESH_TTL_SEC = 30 * 24 * 3600;    // refresh 30d
 const CODE_TTL_SEC = 10 * 60;              // 授权码 10min、一次性
+const DEVICE_CODE_TTL_SEC = 10 * 60;
+const DEVICE_CODE_INTERVAL_SEC = 5;
+const DEVICE_CODE_MAX_INTERVAL_SEC = 300;
 const OAUTH_TOKEN_PREFIX = 'crh_';
 const MAX_REVOKE_TOKEN_ROWS = 10_000;
 
@@ -51,6 +57,7 @@ const PUBLIC_DIR = (() => {
 
 // ---------- 工具 ----------
 const { sha256Hex } = require('../utils/key-hash');
+const { isValidPkceChallenge, isValidPkceVerifier } = oauthClients;
 
 function randomToken() {
   return OAUTH_TOKEN_PREFIX + crypto.randomBytes(32).toString('base64url');
@@ -60,10 +67,17 @@ function randomCode() {
   return crypto.randomBytes(32).toString('base64url');
 }
 
+function randomUserCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const chars = Array.from({ length: 8 }, () => alphabet[crypto.randomInt(alphabet.length)]);
+  return `${chars.slice(0, 4).join('')}-${chars.slice(4).join('')}`;
+}
+
 /** PKCE S256：base64url(sha256(verifier)) 与 challenge 恒时比较 */
 function pkceMatches(verifier, challenge) {
   try {
-    const digest = crypto.createHash('sha256').update(String(verifier), 'ascii').digest();
+    if (!isValidPkceVerifier(verifier) || !isValidPkceChallenge(challenge)) return false;
+    const digest = crypto.createHash('sha256').update(verifier, 'ascii').digest();
     const expected = Buffer.from(String(challenge), 'base64url');
     return digest.length === expected.length && crypto.timingSafeEqual(digest, expected);
   } catch (e) {
@@ -127,11 +141,14 @@ async function ensureOAuthTables() {
       user_id        INTEGER NOT NULL,
       api_key_id     INTEGER,
       scope          TEXT NOT NULL,
+      redirect_uri   TEXT,
       code_challenge TEXT NOT NULL,
       expires_at     TIMESTAMPTZ NOT NULL,
       used           BOOLEAN NOT NULL DEFAULT FALSE
     )
   `);
+
+  await pool.query(`ALTER TABLE oauth_auth_codes ADD COLUMN IF NOT EXISTS redirect_uri TEXT`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS oauth_tokens (
@@ -153,6 +170,21 @@ async function ensureOAuthTables() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_oauth_auth_codes_expires ON oauth_auth_codes (expires_at)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_oauth_tokens_rotated_from ON oauth_tokens (rotated_from)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_oauth_tokens_user ON oauth_tokens (user_id)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS oauth_device_codes (
+      device_code_hash TEXT PRIMARY KEY,
+      user_code TEXT NOT NULL UNIQUE,
+      client_id TEXT NOT NULL,
+      user_id INTEGER,
+      scope TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','denied','consumed')),
+      expires_at TIMESTAMPTZ NOT NULL,
+      interval_seconds INTEGER NOT NULL DEFAULT 5 CHECK (interval_seconds > 0),
+      last_polled_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_oauth_device_codes_expires ON oauth_device_codes (expires_at)`);
 
   // 内置种子 client：存在即跳过；实际校验始终以代码内置定义为准。
   for (const c of oauthClients.BUILTIN_CLIENTS) {
@@ -181,8 +213,7 @@ async function validateAuthorizeParams(query) {
   const scope = oauthClients.normalizeScopeRequest(query.scope, client);
   if (!scope) return { error: 'invalid_scope' };
   const challenge = String(query.code_challenge || '');
-  if (!challenge) return { error: 'invalid_request' };
-  if (query.code_challenge_method && query.code_challenge_method !== 'S256') {
+  if (!isValidPkceChallenge(challenge) || query.code_challenge_method !== 'S256') {
     return { error: 'invalid_request' };
   }
   return {
@@ -293,9 +324,9 @@ router.post('/oauth/authorize/approve', requireAuth, async (req, res) => {
 
   const code = randomCode();
   await pool.query(
-    `INSERT INTO oauth_auth_codes (code, client_id, user_id, api_key_id, scope, code_challenge, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, now() + ($7 || ' seconds')::interval)`,
-    [code, v.client.client_id, req.session.user.id, apiKeyId, v.scope, v.codeChallenge, String(CODE_TTL_SEC)]
+    `INSERT INTO oauth_auth_codes (code, client_id, user_id, api_key_id, scope, redirect_uri, code_challenge, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, now() + ($8 || ' seconds')::interval)`,
+    [code, v.client.client_id, req.session.user.id, apiKeyId, v.scope, v.redirectUri, v.codeChallenge, String(CODE_TTL_SEC)]
   );
 
   Logger.info(`[OAuth授权] 用户 ${req.session.user.username} 同意 ${v.client.client_id}（scope=${v.scope}, key=${apiKeyId}）`);
@@ -406,10 +437,18 @@ async function revokeChain(tokenRow, reason = '检测到 refresh 重用', availa
 }
 
 function sendTokenError(res, error, description) {
-  return res.status(400).json({ error, ...(description ? { error_description: description } : {}) });
+  res.set('Cache-Control', 'no-store');
+  res.set('Pragma', 'no-cache');
+  const status = error === 'invalid_client' ? 401 : 400;
+  res.statusCode = status;
+  if (typeof res.status === 'function') res.status(status);
+  return res.json({ error, ...(description ? { error_description: description } : {}) });
 }
 
 function sendClientAuthError(res, client) {
+  res.set('Cache-Control', 'no-store');
+  res.set('Pragma', 'no-cache');
+  res.statusCode = 401;
   if (client && client.type === 'confidential') {
     res.set('WWW-Authenticate', 'Basic realm="CrewRouter OAuth"');
   }
@@ -441,10 +480,88 @@ router.post('/oauth/desktop-session', async (req, res) => {
 });
 
 // ---------- token 端点（机器调用，无 session） ----------
-router.post('/oauth/token', async (req, res) => {
+router.post('/oauth/device/code', async (req, res) => {
   try {
     await ensureOAuthTables();
     const p = req.body || {};
+    const credentials = oauthClients.clientCredentials(req, p);
+    if (credentials.basic && p.client_id && p.client_id !== credentials.basic.clientId) return sendClientAuthError(res, null);
+    const clientId = String(credentials.clientId || '');
+    const client = await oauthClients.resolveClient(pool, config, clientId);
+    if (!client || client.enabled === false || !oauthClients.authenticateClient(client, req, p)) return sendClientAuthError(res, client);
+    const scope = oauthClients.normalizeScopeRequest(p.scope, client);
+    if (!scope) return sendTokenError(res, 'invalid_scope');
+
+    let userCode;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const candidate = randomUserCode();
+      const exists = await pool.query('SELECT 1 FROM oauth_device_codes WHERE user_code = $1', [candidate]);
+      if (!exists.rowCount) { userCode = candidate; break; }
+    }
+    if (!userCode) throw new Error('unable to allocate user code');
+    const deviceCode = randomToken();
+    await pool.query(
+      `INSERT INTO oauth_device_codes (device_code_hash, user_code, client_id, scope, expires_at, interval_seconds)
+       VALUES ($1, $2, $3, $4, now() + ($5 || ' seconds')::interval, $6)`,
+      [sha256Hex(deviceCode), userCode, clientId, scope, String(DEVICE_CODE_TTL_SEC), DEVICE_CODE_INTERVAL_SEC]
+    );
+    const verificationUri = `${configIssuer(req)}/oauth/device`;
+    res.set('Cache-Control', 'no-store');
+    res.set('Pragma', 'no-cache');
+    return res.json({ device_code: deviceCode, user_code: userCode, verification_uri: verificationUri,
+      verification_uri_complete: `${verificationUri}?user_code=${encodeURIComponent(userCode)}`,
+      expires_in: DEVICE_CODE_TTL_SEC, interval: DEVICE_CODE_INTERVAL_SEC });
+  } catch (error) {
+    Logger.error('[OAuth授权] 设备码签发失败:', error.message);
+    return res.status(503).json({ error: 'temporarily_unavailable' });
+  }
+});
+
+router.get('/oauth/device', async (req, res) => {
+  await ensureOAuthTables();
+  if (!req.session.user) return res.redirect('/?error=login_required');
+  const userCode = String(req.query.user_code || '').toUpperCase();
+  const csrfToken = ensureCsrfToken(req) || '';
+  const esc = value => String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const page = body => res.set('Cache-Control', 'no-store').send(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>设备授权</title><main>${body}</main></html>`);
+  if (!userCode) return page(`<h1>输入设备显示的用户码</h1><form method="get" action="/oauth/device"><input name="user_code" required maxlength="9" autocomplete="one-time-code"><button>继续</button></form>`);
+  if (!/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(userCode)) return page('<p>用户码无效或已过期。</p>');
+  const found = await pool.query(
+    `SELECT d.user_code, d.client_id, d.scope, c.name FROM oauth_device_codes d
+       LEFT JOIN oauth_clients c ON c.client_id = d.client_id
+      WHERE d.user_code = $1 AND d.status = 'pending' AND d.expires_at > now()`, [userCode]
+  );
+  const row = found.rows[0];
+  if (!row) return page('<p>用户码无效、已过期或已使用。</p>');
+  return page(`<h1>授权设备</h1><p>${esc(row.name || row.client_id)} 请求权限：${esc(row.scope)}</p><p>确认此设备和权限后再继续。</p><form method="post" action="/oauth/device/authorize"><input type="hidden" name="_csrf" value="${esc(csrfToken)}"><input type="hidden" name="user_code" value="${esc(row.user_code)}"><button name="decision" value="approve">同意</button><button name="decision" value="deny">拒绝</button></form>`);
+});
+
+router.post('/oauth/device/authorize', requireAuth, csrfProtection, async (req, res) => {
+  await ensureOAuthTables();
+  const userCode = String(req.body?.user_code || '').toUpperCase();
+  const decision = req.body?.decision;
+  if (!/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(userCode) || !['approve', 'deny'].includes(decision)) return res.status(400).send('无效的设备授权请求');
+  const result = await pool.query(
+    `UPDATE oauth_device_codes SET status = $2, user_id = $3 WHERE user_code = $1
+      AND status = 'pending' AND expires_at > now() RETURNING client_id`,
+    [userCode, decision === 'approve' ? 'approved' : 'denied', req.session.user.id]
+  );
+  if (!result.rowCount) return res.status(400).send('用户码无效、已过期或已使用');
+  return res.send(decision === 'approve' ? '已批准设备授权，请返回设备继续。' : '已拒绝设备授权。');
+});
+
+router.post('/oauth/token', async (req, res) => {
+  try {
+    await ensureOAuthTables();
+    res.set('Cache-Control', 'no-store');
+    res.set('Pragma', 'no-cache');
+    if (!/^application\/x-www-form-urlencoded(?:\s*;|$)/i.test(String(req.headers['content-type'] || ''))) {
+      return sendTokenError(res, 'invalid_request', 'token requests must use application/x-www-form-urlencoded');
+    }
+    const p = req.body || {};
+    if (p.grant_type === 'urn:ietf:params:oauth:grant-type:device_code') {
+      return await handleDeviceCodeGrant(p, req, res);
+    }
     if (p.grant_type === 'authorization_code') {
       return await handleAuthorizationCodeGrant(p, req, res);
     }
@@ -458,12 +575,79 @@ router.post('/oauth/token', async (req, res) => {
   }
 });
 
+async function handleDeviceCodeGrant(p, req, res) {
+  const credentials = oauthClients.clientCredentials(req, p);
+  if (credentials.basic && p.client_id && p.client_id !== credentials.basic.clientId) return sendClientAuthError(res, null);
+  const clientId = String(credentials.clientId || '');
+  const deviceCode = String(p.device_code || '');
+  if (!clientId || !deviceCode) return sendTokenError(res, 'invalid_request', 'client_id and device_code are required');
+  const client = await oauthClients.resolveClient(pool, config, clientId);
+  if (!client || client.enabled === false || !oauthClients.authenticateClient(client, req, p)) return sendClientAuthError(res, client);
+
+  const hash = sha256Hex(deviceCode);
+  const conn = await pool.connect();
+  try {
+    await conn.query('BEGIN');
+    await conn.query("SET LOCAL statement_timeout = '5s'");
+    const result = await conn.query('SELECT * FROM oauth_device_codes WHERE device_code_hash = $1 FOR UPDATE', [hash]);
+    const device = result.rows[0];
+    if (!device || device.client_id !== clientId) {
+      await conn.query('ROLLBACK');
+      return sendTokenError(res, 'expired_token');
+    }
+    if (new Date(device.expires_at) <= new Date()) {
+      await conn.query('UPDATE oauth_device_codes SET status = \'consumed\' WHERE device_code_hash = $1', [hash]);
+      await conn.query('COMMIT');
+      return sendTokenError(res, 'expired_token');
+    }
+    if (device.status === 'consumed') {
+      await conn.query('ROLLBACK');
+      return sendTokenError(res, 'invalid_grant');
+    }
+    const elapsedMs = device.last_polled_at ? Date.now() - new Date(device.last_polled_at).getTime() : Infinity;
+    if (elapsedMs < device.interval_seconds * 1000) {
+      const interval = Math.min(device.interval_seconds + 5, DEVICE_CODE_MAX_INTERVAL_SEC);
+      await conn.query('UPDATE oauth_device_codes SET interval_seconds = $2, last_polled_at = now() WHERE device_code_hash = $1', [hash, interval]);
+      await conn.query('COMMIT');
+      return sendTokenError(res, 'slow_down');
+    }
+    await conn.query('UPDATE oauth_device_codes SET last_polled_at = now() WHERE device_code_hash = $1', [hash]);
+    if (device.status === 'pending') {
+      await conn.query('COMMIT');
+      return sendTokenError(res, 'authorization_pending');
+    }
+    if (device.status === 'denied') {
+      await conn.query('COMMIT');
+      return sendTokenError(res, 'access_denied');
+    }
+    if (device.status !== 'approved' || !device.user_id) {
+      await conn.query('ROLLBACK');
+      return sendTokenError(res, 'invalid_grant');
+    }
+    const accessToken = randomToken();
+    await conn.query(
+      `INSERT INTO oauth_tokens (token_hash, user_id, client_id, scope, kind, expires_at)
+       VALUES ($1, $2, $3, $4, 'access', now() + ($5 || ' seconds')::interval)`,
+      [sha256Hex(accessToken), device.user_id, clientId, device.scope, String(ACCESS_TTL_SEC)]
+    );
+    await conn.query("UPDATE oauth_device_codes SET status = 'consumed' WHERE device_code_hash = $1", [hash]);
+    await conn.query('COMMIT');
+    return res.json({ access_token: accessToken, token_type: 'Bearer', expires_in: ACCESS_TTL_SEC, scope: device.scope });
+  } catch (error) {
+    await conn.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
 async function handleAuthorizationCodeGrant(p, req, res) {
   const { code, code_verifier: verifier } = p;
   const credentials = oauthClients.clientCredentials(req, p);
   const clientId = credentials.clientId;
-  if (!code || !clientId || !verifier) {
-    return sendTokenError(res, 'invalid_request', 'code / client_id / code_verifier 均为必填');
+  const redirectUri = String(p.redirect_uri || '');
+  if (!code || !clientId || !verifier || !redirectUri) {
+    return sendTokenError(res, 'invalid_request', 'code / client_id / redirect_uri / code_verifier 均为必填');
   }
 
   const client = await oauthClients.resolveClient(pool, config, clientId);
@@ -473,7 +657,7 @@ async function handleAuthorizationCodeGrant(p, req, res) {
 
   const found = await pool.query(`SELECT * FROM oauth_auth_codes WHERE code = $1`, [String(code)]);
   const row = found.rows[0];
-  if (!row || row.client_id !== clientId) {
+  if (!row || row.client_id !== clientId || row.redirect_uri !== redirectUri) {
     return sendTokenError(res, 'invalid_grant');
   }
 
@@ -507,6 +691,7 @@ async function handleRefreshTokenGrant(p, req, res) {
   const presented = p.refresh_token;
   const credentials = oauthClients.clientCredentials(req, p);
   const clientId = credentials.clientId;
+  if (credentials.basic && p.client_id && p.client_id !== credentials.basic.clientId) return sendClientAuthError(res, null);
   if (!presented || !clientId) {
     return sendTokenError(res, 'invalid_request', 'refresh_token / client_id 均为必填');
   }
@@ -700,24 +885,29 @@ router.post('/oauth/revoke', async (req, res) => {
 
 // ---------- RFC 8414 元数据 ----------
 router.get('/.well-known/oauth-authorization-server', (req, res) => {
-  const issuer = process.env.OAUTH_ISSUER || configIssuer(req);
+  const configuredIssuer = process.env.OAUTH_ISSUER || config.oauth?.issuer || config.app?.publicOrigin;
+  const issuer = String(configuredIssuer || configIssuer(req)).replace(/\/+$/, '');
+  if (!/^https:\/\/[^/?#]+$/i.test(issuer)) return res.status(500).json({ error: 'server_error' });
   res.set('Cache-Control', 'public, max-age=300');
   res.json({
     issuer,
     authorization_endpoint: `${issuer}/oauth/authorize`,
     token_endpoint: `${issuer}/oauth/token`,
-    response_types: ['code'],
-    grant_types: ['authorization_code', 'refresh_token'],
-    code_challenge_methods: ['S256'],
+    device_authorization_endpoint: `${issuer}/oauth/device/code`,
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code', 'refresh_token', 'urn:ietf:params:oauth:grant-type:device_code'],
+    code_challenge_methods_supported: ['S256'],
     token_endpoint_auth_methods_supported: ['none', 'client_secret_basic', 'client_secret_post'],
     scopes_supported: Object.keys(oauthClients.SCOPE_DEFINITIONS),
   });
 });
 
 function configIssuer(req) {
-  const explicit = config.oauth?.issuer;
+  const explicit = config.oauth?.issuer || config.app?.publicOrigin;
   if (explicit) return String(explicit).replace(/\/+$/, '');
-  return `${req.protocol}://${req.get('host')}`;
+  const host = String(req.get('host') || '').toLowerCase();
+  if (!host || /[\r\n/@]/.test(host)) throw new Error('OAuth issuer must be configured behind an untrusted host boundary');
+  return `${req.protocol}://${host}`;
 }
 
 module.exports = router;

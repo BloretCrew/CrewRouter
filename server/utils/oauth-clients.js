@@ -82,6 +82,16 @@ const FORBIDDEN_SCHEMES = new Set([
 ]);
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 const CLIENT_TYPES = new Set(['public', 'confidential']);
+const PKCE_CHALLENGE_RE = /^[A-Za-z0-9_-]{43}$/;
+const PKCE_VERIFIER_RE = /^[A-Za-z0-9._~-]{43,128}$/;
+
+function isValidPkceChallenge(value) {
+  return typeof value === 'string' && PKCE_CHALLENGE_RE.test(value);
+}
+
+function isValidPkceVerifier(value) {
+  return typeof value === 'string' && PKCE_VERIFIER_RE.test(value);
+}
 
 function sha256Hex(value) {
   return crypto.createHash('sha256').update(String(value), 'utf8').digest('hex');
@@ -397,4 +407,6 @@ module.exports = {
   adminClientView,
   sha256Hex,
   timingSafeEqualHex,
+  isValidPkceChallenge,
+  isValidPkceVerifier,
 };

@@ -2,7 +2,8 @@ const crypto = require('crypto');
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 // These exchanges authenticate with the supplied token/code, never a browser session.
-const TOKEN_ENDPOINTS = new Set(['/oauth/token', '/oauth/revoke', '/oauth/github-actions']);
+const TOKEN_ENDPOINTS = new Set(['/oauth/token', '/oauth/revoke', '/oauth/github-actions', '/oauth/device/code']);
+const SESSION_AUTH_ENDPOINTS = new Set(['/oauth/device/authorize']);
 
 function allowedOrigins(req) {
   const configured = req.app?.locals?.csrfAllowedOrigins || [];
@@ -39,6 +40,11 @@ function csrfProtection(req, res, next) {
   if (req.authActor?.type === 'api_key') return next();
   const path = String(req.path || '').toLowerCase().replace(/\/+$/, '');
   if (req.method === 'POST' && TOKEN_ENDPOINTS.has(path)) return next();
+  if (req.method === 'POST' && SESSION_AUTH_ENDPOINTS.has(path) && req.session.user) {
+    const submitted = Buffer.from(String(req.body?._csrf || ''));
+    const expected = Buffer.from(String(req.session.csrfToken || ''));
+    if (submitted.length === expected.length && submitted.length > 0 && crypto.timingSafeEqual(submitted, expected)) return next();
+  }
   const suppliedOrigin = getOrigin(req);
   // Electron's main process exchanges a one-time code using JSON without browser
   // headers. A browser form or cross-origin fetch must still pass the normal guard.

@@ -113,6 +113,17 @@ test('scopes default to the client set and never escape it', async () => {
   assert.deepEqual(clients.normalizeScopes(['gateway:invoke', 'events:report']), ['gateway:invoke', 'events:report']);
 });
 
+test('PKCE challenge and verifier follow RFC 7636 syntax', () => {
+  assert.equal(clients.isValidPkceChallenge('A'.repeat(43)), true);
+  assert.equal(clients.isValidPkceChallenge('A'.repeat(42)), false);
+  assert.equal(clients.isValidPkceChallenge('A'.repeat(42) + '='), false);
+  assert.equal(clients.isValidPkceVerifier('A'.repeat(43)), true);
+  assert.equal(clients.isValidPkceVerifier('A'.repeat(128)), true);
+  assert.equal(clients.isValidPkceVerifier('A'.repeat(42)), false);
+  assert.equal(clients.isValidPkceVerifier('A'.repeat(129)), false);
+  assert.equal(clients.isValidPkceVerifier('bad verifier'.repeat(4)), false);
+});
+
 test('confidential clients require the correct secret', () => {
   assert.equal(clients.authenticateClient(confidentialClient, { headers: {} }, { client_id: 'server-app', client_secret: 'top-secret' }), true);
   assert.equal(clients.authenticateClient(confidentialClient, {

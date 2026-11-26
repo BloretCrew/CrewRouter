@@ -84,8 +84,16 @@ function loadOAuth(pool) {
     express: { Router: () => router },
     '../models/database': { pool },
     '../logger': { info() {}, warn() {}, error() {} },
-    '../config-loader': {},
-    '../middleware/auth': { requireAuth(_req, _res, next) { next(); } },
+    '../config-loader': { oauth: { issuer: 'https://router.example.test' } },
+    '../middleware/auth': { requireAuth(req, res, next) { if (!req.session?.user) return res.status(401).json({ error: 'login_required' }); next(); } },
+    '../middleware/csrf': {
+      ensureCsrfToken(req) { req.session.csrfToken ||= 'test-csrf-token'; return req.session.csrfToken; },
+      csrfProtection(req, res, next) {
+        if (req.path !== '/oauth/device/authorize') return next();
+        if (req.body?._csrf === req.session?.csrfToken && req.session?.csrfToken) return next();
+        return res.status(403).json({ error: 'CSRF 校验失败', type: 'csrf_failed' });
+      },
+    },
   };
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), {
     module,
@@ -163,9 +171,15 @@ function createOAuthCaller(routes) {
       redirect(status, url) { this.statusCode = status; this.location = url; return this; },
     };
     const request = {
-      query, body, headers, session, ip: '127.0.0.1', baseUrl: '', originalUrl: route,
+      query, body, headers: { 'content-type': 'application/x-www-form-urlencoded', ...headers }, session, path: route, method: 'POST', ip: '127.0.0.1', baseUrl: '', originalUrl: route,
       get() { return ''; },
     };
+    for (const middleware of handlers.slice(0, -1)) {
+      let continued = false;
+      await middleware(request, response, () => { continued = true; });
+      if (response.statusCode >= 400) return response;
+      if (!continued) return response;
+    }
     await handlers.at(-1)(request, response);
     return response;
   };
@@ -186,6 +200,13 @@ async function main() {
     await pool.query("INSERT INTO api_keys (id, user_id, enabled, name) VALUES (1, 1, TRUE, 'test')");
     const admin = loadAdmin(pool, ensureOAuthTables);
     const oauthCall = createOAuthCaller(oauth.routes);
+
+    const metadataHandlers = oauth.routes.get('GET /.well-known/oauth-authorization-server');
+    const metadataResponse = { statusCode: 200, headers: {}, status(value) { this.statusCode = value; return this; }, json(value) { this.body = value; return this; }, set(name, value) { this.headers[name] = value; return this; } };
+    metadataHandlers.at(-1)({ protocol: 'https', get() { return 'router.example.test'; } }, metadataResponse);
+    assert.equal(metadataResponse.body.issuer, 'https://router.example.test');
+    assert.equal(metadataResponse.body.device_authorization_endpoint, 'https://router.example.test/oauth/device/code');
+    assert.ok(metadataResponse.body.grant_types_supported.includes('urn:ietf:params:oauth:grant-type:device_code'));
 
     const columns = (await pool.query(`
       SELECT column_name FROM information_schema.columns
@@ -248,6 +269,64 @@ async function main() {
       code_challenge: challenge,
       code_challenge_method: 'S256',
     };
+    const deviceStart = await oauthCall('POST', '/oauth/device/code', {
+      body: { client_id: publicId, scope: 'gateway:invoke' },
+      session: {},
+    });
+    assert.equal(deviceStart.statusCode, 200);
+    assert.equal(deviceStart.headers['Cache-Control'], 'no-store');
+    assert.equal(deviceStart.body.expires_in, 600);
+    assert.equal(deviceStart.body.interval, 5);
+    assert.match(deviceStart.body.user_code, /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+    const deviceStored = (await pool.query('SELECT * FROM oauth_device_codes WHERE user_code = $1', [deviceStart.body.user_code])).rows[0];
+    const deviceApprovalPage = await oauthCall('GET', '/oauth/device', { query: { user_code: deviceStart.body.user_code }, session: { user: { id: 1, username: 'alice' } } });
+    assert.match(deviceApprovalPage.body, /Public App/);
+    assert.match(deviceApprovalPage.body, /gateway:invoke/);
+    assert.match(deviceApprovalPage.body, /name="_csrf" value="test-csrf-token"/);
+    const missingDeviceCsrf = await oauthCall('POST', '/oauth/device/authorize', {
+      body: { user_code: deviceStart.body.user_code, decision: 'approve' },
+      session: { user: { id: 1, username: 'alice' }, csrfToken: 'test-csrf-token' },
+    });
+    assert.equal(missingDeviceCsrf.statusCode, 403);
+    const deviceApproval = await oauthCall('POST', '/oauth/device/authorize', {
+      body: { user_code: deviceStart.body.user_code, decision: 'approve', _csrf: 'test-csrf-token' },
+      session: { user: { id: 1, username: 'alice' }, csrfToken: 'test-csrf-token' },
+    });
+    assert.equal(deviceApproval.statusCode, 200);
+    assert.equal(deviceStored.device_code_hash, oauthClients.sha256Hex(deviceStart.body.device_code));
+    assert.notEqual(deviceStored.device_code_hash, deviceStart.body.device_code);
+
+    const pollDeviceStart = await oauthCall('POST', '/oauth/device/code', {
+      body: { client_id: publicId, scope: 'gateway:invoke' }, session: {},
+    });
+    const pollStored = (await pool.query('SELECT * FROM oauth_device_codes WHERE user_code = $1', [pollDeviceStart.body.user_code])).rows[0];
+    const pending = await oauthCall('POST', '/oauth/token', {
+      body: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: publicId, device_code: pollDeviceStart.body.device_code },
+      session: {},
+    });
+    assert.equal(pending.statusCode, 400);
+    assert.equal(pending.body.error, 'authorization_pending');
+    await pool.query("UPDATE oauth_device_codes SET last_polled_at = now() WHERE device_code_hash = $1", [pollStored.device_code_hash]);
+    const tooFastDevice = await oauthCall('POST', '/oauth/token', {
+      body: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: publicId, device_code: pollDeviceStart.body.device_code },
+      session: {},
+    });
+    assert.equal(tooFastDevice.body.error, 'slow_down');
+    assert.equal((await pool.query('SELECT interval_seconds FROM oauth_device_codes WHERE device_code_hash = $1', [pollStored.device_code_hash])).rows[0].interval_seconds, 10);
+    await pool.query("UPDATE oauth_device_codes SET last_polled_at = now() - interval '11 seconds', status = 'approved', user_id = 1 WHERE device_code_hash = $1", [pollStored.device_code_hash]);
+    const deviceToken = await oauthCall('POST', '/oauth/token', {
+      body: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: publicId, device_code: pollDeviceStart.body.device_code },
+      session: {},
+    });
+    assert.equal(deviceToken.statusCode, 200);
+    assert.equal(deviceToken.body.token_type, 'Bearer');
+    assert.equal(deviceToken.body.scope, 'gateway:invoke');
+    const repeatedDeviceToken = await oauthCall('POST', '/oauth/token', {
+      body: { grant_type: 'urn:ietf:params:oauth:grant-type:device_code', client_id: publicId, device_code: pollDeviceStart.body.device_code },
+      session: {},
+    });
+    assert.equal(repeatedDeviceToken.body.error, 'invalid_grant');
+
     const publicInfo = await oauthCall('GET', '/oauth/authorize/info', { query: publicParams });
     assert.equal(publicInfo.statusCode, 200);
     assert.equal(publicInfo.body.client.type, 'public');
@@ -259,8 +338,13 @@ async function main() {
     const publicCallback = new URL(publicApprove.location);
     assert.equal(publicCallback.searchParams.get('state'), 'state-public');
     const publicCode = publicCallback.searchParams.get('code');
+    const badPkceMethod = await oauthCall('GET', '/oauth/authorize/info', {
+      query: { ...publicParams, code_challenge_method: undefined },
+    });
+    assert.equal(badPkceMethod.statusCode, 400);
+
     const publicToken = await oauthCall('POST', '/oauth/token', {
-      body: { grant_type: 'authorization_code', code: publicCode, client_id: publicId, code_verifier: verifier },
+      body: { grant_type: 'authorization_code', code: publicCode, client_id: publicId, redirect_uri: publicParams.redirect_uri, code_verifier: verifier },
     });
     assert.equal(publicToken.statusCode, 200);
     assert.match(publicToken.body.access_token, /^crh_/);
@@ -291,17 +375,17 @@ async function main() {
     assert.equal(confidentialApprove.statusCode, 302);
     const confidentialCode = new URL(confidentialApprove.location).searchParams.get('code');
     const missingSecret = await oauthCall('POST', '/oauth/token', {
-      body: { grant_type: 'authorization_code', code: confidentialCode, client_id: confidentialId, code_verifier: verifier },
+      body: { grant_type: 'authorization_code', code: confidentialCode, client_id: confidentialId, redirect_uri: confidentialParams.redirect_uri, code_verifier: verifier },
     });
     assert.equal(missingSecret.statusCode, 401);
     assert.equal(missingSecret.body.error, 'invalid_client');
     const wrongSecret = await oauthCall('POST', '/oauth/token', {
-      body: { grant_type: 'authorization_code', code: confidentialCode, code_verifier: verifier },
+      body: { grant_type: 'authorization_code', code: confidentialCode, client_id: confidentialId, redirect_uri: confidentialParams.redirect_uri, code_verifier: verifier },
       headers: { authorization: 'Basic ' + Buffer.from(`${confidentialId}:wrong`).toString('base64') },
     });
     assert.equal(wrongSecret.statusCode, 401);
     const confidentialToken = await oauthCall('POST', '/oauth/token', {
-      body: { grant_type: 'authorization_code', code: confidentialCode, code_verifier: verifier },
+      body: { grant_type: 'authorization_code', code: confidentialCode, client_id: confidentialId, redirect_uri: confidentialParams.redirect_uri, code_verifier: verifier },
       headers: { authorization: 'Basic ' + Buffer.from(`${confidentialId}:${secret}`).toString('base64') },
     });
     assert.equal(confidentialToken.statusCode, 200);
