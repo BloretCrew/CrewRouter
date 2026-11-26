@@ -7,7 +7,7 @@ on:
         description: Published beta release tag whose successful build artifacts should be published
         type: string
         required: true
-        default: v27.0.0-beta.3
+        default: v27.0.0-beta.4
       publish:
         description: Publish both validated packages to the npm beta dist-tag
         type: boolean

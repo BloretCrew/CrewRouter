@@ -128,4 +128,4 @@ cr dsh-plugin uninstall --profile standard
 
 ## 版本
 
-CLI 预发布版本使用年号版本 **27.0 Beta**。独立 npm 包 `@bloret-crew/crewrouter@27.0.0-beta.1` 已发布到 `beta` 标签；27.0.0-beta.3 是待 dry-run 的候选版本。可执行 `npm install -g @bloret-crew/crewrouter@27.0.0-beta.1` 固定安装已发布版。
+CLI 预发布版本使用年号版本 **27.0 Beta**。独立 npm 包 `@bloret-crew/crewrouter@27.0.0-beta.1` 已发布到 `beta` 标签；27.0.0-beta.4 是待 dry-run 的候选版本。可执行 `npm install -g @bloret-crew/crewrouter@27.0.0-beta.1` 固定安装已发布版。

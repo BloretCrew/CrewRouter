@@ -1,6 +1,6 @@
 # CrewRouter Desktop
 
-> 当前 27.0 Beta 候选版本：`27.0.0-beta.3`。建议首先使用 Remote 模式；Beta 不承诺开箱 Local Passport 登录。
+> 当前 27.0 Beta 候选版本：`27.0.0-beta.4`。建议首先使用 Remote 模式；Beta 不承诺开箱 Local Passport 登录。
 
 
 Electron 壳，复用 CrewRouter Web UI。Local 模式在本机启动真正的 CrewRouter Server（含内置 PostgreSQL），Remote 模式通过官方站选择实例或直接输入服务器地址，页面本身由目标 CrewRouter 提供。
