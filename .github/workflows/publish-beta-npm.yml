@@ -1,0 +1,125 @@
+name: Publish CrewRouter beta npm candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published beta release tag whose successful build artifacts should be published
+        type: string
+        required: true
+        default: v27.0.0-beta.3
+      publish:
+        description: Publish both validated packages to the npm beta dist-tag
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: crewrouter-beta-npm-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  validate-candidate:
+    name: Validate candidates from the successful release-tag run
+    runs-on: ubuntu-latest
+    outputs:
+      release-sha: ${{ steps.release.outputs.sha }}
+      release-version: ${{ steps.release.outputs.version }}
+      source-run-id: ${{ steps.release.outputs.run-id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Resolve exact tag and successful source run
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          case "$RELEASE_TAG" in
+            v27.0.0-beta.[0-9]*) ;;
+            *) echo "Refusing unsupported beta tag: $RELEASE_TAG"; exit 1 ;;
+          esac
+          git fetch --no-tags origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          release_sha="$(git rev-parse "$RELEASE_TAG^{commit}")"
+          version="${RELEASE_TAG#v}"
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/beta-release.yml/runs?head_sha=$release_sha&event=push&per_page=100")"
+          run_id="$(printf '%s' "$runs" | jq -r --arg sha "$release_sha" '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .status == "completed" and .conclusion == "success")] | sort_by(.run_number) | last | .id // empty')"
+          test -n "$run_id" || { echo "No successful beta-release run exists for $RELEASE_TAG ($release_sha)"; exit 1; }
+          printf 'sha=%s\nversion=%s\nrun-id=%s\n' "$release_sha" "$version" "$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download candidate packages from the exact release run
+        uses: actions/download-artifact@v4
+        with:
+          name: crewrouter-27-beta-npm-candidates-${{ steps.release.outputs.release-sha }}
+          run-id: ${{ steps.release.outputs.source-run-id }}
+          github-token: ${{ github.token }}
+          path: candidates
+      - name: Validate both package names and versions
+        env:
+          EXPECTED_VERSION: ${{ steps.release.outputs.release-version }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const expected = new Map([
+            [`bloret-crew-crewrouter-sdk-${process.env.EXPECTED_VERSION}.tgz`, '@bloret-crew/crewrouter-sdk'],
+            [`bloret-crew-crewrouter-${process.env.EXPECTED_VERSION}.tgz`, '@bloret-crew/crewrouter'],
+          ]);
+          for (const [file, name] of expected) {
+            const path = `candidates/${file}`;
+            if (!fs.existsSync(path)) throw new Error(`Missing candidate artifact ${file}`);
+            const raw = execFileSync('tar', ['-xOf', path, 'package/package.json'], { encoding: 'utf8' });
+            const manifest = JSON.parse(raw);
+            if (manifest.name !== name || manifest.version !== process.env.EXPECTED_VERSION) {
+              throw new Error(`${file}: expected ${name}@${process.env.EXPECTED_VERSION}, received ${manifest.name}@${manifest.version}`);
+            }
+          }
+          const extras = fs.readdirSync('candidates').filter(file => !expected.has(file));
+          if (extras.length) throw new Error(`Unexpected candidate files: ${extras.join(', ')}`);
+          NODE
+      - name: Preserve validated artifacts for the publish approval boundary
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-beta-npm-${{ github.run_id }}
+          path: candidates/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish validated npm beta packages
+    if: ${{ inputs.publish }}
+    needs: [validate-candidate]
+    runs-on: ubuntu-latest
+    environment: npm-beta
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: validated-beta-npm-${{ github.run_id }}
+          path: candidates
+      - name: Publish only the validated versions to beta
+        env:
+          PRODUCT_VERSION: ${{ needs.validate-candidate.outputs.release-version }}
+        run: |
+          for name in @bloret-crew/crewrouter-sdk @bloret-crew/crewrouter; do
+            encoded="${name/\//%2f}"
+            file="$RUNNER_TEMP/npm-${name//\//-}.json"
+            code=$(curl --silent --show-error --output "$file" --write-out '%{http_code}' "https://registry.npmjs.org/$encoded")
+            if [ "$code" = "404" ]; then continue; fi
+            test "$code" = "200" || { echo "npm registry lookup for $name returned HTTP $code"; exit 1; }
+            node -e 'const doc = require(process.argv[1]); if (doc.versions && doc.versions[process.env.PRODUCT_VERSION]) { console.error(`npm package ${doc.name} already has ${process.env.PRODUCT_VERSION}`); process.exit(1); }' "$file"
+          done
+          npm publish "candidates/bloret-crew-crewrouter-sdk-${PRODUCT_VERSION}.tgz" --access public --tag beta
+          npm publish "candidates/bloret-crew-crewrouter-${PRODUCT_VERSION}.tgz" --access public --tag beta

@@ -8,6 +8,7 @@ const files = [
   '.github/workflows/build-docker.yml',
   '.github/workflows/build-desktop.yml',
   '.github/workflows/beta-release.yml',
+  '.github/workflows/publish-beta-npm.yml',
 ];
 for (const file of files) {
   const doc = parse(await readFile(file, 'utf8'));
@@ -223,6 +224,17 @@ for (const required of ['limited preview', 'GA readiness gate', 'release owner a
 }
 const sdkOverview = await readFile('docs/sdk/README.md', 'utf8');
 if (!sdkOverview.includes('Limited preview only; not part of the client SDK stable-release commitment')) throw new Error('SDK overview must keep embedded server SDK outside the stable client commitment');
+const npmPublisher = parse(await readFile('.github/workflows/publish-beta-npm.yml', 'utf8'));
+const publisherInputs = npmPublisher.on.workflow_dispatch.inputs;
+const publisherValidation = npmPublisher.jobs['validate-candidate'];
+const publisherRun = publisherValidation.steps.find(step => step.name === 'Resolve exact tag and successful source run')?.run || '';
+const publisherManifestCheck = publisherValidation.steps.find(step => step.name === 'Validate both package names and versions')?.run || '';
+const publisherPublish = npmPublisher.jobs.publish;
+const publisherPublishRun = publisherPublish.steps.find(step => step.name === 'Publish only the validated versions to beta')?.run || '';
+if (publisherInputs.publish?.default !== false || publisherPublish.if !== "${{ inputs.publish }}" || publisherPublish.environment !== 'npm-beta' || publisherPublish.permissions?.['id-token'] !== 'write') throw new Error('Standalone npm publisher must require explicit publish approval and protected OIDC environment');
+if (!publisherRun.includes('refs/tags/$RELEASE_TAG') || !publisherRun.includes('head_sha == $sha') || !publisherRun.includes('event == "push"') || !publisherRun.includes('conclusion == "success"')) throw new Error('Standalone npm publisher must source candidates from the successful exact tag workflow run');
+for (const required of ['manifest.name !== name', 'manifest.version !== process.env.EXPECTED_VERSION', 'Unexpected candidate files']) if (!publisherManifestCheck.includes(required)) throw new Error(`Standalone npm publisher candidate validation omits ${required}`);
+if (!publisherPublishRun.includes('--tag beta') || publisherPublishRun.includes('--tag latest')) throw new Error('Standalone npm publisher must never move the latest dist-tag');
 const sdkVersioning = await readFile('docs/sdk/versioning.md', 'utf8');
 const embeddedCi = parse(await readFile('.github/workflows/sdk-ci.yml', 'utf8'));
 const embeddedMatrixJob = embeddedCi.jobs['embedded-support-matrix'];
