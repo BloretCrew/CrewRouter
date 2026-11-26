@@ -21,7 +21,7 @@ test('model library renders framed model cards, key selector and status in a rea
   const runtime = makeRuntime();
   runtime.libraryProvider = { team_id: 2, provider_id: 'p1', provider_name: 'Provider A' };
   const page = buildPages(runtime).find(item => item.id === 'model-library');
-  const tty = terminal(100, 42);
+  const tty = terminal(160, 42);
   const task = runPagedTui({ ...tty, env: { NO_COLOR: '1' }, api: fixtureApi(), pages: [page], authenticate: async () => true });
   try {
     await until(() => tty.screen().includes('Provider A'));
@@ -35,7 +35,7 @@ test('model library renders framed model cards, key selector and status in a rea
     assert.equal(runtime.libraryProvider.provider_id, 'p1');
     await until(() => tty.screen().includes('Model One Alias'));
     const screen = tty.screen();
-    for (const text of ['┌', '┐', '│ Model One Alias', '输入价：0.1', '测试通过']) assert.ok(screen.includes(text), `terminal missing ${text}:\n${screen}`);
+    for (const text of ['┌', '┐', '│  Model One Alias', '│  输入价：0.1', '│  测试通过']) assert.ok(screen.includes(text), `terminal missing ${text}:\n${screen}`);
     const modelSection = (await page.load(fixtureApi())).sections.find(section => section.title.includes('模型目录'));
     assert.equal(modelSection.cards.length, 2);
     assert.ok(modelSection.cards.every(card => typeof card.run === 'function'));

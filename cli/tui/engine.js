@@ -260,11 +260,11 @@ async function runPagedTui({
         }
         const cards = Array.isArray(section.cards) ? section.cards : [];
         if (cards.length) {
-          const count = w >= 116 ? 3 : w >= 76 ? 2 : 1;
+          const count = Number(section.cardColumns) || (w >= 116 ? 3 : w >= 68 ? 2 : 1);
           for (let start = 0; start < cards.length; start += count) {
             const group = cards.slice(start, start + count);
             const gap = 2;
-            const cell = Math.max(8, Math.floor((w - gap * (group.length - 1)) / group.length));
+            const cell = Math.max(8, Math.floor((w - 2 - gap * (group.length - 1)) / group.length));
             const details = [];
             const groupActions = group.map(card => ({ label: card.label || '模型卡片', run: ctx => card.run?.(ctx) }));
             group.forEach((card, index) => {
@@ -272,12 +272,12 @@ async function runPagedTui({
               const value = clean(text(card.value));
               const labelWidth = Math.max(6, Math.min(cell - 3, width(label)));
               const shortLabel = cut(label, labelWidth);
-              const labelLine = wrap(`${shortLabel}  ${cut(value, Math.max(1, cell - width(shortLabel) - 2))}`, Math.max(1, cell - 4));
-              details.push({ card, action: groupActions[index], label: labelLine, lines: wrap(text(card.detail), Math.max(1, cell - 4)) });
+              const labelLine = wrap(`${shortLabel}  ${cut(value, Math.max(1, cell - width(shortLabel) - 2))}`, Math.max(1, cell - 6));
+              details.push({ card, action: groupActions[index], label: labelLine, lines: wrap(text(card.detail), Math.max(1, cell - 6)) });
             });
             const cardHeight = Math.max(1, ...details.map(item => item.lines.length + item.label.length));
             const borderTop = [];
-            details.forEach((item, index) => { if (index) borderTop.push({ text: '  ', fg: 'fg' }); borderTop.push({ text: '┌' + '─'.repeat(Math.max(1, cell - 2)) + '┐', fg: 'line' }); });
+            details.forEach((item, index) => { if (index) borderTop.push({ text: '  ', fg: 'fg' }); borderTop.push({ text: '┌' + '─'.repeat(Math.max(1, cell)) + '┐', fg: 'line' }); });
             addSpans(borderTop, 'muted', null, 0);
             for (let line = 0; line < cardHeight; line++) {
               const cardSpans = [];
@@ -286,8 +286,8 @@ async function runPagedTui({
                 const labelLineCount = item.label.length;
                 const isLabel = line < labelLineCount;
                 const content = isLabel ? item.label[line] : item.lines[line - labelLineCount] || '';
-                cardSpans.push({ text: '│ ', fg: 'line' }, { text: content, fg: isLabel ? 'rose' : 'mute', bold: isLabel });
-                cardSpans.push({ text: ' '.repeat(Math.max(0, cell - 2 - width(content))), fg: 'fg' }, { text: '│', fg: 'line' });
+                cardSpans.push({ text: '│  ', fg: 'line' }, { text: content, fg: isLabel ? 'rose' : 'mute', bold: isLabel });
+                cardSpans.push({ text: ' '.repeat(Math.max(0, cell - 4 - width(content))), fg: 'fg' }, { text: '  │', fg: 'line' });
               });
               const actions = details.map(item => item.action);
               addSpans(cardSpans, line === 0 ? 'heading' : 'muted', { label: '模型卡片', run: async ctx => {
@@ -298,7 +298,7 @@ async function runPagedTui({
             const bottomSpans = [];
             details.forEach((item, index) => {
               if (index) bottomSpans.push({ text: '  ', fg: 'fg' });
-              bottomSpans.push({ text: '└' + '─'.repeat(Math.max(1, cell - 2)) + '┘', fg: 'line' });
+              bottomSpans.push({ text: '└' + '─'.repeat(Math.max(1, cell)) + '┘', fg: 'line' });
             });
             addSpans(bottomSpans, 'muted', null, 0);
           }
@@ -555,7 +555,7 @@ async function runPagedTui({
     const freshness = st.lastUpdated ? `更新 ${new Date(st.lastUpdated).toLocaleTimeString('zh-CN', { hour12: false })}${Date.now() - st.lastUpdated > 30000 ? ' · 可能过期' : ''}` : '';
     const pageStatus = st.data?.status ? text(st.data.status) : '';
     const info = st.loading ? '正在加载…' : st.refreshing ? '正在刷新…' : busy ? status || '正在处理…' : status;
-    const statusText = [busy || st.loading || st.refreshing ? info : '', pageStatus, freshness].filter(Boolean).join('  ·  ');
+    const statusText = [info, pageStatus, freshness].filter(Boolean).join('  ·  ');
     const visibleStatus = cut(clean(statusText), innerW);
     put(height - 2, sidebarText(height - 2), leftPad + ui(pad(visibleStatus, innerW), 'mute', 'bg') + leftPad);
     const hints = [
