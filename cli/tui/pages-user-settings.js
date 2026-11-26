@@ -4,16 +4,57 @@ const { text } = require('./pages-common');
 
 function securitySettingsPage(runtime) {
   return {
-    id: 'security-settings', label: '安全设置', description: '双重验证需要二维码/密码挑战；Passkey 注册依赖浏览器 WebAuthn。',
+    id: 'security-settings', label: '安全设置', description: '管理双重认证（2FA）和通行密钥（Passkeys）。',
     async load(api) {
-      const result = await Promise.allSettled([api('/api/2fa/status')]);
-      const status = result[0].status === 'fulfilled' ? result[0].value : {};
-      return { sections: [{ title: '双重验证', rows: [
-        { label: `状态：${status.enabled ? '已启用' : '未启用'}` },
-        ...(status.enabled ? [{ label: `启用时间：${text(status.enabledAt || status.enabled_at)}` }] : []),
-        ...(result[0].status === 'rejected' ? [{ label: result[0].reason.message || '双重验证状态暂不可用' }] : []),
-      ] }, { title: 'Passkey', rows: [{ label: 'Passkey 注册和验证需要浏览器 WebAuthn；请从网页用户设置管理。' }] }], actions: [
-        { label: '在浏览器打开安全设置', run: async ctx => { const url = `${runtime.client.baseUrl}/console#settings`; const opened = require('../lib/context').openBrowser(url); ctx.notify(opened ? '已在浏览器打开安全设置。' : `请在浏览器访问：${url}`); } },
+      const [statusResult, passkeysResult] = await Promise.allSettled([api('/api/2fa/status'), api('/api/passkey/list')]);
+      const status = statusResult.status === 'fulfilled' ? statusResult.value : {};
+      const passkeys = passkeysResult.status === 'fulfilled' && Array.isArray(passkeysResult.value) ? passkeysResult.value : [];
+      const enabled = status.enabled === true;
+      const passkeyRows = passkeys.map((passkey, index) => {
+        const device = passkey.deviceType === 'multiDevice' ? '同步通行密钥' : '本机通行密钥';
+        const credentialId = String(passkey.credentialID || '');
+        const shortId = credentialId ? `${credentialId.slice(0, 12)}…` : '编号未知';
+        return { label: `${device} ${index + 1} · ${shortId}`, detail: `创建于：${passkey.createdAt ? text(passkey.createdAt) : '未知'}`, run: async ctx => {
+          const choice = await ctx.choose(`${device} · ${shortId}`, [{ label: '删除此通行密钥', value: 'delete' }, { label: '返回', value: 'cancel' }]);
+          if (choice !== 'delete') return;
+          if (!credentialId || !await ctx.confirm('删除通行密钥', '此设备将不能再使用该通行密钥登录。继续？')) return;
+          await api(`/api/passkey/${encodeURIComponent(credentialId)}`, { method: 'DELETE' });
+          ctx.notify('通行密钥已删除。'); await ctx.refresh();
+        } };
+      });
+      const sections = [
+        { title: '双重认证（2FA）', description: '使用身份验证器应用增强账户安全。启用时需要扫描二维码或手动录入密钥，并验证 6 位验证码。', rows: [
+          { label: `状态：${enabled ? '已启用' : '未启用'}` },
+          ...(enabled && (status.enabledAt || status.enabled_at) ? [{ label: `启用时间：${text(status.enabledAt || status.enabled_at)}` }] : []),
+          ...(statusResult.status === 'rejected' ? [{ label: `双重认证状态读取失败：${statusResult.reason.message || '未知错误'}` }] : []),
+        ], actions: [
+          ...(!enabled && statusResult.status === 'fulfilled' ? [{ label: '开始设置双重认证', run: async ctx => {
+            const generated = await api('/api/2fa/generate');
+            if (!generated.secret) { await ctx.show('无法生成双重认证密钥', '服务器未返回可录入的身份验证器密钥。'); return; }
+            await ctx.show('双重认证密钥（仅本次显示）', `在身份验证器应用中添加 CrewRouter 账户，并手动输入以下 Base32 密钥：\n\n${generated.secret}\n\n不要将密钥发送给他人；验证成功前不要关闭此页面。`);
+            const token = String(await ctx.ask('输入身份验证器当前显示的 6 位验证码', { secret: true }) || '').replace(/\s/g, '');
+            if (!/^\d{6}$/.test(token)) { await ctx.show('验证码格式错误', '验证码必须是 6 位数字。当前设置密钥仍有效；请重新输入身份验证器显示的验证码。'); return; }
+            const result = await api('/api/2fa/enable', { method: 'POST', body: { token } });
+            if (!result.success) { await ctx.show('双重认证未启用', `${result.error || '验证码验证失败。'}\n当前设置密钥仍有效；请确认身份验证器时间准确后重试，若已取消设置，请重新生成密钥。`); return; }
+            ctx.notify('双重认证已启用。'); await ctx.refresh();
+          } }] : []),
+          ...(enabled ? [{ label: '关闭双重认证', run: async ctx => {
+            const password = await ctx.ask('输入当前账户密码以关闭双重认证', { secret: true });
+            if (!password) return;
+            if (!await ctx.confirm('关闭双重认证', '关闭后，登录账户将不再需要 6 位验证码。继续？')) return;
+            const result = await api('/api/2fa/disable', { method: 'POST', body: { password } });
+            if (!result.success) { await ctx.show('无法关闭双重认证', result.error || '密码验证失败。'); return; }
+            ctx.notify('双重认证已关闭。'); await ctx.refresh();
+          } }] : []),
+        ] },
+        { title: '通行密钥（Passkeys）', description: '使用指纹、面部识别或硬件密钥登录。注册需要支持 WebAuthn 的浏览器；TUI 可查看或删除已有密钥。', rows: [
+          ...(passkeysResult.status === 'rejected' ? [{ label: `通行密钥列表读取失败：${passkeysResult.reason.message || '未知错误'}` }] : passkeyRows.length ? passkeyRows : [{ label: '暂无绑定的通行密钥。' }]),
+        ], actions: [
+          { label: '在网页中添加通行密钥', run: async ctx => { const url = `${runtime.client.baseUrl}/console#settings`; const opened = require('../lib/context').openBrowser(url); ctx.notify(opened ? '已在浏览器打开安全设置中的通行密钥注册区域。' : `请在浏览器打开安全设置添加通行密钥：${url}`); } },
+        ] },
+      ];
+      return { sections, actions: [
+        { label: '在浏览器打开安全设置', toolbar: true, run: async ctx => { const url = `${runtime.client.baseUrl}/console#settings`; const opened = require('../lib/context').openBrowser(url); ctx.notify(opened ? '已在浏览器打开安全设置。' : `请在浏览器访问：${url}`); } },
         { label: '刷新状态', run: ctx => ctx.refresh() },
       ] };
     },
