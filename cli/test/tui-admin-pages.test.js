@@ -91,11 +91,13 @@ test('admin user edits use named Teams and refundable balances with confirmed ne
   const row = data.sections.find(section => section.title === '用户列表').rows[0];
   const formValues = { email: 'new@example.test', email_verified: true, isAdmin: false, balance: '12', team_id: '3', rate_limit_rpm: '20', rate_limit_tpm: '200', tags: 'ops,urgent' };
   let fields;
-  await row.run({ choose: async () => 'edit', form: async (_title, formFields) => { fields = formFields; return formValues; }, confirm: async () => false, notify() {}, refresh: async () => {} });
+  let formDescription = '';
+  await row.run({ choose: async () => 'edit', form: async (_title, formFields, options) => { fields = formFields; formDescription = options.description; return formValues; }, confirm: async () => false, notify() {}, refresh: async () => {} });
   assert.equal(calls.some(call => call.options.method === 'PUT'), false);
   const teamField = fields.find(field => field.name === 'team_id');
   assert.deepEqual(teamField.options, [{ value: '', label: '未指定 Team' }, { value: '2', label: 'Team Two' }, { value: '3', label: 'Team Three' }]);
-  assert.ok(fields.find(field => field.name === 'refund_info').value.includes('15.50 积分'));
+  assert.match(formDescription, /可退款余额：15\.50 积分（2 条兑换记录/);
+  assert.equal(fields.some(field => field.name === 'refund_info'), false, 'read-only balance summary must not become an editable form field');
   await row.run({ choose: async () => 'edit', form: async () => formValues, confirm: async () => true, notify() {}, refresh: async () => {} });
   const write = calls.find(call => call.options.method === 'PUT');
   assert.deepEqual(write.options.body, { email: 'new@example.test', email_verified: true, isAdmin: false, balance: 12, team_id: 3, rate_limit_rpm: 20, rate_limit_tpm: 200, tags: ['ops', 'urgent'] });
@@ -581,14 +583,21 @@ test('admin error details use readable basic fields and separate original respon
   assert.match(row.cells.model, /重试中/);
   let body = '';
   await row.run({ choose: async () => 'overview', show: async (_title, content) => { body = content; } });
+  assert.match(body, /请求类型：未知/);
   assert.match(body, /请求状态码：500/);
   assert.match(body, /模型：m1/);
-  assert.match(body, /最终失败|中间失败/);
+  assert.match(body, /中间失败（系统仍在尝试备用模型）/);
   assert.match(body, /响应时间：123 毫秒/);
   assert.match(body, /cr_live_x••••/);
   assert.doesNotMatch(body, /status_code|api_key_id|error_body/);
   await row.run({ choose: async () => 'response', show: async (_title, content) => { body = content; } });
   assert.match(body, /"type": "timeout"/);
+  const finalData = await page.load(async () => ({ logs: [{ error_type: 'auth', is_final: true }], total: 1, page: 1 }));
+  await finalData.sections[0].rows[0].run({ choose: async () => 'overview', show: async (_title, content) => { body = content; } });
+  assert.match(body, /请求结果：最终失败（已返回客户端）/);
+  const unknownData = await page.load(async () => ({ logs: [{ error_type: 'auth' }], total: 1, page: 1 }));
+  await unknownData.sections[0].rows[0].run({ choose: async () => 'overview', show: async (_title, content) => { body = content; } });
+  assert.match(body, /请求结果：未知/);
 });
 
 test('admin popup notices mirror web fields and confirmed lifecycle operations', async () => {

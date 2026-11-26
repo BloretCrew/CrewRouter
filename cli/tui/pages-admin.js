@@ -275,11 +275,10 @@ function createAdminPages(runtime) {
               { name: 'isAdmin', label: '管理员权限', value: item.is_admin === true, options: [{ value: false, label: '普通用户' }, { value: true, label: '管理员' }] },
               { name: 'balance', label: '积分余额（留空不修改）', value: '' },
               { name: 'team_id', label: '所属 Team', value: item.team_id == null ? '' : String(item.team_id), options: [{ value: '', label: '未指定 Team' }, ...teams.map(team => ({ value: String(team.id), label: team.name }))] },
-              { name: 'refund_info', label: '可退款余额（只读）', value: `${availableRefund.toFixed(2)} 积分 · ${codeBalances.length} 条兑换记录`, disabled: true },
               { name: 'rate_limit_rpm', label: '每分钟请求数限额（0 表示不限制；留空不修改）', value: '' },
               { name: 'rate_limit_tpm', label: '每分钟 Token 数限额（0 表示不限制；留空不修改）', value: '' },
               { name: 'tags', label: '用户标签（逗号分隔）', value: Array.isArray(item.tags) ? item.tags.join(', ') : '' },
-            ], { description: 'Team 从名称列表中选择；留空表示不修改现有积分和速率限额。' });
+            ], { description: `Team 从名称列表中选择；留空表示不修改现有积分和速率限额。可退款余额：${availableRefund.toFixed(2)} 积分（${codeBalances.length} 条兑换记录；选择“退款”可查看明细并按净额退款）。` });
             if (!values) return;
             const body = { email: values.email, email_verified: values.email_verified === true, isAdmin: values.isAdmin === true, tags: String(values.tags || '').split(',').map(tag => tag.trim()).filter(Boolean) };
             if (String(values.balance ?? '') !== '') body.balance = Number(values.balance);
@@ -344,8 +343,8 @@ function createAdminPages(runtime) {
               `时间：${formatTime(item.created_at)}`, `用户：${item.username || (item.user_id ? `用户编号 ${item.user_id}` : '未知')}`,
               `模型：${item.model_name || item.model_id || '未知模型'}`, item.series && `模型系列：${item.series}`,
               `上游模型 ID：${item.upstream_model_id || item.model_id || '未知'}`, `供应商：${item.provider_name || item.provider_id || '未知供应商'}`,
-              `请求状态码：${item.status_code ?? '未知'}`, `错误类别：${item.error_type || '未分类'}`,
-              `请求结果：${item.is_final ? '最终失败（已返回客户端）' : '中间失败（系统仍在尝试备用模型）'}`,
+              `请求类型：${item.request_type || '未知'}`, `请求状态码：${item.status_code ?? '未知'}`, `错误类别：${item.error_type || '未分类'}`,
+              `请求结果：${item.is_final === true ? '最终失败（已返回客户端）' : item.is_final === false ? '中间失败（系统仍在尝试备用模型）' : '未知'}`,
               `响应时间：${item.latency_ms != null ? `${item.latency_ms} 毫秒` : '未知'}`, `请求来源地址：${item.ip_address || '未知'}`,
               `调用密钥：${item.key_prefix ? `${item.key_prefix}••••${item.key_name ? ` · ${item.key_name}` : ''}` : '未知'}`,
             ].filter(Boolean).join('\n');
