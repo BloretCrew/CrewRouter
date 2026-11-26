@@ -25,7 +25,7 @@ test('model library renders a key selector, wrapped model cards and key status i
   try {
     await until(() => tty.screen().includes('Model One Alias'));
     const screen = tty.screen();
-    for (const text of ['选择 API Key', 'Model One Alias', 'Team A · Provider A', '倍率：计费倍率 ×1.20', '输入价：0.', '测试通过 · 21 毫秒', 'Featured', 'Key：Main Key · 当前模型：Bound Model']) assert.ok(screen.includes(text), `terminal is missing ${text}:\n${screen}`);
+    for (const text of ['选择 API Key', '┌', '┐', '│ Model One Alias', 'Team A · Provider A', '倍率：计费倍率 ×1.20', '输入价：0.1', '测试通过 · 21 毫秒', 'Key：Main Key · 当前模型：Bound Model']) assert.ok(screen.includes(text), `terminal is missing ${text}:\n${screen}`);
   } finally { tty.input.write('q'); await task; }
 });
 
