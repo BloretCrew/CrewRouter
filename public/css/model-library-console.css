@@ -155,6 +155,7 @@
 #modelLibraryPage .ml-key-choice-model { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
 #modelLibraryPage .ml-key-choice-name { flex: 0 1 auto; }
 #modelLibraryPage .ml-key-choice-model { flex: 0 1 auto; max-inline-size: 150px; padding: 2px 7px; border: 1px solid var(--lg-divider); border-radius: var(--lg-radius-pill); background: var(--lg-accent-tint); color: var(--lg-accent-ink); font-size: 11px; font-weight: 500; line-height: 1.2; }
+#modelLibraryPage .ml-key-choice-model.is-unbound { background: color-mix(in srgb, var(--lg-red) 14%, transparent); color: var(--lg-red-ink); border-color: color-mix(in srgb, var(--lg-red) 30%, transparent); }
 #modelLibraryPage .ml-key-expand { flex: 0 0 auto; color: var(--lg-accent-ink); }
 #modelLibraryPage .ml-key-choice:hover { background: var(--lg-chip-hover); color: var(--lg-fg); }
 #modelLibraryPage .ml-key-choice.is-selected { border-color: color-mix(in srgb, var(--lg-accent) 35%, transparent); background: var(--lg-accent-tint); color: var(--lg-accent-ink); font-weight: 600; }

@@ -66,17 +66,35 @@ async function main() {
   const check = async (expression, label) => assert.ok(await cdp.evaluate(expression), label);
   try {
     await cdp.send('Page.enable');
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `
+      const originalFetch = window.fetch;
+      window.fetch = async (...args) => {
+        const response = await originalFetch(...args);
+        if (String(args[0]) === '/api/user/api-keys' && (!args[1]?.method || args[1].method === 'GET')) {
+          const keys = await response.clone().json();
+          const aiKeys = keys.map((key, i) => ({...key, permissions: [['gateway.chat'], ['gateway.messages'], ['gateway.responses'], ['gateway.gemini']][i % 4]}));
+          return new Response(JSON.stringify([...aiKeys, {...keys[0], id: 99991, name: 'Non-AI test key', permissions: ['gateway.models', 'account.profile.read']}, {...keys[0], id: 99992, name: 'Empty permissions key', permissions: []}]), {status: 200, headers: {'Content-Type': 'application/json'}});
+        }
+        return response;
+      };
+    ` });
     for (const width of [1440, 390]) {
       cdp.mobile = width === 390;
       await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: cdp.mobile });
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 390 });
+      await cdp.send('Page.navigate', { url: 'about:blank' });
+      await sleep(200);
       await cdp.send('Page.navigate', { url: `${base}/console#modelLibrary` });
       await sleep(1500);
       for (let i = 0; i < 100; i++) {
         if (await cdp.evaluate(`typeof app !== 'undefined' && !!document.querySelector('.ml-key-choice-model')`)) break;
         await sleep(100);
       }
+      await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+      await cdp.evaluate(`window.scrollTo({top: 0, behavior: 'instant'})`);
+      await sleep(600);
       await check(`app._libraryKeys.slice(0, 5).every((key, i) => document.querySelectorAll('.ml-key-choice-model')[i]?.textContent === String(key.current_model_name || key.current_model_id || t('未绑定')))`, '初始模型与 Key 绑定一致');
+      await check(`!app._libraryKeys.some(key => [99991, 99992].includes(key.id))`, '无 AI 权限的 Key 从模型库排除');
       assert.ok(await cdp.click('#libraryKeyChips .ml-key-choice:not(.ml-key-expand):nth-of-type(2)'), '点击切换 Key');
       await check(`document.querySelector('.ml-key-choice.is-selected .ml-key-choice-model').textContent === String(app._getSelectedLibraryKey().current_model_name || app._getSelectedLibraryKey().current_model_id || t('未绑定'))`, '选中状态与绑定同步');
       assert.ok(await cdp.click('.ml-key-choice.is-selected'), '再次点击打开菜单');
@@ -112,6 +130,19 @@ async function main() {
       await check(`document.querySelector('.ml-key-choice.is-selected .ml-key-choice-model').textContent === 'Updated model' && document.querySelector('#libraryStickyKeyBtn').textContent.includes('Updated model') && document.querySelector('#modelLibraryBindingSummary .binding-model-name').textContent === 'Updated model'`, '绑定更新后按钮、摘要、悬浮栏同步');
       await cdp.evaluate(`app._libraryKeys[0].current_model_name = null; app._renderLibraryKeySelector()`);
       await check(`document.querySelector('.ml-key-choice-model').textContent === 'model-0'`, '缺少模型名称时回退模型 ID');
+      await check(`document.querySelectorAll('.ml-key-choice-model')[1].classList.contains('is-unbound') && getComputedStyle(document.querySelectorAll('.ml-key-choice-model')[1]).color !== getComputedStyle(document.querySelector('.ml-key-choice-model')).color`, '未绑定胶囊使用红色');
+      await cdp.evaluate(`app.navigateTo('apiKeys')`);
+      for (let i = 0; i < 100; i++) {
+        if (await cdp.evaluate(`!!document.querySelector('.api-key-group-no-ai')`)) break;
+        await sleep(100);
+      }
+      await check(`document.querySelector('.api-key-group-no-ai').textContent.includes('Non-AI test key') && document.querySelector('.api-key-group-no-ai').textContent.includes('Empty permissions key') && document.querySelectorAll('.api-key-group-no-ai .api-key-card').length === 2`, '密钥管理保留无 AI Key 并单独分类');
+      await cdp.evaluate(`app.navigateTo('modelLibrary')`);
+      await sleep(1000);
+      await check(`app._libraryKeys.length > 0 && !app._libraryKeys.some(key => [99991, 99992].includes(key.id))`, '返回模型库仍过滤无 AI Key');
+      await cdp.evaluate(`app._libraryKeysExpanded = true; app._librarySelectedKeyId = null; const nativeFetch = window.fetch; window.fetch = async (...args) => String(args[0]) === '/api/user/api-keys' ? new Response(JSON.stringify([{id: 99991, enabled: true, permissions: []}])) : nativeFetch(...args); app._loadLibraryKeys()`);
+      await sleep(500);
+      await check(`app._libraryNoAiKeys && !app._libraryAllKeysClosed && app._libraryKeys.length === 0 && document.querySelector('#modelLibraryBindingSummary').textContent.includes('去配置 AI 权限') && !document.querySelector('.ml-key-choice')`, '只有无 AI Key 时显示权限配置空态');
       console.log(`PASS ${width}px: 模型展示、Key 切换、工具菜单、展开收起、未绑定、长名称、转义及绑定刷新同步`);
     }
   } finally {

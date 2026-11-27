@@ -92,6 +92,7 @@ class ConsoleApp {
     this._libraryKeys = [];
     /** 用户的 Key 全部被关闭（禁用）时为 true，用于顶部空态文案 */
     this._libraryAllKeysClosed = false;
+    this._libraryNoAiKeys = false;
     /** 模型库绑定目标：'default' | harness id（如 claude_code） */
     this._libraryBindTarget = 'default';
     this._libraryKeyBubbleCloser = null;
@@ -735,6 +736,12 @@ class ConsoleApp {
     }
   }
 
+  _keyHasAiCapability(key) {
+    const permissions = Array.isArray(key?.permissions) ? key.permissions : [];
+    return ['gateway.chat', 'gateway.messages', 'gateway.responses', 'gateway.gemini']
+      .some(permission => permissions.includes(permission));
+  }
+
   async loadApiKeys() {
     const container = setBloraState('apiKeysList', 'loading');
     if (container && !(this._lastApiKeys || []).length) {
@@ -777,8 +784,9 @@ class ConsoleApp {
       }
       this._setApiKeysSearchVisible(true);
 
-      const normalKeys = apiKeys.filter(key => key.key_type === 'normal');
-      const coKeys = apiKeys.filter(key => key.key_type === 'co_key');
+      const normalKeys = apiKeys.filter(key => key.key_type === 'normal' && this._keyHasAiCapability(key));
+      const coKeys = apiKeys.filter(key => key.key_type === 'co_key' && this._keyHasAiCapability(key));
+      const nonAiKeys = apiKeys.filter(key => !this._keyHasAiCapability(key));
       const renderGroup = (title, hint, keys, groupClass) => !keys.length ? '' : `
         <section class="api-key-group ${groupClass}">
           <div class="api-key-group-header">
@@ -800,6 +808,7 @@ class ConsoleApp {
       setHTML(container, `<div class="api-key-groups">
         ${[...groupedNormalKeys.entries()].map(([name, keys]) => renderGroup(name ? escapeHtml(name) : t('未分组'), name ? t('API Key 分组') : t('仅自己管理的密钥'), keys, 'api-key-group-normal')).join('')}
         ${renderGroup('Co-Key', t('已共享给成员，或由其他用户共享给您'), coKeys, 'api-key-group-cokey')}
+        ${renderGroup(t('无 AI 功能'), t('未开放 AI 接口，可继续用于其他已授权功能'), nonAiKeys, 'api-key-group-no-ai')}
       </div>
       <div id="apiKeysFilterEmpty" class="ak-filter-empty" hidden>
         <strong>${escapeHtml(t('没有匹配的密钥'))}</strong>
@@ -12238,7 +12247,7 @@ ${extractorBody}
     const noKeys = !this._libraryKeys || this._libraryKeys.length === 0;
     // Key 全部被关闭时，引导动作是去启用而不是去创建
     const keyCtaHtml = noKeys
-      ? `<button type="button" onclick="app.navigateTo('apiKeys')">${this._libraryAllKeysClosed ? t('去启用 API Key') : t('创建 API Key')}</button>`
+      ? `<button type="button" onclick="app.navigateTo('apiKeys')">${this._libraryNoAiKeys ? t('去配置 AI 权限') : this._libraryAllKeysClosed ? t('去启用 API Key') : t('创建 API Key')}</button>`
       : '';
 
     const starredModels = libraryData.starred_models || [];
@@ -13445,6 +13454,7 @@ ${extractorBody}
     this._libraryKeys = [];
     this._libraryKeysExpanded = false;
     this._libraryAllKeysClosed = false;
+    this._libraryNoAiKeys = false;
     try {
       const res = await fetch('/api/user/api-keys');
       if (!res.ok) {
@@ -13461,8 +13471,10 @@ ${extractorBody}
         return;
       }
       // 已关闭（已禁用）的 Key 不进入模型库顶部的切换与绑定区域
-      const keys = allKeys.filter(k => k.enabled !== false);
-      this._libraryAllKeysClosed = keys.length === 0;
+      const aiKeys = allKeys.filter(k => this._keyHasAiCapability(k));
+      const keys = aiKeys.filter(k => k.enabled !== false);
+      this._libraryNoAiKeys = aiKeys.length === 0;
+      this._libraryAllKeysClosed = aiKeys.length > 0 && keys.length === 0;
       this._libraryKeys = keys;
 
       // 优先保留用户已选 Key；否则选绑定了当前模型的 Key；否则选第一个
@@ -13527,9 +13539,9 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-empty">
           <span class="binding-empty-icon" data-icon="key-round" aria-hidden="true"></span>
-          <div class="binding-empty-title">${allClosed ? t('API Key 都已关闭') : t('还没有 API Key')}</div>
-          <div class="binding-empty-desc">${t('绑定模型前需要一个可用的 Key')}</div>
-          <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.navigateTo('apiKeys')">${allClosed ? t('去启用 API Key') : t('去创建 API Key')}</button>
+          <div class="binding-empty-title">${this._libraryNoAiKeys ? t('暂无具备 AI 功能的 API Key') : allClosed ? t('API Key 都已关闭') : t('还没有 API Key')}</div>
+          <div class="binding-empty-desc">${this._libraryNoAiKeys ? t('请为密钥开放至少一个 AI 接口权限') : t('绑定模型前需要一个可用的 Key')}</div>
+          <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.navigateTo('apiKeys')">${this._libraryNoAiKeys ? t('去配置 AI 权限') : allClosed ? t('去启用 API Key') : t('去创建 API Key')}</button>
         </div>`);
       this._renderLibraryStickyKeyBtn();
       return;
@@ -13683,7 +13695,7 @@ ${extractorBody}
       ${groupEntries.map(([groupName, groupKeys], index) => `<div class="ml-key-choice-group"><span class="ml-key-choice-group-title">${escapeHtml(groupName)}</span>${groupKeys.map(key => {
         const keyName = key.name || 'API Key';
         const modelName = key.current_model_name || key.current_model_id || t('未绑定');
-        return `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" title="${escapeHtml(`${keyName} → ${modelName}`)}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)"><span class="ml-key-choice-name">${escapeHtml(keyName)}</span><span class="ml-key-choice-model">${escapeHtml(String(modelName))}</span></button>`;
+        return `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" title="${escapeHtml(`${keyName} → ${modelName}`)}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)"><span class="ml-key-choice-name">${escapeHtml(keyName)}</span><span class="ml-key-choice-model${!key.current_model_id && !key.current_model_name ? ' is-unbound' : ''}">${escapeHtml(String(modelName))}</span></button>`;
       }).join('')}${index === groupEntries.length - 1 ? expandButton : ''}</div>`).join('')}
     </div>`;
     setHTML(chipsContainer, html);
@@ -14185,7 +14197,7 @@ ${extractorBody}
         : ''}
       ${modelName
         ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(modelName)}</span>`
-        : `<span class="blora-tag" data-variant="warning">${t('未绑定')}</span>`}
+        : `<span class="blora-tag" data-variant="danger">${t('未绑定')}</span>`}
       <span class="ml-sticky-key-chevron" data-icon="chevron-down" aria-hidden="true"></span>
     `);
   }
@@ -14345,7 +14357,7 @@ ${extractorBody}
 
     if (!this._libraryKeys?.length) {
       // Key 被全部关闭与从未创建 Key 的引导文案不同
-      this.showToast(this._libraryAllKeysClosed ? t('API Key 已全部关闭，请先启用') : t('请先创建 API Key'), 'error');
+      this.showToast(this._libraryNoAiKeys ? t('请先为 API Key 开放 AI 接口权限') : this._libraryAllKeysClosed ? t('API Key 已全部关闭，请先启用') : t('请先创建 API Key'), 'error');
       this.navigateTo('apiKeys');
       return;
     }
