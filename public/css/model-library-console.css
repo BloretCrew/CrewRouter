@@ -814,6 +814,9 @@ body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item {
   color: var(--lg-fg);
 }
 body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item:hover { background: var(--lg-chip-bg); color: var(--lg-fg); }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item.is-danger { color: var(--lg-red-ink); }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item:disabled { opacity: .45; cursor: default; }
+body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item:focus-visible { outline: 2px solid var(--lg-accent); outline-offset: -2px; }
 body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item.active { background: var(--lg-accent-tint); color: var(--lg-accent-ink); }
 body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item-main { font-size: 13.5px; }
 body.blora-page #libraryKeyBubbleMenu .library-key-bubble-item-meta { color: var(--lg-fg-secondary); font-size: 12px; }

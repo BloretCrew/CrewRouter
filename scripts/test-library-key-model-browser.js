@@ -99,6 +99,39 @@ async function main() {
       await check(`document.querySelector('.ml-key-choice.is-selected .ml-key-choice-model').textContent === String(app._getSelectedLibraryKey().current_model_name || app._getSelectedLibraryKey().current_model_id || t('未绑定'))`, '选中状态与绑定同步');
       assert.ok(await cdp.click('.ml-key-choice.is-selected'), '再次点击打开菜单');
       await check(`app._isLibraryKeyBubbleOpen()`, '工具菜单正常打开');
+      await check(`!document.querySelector('#libraryKeyBubbleMenu [onclick*="onLibraryKeyBubbleHarness("]') && document.querySelector('#libraryKeyBubbleMenu [onclick*="toggleLibraryKeyHarnessSubmenu"]').textContent.includes('按 Harness 工具绑定')`, '主菜单收起 Harness 工具');
+      assert.ok(await cdp.click('#libraryKeyBubbleMenu [onclick*="toggleLibraryKeyHarnessSubmenu"]'), '打开 Harness 子菜单');
+      await check(`document.querySelectorAll('#libraryKeyBubbleMenu [onclick*="onLibraryKeyBubbleHarness("]').length === app._libraryHarnessList().length`, '子菜单包含全部 Harness');
+      assert.ok(await cdp.click('#libraryKeyBubbleMenu [onclick*="toggleLibraryKeyHarnessSubmenu"]'), '返回 Key 主菜单');
+      await check(`!!document.querySelector('#libraryKeyBubbleMenu [onclick*="removeLibraryKeyBinding"]') && document.querySelectorAll('#libraryKeyBubbleMenu [onclick*="onLibraryKeyBubbleManage"]').length >= 4`, '移除绑定与管理入口可用');
+      assert.ok(await cdp.click('#libraryKeyBubbleMenu [onclick*="toggleLibraryKeyHarnessSubmenu"]'), '再次打开工具子菜单');
+      const harnessId = await cdp.evaluate(`app._libraryHarnessList()[0].id`);
+      assert.ok(await cdp.click('#libraryKeyBubbleMenu [onclick*="onLibraryKeyBubbleHarness("]'), '选择 Harness 绑定');
+      await check(`app._libraryBindTarget === ${JSON.stringify(harnessId)} && !app._isLibraryKeyBubbleOpen()`, '选择工具后进入独立绑定模式');
+      await cdp.evaluate(`app.exitLibraryHarnessBindMode()`);
+      assert.ok(await cdp.click('.ml-key-choice.is-selected'), '返回默认绑定菜单');
+
+      await cdp.evaluate(`window.__bindingWrites = []; const realFetch = window.fetch; window.fetch = async (...args) => {
+        if (args[1]?.method === 'PUT' && String(args[0]).startsWith('/api/user/api-keys/') && String(args[0]).endsWith('/models')) {
+          window.__bindingWrites.push(JSON.parse(args[1].body));
+          return new Response(JSON.stringify({success: true}), {status: 200});
+        }
+        return realFetch(...args);
+      }`);
+      assert.ok(await cdp.click('#libraryKeyBubbleMenu [onclick*="removeLibraryKeyBinding"]'), '点击移除默认绑定');
+      assert.ok(await cdp.click('[data-dialog-cancel]'), '取消移除');
+      await check(`window.__bindingWrites.length === 0 && !!app._getSelectedLibraryKey().current_model_id`, '取消保留绑定');
+      assert.ok(await cdp.click('.ml-key-choice.is-selected'), '重新打开 Key 菜单');
+      assert.ok(await cdp.click('#libraryKeyBubbleMenu [onclick*="removeLibraryKeyBinding"]'), '重新移除');
+      assert.ok(await cdp.click('[data-dialog-confirm]'), '确认移除');
+      await check(`window.__bindingWrites.length === 1 && window.__bindingWrites[0].modelIds.length === 0 && !app._getSelectedLibraryKey().current_model_id && document.querySelector('.ml-key-choice.is-selected .is-unbound') && document.querySelector('#libraryStickyKeyBtn [data-variant="danger"]')`, '移除后按钮、摘要与悬浮栏同步未绑定');
+      assert.ok(await cdp.click('.ml-key-choice.is-selected'), '未绑定 Key 菜单');
+      await check(`document.querySelector('#libraryKeyBubbleMenu [onclick*="removeLibraryKeyBinding"]').disabled`, '无绑定时禁用移除');
+      assert.ok(await cdp.click('#libraryKeyBubbleMenu [onclick*=\"onLibraryKeyBubbleManage(\'permissions\')\"]'), '打开权限管理');
+      await check(`app.currentPage === 'apiKeys' && !!app._currentPermissionsKeyId`, '管理入口导航并打开当前 Key 权限');
+      await cdp.evaluate(`app.closeModals(); app.navigateTo('modelLibrary')`);
+      await sleep(1000);
+
       await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', windowsVirtualKeyCode: 27 });
       await sleep(350);
       // 边界夹具仅修改隔离演示页面的内存数据。
@@ -143,7 +176,7 @@ async function main() {
       await cdp.evaluate(`app._libraryKeysExpanded = true; app._librarySelectedKeyId = null; const nativeFetch = window.fetch; window.fetch = async (...args) => String(args[0]) === '/api/user/api-keys' ? new Response(JSON.stringify([{id: 99991, enabled: true, permissions: []}])) : nativeFetch(...args); app._loadLibraryKeys()`);
       await sleep(500);
       await check(`app._libraryNoAiKeys && !app._libraryAllKeysClosed && app._libraryKeys.length === 0 && document.querySelector('#modelLibraryBindingSummary').textContent.includes('去配置 AI 权限') && !document.querySelector('.ml-key-choice')`, '只有无 AI Key 时显示权限配置空态');
-      console.log(`PASS ${width}px: 模型展示、Key 切换、工具菜单、展开收起、未绑定、长名称、转义及绑定刷新同步`);
+      console.log(`PASS ${width}px: 模型展示、Harness 子菜单与模式切换、移除确认/取消、管理跳转及绑定刷新同步`);
     }
   } finally {
     cdp.ws.close();

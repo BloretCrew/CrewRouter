@@ -13766,7 +13766,7 @@ ${extractorBody}
     return !!(menu && menu.classList.contains('is-open') && !menu.classList.contains('is-closing'));
   }
 
-  _openLibraryKeyBubble(keyId, anchorEl) {
+  _openLibraryKeyBubble(keyId, anchorEl, submenu = false) {
     const key = (this._libraryKeys || []).find(k => k.id === keyId);
     if (!key) return;
 
@@ -13777,7 +13777,8 @@ ${extractorBody}
     }
 
     const menu = this._ensureLibraryKeyBubbleEl();
-    const defaultModel = key.current_model_name || t('未绑定');
+    const defaultModel = key.current_model_name || key.current_model_id || t('未绑定');
+    this._libraryKeyBubbleAnchor = anchorEl || this._libraryKeyBubbleAnchor;
     const requestMappingCount = Array.isArray(key.request_model_bindings) ? key.request_model_bindings.length : 0;
     const harnessItems = this._libraryHarnessList().map(h => {
       const bound = this._getKeyHarnessBinding(key, h.id);
@@ -13794,7 +13795,23 @@ ${extractorBody}
         </button>`;
     }).join('');
 
-    setHTML(menu, `
+    const managementItems = [
+      ['models', '模型队列'], ['options', '密钥选项'],
+      ...(key.is_owner !== false ? [['permissions', '权限管理'], ['group', '设置分组']] : []),
+      ['usage', '用量详情'], ['manage', '管理此 Key']
+    ].map(([action, label]) => `<button type="button" class="library-key-bubble-item" role="menuitem" onclick="app.onLibraryKeyBubbleManage('${action}')"><span class="library-key-bubble-item-main">${escapeHtml(t(label))}</span></button>`).join('');
+    const bindTarget = this._libraryBindTarget || 'default';
+    const hasBinding = bindTarget === 'default'
+      ? !!(key.current_model_id || key.current_model_name)
+      : !!this._getKeyHarnessBinding(key, bindTarget);
+    setHTML(menu, submenu ? `
+      <button type="button" class="library-key-bubble-item" role="menuitem" onclick="app.toggleLibraryKeyHarnessSubmenu(false)">
+        <span class="library-key-bubble-item-main">← ${escapeHtml(t('返回 Key 菜单'))}</span>
+      </button>
+      <div class="expand-dropdown-divider"></div>
+      <div class="library-key-bubble-section-label">${escapeHtml(t('按 Harness 工具绑定'))}</div>
+      ${harnessItems}
+    ` : `
       <button type="button" class="library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleLocate()">
         <span class="library-key-bubble-item-main">跳转到绑定模型</span>
@@ -13813,8 +13830,17 @@ ${extractorBody}
         <span class="library-key-bubble-item-meta">${escapeHtml(t('{count} 条规则', { count: requestMappingCount }))}</span>
       </button>
       <div class="expand-dropdown-divider"></div>
-      <div class="library-key-bubble-section-label">按工具绑定</div>
-      ${harnessItems}
+      <button type="button" class="library-key-bubble-item" role="menuitem" aria-haspopup="menu" aria-expanded="false"
+              onclick="app.toggleLibraryKeyHarnessSubmenu(true)">
+        <span class="library-key-bubble-item-main">${escapeHtml(t('按 Harness 工具绑定'))}</span>
+        <span aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="library-key-bubble-item is-danger" role="menuitem" ${hasBinding ? '' : 'disabled'} onclick="app.removeLibraryKeyBinding()">
+        <span class="library-key-bubble-item-main">${escapeHtml(bindTarget === 'default' ? t('移除默认绑定') : t('移除当前 Harness 绑定'))}</span>
+      </button>
+      <div class="expand-dropdown-divider"></div>
+      <div class="library-key-bubble-section-label">${escapeHtml(t('Key 管理'))}</div>
+      ${managementItems}
       <div class="expand-dropdown-divider"></div>
       <button type="button" class="library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleExportConfig()">
@@ -13829,6 +13855,7 @@ ${extractorBody}
 
     // 先以收起态显示，测量尺寸后再定位并播放打开动画
     menu.hidden = false;
+    menu.scrollTop = 0;
     menu.classList.remove('is-open', 'is-closing', 'origin-top-right');
     menu.style.visibility = 'hidden';
     menu.style.left = '0px';
@@ -13897,6 +13924,63 @@ ${extractorBody}
       menu.classList.remove('is-closing', 'is-open', 'origin-top-right');
       menu.hidden = true;
     }, 160);
+  }
+
+  toggleLibraryKeyHarnessSubmenu(open) {
+    this._openLibraryKeyBubble(this._librarySelectedKeyId, this._libraryKeyBubbleAnchor, open);
+    document.querySelector('#libraryKeyBubbleMenu button')?.focus({ preventScroll: true });
+  }
+
+  async onLibraryKeyBubbleManage(action) {
+    const keyId = this._librarySelectedKeyId;
+    if (!keyId) return;
+    this.closeLibraryKeyBubble();
+    if (action === 'usage') {
+      window.location.href = `/usage?keyId=${encodeURIComponent(String(keyId))}`;
+      return;
+    }
+    await this.navigateTo('apiKeys');
+    const handlers = {
+      models: () => this.showKeyModels(keyId),
+      options: () => this.showKeyOptions(keyId),
+      permissions: () => this.showKeyPermissions(keyId),
+      group: () => this.editApiKeyGroup(keyId)
+    };
+    if (handlers[action]) await handlers[action]();
+    else document.querySelector(`.api-key-card[data-key-id="${Number(keyId)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  async removeLibraryKeyBinding() {
+    const key = this._getSelectedLibraryKey();
+    if (!key) return;
+    const target = this._libraryBindTarget || 'default';
+    this.closeLibraryKeyBubble();
+    const message = target === 'default'
+      ? t('将清空此 Key 的默认模型队列；Harness 单独绑定和请求名映射会保留。')
+      : t('移除此 Harness 的单独绑定后，将跟随默认模型。');
+    if (!await Dialog.confirm(t('移除模型绑定'), message, { danger: true, size: 'sm', confirmText: t('移除绑定') })) return;
+    if (this._librarySelectedKeyId !== key.id) return;
+    if (target !== 'default') return this.clearLibraryHarnessBinding(target);
+    try {
+      const res = await fetch(`/api/user/api-keys/${key.id}/models`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelIds: [] })
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || t('移除绑定失败'));
+      }
+      key.current_model_id = null;
+      key.current_model_name = null;
+      key.current_model_provider_name = null;
+      if (this._librarySelectedKeyId === key.id) this._libraryCurrentModel = null;
+      this._renderLibraryKeySelector();
+      this._updateLibraryBindingBar();
+      this._refreshExpandedProviderLists();
+      this.showToast(t('已移除默认模型绑定'), 'success');
+    } catch (error) {
+      this.showToast(error.message || t('移除绑定失败'), 'error');
+    }
   }
 
   onLibraryKeyBubbleLocate() {
