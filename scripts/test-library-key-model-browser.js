@@ -95,6 +95,15 @@ async function main() {
       await check(`document.querySelectorAll('.ml-key-choice-model').length === 5 && document.querySelectorAll('.ml-key-choice-model')[1].textContent === t('未绑定')`, '未绑定与默认折叠');
       await check(`document.querySelector('.ml-key-choice-model').textContent === '<Model & "long">'.repeat(12) && document.querySelector('.ml-key-choice').title.includes('<Model & "long">') && !document.querySelector('.ml-key-choice model')`, '特殊字符安全及完整提示');
       await check(`[...document.querySelectorAll('.ml-key-choice')].every(el => el.getBoundingClientRect().right <= innerWidth) && document.documentElement.scrollWidth <= innerWidth`, '长名称无横向溢出');
+      await check(`[...document.querySelectorAll('.ml-key-choice-model')].every(model => {
+        const name = model.previousElementSibling.getBoundingClientRect();
+        const pill = model.getBoundingClientRect();
+        const style = getComputedStyle(model);
+        return Math.abs((name.top + name.height / 2) - (pill.top + pill.height / 2)) < 1
+          && pill.left >= name.right && pill.width > 14 && name.width > 0
+          && parseFloat(style.borderTopLeftRadius) >= pill.height / 2
+          && style.backgroundColor !== 'rgba(0, 0, 0, 0)';
+      })`, 'Key 名称与模型单行居中，模型显示为胶囊');
       assert.ok(await cdp.click('.ml-key-expand'), '展开 Key');
       await check(`document.querySelectorAll('.ml-key-choice-model').length === 7`, '展开后所有 Key 显示模型');
       assert.ok(await cdp.click('.ml-key-expand'), '收起 Key');
