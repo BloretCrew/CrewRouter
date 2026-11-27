@@ -150,6 +150,9 @@
 #modelLibraryPage .ml-key-choice-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-inline-size: 0; }
 #modelLibraryPage .ml-key-choice-group-title { flex-basis: 100%; color: var(--lg-fg-secondary); font-size: 11px; font-weight: 600; }
 #modelLibraryPage .ml-key-choice { min-block-size: 32px; max-inline-size: 220px; overflow: hidden; padding: 5px 12px; border: 1px solid var(--lg-divider); border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); color: var(--lg-fg-secondary); font: 500 13px/1.2 var(--lg-font); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+#modelLibraryPage .ml-key-choice-name,
+#modelLibraryPage .ml-key-choice-model { display: block; overflow: hidden; text-overflow: ellipsis; }
+#modelLibraryPage .ml-key-choice-model { margin-block-start: 3px; font-size: 11px; font-weight: 400; opacity: .8; }
 #modelLibraryPage .ml-key-expand { flex: 0 0 auto; color: var(--lg-accent-ink); }
 #modelLibraryPage .ml-key-choice:hover { background: var(--lg-chip-hover); color: var(--lg-fg); }
 #modelLibraryPage .ml-key-choice.is-selected { border-color: color-mix(in srgb, var(--lg-accent) 35%, transparent); background: var(--lg-accent-tint); color: var(--lg-accent-ink); font-weight: 600; }

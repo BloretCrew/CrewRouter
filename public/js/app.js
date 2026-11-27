@@ -13680,7 +13680,11 @@ ${extractorBody}
         : '';
     const groupEntries = [...groups.entries()];
     const html = `<div class="ml-key-choices" role="group" aria-label="${escapeHtml(t('切换 Key'))}">
-      ${groupEntries.map(([groupName, groupKeys], index) => `<div class="ml-key-choice-group"><span class="ml-key-choice-group-title">${escapeHtml(groupName)}</span>${groupKeys.map(key => `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${escapeHtml(key.name || 'API Key')}</button>`).join('')}${index === groupEntries.length - 1 ? expandButton : ''}</div>`).join('')}
+      ${groupEntries.map(([groupName, groupKeys], index) => `<div class="ml-key-choice-group"><span class="ml-key-choice-group-title">${escapeHtml(groupName)}</span>${groupKeys.map(key => {
+        const keyName = key.name || 'API Key';
+        const modelName = key.current_model_name || key.current_model_id || t('未绑定');
+        return `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" title="${escapeHtml(`${keyName} → ${modelName}`)}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)"><span class="ml-key-choice-name">${escapeHtml(keyName)}</span><span class="ml-key-choice-model">${escapeHtml(String(modelName))}</span></button>`;
+      }).join('')}${index === groupEntries.length - 1 ? expandButton : ''}</div>`).join('')}
     </div>`;
     setHTML(chipsContainer, html);
     this._renderLibraryStickyKeyBtn();
