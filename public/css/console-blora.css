@@ -403,14 +403,27 @@
 }
 
 @media (max-width: 640px) {
-  .blora-page .sidebar { width: 260px; }
-  .blora-page .sidebar.open { width: 260px; }
+  .blora-page .sidebar { width: min(18rem, calc(100vw - 3rem)); }
+  .blora-page .sidebar.open { width: min(18rem, calc(100vw - 3rem)); }
   .blora-page .sidebar-footer { flex-direction: row; }
   .blora-page .sidebar-footer .user-info { flex: 1; }
   .blora-page .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
   .blora-page .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
   .blora-page .content-header h1 { font-size: var(--blora-text-xl); }
+  .blora-page .content-header .mobile-hamburger { min-width: 2.75rem; min-height: 2.75rem; }
+  .blora-page :is(button, a, .nav-item, blora-select)::part(trigger) { min-height: 2.75rem; }
+  .blora-page :is(button, a, .nav-item) { -webkit-tap-highlight-color: transparent; }
+  .blora-page .page { min-width: 0; }
+  .blora-page .content-header,
+  .blora-page .content-section { min-width: 0; }
   .blora-page .content-section { padding: var(--blora-space-4); border-radius: var(--blora-radius-md); }
   .blora-page .section-header { align-items: flex-start; flex-wrap: wrap; gap: var(--blora-space-3); }
   .blora-page .content-header .theme-toggle { gap: var(--blora-space-1); }
+}
+
+@media (max-width: 640px) {
+  .blora-page #mobileSidebarDrawer::part(panel) {
+    inline-size: min(19rem, calc(100vw - 2.5rem));
+    max-inline-size: 90vw;
+  }
 }
