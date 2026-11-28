@@ -15485,6 +15485,109 @@
       "contractVersion": 1
     },
     {
+      "operationId": "oauth.device.list",
+      "method": "GET",
+      "path": "/oauth/device",
+      "aliases": [],
+      "module": "server/routes/oauth.js",
+      "mount": "/",
+      "feature": "oauth",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": null,
+        "contentTypes": [],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "oauth.device.authorize.create",
+      "method": "POST",
+      "path": "/oauth/device/authorize",
+      "aliases": [],
+      "module": "server/routes/oauth.js",
+      "mount": "/",
+      "feature": "oauth",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
+      "operationId": "oauth.device.code.create",
+      "method": "POST",
+      "path": "/oauth/device/code",
+      "aliases": [],
+      "module": "server/routes/oauth.js",
+      "mount": "/",
+      "feature": "oauth",
+      "permission": null,
+      "permissionGroup": null,
+      "adminOnly": false,
+      "authModes": [
+        "session"
+      ],
+      "streaming": false,
+      "dynamic": false,
+      "request": {
+        "body": "json",
+        "contentTypes": [
+          "application/json"
+        ],
+        "schemaRef": null
+      },
+      "response": {
+        "kind": "json",
+        "schemaRef": null,
+        "schemaStatus": "untyped"
+      },
+      "limits": {
+        "body": "2mb"
+      },
+      "sdkStatus": "excluded",
+      "exclusion": "permission_not_configured",
+      "contractVersion": 1
+    },
+    {
       "operationId": "oauth.githubActions.create",
       "method": "POST",
       "path": "/oauth/github-actions",

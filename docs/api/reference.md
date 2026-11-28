@@ -497,6 +497,9 @@
 | `oauth.authorize.approve` | POST | `/oauth/authorize/approve` | — | session | no |
 | `oauth.authorize.info.list` | GET | `/oauth/authorize/info` | — | session | no |
 | `oauth.desktopSession.create` | POST | `/oauth/desktop-session` | — | public | no |
+| `oauth.device.list` | GET | `/oauth/device` | — | session | no |
+| `oauth.device.authorize.create` | POST | `/oauth/device/authorize` | — | session | no |
+| `oauth.device.code.create` | POST | `/oauth/device/code` | — | session | no |
 | `oauth.githubActions.create` | POST | `/oauth/github-actions` | — | session | no |
 | `oauth.revoke` | POST | `/oauth/revoke` | — | public | no |
 | `oauth.token.create` | POST | `/oauth/token` | — | public | no |

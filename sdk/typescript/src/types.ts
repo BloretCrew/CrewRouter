@@ -172,6 +172,27 @@ export interface ApiKeyRequestModelBindingsResponse {
   available_harnesses: AvailableHarness[];
 }
 
+export interface ApiKeyRequestModelBindingInput {
+  request_model_name: string;
+  harness?: string | null;
+  model_id: string;
+}
+
+export interface ApiKeyRequestModelBindingsPut {
+  bindings: ApiKeyRequestModelBindingInput[];
+}
+
+export interface ApiKeyRequestModelBindingSaved {
+  requestModelName: string;
+  harness: string | null;
+  modelId: string;
+}
+
+export interface ApiKeyRequestModelBindingsUpdateResponse {
+  success: true;
+  bindings: ApiKeyRequestModelBindingSaved[];
+}
+
 export interface ApiKeyFusionConfig {
   panel_models: string[];
   judge_model_id: string;

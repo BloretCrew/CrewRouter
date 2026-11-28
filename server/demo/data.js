@@ -74,6 +74,10 @@ const DEMO_API_KEYS = [
       { model_id: 'gpt-4.1', name: 'GPT-4.1', sort_order: 0 },
       { model_id: 'deepseek-chat', name: 'DeepSeek V3', sort_order: 1 }
     ],
+    request_model_bindings: [
+      { request_model_name: 'fast-chat', harness: null, model_id: 'deepseek-chat' },
+      { request_model_name: 'fast-chat', harness: 'codex', model_id: 'gpt-4.1' }
+    ],
     current_model_provider_name: 'OpenAI',
     current_model_test_ok: true, current_model_test_latency_ms: 320, current_model_test_tokens_per_second: 45.2, current_model_test_tested_at: '2025-06-28T12:00:00Z',
     is_system: false, enabled: true, created_at: '2025-01-15T10:00:00Z', last_used_at: '2025-06-28T14:30:00Z', expires_at: null,

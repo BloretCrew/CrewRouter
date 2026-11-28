@@ -415,6 +415,19 @@ function managementSchemas() {
       request_model_name: { type: 'string' }, harness: nullableString, model_id: { type: 'string' },
       name: nullableString, provider_name: nullableString,
     }, ['request_model_name', 'model_id']),
+    ApiKeyRequestModelBindingsPut: {
+      ...object({
+        bindings: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyRequestModelBinding' } },
+      }, ['bindings']),
+      description: 'Complete replacement of the Key request-name mappings. Names are trimmed and lowercased. At most 100 entries; names are at most 255 characters and may not contain control characters or use the reserved fusion prefix. A null harness means every Harness; a harness-scoped rule wins over the general rule with the same name. Every target model must be authorized for the Key owner.',
+    },
+    ApiKeyRequestModelBindingSaved: object({
+      requestModelName: { type: 'string' }, harness: nullableString, modelId: { type: 'string' },
+    }, ['requestModelName', 'modelId']),
+    ApiKeyRequestModelBindingsUpdateResponse: object({
+      success: { const: true },
+      bindings: { type: 'array', items: { $ref: '#/components/schemas/ApiKeyRequestModelBindingSaved' } },
+    }, ['success', 'bindings']),
     ApiKeyMember: object({
       id: { type: 'integer' }, username: { type: 'string' }, email: nullableString,
     }, ['id', 'username']),
@@ -866,6 +879,7 @@ function managementResponseSchema(operationId) {
     'user.apiKeys.byId.models.list': { $ref: '#/components/schemas/ApiKeyModelsResponse' },
     'user.apiKeys.byId.harnessModels.list': { $ref: '#/components/schemas/ApiKeyHarnessModelsResponse' },
     'user.apiKeys.byId.requestModelBindings.list': { $ref: '#/components/schemas/ApiKeyRequestModelBindingsResponse' },
+    'user.apiKeys.byId.requestModelBindings.update': { $ref: '#/components/schemas/ApiKeyRequestModelBindingsUpdateResponse' },
     'user.apiKeys.byId.models.update': { $ref: '#/components/schemas/ApiKeyModelsUpdateResponse' },
     'user.apiKeys.byId.config.list': { $ref: '#/components/schemas/ApiKeyClaudeConfig' },
     'user.apiKeys.byId.fusionConfig.list': { $ref: '#/components/schemas/ApiKeyFusionConfig' },
@@ -1004,6 +1018,21 @@ function buildOpenApi(operations) {
     if (op.operationId === 'user.apiKeys.byId.config.list') {
       operation.description = 'Owner-only Claude Code configuration. Requires keys.secret and an API Key owned by the caller. The response contains the API Key in ANTHROPIC_AUTH_TOKEN; never log or expose it. Legacy hash-only keys return HTTP 410 and must be regenerated.';
     }
+    if (op.operationId === 'user.apiKeys.byId.requestModelBindings.update') {
+      operation.description = 'Replaces the Key request-name mappings atomically. Harness-scoped rules take precedence over the general rule with the same name, then fall back to the Harness model binding and the default queue. Invalid names, unauthorized target models, or a target model the Key owner cannot use return 400/403 before any write.';
+      operation.requestBody = {
+        required: true,
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiKeyRequestModelBindingsPut' } } },
+      };
+      operation.responses[400] = {
+        description: 'Invalid bindings: not an array, more than 100 entries, empty/oversized/control-character name, reserved fusion name, duplicate name within the same harness scope, unknown harness, or missing target model.',
+        content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+      };
+      operation.responses[403] = {
+        description: 'The API Key owner is not authorized to use one of the configured target models.',
+        content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+      };
+    }
     if (op.operationId === 'user.apiKeys.byId.fusionConfig.update') {
       operation.requestBody = {
         required: true,
@@ -1055,7 +1084,7 @@ function buildOpenApi(operations) {
     openapi: '3.1.0',
     info: {
       title: 'CrewRouter API',
-      version: '27.0.0-beta.3',
+      version: '27.0.0-beta.4',
       description: 'OpenAI/Anthropic/Gemini-compatible model gateway plus management API.',
     },
     servers: [{ url: 'https://your-host', description: 'CrewRouter instance' }],

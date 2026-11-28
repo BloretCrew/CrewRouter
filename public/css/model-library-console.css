@@ -50,19 +50,31 @@
   padding: 0;
 }
 
-/* ---------- API Key 请求名映射：内容置于晶液纸面，控件复用全局玻璃皮肤 ---------- */
-#libraryKeyBubbleMenu .ml-request-binding-form { display: grid; gap: 14px; }
-#libraryKeyBubbleMenu .ml-request-binding-form label { display: grid; gap: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; }
-#libraryKeyBubbleMenu .ml-request-binding-form :is(blora-select, input.blora-input, datalist) { inline-size: 100%; min-inline-size: 0; box-sizing: border-box; }
-#libraryKeyBubbleMenu .ml-request-binding-form input.blora-input { min-block-size: var(--lg-control-h); padding-inline: 12px; }
-#libraryKeyBubbleMenu .ml-request-bindings { display: grid; gap: 8px; padding: 4px; }
-#libraryKeyBubbleMenu .ml-request-bindings-heading { color: var(--lg-fg-secondary); font-size: 12px; }
-#libraryKeyBubbleMenu .ml-request-bindings-list { display: grid; gap: 6px; max-block-size: min(38vh, 280px); overflow: auto; }
-#libraryKeyBubbleMenu .ml-request-binding-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px; padding: 7px 8px; border-radius: var(--lg-radius-item); background: var(--lg-group-bg); color: var(--lg-fg); font-size: 12px; }
-#libraryKeyBubbleMenu .ml-request-binding-scope { grid-column: 1; color: var(--lg-fg-secondary); font-size: 11px; }
-#libraryKeyBubbleMenu .ml-request-binding-target { grid-column: 1; overflow: hidden; color: var(--lg-fg-secondary); text-overflow: ellipsis; }
-#libraryKeyBubbleMenu .ml-request-bindings-empty { padding: 7px 8px; color: var(--lg-fg-secondary); font-size: 12px; }
-#libraryKeyBubbleMenu .ml-request-bindings-add { justify-self: start; }
+/* ---------- API Key 请求名映射：弹窗挂在 body 下，用 .lg-scope 承载令牌与控件皮肤 ---------- */
+.lg-scope .ml-request-bindings { display: grid; gap: 14px; }
+.lg-scope .ml-request-bindings-hint { margin: 0; color: var(--lg-fg-secondary); font-size: 12.5px; line-height: 1.5; }
+.lg-scope .ml-request-bindings-list { display: grid; gap: 6px; max-block-size: min(34vh, 260px); overflow: auto; }
+.lg-scope .ml-request-bindings-empty { padding: 10px 12px; border-radius: var(--lg-radius-item); background: var(--lg-group-bg); color: var(--lg-fg-secondary); font-size: 12.5px; line-height: 1.5; }
+.lg-scope .ml-request-binding-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--lg-radius-item); background: var(--lg-group-bg); color: var(--lg-fg); font-size: 12.5px; }
+.lg-scope .ml-request-binding-row.is-editing { border-color: color-mix(in srgb, var(--lg-accent) 40%, transparent); background: var(--lg-accent-tint); }
+.lg-scope .ml-request-binding-main { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); align-items: baseline; gap: 2px 8px; min-inline-size: 0; }
+.lg-scope .ml-request-binding-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.lg-scope .ml-request-binding-scope { justify-self: end; color: var(--lg-fg-secondary); font-size: 11px; }
+.lg-scope .ml-request-binding-target { grid-column: 1 / -1; overflow: hidden; color: var(--lg-fg-secondary); text-overflow: ellipsis; white-space: nowrap; }
+.lg-scope .ml-request-binding-actions { display: flex; flex: 0 0 auto; gap: 2px; }
+.lg-scope .ml-request-binding-form { display: grid; gap: 12px; padding-block-start: 12px; border-block-start: 1px solid var(--lg-divider); }
+.lg-scope .ml-request-binding-form-heading { color: var(--lg-fg-secondary); font-size: 12px; font-weight: 500; }
+.lg-scope .ml-request-binding-form label { display: grid; gap: 6px; color: var(--lg-fg-secondary); font-size: 12.5px; }
+.lg-scope .ml-request-binding-form :is(blora-select, input.blora-input, datalist) { inline-size: 100%; min-inline-size: 0; box-sizing: border-box; }
+.lg-scope .ml-request-binding-form input.blora-input { min-block-size: var(--lg-control-h); padding-inline: 12px; }
+.lg-scope .ml-request-binding-form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 组件皮肤给 .blora-button 声明了 display，压过 UA 的 [hidden] 规则，这里补回来 */
+.lg-scope .ml-request-binding-form-actions .blora-button[hidden] { display: none; }
+.lg-scope .ml-request-binding-error { margin: 0; color: var(--lg-red-ink); font-size: 12.5px; line-height: 1.5; }
+@media (max-width: 560px) {
+  .lg-scope .ml-request-binding-row { grid-template-columns: minmax(0, 1fr); }
+  .lg-scope .ml-request-binding-actions { justify-content: flex-end; }
+}
 
 /* ---------- 2. 绑定卡：本页主焦点，真实玻璃 ---------- */
 #modelLibraryPage .model-library-binding-bar {

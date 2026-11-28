@@ -285,6 +285,10 @@ test('management wrappers preserve their documented response payload shapes', as
       json(res, 200, { harness_models: [{ harness: 'codex', model_id: 'm1', name: 'Model', provider_name: 'Provider', label: 'Codex' }], available_harnesses: [{ id: 'codex', label: 'Codex' }] });
       return;
     }
+    if (req.url === '/api/user/api-keys/7/request-model-bindings' && req.method === 'PUT') {
+      json(res, 200, { success: true, bindings: [{ requestModelName: 'fast', harness: 'codex', modelId: 'm1' }] });
+      return;
+    }
     if (req.url === '/api/user/api-keys/7/request-model-bindings') {
       json(res, 200, { bindings: [{ request_model_name: 'fast', harness: null, model_id: 'm1', name: 'Model', provider_name: 'Provider' }], models: [{ id: 'm1', name: 'Model', alias: null, upstream_model_id: 'upstream-m1' }], available_harnesses: [{ id: 'codex', label: 'Codex' }] });
       return;
@@ -330,6 +334,7 @@ test('management wrappers preserve their documented response payload shapes', as
   const fusionSaved = await client.keys.setFusionConfig(7, { panel_models: ['m1'] });
   const harnessModels = await client.keys.getHarnessModels(7);
   const requestModelBindings = await client.keys.getRequestModelBindings(7);
+  const requestModelBindingsSaved = await client.keys.setRequestModelBindings(7, { bindings: [{ request_model_name: 'fast', harness: 'codex', model_id: 'm1' }] });
   const usage = await client.usage.get();
   const balance = await client.balance.get();
   const models = await client.models.list();
@@ -391,6 +396,8 @@ test('management wrappers preserve their documented response payload shapes', as
   assert.equal(harnessModels.data.harness_models[0].harness, 'codex');
   assert.equal(requestModelBindings.data.bindings[0].harness, null);
   assert.equal(requestModelBindings.data.models[0].upstream_model_id, 'upstream-m1');
+  assert.equal(requestModelBindingsSaved.data.success, true);
+  assert.equal(requestModelBindingsSaved.data.bindings[0].requestModelName, 'fast');
   assert.equal(usage.data[0].total_tokens, '12');
   assert.equal(balance.data.refund_balance, 8);
   assert.equal(balance.data.group, null);

@@ -75,6 +75,59 @@ router.put('/api-keys/:id/models', (req, res) => {
   res.json({ success: true, modelIds: ordered, current_model_id: ordered[0] || null });
 });
 
+// 请求模型名映射（演示模式：内存读写，结构与生产接口一致）
+const { HARNESS_SOURCES, isHarnessSource, sourceLabel } = require('../utils/request-source');
+const { normalizeRequestModelBindings } = require('../utils/request-model-bindings');
+
+function demoBindingModels() {
+  return data.myTeamModels()
+    .filter(model => model.id !== 'fusion')
+    .map(model => ({ id: model.id, name: model.name, alias: model.alias || null, upstream_model_id: model.upstream_model_id || null }));
+}
+
+function demoRequestModelBindings(key) {
+  if (!Array.isArray(key.request_model_bindings)) key.request_model_bindings = [];
+  return key.request_model_bindings;
+}
+
+router.get('/api-keys/:id/request-model-bindings', (req, res) => {
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  res.json({
+    bindings: demoRequestModelBindings(key).map(binding => {
+      const model = data.myTeamModels().find(item => item.id === binding.model_id);
+      return {
+        request_model_name: binding.request_model_name,
+        harness: binding.harness || null,
+        model_id: binding.model_id,
+        name: model?.name || binding.model_id,
+        provider_name: model?.provider_name || ''
+      };
+    }),
+    models: demoBindingModels(),
+    available_harnesses: HARNESS_SOURCES.map(harness => ({ id: harness, label: sourceLabel(harness) }))
+  });
+});
+
+router.put('/api-keys/:id/request-model-bindings', (req, res) => {
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  const parsed = normalizeRequestModelBindings(req.body?.bindings, { isHarnessSource, harnessSources: HARNESS_SOURCES });
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const models = data.myTeamModels();
+  for (const binding of parsed.bindings) {
+    if (!models.some(model => model.id === binding.modelId)) {
+      return res.status(400).json({ error: `模型不存在: ${binding.modelId}` });
+    }
+  }
+  key.request_model_bindings = parsed.bindings.map(binding => ({
+    request_model_name: binding.requestModelName,
+    harness: binding.harness,
+    model_id: binding.modelId
+  }));
+  res.json({ success: true, bindings: parsed.bindings });
+});
+
 // Fusion 配置
 router.get('/api-keys/:id/fusion-config', (req, res) => {
   res.json({ enabled: false, panels: [] });

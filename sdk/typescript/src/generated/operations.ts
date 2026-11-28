@@ -7937,6 +7937,57 @@ export const OPERATIONS: Record<string, CrewRouterOperation> = {
     "exclusion": null,
     "bodyLimit": "2mb"
   },
+  "oauth.device.list": {
+    "operationId": "oauth.device.list",
+    "method": "GET",
+    "path": "/oauth/device",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "oauth.device.authorize.create": {
+    "operationId": "oauth.device.authorize.create",
+    "method": "POST",
+    "path": "/oauth/device/authorize",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
+  "oauth.device.code.create": {
+    "operationId": "oauth.device.code.create",
+    "method": "POST",
+    "path": "/oauth/device/code",
+    "aliases": [],
+    "permission": null,
+    "permissionGroup": null,
+    "adminOnly": false,
+    "authModes": [
+      "session"
+    ],
+    "streaming": false,
+    "dynamic": false,
+    "sdkStatus": "excluded",
+    "exclusion": "permission_not_configured",
+    "bodyLimit": "2mb"
+  },
   "oauth.githubActions.create": {
     "operationId": "oauth.githubActions.create",
     "method": "POST",

@@ -32,6 +32,8 @@ router.use((req, res, next) => {
   req._requestedModel = req.body?.model;
   const purpose = ['session_summary', 'provider_parse'].includes(req.headers?.['x-crewrouter-call-purpose'])
     ? req.headers?.['x-crewrouter-call-purpose'] : 'user_request';
+  // 内部调用（会话总结、供应商解析）传入的是精确模型 id，不能命中面向客户端的请求名映射。
+  req._skipRequestModelMapping = purpose !== 'user_request';
   req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal, requestedModel: req._requestedModel, requestId: crypto.randomUUID(), purpose };
   const disposeLifecycle = () => req._requestLifecycle.dispose();
   res.once('finish', disposeLifecycle);
@@ -3816,6 +3818,34 @@ async function handleFusionRequest(req, res, format = 'openai') {
   }
 }
 
+// 客户端可发现的模型：已配置队列 + 请求名映射 + Harness 绑定。
+// 映射名与真实模型 id 分开标注，客户端据此知道某个名称会被改路由到哪个模型。
+function collectDiscoverableKeyModels(apiUser, { includeFusion = false } = {}) {
+  const entries = [];
+  const push = (id, extra = {}) => {
+    const value = String(id || '').trim();
+    if (!value) return;
+    entries.push({ id: value, ...extra });
+  };
+  if (includeFusion) push('fusion');
+  for (const id of Array.isArray(apiUser?.modelQueue) ? apiUser.modelQueue : []) push(id);
+  push(apiUser?.currentModelId);
+  const denied = new Set(apiUser?.modelAuthorization?.deniedModelIds || []);
+  for (const id of Object.values(apiUser?.harnessModels || {})) {
+    if (!entries.some(entry => entry.id === String(id))) push(id, { mappedFromHarness: true });
+  }
+  for (const binding of apiUser?.requestModelBindings || []) {
+    if (!binding?.requestModelName) continue;
+    if (entries.some(entry => entry.id === binding.requestModelName)) continue;
+    const key = JSON.stringify([binding.harness || null, binding.requestModelName]);
+    const mappingDenied = (apiUser?.modelAuthorization?.deniedRequestModelBindings || []).includes(key) || denied.has(String(binding.modelId));
+    push(binding.requestModelName, {
+      requestModelBinding: { harness: binding.harness || null, model_id: binding.modelId, authorized: !mappingDenied },
+    });
+  }
+  return entries;
+}
+
 // OpenAI 兼容: /v1/models (CrewRouter: 返回配置的模型列表 + fusion 固定)
 router.get('/models', oauthBearer, policyGate, async (req, res) => {
   try {
@@ -3862,6 +3892,25 @@ router.get('/models', oauthBearer, policyGate, async (req, res) => {
           owned_by: 'crewrouter'
         });
       }
+    }
+
+    // 当前 Key 的请求名映射与 Harness 绑定也参与发现，避免客户端拿不到可用的请求名。
+    for (const entry of collectDiscoverableKeyModels(req.apiUser)) {
+      if (entry.id === 'fusion' || modelSet.has(entry.id)) continue;
+      modelSet.add(entry.id);
+      const entryModel = {
+        id: entry.id,
+        object: 'model',
+        created: Math.floor(Date.now() / 1000),
+        owned_by: 'crewrouter'
+      };
+      if (entry.requestModelBinding) {
+        entryModel.description = `请求名映射 → ${entry.requestModelBinding.model_id}`;
+        entryModel.x_crewrouter = { request_model_binding: entry.requestModelBinding };
+      } else if (entry.mappedFromHarness) {
+        entryModel.x_crewrouter = { harness_model: true };
+      }
+      models.push(entryModel);
     }
 
     // 插件 models:list 钩子：过滤/追加模型列表
@@ -7297,8 +7346,7 @@ function geminiModelResource(id) {
 }
 
 async function listGeminiModels(req) {
-  let ids = Array.isArray(req.apiUser?.modelQueue) ? req.apiUser.modelQueue.slice() : [];
-  if (req.apiUser?.currentModelId) ids.push(req.apiUser.currentModelId);
+  let ids = (collectDiscoverableKeyModels(req.apiUser) || []).map(entry => entry.id);
   if (!ids.length) {
     try {
       const result = await pool.query("SELECT value FROM settings WHERE key = 'model_list'");

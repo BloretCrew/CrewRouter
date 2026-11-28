@@ -37,6 +37,7 @@ const {
   isHarnessSource,
   sourceLabel,
 } = require('../utils/request-source');
+const { normalizeRequestModelBindings } = require('../utils/request-model-bindings');
 
 // Co-Key 权限：api_keys.user_id 始终是发起者和计费归属；成员仅共享管理权限。
 async function getApiKeyAccess(db, apiKeyId, userId) {
@@ -1052,34 +1053,13 @@ router.put('/api-keys/:id/request-model-bindings', requireAuth, auditMiddleware(
 }), async (req, res) => {
   try {
     return await withApiKeyWrite(req, res, {}, async (db, reply, invalidateAfterCommit, access) => {
-      const input = req.body?.bindings;
-      if (!Array.isArray(input) || input.length > 100) {
-        return reply.status(400).json({ error: 'bindings 必须是最多 100 项的数组' });
-      }
-      const normalized = [];
-      const seen = new Set();
-      for (const item of input) {
-        const requestModelName = String(item?.requestModelName ?? item?.request_model_name ?? '').trim();
-        const harnessRaw = String(item?.harness || '').trim().toLowerCase();
-        const harness = harnessRaw || null;
-        const modelId = String(item?.modelId ?? item?.model_id ?? '').trim();
-        if (!requestModelName || requestModelName.length > 255 || /[\\u0000-\\u001f]/.test(requestModelName)) {
-          return reply.status(400).json({ error: '请求模型名不能为空、不可含控制字符且最多 255 字符' });
-        }
-        if (harness && (!isHarnessSource(harness) || harness === 'unknown')) {
-          return reply.status(400).json({ error: `无效的 harness，可选: ${HARNESS_SOURCES.join(', ')}` });
-        }
-        if (!modelId) return reply.status(400).json({ error: `请为请求名 ${requestModelName} 选择目标模型` });
-        const normalizedName = requestModelName.toLowerCase();
-        const unique = `${harness || '*'}:${normalizedName}`;
-        if (seen.has(unique)) return reply.status(400).json({ error: `请求名映射重复: ${requestModelName}` });
-        seen.add(unique);
-        const check = await assertOwnerCanUseModel(modelId, access.owner_user_id, db);
+      const parsed = normalizeRequestModelBindings(req.body?.bindings, { isHarnessSource, harnessSources: HARNESS_SOURCES });
+      if (parsed.error) return reply.status(400).json({ error: parsed.error });
+      const normalized = parsed.bindings;
+      // 先整体校验授权再落库：任一目标模型不可用都返回 4xx，且不产生部分写入。
+      for (const binding of normalized) {
+        const check = await assertOwnerCanUseModel(binding.modelId, access.owner_user_id, db);
         if (check.error) return reply.status(check.status).json({ error: check.error });
-        if (/^(?:fusion|fusion[:/])/i.test(normalizedName)) {
-          return reply.status(400).json({ error: `请求名为 ${requestModelName}，与保留的 Fusion 路由名称冲突` });
-        }
-        normalized.push({ requestModelName: normalizedName, harness, modelId });
       }
       const apiKeyId = Number(req.params.id);
       await db.query('DELETE FROM api_key_request_model_bindings WHERE api_key_id = $1', [apiKeyId]);

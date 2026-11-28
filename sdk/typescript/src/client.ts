@@ -40,6 +40,8 @@ import type {
   ApiKeyModelsUpdateResponse,
   ApiKeyHarnessModelsResponse,
   ApiKeyRequestModelBindingsResponse,
+  ApiKeyRequestModelBindingsPut,
+  ApiKeyRequestModelBindingsUpdateResponse,
   ApiKeyQuotaWarning,
   ApiKeySchedule,
   CallOptions,
@@ -219,6 +221,8 @@ export class CrewRouter {
       this.call<T>('user.apiKeys.byId.harnessModels.list', mergePathParams(options, { id })),
     getRequestModelBindings: <T = ApiKeyRequestModelBindingsResponse>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.requestModelBindings.list', mergePathParams(options, { id })),
+    setRequestModelBindings: <T = ApiKeyRequestModelBindingsUpdateResponse>(id: string | number, body: ApiKeyRequestModelBindingsPut, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
+      this.call<T>('user.apiKeys.byId.requestModelBindings.update', mergePathParams({ ...options, body }, { id })),
     getMembers: <T = ApiKeyMembersResponse>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>
       this.call<T>('user.apiKeys.byId.members.list', mergePathParams(options, { id })),
     getQuotaWarning: <T = ApiKeyQuotaWarning>(id: string | number, options?: CallOptions): Promise<CrewRouterResponse<T>> =>

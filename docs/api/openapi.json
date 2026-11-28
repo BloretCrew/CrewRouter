@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CrewRouter API",
-    "version": "27.0.0-beta.3",
+    "version": "27.0.0-beta.4",
     "description": "OpenAI/Anthropic/Gemini-compatible model gateway plus management API."
   },
   "servers": [
@@ -247,6 +247,63 @@
         "required": [
           "request_model_name",
           "model_id"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyRequestModelBindingsPut": {
+        "type": "object",
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyRequestModelBinding"
+            }
+          }
+        },
+        "required": [
+          "bindings"
+        ],
+        "additionalProperties": true,
+        "description": "Complete replacement of the Key request-name mappings. Names are trimmed and lowercased. At most 100 entries; names are at most 255 characters and may not contain control characters or use the reserved fusion prefix. A null harness means every Harness; a harness-scoped rule wins over the general rule with the same name. Every target model must be authorized for the Key owner."
+      },
+      "ApiKeyRequestModelBindingSaved": {
+        "type": "object",
+        "properties": {
+          "requestModelName": {
+            "type": "string"
+          },
+          "harness": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modelId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestModelName",
+          "modelId"
+        ],
+        "additionalProperties": true
+      },
+      "ApiKeyRequestModelBindingsUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyRequestModelBindingSaved"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "bindings"
         ],
         "additionalProperties": true
       },
@@ -16654,6 +16711,27 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "$ref": "#/components/schemas/ApiKeyRequestModelBindingsUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid bindings: not an array, more than 100 entries, empty/oversized/control-character name, reserved fusion name, duplicate name within the same harness scope, unknown harness, or missing target model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The API Key owner is not authorized to use one of the configured target models.",
+            "content": {
+              "application/json": {
+                "schema": {
                   "type": "object",
                   "additionalProperties": true
                 }
@@ -16668,13 +16746,13 @@
         ],
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
+        "description": "Replaces the Key request-name mappings atomically. Harness-scoped rules take precedence over the general rule with the same name, then fall back to the Harness model binding and the default queue. Invalid names, unauthorized target models, or a target model the Key owner cannot use return 400/403 before any write.",
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true
+                "$ref": "#/components/schemas/ApiKeyRequestModelBindingsPut"
               }
             }
           }
@@ -22586,6 +22664,121 @@
         "x-crewrouter-auth-modes": [],
         "x-crewrouter-streaming": false,
         "x-crewrouter-body-limit": "2mb",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/device": {
+      "get": {
+        "operationId": "oauth.device.list",
+        "summary": "GET /oauth/device",
+        "tags": [
+          "oauth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured"
+      }
+    },
+    "/oauth/device/authorize": {
+      "post": {
+        "operationId": "oauth.device.authorize.create",
+        "summary": "POST /oauth/device/authorize",
+        "tags": [
+          "oauth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/device/code": {
+      "post": {
+        "operationId": "oauth.device.code.create",
+        "summary": "POST /oauth/device/code",
+        "tags": [
+          "oauth"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "x-crewrouter-permission": null,
+        "x-crewrouter-auth-modes": [
+          "session"
+        ],
+        "x-crewrouter-streaming": false,
+        "x-crewrouter-body-limit": "2mb",
+        "x-crewrouter-excluded": "permission_not_configured",
         "requestBody": {
           "required": false,
           "content": {

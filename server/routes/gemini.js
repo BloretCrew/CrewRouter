@@ -36,6 +36,7 @@ router.use((req, res, next) => {
   req._requestedModel = req.body?.model;
   const purpose = ['session_summary', 'provider_parse'].includes(req.headers?.['x-crewrouter-call-purpose'])
     ? req.headers['x-crewrouter-call-purpose'] : 'user_request';
+  req._skipRequestModelMapping = purpose !== 'user_request';
   req._upstreamAttemptContext = {
     upstreamAttempts: 0,
     signal: req._requestLifecycle.signal,

@@ -7,6 +7,7 @@ const { HARNESS_SOURCES, isHarnessSource, sourceLabel, clientMetaFromReq } = req
 const { startSession, endSession, getActiveSession, recordEvent } = require('./trace-session');
 const { extractRequestIdentity } = require('./session-identity');
 const { resolveSignatureConfig } = require('./api-signature');
+const { normalizeRequestModelName } = require('./request-model-bindings');
 
 const TRIGGER_RE = /@(?:crewrouter|cr)\b/i;
 const USER_QUERY_RE = /<user_query\b[^>]*>([\s\S]*?)<\/user_query>/i;
@@ -516,8 +517,21 @@ register({
   aliases: ['请求名映射', '绑定请求名', 'model mapping'],
   parse: (rest) => {
     const text = String(rest || '').trim();
-    const match = text.match(/^(?:(.+?)\s+)?(.+?)\s+(?:映射到|用|->)\s+(.+)$/i);
-    return match ? { harnessText: match[1] || '', requestModelName: match[2].trim(), modelQuery: match[3].trim() } : {};
+    // 只有整段前缀确实是一个 Harness 名称时才按「<harness> <名称> 用 <模型>」解析，
+    // 否则 "claude code fast-chat 用 gpt-4.1" 会把 "code fast-chat" 当成请求名。
+    const matched = text.match(/^(.+?)\s+(?:映射到|用|->)\s+(.+)$/i);
+    if (!matched) return {};
+    const modelQuery = matched[2].trim();
+    const parts = matched[1].trim().split(/\s+/);
+    for (let take = Math.min(parts.length, 2); take >= 1; take -= 1) {
+      const prefix = parts.slice(0, take).join(' ');
+      const harness = parseHarnessName(prefix);
+      if (!harness) continue;
+      const requestModelName = parts.slice(take).join(' ').trim();
+      // 前缀本身就覆盖全部输入（如「claude code 用 x」）时没有请求名，交由用法提示处理。
+      return { harnessText: prefix, requestModelName, modelQuery };
+    }
+    return { harnessText: '', requestModelName: matched[1].trim(), modelQuery };
   },
   async run({ req, apiUser, args }) {
     if (!args.requestModelName || !args.modelQuery) {
@@ -525,6 +539,9 @@ register({
     }
     const harness = args.harnessText ? parseHarnessName(args.harnessText) : null;
     if (args.harnessText && (!harness || harness === 'unknown')) return composeReply('无效客户端', `无法识别：${args.harnessText}`, apiUser);
+    const nameCheck = normalizeRequestModelName(args.requestModelName);
+    if (nameCheck.error) return composeReply('请求名无效', nameCheck.error, apiUser);
+    const requestModelName = nameCheck.requestModelName;
     const ownerId = await ownerUserId(apiUser);
     const hits = await searchModels(args.modelQuery, ownerId);
     const exact = hits.filter(model => model.id === args.modelQuery || model.name?.toLowerCase() === args.modelQuery.toLowerCase() || model.alias?.toLowerCase() === args.modelQuery.toLowerCase());
@@ -534,13 +551,13 @@ register({
       UNION ALL SELECT 1 FROM api_keys WHERE id = $1 AND current_model_id = $2
       UNION ALL SELECT 1 FROM api_key_harness_models WHERE api_key_id = $1 AND model_id = $2 LIMIT 1`, [apiUser.keyId, chosen.id]);
     if (!keyBinding.rows.length) return composeReply('映射目标未绑定', '请先将目标模型加入该 Key 的默认队列或 Harness 绑定。', apiUser);
-    await pool.query('DELETE FROM api_key_request_model_bindings WHERE api_key_id = $1 AND request_model_name = $2 AND harness IS NOT DISTINCT FROM $3', [apiUser.keyId, args.requestModelName.toLowerCase(), harness]);
-    await pool.query('INSERT INTO api_key_request_model_bindings (api_key_id, request_model_name, harness, model_id, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)', [apiUser.keyId, args.requestModelName.toLowerCase(), harness, chosen.id]);
+    await pool.query('DELETE FROM api_key_request_model_bindings WHERE api_key_id = $1 AND request_model_name = $2 AND harness IS NOT DISTINCT FROM $3', [apiUser.keyId, requestModelName, harness]);
+    await pool.query('INSERT INTO api_key_request_model_bindings (api_key_id, request_model_name, harness, model_id, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)', [apiUser.keyId, requestModelName, harness, chosen.id]);
     require('../routes/api').invalidateApiKeyCacheByKeyId(apiUser.keyId);
     await logAction({ userId: apiUser.userId, username: apiUser.username, action: ACTIONS.API_KEY_MODELS,
       resourceType: 'api_key', resourceId: String(apiUser.keyId),
-      description: `设置请求名映射 ${args.requestModelName} → ${chosen.id}`,
-      details: { request_model_name: args.requestModelName.toLowerCase(), harness, model_id: chosen.id }, ip: req.ip });
+      description: `设置请求名映射 ${requestModelName} → ${chosen.id}`,
+      details: { request_model_name: requestModelName, harness, model_id: chosen.id }, ip: req.ip });
     return composeReply('请求名映射已保存', `${args.requestModelName}${harness ? ` [${sourceLabel(harness)}]` : ' [所有 Harness]'} → ${chosen.name} (${chosen.id})`, apiUser);
   },
 });
