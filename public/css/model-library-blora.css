@@ -558,6 +558,7 @@
 #libraryKeyBubbleMenu .library-key-bubble-item.active .library-key-bubble-item-meta { color: var(--blora-color-text-emphasis); }
 #libraryKeyBubbleMenu .library-key-bubble-item-main > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #modelTestModal::part(panel) { max-width: min(52rem, calc(100vw - 2 * var(--blora-space-4))) !important; }
+#modelTestModal .blora-progress__bar::after { content: none; }
 #modelTestModal .model-test-row-model { overflow-wrap: anywhere; }
 #modelTestModal .model-test-row.is-error-expanded { flex-wrap: wrap; }
 #modelTestModal .model-test-row.is-error-expanded .model-test-row-error-wrap { flex: 1 1 100%; max-width: 100%; }

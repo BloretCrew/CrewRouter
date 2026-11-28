@@ -84,6 +84,7 @@
   background: var(--lg-accent);
   transition: width var(--lg-dur) var(--lg-ease-out);
 }
+#balancePage .blora-progress__bar::after { content: none; }
 
 @media (max-width: 640px) {
   #balancePage > .content-section { padding: 18px; }
