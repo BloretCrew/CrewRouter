@@ -60,7 +60,7 @@
   border: 1px solid var(--lg-glass-border);
   border-radius: 18px;
   background-color: var(--lg-card-bg);
-  background-image: var(--lg-sheen);
+  background-image: none;
   box-shadow: var(--lg-rim), var(--lg-shadow-card);
 }
 #balancePage .limit-label { color: var(--lg-fg-secondary); font-size: 12.5px; font-weight: 500; }

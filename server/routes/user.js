@@ -222,6 +222,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         ak.permissions,
         ak.custom_model_name,
         ak.current_model_id,
+        ak.last_used_at,
         ak.is_system,
         ak.created_at,
         ak.last_used_at,

@@ -13674,7 +13674,11 @@ ${extractorBody}
       return;
     }
 
-    const keys = this._libraryKeys;
+    const keys = [...this._libraryKeys].sort((a, b) => {
+      const aTime = a.last_used_at ? new Date(a.last_used_at).getTime() : 0;
+      const bTime = b.last_used_at ? new Date(b.last_used_at).getTime() : 0;
+      return bTime - aTime;
+    });
     const selectedId = String(this._librarySelectedKeyId ?? keys[0]?.id ?? '');
     // 每次重新加载 Key 后恢复为收起状态，用户可通过展开按钮查看完整列表。
     const visibleKeys = this._libraryKeysExpanded ? keys : keys.slice(0, 5);
@@ -13695,7 +13699,9 @@ ${extractorBody}
       ${groupEntries.map(([groupName, groupKeys], index) => `<div class="ml-key-choice-group"><span class="ml-key-choice-group-title">${escapeHtml(groupName)}</span>${groupKeys.map(key => {
         const keyName = key.name || 'API Key';
         const modelName = key.current_model_name || key.current_model_id || t('未绑定');
-        return `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" title="${escapeHtml(`${keyName} → ${modelName}`)}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)"><span class="ml-key-choice-name">${escapeHtml(keyName)}</span><span class="ml-key-choice-model${!key.current_model_id && !key.current_model_name ? ' is-unbound' : ''}">${escapeHtml(String(modelName))}</span></button>`;
+        const accessedAt = key.last_used_at ? new Date(key.last_used_at).getTime() : 0;
+        const isRecentlyActive = accessedAt > 0 && Date.now() - accessedAt <= 5 * 60 * 1000;
+        return `<button type="button" class="ml-key-choice${String(key.id) === selectedId ? ' is-selected' : ''}" aria-pressed="${String(key.id) === selectedId}" title="${escapeHtml(`${keyName} → ${modelName}`)}" onclick="app.selectLibraryKey('${escapeHtml(String(key.id))}', event)">${isRecentlyActive ? '<span class="ml-key-choice-activity" role="img" aria-label="最近 5 分钟内有请求"></span>' : ''}<span class="ml-key-choice-name">${escapeHtml(keyName)}</span><span class="ml-key-choice-model${!key.current_model_id && !key.current_model_name ? ' is-unbound' : ''}">${escapeHtml(String(modelName))}</span></button>`;
       }).join('')}${index === groupEntries.length - 1 ? expandButton : ''}</div>`).join('')}
     </div>`;
     setHTML(chipsContainer, html);

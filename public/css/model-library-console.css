@@ -163,6 +163,7 @@
 #modelLibraryPage .ml-key-choice-group-title { flex-basis: 100%; color: var(--lg-fg-secondary); font-size: 11px; font-weight: 600; }
 #modelLibraryPage .ml-key-choice { min-block-size: 32px; max-inline-size: 220px; overflow: hidden; padding: 5px 12px; border: 1px solid var(--lg-divider); border-radius: var(--lg-radius-pill); background: var(--lg-chip-bg); color: var(--lg-fg-secondary); font: 500 13px/1.2 var(--lg-font); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 #modelLibraryPage .ml-key-choice:has(.ml-key-choice-model) { display: inline-flex; align-items: center; gap: 6px; max-inline-size: min(360px, 100%); padding: 4px 8px 4px 12px; }
+#modelLibraryPage .ml-key-choice-activity { inline-size: 8px; block-size: 8px; flex: 0 0 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 2px color-mix(in srgb, #22c55e 18%, transparent); }
 #modelLibraryPage .ml-key-choice-name,
 #modelLibraryPage .ml-key-choice-model { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
 #modelLibraryPage .ml-key-choice-name { flex: 0 1 auto; }
