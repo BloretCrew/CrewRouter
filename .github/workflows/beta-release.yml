@@ -3,7 +3,7 @@ name: CrewRouter 27.0 Beta
 on:
   push:
     tags:
-      - 'v27.0.0-beta.3'
+      - 'v27.0.0-beta.4'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -25,8 +25,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PRODUCT_VERSION: 27.0.0-beta.3
-  RELEASE_TAG: v27.0.0-beta.3
+  PRODUCT_VERSION: 27.0.0-beta.4
+  RELEASE_TAG: v27.0.0-beta.4
 
 jobs:
   gate:
@@ -43,13 +43,13 @@ jobs:
       - name: Validate beta tag and all npm manifests
         env:
           TAG_VERSION: ${{ github.ref_name }}
-          DISPATCH_VERSION: 27.0.0-beta.3
+          DISPATCH_VERSION: 27.0.0-beta.4
           PUBLISH: ${{ inputs.publish }}
           RELEASE_TAG: ${{ github.ref_name }}
-          PRODUCT_VERSION: 27.0.0-beta.3
+          PRODUCT_VERSION: 27.0.0-beta.4
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            case "$TAG_VERSION" in v27.0.0-beta.3) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
+            case "$TAG_VERSION" in v27.0.0-beta.4) ;; *) echo "Beta release workflow refuses tag $TAG_VERSION"; exit 1 ;; esac
             TAG_VERSION="${TAG_VERSION#v}"
           else
             TAG_VERSION="$DISPATCH_VERSION"
