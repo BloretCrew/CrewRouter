@@ -109,6 +109,41 @@ async function addModelsToFrontierTeams(modelIds) {
   return added;
 }
 
+// 获取数据库运行信息，仅向管理员公开统计指标，不包含连接凭据。
+router.get('/database-stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const [databaseResult, tablesResult, connectionsResult] = await Promise.all([
+      pool.query(`SELECT current_database() AS name, pg_database_size(current_database()) AS size_bytes`),
+      pool.query(`
+        SELECT schemaname, relname AS name,
+               pg_total_relation_size(format('%I.%I', schemaname, relname)::regclass) AS size_bytes,
+               COALESCE(n_live_tup, 0) AS estimated_rows
+        FROM pg_stat_user_tables
+        ORDER BY pg_total_relation_size(format('%I.%I', schemaname, relname)::regclass) DESC
+        LIMIT 10
+      `),
+      pool.query(`SELECT count(*)::int AS active, current_setting('max_connections')::int AS max
+                  FROM pg_stat_activity WHERE datname = current_database()`),
+    ]);
+    const database = databaseResult.rows[0];
+    res.json({
+      name: database.name,
+      size_bytes: Number(database.size_bytes),
+      tables: tablesResult.rows.map(row => ({
+        schema: row.schemaname,
+        name: row.name,
+        size_bytes: Number(row.size_bytes),
+        estimated_rows: Number(row.estimated_rows),
+      })),
+      connections: connectionsResult.rows[0],
+      updated_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    Logger.error('[数据库信息] 获取失败:', error);
+    res.status(500).json({ error: '数据库信息获取失败' });
+  }
+});
+
 // 获取所有用户列表（支持可选分页：?page=&limit=&q=）
 router.get('/users', requireAuth, requireAdmin, requireTeamAdminEdition, async (req, res) => {
   try {

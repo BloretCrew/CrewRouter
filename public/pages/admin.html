@@ -1333,6 +1333,7 @@
             <button type="button" class="settings-category-card" data-admin-settings-category="appearance"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/paintpalette?color=black" alt="" data-sf-name="paintpalette"><span><strong><span data-i18n="外观">外观</span></strong><small><span data-i18n="默认主题与界面外观">默认主题与界面外观</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="updates"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/arrow.clockwise?color=black" alt="" data-sf-name="arrow.clockwise"><span><strong><span data-i18n="版本与更新">版本与更新</span></strong><small><span data-i18n="检查版本与一键更新">检查版本与一键更新</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="retention"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/archivebox?color=black" alt="" data-sf-name="archivebox"><span><strong><span data-i18n="数据保留">数据保留</span></strong><small><span data-i18n="压缩、清理与聚合策略">压缩、清理与聚合策略</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="database"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/cylinder?color=black" alt="" data-sf-name="cylinder"><span><strong data-i18n="数据库状态">数据库状态</strong><small data-i18n="数据库容量、表大小与连接数">数据库容量、表大小与连接数</small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="auth"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/person.badge.key?color=black" alt="" data-sf-name="person.badge.key"><span><strong><span data-i18n="登录与认证">登录与认证</span></strong><small><span data-i18n="飞书登录、OAuth 应用与邀请链接">飞书登录、OAuth 应用与邀请链接</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="network"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/globe?color=black" alt="" data-sf-name="globe"><span><strong><span data-i18n="网络">网络</span></strong><small><span data-i18n="代理地址与代理池">代理地址与代理池</span></small></span><span class="settings-category-arrow">›</span></button>
             <button type="button" class="settings-category-card" data-admin-settings-category="agent"><img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/sparkles?color=black" alt="" data-sf-name="sparkles"><span><strong><span data-i18n="Blora Agent 资料">Blora Agent 资料</span></strong><small><span data-i18n="联网搜索与链接抓取">联网搜索与链接抓取</span></small></span><span class="settings-category-arrow">›</span></button>
@@ -1451,6 +1452,22 @@
             <div class="form-group"><label for="quotaConfig_lease_seconds" data-i18n="任务租约秒数">任务租约秒数</label><input class="input" type="number" id="quotaConfig_lease_seconds" name="lease_seconds" min="30" max="3600" step="1" value="120" required></div>
             <p role="status" aria-live="polite"></p><button type="submit" class="blora-button" data-variant="primary" disabled data-i18n="保存采集配置">保存采集配置</button>
           </form>
+        </div>
+
+        <div class="content-section admin-settings-section admin-settings-category-database" id="databaseStatsSection">
+          <h2 data-i18n="数据库状态">数据库状态</h2>
+          <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;" data-i18n="显示当前 PostgreSQL 数据库容量、最大表及连接使用情况。">显示当前 PostgreSQL 数据库容量、最大表及连接使用情况。</p>
+          <div class="stats-grid" style="margin-bottom:16px;">
+            <div class="stat-card"><div class="stat-label" data-i18n="数据库">数据库</div><div class="stat-value" id="databaseStatsName">-</div></div>
+            <div class="stat-card"><div class="stat-label" data-i18n="数据库大小">数据库大小</div><div class="stat-value" id="databaseStatsSize">-</div></div>
+            <div class="stat-card"><div class="stat-label" data-i18n="连接数">连接数</div><div class="stat-value" id="databaseStatsConnections">-</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+            <strong data-i18n="最大数据表">最大数据表</strong>
+            <button type="button" class="blora-button" id="databaseStatsRefreshBtn" data-variant="secondary" data-size="sm" data-i18n="刷新">刷新</button>
+            <span id="databaseStatsUpdated" style="font-size:12px;color:var(--muted-foreground);"></span>
+          </div>
+          <div id="databaseStatsTables" class="models-table" role="status" aria-live="polite">-</div>
         </div>
 
         <div class="content-section admin-settings-section admin-settings-category-agent">

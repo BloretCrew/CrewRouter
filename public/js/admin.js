@@ -344,6 +344,7 @@ class AdminApp {
       item.addEventListener('click', () => this.showAdminSettingsCategory(item.dataset.adminSettingsCategory));
     });
     document.getElementById('adminSettingsBackButton')?.addEventListener('click', () => this.showAdminSettingsOverview());
+    document.getElementById('databaseStatsRefreshBtn')?.addEventListener('click', () => this.loadDatabaseStats());
 
     // 登出按钮
     const logoutBtn = document.getElementById('logoutBtn');
@@ -9491,8 +9492,58 @@ async function(ctx) {
     if (title) title.textContent = document.querySelector(`[data-admin-settings-category="${category}"] strong`)?.textContent || '';
     document.querySelectorAll('.admin-settings-section').forEach(item => { item.hidden = !sections.includes(item); });
     if (category === 'auth') this.loadInvites();
+    if (category === 'database') this.loadDatabaseStats();
     if (category === 'popups') this.loadPopupNotices();
     sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async loadDatabaseStats() {
+    const tablesEl = document.getElementById('databaseStatsTables');
+    const refreshBtn = document.getElementById('databaseStatsRefreshBtn');
+    if (refreshBtn) refreshBtn.disabled = true;
+    if (tablesEl) tablesEl.textContent = t('加载中...');
+    try {
+      const response = await fetch('/api/admin/database-stats', { credentials: 'same-origin' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || t('数据库信息获取失败'));
+      const formatBytes = (bytes) => {
+        let value = Number(bytes) || 0;
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let unit = 0;
+        while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+        return `${value.toFixed(unit ? 2 : 0)} ${units[unit]}`;
+      };
+      document.getElementById('databaseStatsName').textContent = data.name || '-';
+      document.getElementById('databaseStatsSize').textContent = formatBytes(data.size_bytes);
+      document.getElementById('databaseStatsConnections').textContent = `${data.connections?.active ?? '-'} / ${data.connections?.max ?? '-'}`;
+      const rows = Array.isArray(data.tables) ? data.tables : [];
+      if (tablesEl) {
+        if (!rows.length) tablesEl.textContent = t('暂无数据表信息');
+        else {
+          const table = document.createElement('table');
+          table.className = 'data-table';
+          table.innerHTML = `<thead><tr><th>${t('数据表')}</th><th>${t('估算行数')}</th><th>${t('占用空间')}</th></tr></thead>`;
+          const body = document.createElement('tbody');
+          rows.forEach(row => {
+            const tr = document.createElement('tr');
+            [ `${row.schema}.${row.name}`, Number(row.estimated_rows || 0).toLocaleString(), formatBytes(row.size_bytes) ].forEach(value => {
+              const td = document.createElement('td');
+              td.textContent = value;
+              tr.appendChild(td);
+            });
+            body.appendChild(tr);
+          });
+          table.appendChild(body);
+          tablesEl.replaceChildren(table);
+        }
+      }
+      const updated = document.getElementById('databaseStatsUpdated');
+      if (updated) updated.textContent = `${t('更新时间')}: ${new Date(data.updated_at || Date.now()).toLocaleString()}`;
+    } catch (error) {
+      if (tablesEl) tablesEl.textContent = error.message || t('数据库信息获取失败');
+    } finally {
+      if (refreshBtn) refreshBtn.disabled = false;
+    }
   }
 
   // ========== 弹窗通知 ==========
