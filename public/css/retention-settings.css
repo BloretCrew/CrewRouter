@@ -1,0 +1,36 @@
+.retention-threshold-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+}
+.retention-threshold-control {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+.retention-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.retention-toggle input { width: 18px; height: 18px; accent-color: var(--primary); }
+.retention-threshold-control input[type="range"] {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  margin: 0 0 8px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.retention-range-value { display: flex; align-items: center; gap: 8px; }
+.retention-range-value .input { width: 110px; min-width: 0; padding: 7px 10px; }
+.retention-range-value span { color: var(--muted-foreground); font-size: 13px; }
+.retention-threshold-control:has(.retention-toggle input:not(:checked)) input[type="range"],
+.retention-threshold-control:has(.retention-toggle input:not(:checked)) .retention-range-value { opacity: .45; }
+.retention-threshold-control:has(.retention-toggle input:not(:checked)) input[type="range"] { pointer-events: none; }

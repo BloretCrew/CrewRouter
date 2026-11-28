@@ -436,6 +436,7 @@ class AdminApp {
     // 数据保留配置与手动任务
     const retentionForm = document.getElementById('retentionConfigForm');
     if (retentionForm) retentionForm.addEventListener('submit', (e) => this.saveRetentionConfig(e));
+    this.bindRetentionThresholdControls();
     document.getElementById('retentionRunCompressPreviewBtn')?.addEventListener('click', () => this.runRetentionTask('compress', true));
     document.getElementById('retentionRunPurgePreviewBtn')?.addEventListener('click', () => this.runRetentionTask('purge', true));
     document.getElementById('retentionRunCompressBtn')?.addEventListener('click', () => this.runRetentionTask('compress', false));
@@ -9403,12 +9404,52 @@ async function(ctx) {
     }
   }
 
+  bindRetentionThresholdControls() {
+    const controls = [
+      ['CompressDays', 'compress_days'], ['CompressSizeGb', 'compress_size_gb'],
+      ['PurgeDays', 'purge_days'], ['PurgeSizeGb', 'purge_size_gb'],
+    ];
+    for (const [suffix] of controls) {
+      const input = document.getElementById(`retention${suffix}`);
+      const range = document.getElementById(`retention${suffix}Range`);
+      const enabled = document.getElementById(`retention${suffix}Enabled`);
+      if (!input || !range || !enabled || input.dataset.retentionBound) continue;
+      input.dataset.retentionBound = '1';
+      const sync = (source) => {
+        const min = Number(input.min) || 1;
+        const max = Number(input.max);
+        const value = Math.min(max, Math.max(min, Number(source.value) || min));
+        input.value = String(value);
+        range.value = String(value);
+      };
+      range.addEventListener('input', () => sync(range));
+      input.addEventListener('input', () => sync(input));
+      enabled.addEventListener('change', () => {
+        input.disabled = range.disabled = !enabled.checked;
+      });
+    }
+  }
+
+  setRetentionThreshold(field, value) {
+    const input = document.getElementById(`retention${field}`);
+    const range = document.getElementById(`retention${field}Range`);
+    const enabled = document.getElementById(`retention${field}Enabled`);
+    if (!input || !range || !enabled) return;
+    const active = Number(value) > 0;
+    enabled.checked = active;
+    input.value = String(active ? value : input.min);
+    range.value = String(active ? value : range.min);
+    input.disabled = range.disabled = !active;
+  }
+
   async saveRetentionConfig(e) {
     e.preventDefault();
     const fields = ['CompressDays', 'CompressSizeGb', 'PurgeDays', 'PurgeSizeGb', 'ProviderQuotaDays'];
     const values = {};
     for (const field of fields) {
-      const value = Number(document.getElementById(`retention${field}`)?.value);
+      const control = document.getElementById(`retention${field}`);
+      const value = ['CompressDays', 'CompressSizeGb', 'PurgeDays', 'PurgeSizeGb'].includes(field)
+        && !document.getElementById(`retention${field}Enabled`)?.checked ? 0 : Number(control?.value);
       if (!Number.isInteger(value) || value < 0) {
         alert(t('数据保留配置必须是非负整数'));
         return;
@@ -9818,10 +9859,10 @@ async function(ctx) {
       const retentionResponse = await fetch('/api/admin/retention-config');
       if (retentionResponse.ok) {
         const retention = await retentionResponse.json();
-        document.getElementById('retentionCompressDays').value = retention.compress_days;
-        document.getElementById('retentionCompressSizeGb').value = retention.compress_size_gb;
-        document.getElementById('retentionPurgeDays').value = retention.purge_days;
-        document.getElementById('retentionPurgeSizeGb').value = retention.purge_size_gb;
+        this.setRetentionThreshold('CompressDays', retention.compress_days);
+        this.setRetentionThreshold('CompressSizeGb', retention.compress_size_gb);
+        this.setRetentionThreshold('PurgeDays', retention.purge_days);
+        this.setRetentionThreshold('PurgeSizeGb', retention.purge_size_gb);
         document.getElementById('retentionProviderQuotaDays').value = retention.provider_quota_days ?? 90;
         document.getElementById('retentionAggEnabled').checked = retention.agg_enabled !== false;
       }

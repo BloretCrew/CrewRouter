@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
   <link rel="stylesheet" href="/css/admin-model-library-base.css?v=split-20261025">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/retention-settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sidebar-blora.css?v=mobile-sidebar-avatar-20261018">
   <link rel="stylesheet" href="/css/admin-stats-blora.css?v=lg-3">
@@ -1404,20 +1405,20 @@
 
         <div class="content-section admin-settings-section admin-settings-category-retention">
           <h2><span data-i18n="数据保留">数据保留</span></h2>
-          <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="压缩和删除按时长或表大小任一条件触发；输入 0 表示禁用该条件，删除阈值为 0 表示永不删除。">压缩和删除按时长或表大小任一条件触发；输入 0 表示禁用该条件，删除阈值为 0 表示永不删除。</span></p>
+          <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="数据超过设定天数或数据库表达到设定大小时，会自动压缩或清理。关闭单项条件即可忽略它；删除条件全部关闭时不会自动删除数据。">数据超过设定天数或数据库表达到设定大小时，会自动压缩或清理。关闭单项条件即可忽略它；删除条件全部关闭时不会自动删除数据。</span></p>
           <form id="retentionConfigForm" class="settings-form" onsubmit="return false;">
             <div class="form-group">
-              <label><span data-i18n="压缩阈值">压缩阈值</span></label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <input type="number" id="retentionCompressDays" class="input" min="0" max="3650" step="1" placeholder="天" data-i18n-placeholder="天" style="flex:1;min-width:120px;">
-                <input type="number" id="retentionCompressSizeGb" class="input" min="0" max="1024" step="1" placeholder="GB" data-i18n-placeholder="GB" style="flex:1;min-width:120px;">
+              <label><span data-i18n="自动压缩">自动压缩</span></label>
+              <div class="retention-threshold-grid">
+                <div class="retention-threshold-control"><label class="retention-toggle"><input type="checkbox" id="retentionCompressDaysEnabled"><span data-i18n="按数据时长">按数据时长</span></label><input type="range" id="retentionCompressDaysRange" min="1" max="3650" step="1" aria-label="压缩数据时长" aria-valuetext="1–3650 天"><div class="retention-range-value"><input type="number" id="retentionCompressDays" class="input" min="1" max="3650" step="1"><span data-i18n="天">天</span></div></div>
+                <div class="retention-threshold-control"><label class="retention-toggle"><input type="checkbox" id="retentionCompressSizeGbEnabled"><span data-i18n="按数据大小">按数据大小</span></label><input type="range" id="retentionCompressSizeGbRange" min="1" max="1024" step="1" aria-label="压缩数据大小" aria-valuetext="1–1024 GB"><div class="retention-range-value"><input type="number" id="retentionCompressSizeGb" class="input" min="1" max="1024" step="1"><span>GB</span></div></div>
               </div>
             </div>
             <div class="form-group">
-              <label><span data-i18n="删除阈值">删除阈值</span></label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <input type="number" id="retentionPurgeDays" class="input" min="0" max="3650" step="1" placeholder="天" data-i18n-placeholder="天" style="flex:1;min-width:120px;">
-                <input type="number" id="retentionPurgeSizeGb" class="input" min="0" max="1024" step="1" placeholder="GB" data-i18n-placeholder="GB" style="flex:1;min-width:120px;">
+              <label><span data-i18n="自动清理">自动清理</span></label>
+              <div class="retention-threshold-grid">
+                <div class="retention-threshold-control"><label class="retention-toggle"><input type="checkbox" id="retentionPurgeDaysEnabled"><span data-i18n="按数据时长">按数据时长</span></label><input type="range" id="retentionPurgeDaysRange" min="1" max="3650" step="1" aria-label="清理数据时长" aria-valuetext="1–3650 天"><div class="retention-range-value"><input type="number" id="retentionPurgeDays" class="input" min="1" max="3650" step="1"><span data-i18n="天">天</span></div></div>
+                <div class="retention-threshold-control"><label class="retention-toggle"><input type="checkbox" id="retentionPurgeSizeGbEnabled"><span data-i18n="按数据大小">按数据大小</span></label><input type="range" id="retentionPurgeSizeGbRange" min="1" max="1024" step="1" aria-label="清理数据大小" aria-valuetext="1–1024 GB"><div class="retention-range-value"><input type="number" id="retentionPurgeSizeGb" class="input" min="1" max="1024" step="1"><span>GB</span></div></div>
               </div>
             </div>
             <div class="form-group">
